@@ -1,0 +1,58 @@
+# OS
+.DS_Store
+Thumbs.db
+
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+
+# Node / React
+node_modules/
+frontend/node_modules/
+build/
+dist/
+.npmrc
+
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+
+# Java / Kotlin / Gradle
+.gradle/
+build/
+out/
+*.class
+*.log
+
+
+# Spring Boot
+application-local.yml
+application-dev.yml
+
+
+# Environment files
+.env
+.env.*
+
+
+# Docker
+docker-data/
+
+
+# Database
+*.sql
+
+
+# Coverage
+coverage/
+
+
+# Misc
+.tmp/
+.cache/
