@@ -1,0 +1,100 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: #F7F8FA;
+}
+
+@font-face {
+  font-family: "Neue Haas Display Black";
+  src: url("../assets/fonts/neue-haas/NeueHaasDisplayBlack.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Neue Haas Display Black Italic";
+  src: url("../assets/fonts/neue-haas/NeueHaasDisplayBlackItalic.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Neue Haas Display Bold";
+  src: url("../assets/fonts/neue-haas/NeueHaasDisplayBold.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Neue Haas Display Bold Italic";
+  src: url("../assets/fonts/neue-haas/NeueHaasDisplayBoldItalic.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Neue Haas Display Light";
+  src: url("../assets/fonts/neue-haas/NeueHaasDisplayLight.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Neue Haas Display Light Italic";
+  src: url("../assets/fonts/neue-haas/NeueHaasDisplayLightItalic.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Neue Haas Display Medium";
+  src: url("../assets/fonts/neue-haas/NeueHaasDisplayMedium.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Neue Haas Display Medium Italic";
+  src: url("../assets/fonts/neue-haas/NeueHaasDisplayMediumItalic.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Neue Haas Display Roman";
+  src: url("../assets/fonts/neue-haas/NeueHaasDisplayRoman.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Neue Haas Display Roman Italic";
+  src: url("../assets/fonts/neue-haas/NeueHaasDisplayRomanItalic.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Neue Haas Display Thin";
+  src: url("../assets/fonts/neue-haas/NeueHaasDisplayThin.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Neue Haas Display Thin Italic";
+  src: url("../assets/fonts/neue-haas/NeueHaasDisplayThinItalic.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Neue Haas Display X Thin";
+  src: url("../assets/fonts/neue-haas/NeueHaasDisplayXThin.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Neue Haas Display X Thin Italic";
+  src: url("../assets/fonts/neue-haas/NeueHaasDisplayXThinItalic.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Neue Haas Display XX Thin";
+  src: url("../assets/fonts/neue-haas/NeueHaasDisplayXXThin.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Neue Haas Display XX Thin Italic";
+  src: url("../assets/fonts/neue-haas/NeueHaasDisplayXXThinItalic.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Sorts Mill Goudy Regular";
+  src: url("../assets/fonts/sorts-mill/SortsMillGoudy-Regular.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Sorts Mill Goudy Italic";
+  src: url("../assets/fonts/sorts-mill/SortsMillGoudy-Italic.ttf") format("truetype");
+}
+

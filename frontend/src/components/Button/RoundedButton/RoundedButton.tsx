@@ -11,7 +11,7 @@ type RoundedButtonProps = {
 export function RoundedButton({
   children,
   width = 240,
-  ratio = 4,
+  ratio = 3,
   onClick,
   disabled = false,
 }: RoundedButtonProps) {

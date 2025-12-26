@@ -1,12 +1,15 @@
 import { CSSProperties } from "react";
+import { colors, fonts, radii } from "../../../styles/theme";
+
 
 export const roundedButtonStyles: Record<string, CSSProperties> = {
   button: {
-    borderRadius: 9999,
-    backgroundColor: "#142726",
-    color: "#FFFFFF",
-    fontSize: 20,
-    fontWeight: 500,
+    backgroundColor: colors.blindBlack,
+    color: colors.whiteTeeth,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.md,
+    fontWeight: fonts.weight.medium,
+    borderRadius: radii.pill,
     border: "none",
     cursor: "pointer",
     transition: "background-color 0.2s ease, opacity 0.2s ease",
