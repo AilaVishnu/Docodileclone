@@ -1,6 +1,7 @@
 import React from 'react';
 import logo from './logo.svg';
 import './App.css';
+import { RoundedButton } from './components/Button';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         >
           Learn React
         </a>
+        <RoundedButton width={120}>Click Me</RoundedButton>
       </header>
     </div>
   );
