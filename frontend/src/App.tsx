@@ -1,14 +1,13 @@
 import React from 'react';
-import './App.css';
-import { RoundedButton } from './components/Button';
 import "./styles/globals.css";
+import { LoginCard } from './components/LoginCard';
 
 
 function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <RoundedButton width={120}>Login</RoundedButton>
+        <LoginCard />
       </header>
     </div>
   );

@@ -16,7 +16,7 @@ export const gradients = {
 
 export const fonts = {
   family: {
-    primary: "'Sorts Mill Goudy Regular', system-ui, sans-serif",
+    primary: "'Neue Haas Display Light', system-ui, sans-serif",
   },
   size: {
     sm: 14,
@@ -33,6 +33,7 @@ export const fonts = {
 export const radii = {
   pill: 9999,
   md: 8,
+  primary: 20
 };
 
 export const spacing = {

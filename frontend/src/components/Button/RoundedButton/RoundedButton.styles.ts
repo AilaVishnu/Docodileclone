@@ -7,7 +7,7 @@ export const roundedButtonStyles: Record<string, CSSProperties> = {
     backgroundColor: colors.blindBlack,
     color: colors.whiteTeeth,
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.md,
+    fontSize: fonts.size.lg,
     fontWeight: fonts.weight.medium,
     borderRadius: radii.pill,
     border: "none",
