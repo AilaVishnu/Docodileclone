@@ -5,11 +5,11 @@ export const styles: Record<string, CSSProperties> = {
   card: {
     backgroundColor: colors.yellowTeeth,
     borderRadius: radii.primary,
-    padding: 48,
+    padding: 32,
     width: "100%",
     maxWidth: 720,
     display: "flex",
     flexDirection: "column",
-    gap: 32,
+    gap: 28
   },
 };

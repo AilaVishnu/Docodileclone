@@ -29,6 +29,10 @@ export function LoginCard() {
       >
         Login
       </RoundedButton>
+
+      <div style={styles.footer}>
+        <h3 style={styles.footertext}>New to docodile? <b>Book a demo</b></h3>
+      </div>
     </Card>
   );
 }
