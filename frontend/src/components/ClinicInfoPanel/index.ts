@@ -1,0 +1,1 @@
+export { ClinicInfoPanel } from "./ClinicInfoPanel";

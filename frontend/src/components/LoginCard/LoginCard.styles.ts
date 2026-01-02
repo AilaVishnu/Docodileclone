@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors } from "../../styles/theme";
+import { colors, fonts } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   header: {
@@ -10,7 +10,7 @@ export const styles: Record<string, CSSProperties> = {
 
   title: {
     fontFamily: 'Sorts Mill Goudy Regular',
-    fontSize: 28,
+    fontSize: fonts.size.m,
     fontWeight: 500,
     color: colors.blindBlack,
     margin: 0,
@@ -24,9 +24,21 @@ export const styles: Record<string, CSSProperties> = {
 
   footertext: {
     fontFamily: 'Neue Haas Display Thin',
-    fontSize: 18,
+    fontSize: fonts.size.xxs,
     fontWeight: 500,
     color: colors.blindBlack,
     margin: 0,
-  }
+  },
+
+  domainWrapper: {
+  width: "100%",          // keeps layout width consistent
+  alignSelf: "center",
+},
+
+domainHidden: {
+  visibility: "hidden",  // 👈 keeps space, hides content
+  height: 0,
+  margin: 0,
+  padding: 0,
+},
 };

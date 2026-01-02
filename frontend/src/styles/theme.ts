@@ -17,11 +17,18 @@ export const gradients = {
 export const fonts = {
   family: {
     primary: "'Neue Haas Display Light', system-ui, sans-serif",
+    primaryI: "'Neue Haas Display Light Italic', system-ui, sans-serif",
+    secondary: "'Sorts Mill Goudy Regular', serif",
+    secondaryI: "'Sorts Mill Goudy Italic', serif",
   },
   size: {
-    sm: 14,
-    md: 16,
-    lg: 20,
+    xxl: 54,
+    xl: 44,
+    l: 36,
+    m: 30,
+    s: 24,
+    xs: 20,
+    xxs: 18
   },
   weight: {
     regular: 400,

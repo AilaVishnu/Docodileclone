@@ -1,0 +1,1 @@
+export { BuildYourClinicPage } from "./BuildYourClinicPage";
