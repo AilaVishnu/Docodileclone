@@ -15,7 +15,7 @@ export const styles: Record<string, CSSProperties> = {
 
   title: {
     fontFamily: fonts.family.secondary,
-    fontSize: 36,
+    fontSize: fonts.size.xl,
     fontWeight: 500,
     color: colors.blindBlack,
     marginBottom: 16,
@@ -38,6 +38,15 @@ export const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
   },
 
+  rightContainer: {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 24,
+  height: "100%",
+},
+
   footer: {
     marginTop: 32,
     display: "flex",
@@ -51,6 +60,8 @@ export const styles: Record<string, CSSProperties> = {
     border: `1px solid ${colors.blindBlack}`,
     borderRadius: 24,
     cursor: "pointer",
+    width: 120,
     fontFamily: fonts.family.primary,
+    fontSize: fonts.size.xxs,
   },
 };

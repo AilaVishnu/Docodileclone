@@ -111,8 +111,47 @@ export function ClinicInfoPanel({
       </div>
 
       {/* Doctors */}
+      <section style={styles.section}>
+        <h4 style={styles.sectionTitle}>Doctors</h4>
+        {doctors.length > 0 ? (
+          doctors.map((doc) => (
+            <p key={doc.id} style={styles.item}>
+              {doc.name}
+              {doc.role && ` / ${doc.role}`}
+            </p>
+          ))
+        ) : (
+          <p style={styles.empty}>No doctors added</p>
+        )}
+      </section>
+
       {/* Front Desk */}
+      <section style={styles.section}>
+        <h4 style={styles.sectionTitle}>Front Desk</h4>
+        {frontDesk.length > 0 ? (
+          frontDesk.map((staff) => (
+            <p key={staff.id} style={styles.item}>
+              {staff.name}
+            </p>
+          ))
+        ) : (
+          <p style={styles.empty}>No front desk staff added</p>
+        )}
+      </section>
+
       {/* Pharmacy */}
+      <section style={styles.section}>
+        <h4 style={styles.sectionTitle}>Pharmacy</h4>
+        {pharmacy.length > 0 ? (
+          pharmacy.map((staff) => (
+            <p key={staff.id} style={styles.item}>
+              {staff.name}
+            </p>
+          ))
+        ) : (
+          <p style={styles.empty}>No pharmacy staff added</p>
+        )}
+      </section>
     </div>
   );
 }

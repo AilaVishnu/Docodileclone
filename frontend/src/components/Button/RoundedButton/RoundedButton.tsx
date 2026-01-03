@@ -6,6 +6,7 @@ type RoundedButtonProps = {
   ratio?: number;        // width / height
   onClick?: () => void;
   disabled?: boolean;
+  fontSize?: number
 };
 
 export function RoundedButton({
@@ -14,6 +15,7 @@ export function RoundedButton({
   ratio = 3,
   onClick,
   disabled = false,
+  fontSize = 24,
 }: RoundedButtonProps) {
     const height = width / ratio;
     return (
@@ -22,6 +24,7 @@ export function RoundedButton({
         ...roundedButtonStyles.button,
         width,
         height,
+        fontSize,
         ...(disabled ? roundedButtonStyles.disabled : {}),
       }}
     >

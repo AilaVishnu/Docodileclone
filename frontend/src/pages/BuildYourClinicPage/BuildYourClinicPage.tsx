@@ -5,6 +5,7 @@ import { RoundedButton } from "../../components/Button";
 import { styles } from "./BuildYourClinicPage.styles";
 import { ClinicWorkspace } from "../../components/ClinicWorkspace";
 import { ClinicInfoPanel } from "../../components/ClinicInfoPanel";
+import { HintCard } from "../../components/HintCard";
 
 export function BuildYourClinicPage() {
   const [clinics, setClinics] = useState<Clinic[]>([
@@ -72,17 +73,20 @@ export function BuildYourClinicPage() {
                 onLocationChange={(newLocation) =>
                   handleRenameLocation(activeClinic.id, newLocation)
                 }
-                doctors={[
-                  { id: "1", name: "Dr Thenmozhi", role: "Dermatologist" },
-                  { id: "2", name: "Vishnu", role: "Ophthalmologist" },
-                ]}
+                doctors={[]}
                 frontDesk={[]}
                 pharmacy={[]}
               />
             }
             right={
-              <div>
-                Illustration + Add Staff button
+              <div style={styles.rightContainer}>
+                <RoundedButton width={115} fontSize={16}>
+                  + Add Staff
+                </RoundedButton>
+                <HintCard
+                  title="Your clinic is ready"
+                  description="Add doctors, front desk, or pharmacy staff to begin managing your clinic."
+                />
               </div>
             }
           />
