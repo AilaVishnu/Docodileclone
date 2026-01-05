@@ -1,12 +1,13 @@
 import { CSSProperties } from "react";
-import { colors, radii, fonts } from "../../../styles/theme";
+import { colors, radii, fonts, spacing } from "../../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   container: {
     display: "flex",
     alignItems: "center",
-    border: `1px solid ${colors.blindBlack}`,
-    borderRadius: radii.primary,
+    border: `1px solid ${colors.neutral300}`,
+    borderRadius: radii.m,
+    gap: spacing.xs,
     overflow: "hidden",
     backgroundColor: "transparent",
     height: 54,
@@ -18,11 +19,11 @@ export const styles: Record<string, CSSProperties> = {
     height: "100%",
     border: "none",
     outline: "none",
-    padding: "0 24px",
+    padding: spacing.s,
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.h3,
+    fontSize: fonts.size.m,
     backgroundColor: "transparent",
-    color: colors.blindBlack,
+    color: colors.neutral900,
   },
 
   suffix: {
@@ -30,10 +31,10 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     padding: "0 24px",
-    borderLeft: `2px solid ${colors.blindBlack}`,
+    borderLeft: `1px solid ${colors.neutral300}`,
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.h3,
-    color: colors.blindBlack,
+    fontSize: fonts.size.m,
+    color: colors.neutral900,
     backgroundColor: "transparent",
     whiteSpace: "nowrap",
   },

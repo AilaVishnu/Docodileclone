@@ -1,5 +1,4 @@
 import { CSSProperties } from "react";
-import { colors } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   page: {
@@ -9,7 +8,6 @@ export const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    background: colors.secondary600,
     boxSizing: "border-box",
   },
 };

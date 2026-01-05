@@ -8,6 +8,7 @@ import { ReactComponent as MailIcon } from "../../assets/Letter.svg";
 import { ReactComponent as PasswordIcon } from "../../assets/Key.svg";
 import { ReactComponent as EyeIcon } from "../../assets/Eye.svg";
 import { ReactComponent as EyeClosedIcon } from "../../assets/Eye Closed.svg";
+import { colors } from "../../styles/theme";
 
 
 type LoginMode = "admin" | "staff";
@@ -25,7 +26,7 @@ export function LoginCard({ mode }: LoginCardProps) {
   const isStaff = mode === "staff";
 
   return (
-    <Card style={{ ...styles.card, width: "40vw"}}>
+    <Card style={{ ...styles.card, width: "40vw", backgroundColor: isStaff ? colors.primary100 : colors.secondary50 }}>
       <h4 style={styles.title}>
         Login as {isStaff ? "Staff" : "Admin"}
       </h4>

@@ -77,7 +77,7 @@ export const fonts = {
 
 export const radii = {
   pill: 999,
-  md: 8,
+  m: 8,
   primary: 20,
   xxl: "16px"
 };
@@ -90,3 +90,7 @@ export const spacing = {
   xl: "24px",
   xxl: "32px",
 };
+
+export const strokes = {
+  xs: "1px"
+}
