@@ -3,7 +3,44 @@ export const colors = {
   skinColor: "#FFD0BF",
   paleBlue: "ECF1FE",
   whiteTeeth: "#FCFCFC",
-  blindBlack: "#122525"
+  blindBlack: "#122525",
+  primary100: "#F9F9ED",
+  primary200: "#F3F3DC",
+  primary300: "#EDDFBA",
+  primary400: "#EDCA99",
+  primary500: "#ECA66D",
+  primary600: "#E48647",
+  primary700: "#D26D2A",
+  primary800: "#AE561A",
+  secondary50: "#F1F6E7",
+  secondary100: "#E3EAD7",
+  secondary200: "#C8D4B0",
+  secondary300: "#ACBF88",
+  secondary400: "#98B06C",
+  secondary500: "#849D54",
+  secondary600: "#6C8145",
+  secondary700: "#556536",
+  secondary800: "#3D4927",
+  neutralAlphaBlack: "rgba(0, 0, 0, 0.04)",
+  neutral100: "#FFFFFF",
+  neutral200: "#E3E3E3",
+  neutral300: "#C7C7C7",
+  neutral400: "#ABABAB",
+  neutral500: "#8F8F8F",
+  neutral600: "#747474",
+  neutral700: "#585858",
+  neutral800: "#3C3C3C",
+  neutral900: "#202020",
+  neutral1000: "#040404",
+  greenAlpha10: "rgba(31, 193, 107, 0.1)",
+  green200: "#1FC16B",
+  green100: "#84EBB4",
+  yellowAlpha10: "rgba(255, 219, 67, 0.1)",
+  yellow200: "#DFB400",
+  yellow100: "#FFDB43",
+  redAlpha10: "rgba(251, 55, 72, 0.1)",
+  red200: "#D00416",
+  red100: "#FB3748",
 };
 
 export const gradients = {
@@ -16,19 +53,20 @@ export const gradients = {
 
 export const fonts = {
   family: {
-    primary: "'Neue Haas Display Light', system-ui, sans-serif",
-    primaryI: "'Neue Haas Display Light Italic', system-ui, sans-serif",
-    secondary: "'Sorts Mill Goudy Regular', serif",
-    secondaryI: "'Sorts Mill Goudy Italic', serif",
+    primary: "'inter', sans-serif",
+    secondary: "'source-serif', serif",
   },
   size: {
-    xxl: 54,
-    xl: 44,
-    l: 36,
-    m: 30,
-    s: 24,
-    xs: 20,
-    xxs: 18
+    h1: "60px",
+    h2: "48px",
+    h3: "40px",
+    h4: "32px",
+    h5: "24px",
+    h6: "20px",
+    xs: "12px",
+    s: "14px",
+    m: "16px",
+    l: "20px",
   },
   weight: {
     regular: 400,
@@ -38,14 +76,17 @@ export const fonts = {
 };
 
 export const radii = {
-  pill: 9999,
+  pill: 999,
   md: 8,
-  primary: 20
+  primary: 20,
+  xxl: "16px"
 };
 
 export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
+  xs: "8px",
+  s: "16px",
+  m: "18px",
+  l: "20px",
+  xl: "24px",
+  xxl: "32px",
 };

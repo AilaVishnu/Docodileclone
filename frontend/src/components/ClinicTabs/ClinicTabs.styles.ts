@@ -15,7 +15,7 @@ export const styles: Record<string, CSSProperties> = {
     borderBottom: "none",
     backgroundColor: colors.yellowTeeth,
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.xxs,
+    fontSize: fonts.size.h4,
     cursor: "pointer",
   },
 
@@ -29,7 +29,7 @@ export const styles: Record<string, CSSProperties> = {
     background: "none",
     border: "none",
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.xxs,
+    fontSize: fonts.size.h4,
     color: colors.blindBlack,
     opacity: 0.5,
     cursor: "pointer",

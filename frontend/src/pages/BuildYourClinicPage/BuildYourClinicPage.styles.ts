@@ -15,7 +15,7 @@ export const styles: Record<string, CSSProperties> = {
 
   title: {
     fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.xl,
+    fontSize: fonts.size.h1,
     fontWeight: 500,
     color: colors.blindBlack,
     marginBottom: 16,
@@ -54,14 +54,4 @@ export const styles: Record<string, CSSProperties> = {
     justifyContent: "center",
   },
 
-  helpButton: {
-    padding: "12px 20px",
-    background: "none",
-    border: `1px solid ${colors.blindBlack}`,
-    borderRadius: 24,
-    cursor: "pointer",
-    width: 120,
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.xxs,
-  },
 };

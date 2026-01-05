@@ -1,14 +1,14 @@
 import { CSSProperties } from "react";
-import { colors, radii } from "../../styles/theme";
+import { colors, radii, spacing } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   card: {
-    backgroundColor: colors.yellowTeeth,
-    borderRadius: radii.primary,
+    backgroundColor: colors.secondary50,
+    borderRadius: radii.xxl,
     width: "100%",
     display: "flex",
     flexDirection: "column",
-    gap: 18,
+    gap: spacing.xl,
     marginTop: -1
   },
 };

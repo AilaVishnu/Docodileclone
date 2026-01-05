@@ -5,7 +5,8 @@ type TextInputProps = {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  icon?: React.ReactNode; // emoji or icon component
+  iconLeft?: React.ReactNode;
+  iconRight?: React.ReactNode;
   type?: "text" | "password" | "email";
 };
 
@@ -13,12 +14,13 @@ export function TextInput({
   value,
   onChange,
   placeholder,
-  icon,
+  iconLeft,
+  iconRight,
   type = "text",
 }: TextInputProps) {
   return (
     <div style={styles.container}>
-      {icon && <span style={styles.icon}>{icon}</span>}
+      {iconLeft && <span style={styles.icon}>{iconLeft}</span>}
 
       <input
         type={type}
@@ -27,6 +29,8 @@ export function TextInput({
         placeholder={placeholder}
         style={styles.input}
       />
+
+      {iconRight && <span style={styles.icon}>{iconRight}</span>}
     </div>
   );
 }

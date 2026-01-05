@@ -1,44 +1,52 @@
 import { CSSProperties } from "react";
-import { colors, fonts } from "../../styles/theme";
+import { colors, fonts, radii } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
-  header: {
+  card: {
+    backgroundColor: colors.yellowTeeth,
+    borderRadius: radii.primary,
+    padding: 48,
+    width: "100%",
+    maxWidth: 560,
     display: "flex",
     flexDirection: "column",
-    gap: 8,
+    gap: 32,
   },
 
   title: {
-    fontFamily: 'Sorts Mill Goudy Regular',
-    fontSize: fonts.size.m,
-    fontWeight: 500,
-    color: colors.blindBlack,
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h4,
+    color: "#122525",
+    fontWeight: fonts.weight.regular,
     margin: 0,
+  },
+
+  passwordRow: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+  },
+
+  eyeButton: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontSize: 20,
+    marginLeft: 8,
+    opacity: 0.7,
   },
 
   footer: {
     display: "flex",
-    flexDirection: "column",
-    gap: 8,
+    justifyContent: "space-between",
+    marginTop: 8,
   },
 
-  footertext: {
-    fontFamily: 'Neue Haas Display Thin',
-    fontSize: fonts.size.xxs,
-    fontWeight: 500,
-    color: colors.blindBlack,
+  footerText: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.xs,
+    color: "#122525",
     margin: 0,
+    cursor: "pointer",
   },
-
-  domainWrapper: {
-  width: "100%",          // keeps layout width consistent
-  alignSelf: "center",
-},
-
-domainHidden: {
-  visibility: "hidden",  // 👈 keeps space, hides content
-  height: 0,
-  margin: 0,
-  padding: 0,
-},
 };

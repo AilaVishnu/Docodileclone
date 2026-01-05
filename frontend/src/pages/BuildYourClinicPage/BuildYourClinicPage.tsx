@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { ClinicTabs, Clinic } from "../../components/ClinicTabs";
 import { Card } from "../../components/Card";
-import { RoundedButton } from "../../components/Button";
 import { styles } from "./BuildYourClinicPage.styles";
 import { ClinicWorkspace } from "../../components/ClinicWorkspace";
 import { ClinicInfoPanel } from "../../components/ClinicInfoPanel";
 import { HintCard } from "../../components/HintCard";
+import { Button } from "../../components/Button";
 
 export function BuildYourClinicPage() {
   const [clinics, setClinics] = useState<Clinic[]>([
@@ -80,9 +80,9 @@ export function BuildYourClinicPage() {
             }
             right={
               <div style={styles.rightContainer}>
-                <RoundedButton width={115} fontSize={16}>
+                <Button size="sm" variant="dark">
                   + Add Staff
-                </RoundedButton>
+                </Button>
                 <HintCard
                   title="Your clinic is ready"
                   description="Add doctors, front desk, or pharmacy staff to begin managing your clinic."
@@ -94,11 +94,13 @@ export function BuildYourClinicPage() {
 
         {/* Footer actions */}
         <div style={styles.footer}>
-          <button style={styles.helpButton}>Help me</button>
+          <Button size="sm" variant="dark">
+            Help me
+          </Button>
 
-          <RoundedButton width={160}>
+          <Button size="sm" variant="primary">
             Next
-          </RoundedButton>
+          </Button>
         </div>
       </div>
 

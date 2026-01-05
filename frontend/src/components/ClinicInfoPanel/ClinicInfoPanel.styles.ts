@@ -15,16 +15,17 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   clinicName: {
-    fontFamily: fonts.family.secondaryI,
-    fontSize: fonts.size.l,
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h3,
     fontWeight: fonts.weight.medium,
     color: colors.blindBlack,
     margin: 0,
   },
 
   location: {
-    fontFamily: fonts.family.secondaryI,
-    fontSize: fonts.size.xs,
+    fontFamily: fonts.family.secondary,
+    fontStyle: "italic",
+    fontSize: fonts.size.h5,
     color: colors.blindBlack,
     opacity: 0.8,
     margin: 0,

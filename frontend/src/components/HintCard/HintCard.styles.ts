@@ -13,7 +13,7 @@ export const styles: Record<string, CSSProperties> = {
 
   title: {
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.m,
+    fontSize: fonts.size.h3,
     fontWeight: fonts.weight.medium,
     color: colors.blindBlack,
     margin: "0 0 8px 0",
@@ -21,7 +21,7 @@ export const styles: Record<string, CSSProperties> = {
 
   description: {
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.xs,
+    fontSize: fonts.size.h5,
     color: colors.blindBlack,
     opacity: 0.7,
     margin: 0,

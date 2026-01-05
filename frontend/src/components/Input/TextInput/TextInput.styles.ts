@@ -1,13 +1,13 @@
 import { CSSProperties } from "react";
-import { colors, fonts } from "../../../styles/theme";
+import { colors, fonts, spacing } from "../../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   container: {
     display: "flex",
     alignItems: "center",
-    gap: 16,
-    padding: "12px 0",
-    borderBottom: `2px solid ${colors.blindBlack}`,
+    gap: spacing.xs,
+    padding: spacing.xs,
+    borderBottom: `1px solid ${colors.neutral300}`,
     width: "100%",
   },
 
@@ -24,7 +24,7 @@ export const styles: Record<string, CSSProperties> = {
     outline: "none",
     backgroundColor: "transparent",
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.xs,
-    color: colors.blindBlack,
+    fontSize: fonts.size.m,
+    color: colors.neutral900,
   },
 };

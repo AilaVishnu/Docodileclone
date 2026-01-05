@@ -1,76 +1,90 @@
 import React, { useState } from "react";
-import { Card } from "../../components/Card";
-import { DomainInput } from "../../components/Input/DomainInput";
-import { RoundedButton } from "../../components/Button/RoundedButton";
 import { styles } from "./LoginCard.styles";
 import { TextInput } from "../Input/TextInput";
+import { DomainInput } from "../Input/DomainInput";
+import { Button } from "../Button";
+import { Card } from "../Card";
+import { ReactComponent as MailIcon } from "../../assets/Letter.svg";
+import { ReactComponent as PasswordIcon } from "../../assets/Key.svg";
+import { ReactComponent as EyeIcon } from "../../assets/Eye.svg";
+import { ReactComponent as EyeClosedIcon } from "../../assets/Eye Closed.svg";
 
-export function LoginCard() {
-  const [role, setRole] = useState<"admin" | "staff">("staff");
+
+type LoginMode = "admin" | "staff";
+
+type LoginCardProps = {
+  mode: LoginMode;
+};
+
+export function LoginCard({ mode }: LoginCardProps) {
   const [domain, setDomain] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = () => {
-    if (role === "staff") {
-      console.log("Staff login:", `${domain}.docodile.app`);
-    } else {
-      console.log("Admin login");
-    }
-  };
+  const isStaff = mode === "staff";
 
   return (
-    <Card style={{...styles.card, padding: "4vw"}}>
-      <h1 style={styles.title}>Login as {role === "admin" ? "Admin" : "Staff"}</h1>
+    <Card style={{ ...styles.card, width: "40vw"}}>
+      <h4 style={styles.title}>
+        Login as {isStaff ? "Staff" : "Admin"}
+      </h4>
 
-      {/* Role selector */}
-      <div style={styles.roleSelector}>
-        <label style={styles.roleOption}>
-          <input
-            type="radio"
-            checked={role === "staff"}
-            onChange={() => setRole("staff")}
-          />
-          Staff
-        </label>
+      {/* Domain (staff only) */}
+      {isStaff && (
+        <DomainInput
+          value={domain}
+          onChange={setDomain}
+        />
+      )}
 
-        <label style={styles.roleOption}>
-          <input
-            type="radio"
-            checked={role === "admin"}
-            onChange={() => setRole("admin")}
-          />
-          Admin
-        </label>
-      </div>
-
-      <div
-        style={{
-          ...styles.domainWrapper,
-          ...(role === "admin" ? styles.domainHidden : {}),
-        }}
-      >
-        <DomainInput value={domain} onChange={setDomain} />
-      </div>
-
+      {/* Email */}
       <TextInput
+        type="email"
         value={email}
         onChange={setEmail}
         placeholder="hello@example.com"
-        icon="✉️"
+        iconLeft={<MailIcon />}
       />
 
-      <TextInput
-        type="password"
-        value={password}
-        onChange={setPassword}
-        placeholder="enter your password"
-        icon="🔑"
-      />
+      {/* Password */}
+      <div style={styles.passwordRow}>
+        <TextInput
+          type={showPassword ? "text" : "password"}
+          value={password}
+          onChange={setPassword}
+          placeholder="Enter your password"
+          iconLeft={<PasswordIcon />}
+          iconRight={<button
+            type="button"
+            onClick={() => setShowPassword((p) => !p)}
+            style={styles.eyeButton}
+          >
+            {showPassword ? <EyeClosedIcon /> : <EyeIcon />}
+          </button>}
+        />
 
-      <RoundedButton onClick={handleLogin}>
-        Login
-      </RoundedButton>
+        
+      </div>
+
+      {/* Sign in */}
+      <Button
+        variant={isStaff ? "primary" : "secondary"}
+        size="md"
+      >
+        Sign in
+      </Button>
+
+      {/* Footer */}
+      <div style={styles.footer}>
+        <p style={styles.footerText}>
+          New to docodile? <strong>Book Demo</strong>
+        </p>
+
+        <p style={styles.footerText}>
+          <strong>Forgot Password</strong>
+        </p>
+      </div>
     </Card>
   );
 }
