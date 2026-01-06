@@ -84,7 +84,7 @@ export const radii = {
 
 export const spacing = {
   xs: "8px",
-  s: "16px",
+  s: "12px",
   m: "18px",
   l: "20px",
   xl: "24px",

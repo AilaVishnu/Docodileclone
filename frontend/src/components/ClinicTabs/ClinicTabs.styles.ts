@@ -4,8 +4,7 @@ import { colors, radii, fonts } from "../../styles/theme";
 export const styles: Record<string, CSSProperties> = {
   container: {
     display: "flex",
-    alignItems: "stretch",
-    marginLeft: "2vw"
+    alignItems: "flex-end",
   },
 
   tab: {
@@ -15,21 +14,24 @@ export const styles: Record<string, CSSProperties> = {
     borderBottom: "none",
     backgroundColor: colors.yellowTeeth,
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.h4,
+    fontSize: fonts.size.m,
     cursor: "pointer",
+    position: "relative",
   },
 
   activeTab: {
     backgroundColor: colors.yellowTeeth,
-    fontWeight: 600,
+    borderBottom: "none",
+    top: 1,
+    zIndex: 2,
   },
 
   addClinic: {
-    padding: "10px 16px",
+    padding: "12px 24px",
     background: "none",
     border: "none",
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.h4,
+    fontSize: fonts.size.m,
     color: colors.blindBlack,
     opacity: 0.5,
     cursor: "pointer",

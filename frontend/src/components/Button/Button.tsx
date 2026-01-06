@@ -5,7 +5,7 @@ import { styles, variants } from "./Button.styles";
 type ButtonProps = {
   children?: React.ReactNode;
   variant?: "dark" | "light" | "primary" | "primaryLight" | "secondary" | "secondaryLight";
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "smIcon" | "mdIcon";
   iconLeft?: React.ReactNode;
   iconRight?: React.ReactNode;
   disabled?: boolean;
@@ -42,9 +42,9 @@ export function Button({
       onMouseLeave={() => setHovered(false)}
       style={style}
     >
-      {iconLeft && <span>{iconLeft}</span>}
+      {iconLeft}
       {children && <span>{children}</span>}
-      {iconRight && <span>{iconRight}</span>}
+      {iconRight}
     </button>
   );
 }

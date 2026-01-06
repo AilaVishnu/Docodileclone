@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { ClinicTabs, Clinic } from "../../components/ClinicTabs";
-import { Card } from "../../components/Card";
 import { styles } from "./BuildYourClinicPage.styles";
 import { ClinicWorkspace } from "../../components/ClinicWorkspace";
-import { ClinicInfoPanel } from "../../components/ClinicInfoPanel";
-import { HintCard } from "../../components/HintCard";
 import { Button } from "../../components/Button";
+import { ClinicInfoCard } from "../../components/ClinicInfoCard";
+import { ReactComponent as NextIcon } from "../../assets/Arrow Right.svg";
+import { ReactComponent as HelpIcon } from "../../assets/Help.svg";
+import { ReactComponent as PlusIcon } from "../../assets/Plus.svg";
 
 export function BuildYourClinicPage() {
   const [clinics, setClinics] = useState<Clinic[]>([
@@ -13,27 +14,6 @@ export function BuildYourClinicPage() {
   ]);
 
   const [activeClinicId, setActiveClinicId] = useState(clinics[0].id);
-
-  const handleRenameClinic = (id: string, name: string) => {
-    setClinics((prev) =>
-      prev.map((clinic) =>
-        clinic.id === id ? { ...clinic, name } : clinic
-      )
-    );
-  };
-
-  const handleRenameLocation = (id: string, location: string) => {
-    setClinics((prev) =>
-      prev.map((clinic) =>
-        clinic.id === id ? { ...clinic, location } : clinic
-      )
-    );
-  };
-
-
-  const activeClinic = clinics.find(
-    (clinic) => clinic.id === activeClinicId
-  )!;
 
   const handleAddClinic = () => {
     const newClinic: Clinic = {
@@ -49,7 +29,7 @@ export function BuildYourClinicPage() {
   return (
     <div style={styles.page}>
       {/* Page title */}
-      <h1 style={{...styles.title, marginBottom: 32}}>Build your Clinic</h1>
+      <h2 style={{...styles.title, marginBottom: 32}}>Build your Clinic</h2>
 
       {/* Clinic tabs */}
       <div style={styles.workspaceContainer}>
@@ -61,44 +41,26 @@ export function BuildYourClinicPage() {
         />
 
         {/* Main workspace */}
-        <Card>
-          <ClinicWorkspace
-            left={
-              <ClinicInfoPanel
-                clinicName={activeClinic.name}
-                location={activeClinic.location}
-                onClinicRename={(newName) =>
-                  handleRenameClinic(activeClinic.id, newName)
-                }
-                onLocationChange={(newLocation) =>
-                  handleRenameLocation(activeClinic.id, newLocation)
-                }
-                doctors={[]}
-                frontDesk={[]}
-                pharmacy={[]}
-              />
-            }
-            right={
-              <div style={styles.rightContainer}>
-                <Button size="sm" variant="dark">
-                  + Add Staff
-                </Button>
-                <HintCard
-                  title="Your clinic is ready"
-                  description="Add doctors, front desk, or pharmacy staff to begin managing your clinic."
-                />
-              </div>
-            }
-          />
-        </Card>
+        <ClinicWorkspace
+          left={
+            <ClinicInfoCard />
+          }
+          right={
+            <div style={styles.rightContainer}>
+              <Button size="sm" variant="dark" iconLeft={<PlusIcon />}>
+                Add Staff
+              </Button>
+            </div>
+          }
+        />
 
         {/* Footer actions */}
         <div style={styles.footer}>
-          <Button size="sm" variant="dark">
-            Help me
+          <Button size="md" variant="secondaryLight" iconRight={<HelpIcon />}>
+            Help
           </Button>
 
-          <Button size="sm" variant="primary">
+          <Button size="md" variant="primary" iconRight={<NextIcon />}>
             Next
           </Button>
         </div>

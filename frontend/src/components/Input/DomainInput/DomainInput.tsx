@@ -11,7 +11,7 @@ type DomainInputProps = {
 export function DomainInput({
   value,
   onChange,
-  placeholder = "your-clinic",
+  placeholder = "your-clinic-domain",
   suffix = ".docodile.app",
 }: DomainInputProps) {
   return (

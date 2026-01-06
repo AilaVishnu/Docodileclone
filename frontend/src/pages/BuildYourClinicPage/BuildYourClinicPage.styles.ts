@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts } from "../../styles/theme";
+import { colors, fonts, spacing } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   page: {
@@ -15,42 +15,32 @@ export const styles: Record<string, CSSProperties> = {
 
   title: {
     fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h1,
-    fontWeight: 500,
+    fontSize: fonts.size.h2,
+    fontWeight: fonts.weight.regular,
     color: colors.blindBlack,
     marginBottom: 16,
   },
 
-  workspacePlaceholder: {
-    minHeight: 360,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: colors.blindBlack,
-    opacity: 0.5,
-    fontSize: 18,
-  },
-
   workspaceContainer: {
-    minWidth: "60vw",  
+    minWidth: "80vw",
     transition: "max-width 0.3s ease",
     display: "flex",
     flexDirection: "column",
   },
 
   rightContainer: {
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 24,
-  height: "100%",
-},
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 24,
+    height: "100%",
+  },
 
   footer: {
-    marginTop: 32,
+    marginTop: spacing.xxl,
     display: "flex",
-    gap: 16,
+    gap: spacing.xl,
     justifyContent: "center",
   },
 

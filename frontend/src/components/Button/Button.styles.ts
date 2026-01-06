@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts, radii } from "../../styles/theme";
+import { colors, fonts, radii, spacing } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   base: {
@@ -18,14 +18,26 @@ export const styles: Record<string, CSSProperties> = {
     transition: "background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease",
   },
 
+  smIcon: {
+    fontSize: fonts.size.m,
+    height: 40,
+    padding: spacing.xs
+  },
+
+  mdIcon: {
+    fontSize: fonts.size.l,
+    height: 56,
+    padding: spacing.xs
+  },
+
   sm: {
-    fontSize: 14,
+    fontSize: fonts.size.m,
     height: 40
   },
 
   md: {
-    fontSize: 20,
-    height: 56
+    fontSize: fonts.size.l,
+    height: 56,
   },
 };
 
@@ -52,6 +64,7 @@ export const variants = {
     default: {
       borderColor: colors.neutral900,
       color: colors.neutral900,
+      backgroundColor: "transparent",
     },
     hover: {
       backgroundColor: colors.neutralAlphaBlack,
@@ -86,6 +99,7 @@ export const variants = {
     default: {
       borderColor: colors.primary600,
       color: colors.primary600,
+      backgroundColor: "transparent",
     },
     hover: {
       backgroundColor: colors.neutralAlphaBlack,
@@ -119,6 +133,7 @@ export const variants = {
     default: {
       borderColor: colors.secondary600,
       color: colors.secondary600,
+      backgroundColor: "transparent",
     },
     hover: {
       backgroundColor: colors.neutralAlphaBlack,

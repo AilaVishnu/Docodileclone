@@ -1,14 +1,15 @@
 import { CSSProperties } from "react";
-import { colors, radii } from "../../styles/theme";
+import { colors, radii, spacing } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   container: {
     width: "100%",
-    minHeight: 420,
+    minHeight: "56vh",
     border: `1px solid ${colors.blindBlack}`,
-    borderRadius: radii.primary,
+    borderRadius: `0 ${radii.primary}px ${radii.primary}px ${radii.primary}px`,
     display: "flex",
-    padding: 32,
+    padding: spacing.xxl,
+    gap: spacing.xl,
     boxSizing: "border-box",
     backgroundColor: "transparent",
   },
@@ -17,14 +18,12 @@ export const styles: Record<string, CSSProperties> = {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    gap: 24,
-    paddingRight: 32,
+    paddingRight: spacing.xxl,
   },
 
   rightPanel: {
     flex: 1,
     display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "column",
   },
 };
