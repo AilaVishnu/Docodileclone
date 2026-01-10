@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { AddStaffModal } from "../../components/AddStaffModal";
 import { ClinicTabs, Clinic } from "../../components/ClinicTabs";
 import { styles } from "./BuildYourClinicPage.styles";
 import { ClinicWorkspace } from "../../components/ClinicWorkspace";
@@ -14,6 +15,8 @@ export function BuildYourClinicPage() {
   ]);
 
   const [activeClinicId, setActiveClinicId] = useState(clinics[0].id);
+
+  const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
 
   const handleAddClinic = () => {
     const newClinic: Clinic = {
@@ -47,11 +50,25 @@ export function BuildYourClinicPage() {
           }
           right={
             <div style={styles.rightContainer}>
-              <Button size="sm" variant="dark" iconLeft={<PlusIcon />}>
+              <Button
+                size="sm"
+                variant="dark"
+                iconLeft={<PlusIcon />}
+                onClick={() => setIsAddStaffOpen(true)}
+              >
                 Add Staff
               </Button>
             </div>
           }
+        />
+
+        <AddStaffModal
+          isOpen={isAddStaffOpen}
+          onClose={() => setIsAddStaffOpen(false)}
+          onSave={() => {
+            // later: collect & persist staff data
+            setIsAddStaffOpen(false);
+          }}
         />
 
         {/* Footer actions */}

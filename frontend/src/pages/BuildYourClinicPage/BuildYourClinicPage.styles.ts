@@ -22,7 +22,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   workspaceContainer: {
-    minWidth: "80vw",
+    minWidth: "60vw",
     transition: "max-width 0.3s ease",
     display: "flex",
     flexDirection: "column",

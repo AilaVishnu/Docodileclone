@@ -1,13 +1,21 @@
 import React from "react";
 import { LoginCard } from "../../components/LoginCard";
 import { styles } from "./LoginPage.styles";
-import { colors } from "../../styles/theme";
+import StaffBg from "../../assets/staff-illo.svg";
 
 
 export function StaffLoginPage() {
   return (
-    <div style={{...styles.page, backgroundColor: colors.primary300}}>
-      <LoginCard mode={"staff"}/>
+    <div
+      style={{
+        ...styles.page,
+        backgroundImage: `url(${StaffBg})`,
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+        backgroundSize: "cover",
+      }}
+    >
+      <LoginCard mode="staff" />
     </div>
   );
 }
