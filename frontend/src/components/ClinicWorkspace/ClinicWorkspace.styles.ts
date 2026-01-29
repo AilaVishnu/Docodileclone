@@ -5,13 +5,13 @@ export const styles: Record<string, CSSProperties> = {
   container: {
     width: "100%",
     minHeight: "56vh",
-    border: `1px solid ${colors.blindBlack}`,
+    border: `0px solid ${colors.blindBlack}`,
     borderRadius: `0 ${radii.primary}px ${radii.primary}px ${radii.primary}px`,
     display: "flex",
     padding: spacing.xxl,
     gap: spacing.xl,
     boxSizing: "border-box",
-    backgroundColor: "transparent",
+    backgroundColor: colors.primary200,
   },
 
   leftPanel: {

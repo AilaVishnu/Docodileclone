@@ -12,6 +12,7 @@ export function StaffDetailsCard() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [gender, setGender] = useState<"male" | "female" | "other" | "">("");
 
   return (
     <Card style={styles.card}>
@@ -36,6 +37,45 @@ export function StaffDetailsCard() {
         placeholder="+91 98885672664"
         iconLeft={<PhoneIcon />}
       />
+
+      <div style={styles.genderGroup}>
+        <label style={styles.radioLabel}>
+          <input
+            type="radio"
+            name="gender"
+            value="male"
+            checked={gender === "male"}
+            onChange={() => setGender("male")}
+            style={styles.radioInput}
+          />
+          Male
+        </label>
+
+        <label style={styles.radioLabel}>
+          <input
+            type="radio"
+            name="gender"
+            value="female"
+            checked={gender === "female"}
+            onChange={() => setGender("female")}
+            style={styles.radioInput}
+          />
+          Female
+        </label>
+
+        <label style={styles.radioLabel}>
+          <input
+            type="radio"
+            name="gender"
+            value="other"
+            checked={gender === "other"}
+            onChange={() => setGender("other")}
+            style={styles.radioInput}
+          />
+          Other
+        </label>
+      </div>
+
     </Card>
   );
 }

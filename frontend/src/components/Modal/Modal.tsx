@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { styles } from "./Modal.styles";
 
 type ModalProps = {
@@ -10,14 +11,15 @@ type ModalProps = {
 export function Modal({ isOpen, onClose, children }: ModalProps) {
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div style={styles.overlay} onClick={onClose}>
       <div
         style={styles.content}
-        onClick={(e) => e.stopPropagation()} // prevent close on content click
+        onClick={(e) => e.stopPropagation()}
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

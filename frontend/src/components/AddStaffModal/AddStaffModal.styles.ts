@@ -1,10 +1,52 @@
 import { CSSProperties } from "react";
+import { colors, spacing, radii, fonts } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.l,
+  },
+
+  title: {
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h4,
+    fontWeight: fonts.weight.regular,
+    margin: 0,
+    color: colors.blindBlack,
+  },
+
+  closeButton: {
+    background: "none",
+    border: "none",
+    fontSize: 18,
+    cursor: "pointer",
+    color: colors.blindBlack,
+  },
+
+  topSection: {
+    display: "flex",
+    gap: spacing.l,
+    marginBottom: spacing.l,
+    alignItems: "stretch",
+  },
+
+  illustrationWrapper: {
+    width: 220,
+    height: 250,
+    borderRadius: radii.m,
+    backgroundColor: colors.primary800,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: spacing.m,
+  },
+
   footer: {
-    marginTop: 24,
+    marginTop: spacing.l,
     display: "flex",
     justifyContent: "flex-end",
-    gap: 12,
+    gap: spacing.m,
   },
 };

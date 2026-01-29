@@ -10,9 +10,9 @@ export const styles: Record<string, CSSProperties> = {
   tab: {
     padding: "12px 36px",
     borderRadius: `${radii.primary}px ${radii.primary}px 0 0`,
-    border: `1px solid ${colors.blindBlack}`,
+    border: `0px solid ${colors.blindBlack}`,
     borderBottom: "none",
-    backgroundColor: colors.yellowTeeth,
+    backgroundColor: colors.secondary100,
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.m,
     cursor: "pointer",
@@ -20,7 +20,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   activeTab: {
-    backgroundColor: colors.yellowTeeth,
+    backgroundColor: colors.primary200,
     borderBottom: "none",
     top: 1,
     zIndex: 2,

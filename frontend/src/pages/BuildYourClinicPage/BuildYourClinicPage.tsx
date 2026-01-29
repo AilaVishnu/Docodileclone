@@ -77,7 +77,7 @@ export function BuildYourClinicPage() {
             Help
           </Button>
 
-          <Button size="md" variant="primary" iconRight={<NextIcon />}>
+          <Button size="md" variant="dark" iconRight={<NextIcon />}>
             Next
           </Button>
         </div>

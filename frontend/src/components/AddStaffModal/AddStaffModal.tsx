@@ -3,6 +3,9 @@ import { Modal } from "../Modal";
 import { StaffDetailsCard } from "../StaffDetailsCard";
 import { Button } from "../Button";
 import { styles } from "./AddStaffModal.styles";
+import { AdditionalStaffDetailsCard } from "../AdditionalStaffDetailsCard";
+import { ReactComponent as StaffIllustration } from "../../assets/Doctor Img.svg";
+
 
 type AddStaffModalProps = {
   isOpen: boolean;
@@ -17,17 +20,38 @@ export function AddStaffModal({
 }: AddStaffModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
-      <StaffDetailsCard />
+    {/* Header */}
+    <div style={styles.header}>
+      <h3 style={styles.title}>Add staff member</h3>
 
-      <div style={styles.footer}>
-        <Button variant="light" size="sm" onClick={onClose}>
-          Cancel
-        </Button>
+      <button style={styles.closeButton} onClick={onClose}>
+        ✕
+      </button>
+    </div>
 
-        <Button variant="dark" size="sm" onClick={onSave}>
-          Save
-        </Button>
+    {/* Top section: Illustration + Staff details */}
+    <div style={styles.topSection}>
+      <div style={styles.illustrationWrapper}>
+        <StaffIllustration />
       </div>
-    </Modal>
+
+      <StaffDetailsCard />
+    </div>
+
+    {/* Bottom section */}
+    <AdditionalStaffDetailsCard />
+
+    {/* Footer */}
+    <div style={styles.footer}>
+      <Button variant="light" size="sm" onClick={onClose}>
+        Cancel
+      </Button>
+
+      <Button variant="dark" size="sm" onClick={onSave}>
+        Save
+      </Button>
+    </div>
+  </Modal>
+
   );
 }
