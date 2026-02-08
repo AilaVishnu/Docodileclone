@@ -7,7 +7,7 @@ export const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     gap: "10px",
     borderRadius: radii.m,
-    padding: spacing.xl,
+    padding: spacing.l,
     backgroundColor: colors.primary100,
     minWidth: "25vw",
   },

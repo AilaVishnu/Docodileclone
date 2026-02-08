@@ -8,11 +8,27 @@ import { ReactComponent as UserIcon } from "../../assets/User Hands.svg";
 import { ReactComponent as MailIcon } from "../../assets/Letter.svg";
 import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
 
-export function StaffDetailsCard() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [gender, setGender] = useState<"male" | "female" | "other" | "">("");
+type StaffDetailsCardProps = {
+  name: string;
+  setName: (val: string) => void;
+  email: string;
+  setEmail: (val: string) => void;
+  phone: string;
+  setPhone: (val: string) => void;
+  gender: "male" | "female" | "other" | "";
+  setGender: (val: "male" | "female" | "other" | "") => void;
+};
+
+export function StaffDetailsCard({
+  name,
+  setName,
+  email,
+  setEmail,
+  phone,
+  setPhone,
+  gender,
+  setGender,
+}: StaffDetailsCardProps) {
 
   return (
     <Card style={styles.card}>

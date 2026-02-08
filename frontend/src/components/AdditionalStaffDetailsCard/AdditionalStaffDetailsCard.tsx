@@ -24,10 +24,23 @@ const SPECIALITIES = [
   "Pediatrics",
 ];
 
-export function AdditionalStaffDetailsCard() {
-  const [role, setRole] = useState<string>("Doctor");
-  const [speciality, setSpeciality] = useState("");
-  const [registrationNo, setRegistrationNo] = useState("");
+type AdditionalStaffDetailsCardProps = {
+  role: string;
+  setRole: (val: string) => void;
+  speciality: string;
+  setSpeciality: (val: string) => void;
+  registrationNo: string;
+  setRegistrationNo: (val: string) => void;
+};
+
+export function AdditionalStaffDetailsCard({
+  role,
+  setRole,
+  speciality,
+  setSpeciality,
+  registrationNo,
+  setRegistrationNo,
+}: AdditionalStaffDetailsCardProps) {
 
   return (
     <Card style={styles.card}>
@@ -60,22 +73,22 @@ export function AdditionalStaffDetailsCard() {
         <div style={styles.label}>Speciality</div>
 
         <div style={styles.fieldRow}>
-            <StethoIcon />
+          <StethoIcon />
 
-            <select
+          <select
             value={speciality}
             onChange={(e) => setSpeciality(e.target.value)}
             style={styles.select}
-            >
+          >
             <option value="" disabled>
-                Choose Speciality
+              Choose Speciality
             </option>
             {SPECIALITIES.map((s) => (
-                <option key={s} value={s}>
+              <option key={s} value={s}>
                 {s}
-                </option>
+              </option>
             ))}
-            </select>
+          </select>
         </div>
       </div>
 
@@ -85,16 +98,16 @@ export function AdditionalStaffDetailsCard() {
         <div style={styles.label}>Reg. No.</div>
 
         <TextInput
-            value={registrationNo}
-            onChange={setRegistrationNo}
-            placeholder="ABCDEF"
-            iconLeft={<RegIcon />}
+          value={registrationNo}
+          onChange={setRegistrationNo}
+          placeholder="ABCDEF"
+          iconLeft={<RegIcon />}
         />
 
         <div style={styles.hint}>
-            Enter registration number issued by authority
+          Enter registration number issued by authority
         </div>
-        </div>
+      </div>
 
     </Card>
   );

@@ -8,6 +8,19 @@ import { ClinicInfoCard } from "../../components/ClinicInfoCard";
 import { ReactComponent as NextIcon } from "../../assets/Arrow Right.svg";
 import { ReactComponent as HelpIcon } from "../../assets/Help.svg";
 import { ReactComponent as PlusIcon } from "../../assets/Plus.svg";
+import { ReactComponent as ClinicRoof } from "../../assets/clinic roof.svg";
+import { ReactComponent as DefaultAvatar } from "../../assets/Doctor Img.svg";
+
+type Staff = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  gender: "male" | "female" | "other" | "";
+  role: string;
+  speciality: string;
+  registrationNo: string;
+};
 
 export function BuildYourClinicPage() {
   const [clinics, setClinics] = useState<Clinic[]>([
@@ -15,8 +28,9 @@ export function BuildYourClinicPage() {
   ]);
 
   const [activeClinicId, setActiveClinicId] = useState(clinics[0].id);
-
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
+  const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [editingStaff, setEditingStaff] = useState<Staff | undefined>(undefined);
 
   const handleAddClinic = () => {
     const newClinic: Clinic = {
@@ -29,10 +43,39 @@ export function BuildYourClinicPage() {
     setActiveClinicId(newClinic.id);
   };
 
+  const handleOpenAddStaff = () => {
+    setEditingStaff(undefined);
+    setIsAddStaffOpen(true);
+  };
+
+  const handleEditStaff = (staff: Staff) => {
+    setEditingStaff(staff);
+    setIsAddStaffOpen(true);
+  };
+
+  const handleSaveStaff = (data: Omit<Staff, "id">) => {
+    if (editingStaff) {
+      // Update existing
+      setStaffList(staffList.map(s =>
+        s.id === editingStaff.id
+          ? { ...data, id: editingStaff.id }
+          : s
+      ));
+    } else {
+      // Create new
+      const newStaff: Staff = {
+        ...data,
+        id: String(Date.now()),
+      };
+      setStaffList([...staffList, newStaff]);
+    }
+    setIsAddStaffOpen(false);
+  };
+
   return (
     <div style={styles.page}>
       {/* Page title */}
-      <h2 style={{...styles.title, marginBottom: 32}}>Build your Clinic</h2>
+      <h2 style={{ ...styles.title, marginBottom: 32 }}>Build your Clinic</h2>
 
       {/* Clinic tabs */}
       <div style={styles.workspaceContainer}>
@@ -50,14 +93,35 @@ export function BuildYourClinicPage() {
           }
           right={
             <div style={styles.rightContainer}>
-              <Button
-                size="sm"
-                variant="dark"
-                iconLeft={<PlusIcon />}
-                onClick={() => setIsAddStaffOpen(true)}
-              >
-                Add Staff
-              </Button>
+              <div style={styles.houseContainer}>
+                {/* Roof */}
+                <ClinicRoof style={styles.roofImage} />
+
+                {/* House Body */}
+                <div style={styles.houseBody}>
+                  <div style={styles.staffList}>
+                    {staffList.map((staff) => (
+                      <div
+                        key={staff.id}
+                        style={styles.staffCard}
+                        onClick={() => handleEditStaff(staff)}
+                      >
+                        <DefaultAvatar style={styles.staffImage} />
+                        <div style={styles.staffName}>{staff.name}</div>
+                        <div style={styles.staffRole}>{staff.role}</div>
+                      </div>
+                    ))}
+
+                    {/* Add Staff Button Card */}
+                    <div
+                      style={styles.addStaffCard}
+                      onClick={handleOpenAddStaff}
+                    >
+                      <PlusIcon style={{ width: 40, height: 40, color: "white" }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           }
         />
@@ -65,10 +129,8 @@ export function BuildYourClinicPage() {
         <AddStaffModal
           isOpen={isAddStaffOpen}
           onClose={() => setIsAddStaffOpen(false)}
-          onSave={() => {
-            // later: collect & persist staff data
-            setIsAddStaffOpen(false);
-          }}
+          onSave={handleSaveStaff}
+          initialData={editingStaff}
         />
 
         {/* Footer actions */}

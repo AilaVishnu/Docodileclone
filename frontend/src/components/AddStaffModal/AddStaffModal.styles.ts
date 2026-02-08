@@ -34,13 +34,14 @@ export const styles: Record<string, CSSProperties> = {
 
   illustrationWrapper: {
     width: 220,
-    height: 250,
+    height: 220,
     borderRadius: radii.m,
     backgroundColor: colors.primary800,
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-end",
     justifyContent: "center",
     padding: spacing.m,
+    paddingBottom: 0,
   },
 
   footer: {

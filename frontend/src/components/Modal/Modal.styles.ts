@@ -18,5 +18,7 @@ export const styles: Record<string, CSSProperties> = {
     padding: 32,
     minWidth: 420,
     maxWidth: "90vw",
+    maxHeight: "90vh",
+    overflowY: "auto",
   },
 };
