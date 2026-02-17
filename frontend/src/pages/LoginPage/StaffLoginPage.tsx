@@ -3,8 +3,11 @@ import { LoginCard } from "../../components/LoginCard";
 import { styles } from "./LoginPage.styles";
 import StaffBg from "../../assets/staff-illo.svg";
 
+type StaffLoginPageProps = {
+  onLoginSuccess?: () => void;
+};
 
-export function StaffLoginPage() {
+export function StaffLoginPage({ onLoginSuccess }: StaffLoginPageProps) {
   return (
     <div
       style={{
@@ -15,7 +18,7 @@ export function StaffLoginPage() {
         backgroundSize: "cover",
       }}
     >
-      <LoginCard mode="staff" />
+      <LoginCard mode="staff" onLoginSuccess={onLoginSuccess} />
     </div>
   );
 }

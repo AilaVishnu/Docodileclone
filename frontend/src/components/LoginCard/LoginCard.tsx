@@ -15,15 +15,58 @@ type LoginMode = "admin" | "staff";
 
 type LoginCardProps = {
   mode: LoginMode;
+  onLoginSuccess?: () => void;
 };
 
-export function LoginCard({ mode }: LoginCardProps) {
+type LoginResponse = {
+  token: string;
+  role: string;
+  clinicId: string;
+};
+
+export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
   const [domain, setDomain] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isStaff = mode === "staff";
+  const canSubmit = email.trim().length > 0 && password.trim().length > 0;
+
+  const handleLogin = async () => {
+    if (!canSubmit) {
+      setError("Please enter email and password.");
+      return;
+    }
+
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("http://localhost:8080/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Invalid credentials");
+      }
+
+      const data = (await response.json()) as LoginResponse;
+      localStorage.setItem("docodile_token", data.token);
+      localStorage.setItem("docodile_role", data.role);
+      localStorage.setItem("docodile_clinic_id", data.clinicId);
+
+      onLoginSuccess?.();
+    } catch (err) {
+      setError("Login failed. Please check your credentials.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <Card style={{ ...styles.card, width: "40vw", backgroundColor: isStaff ? colors.primary100 : colors.secondary50 }}>
@@ -72,9 +115,17 @@ export function LoginCard({ mode }: LoginCardProps) {
       <Button
         variant={isStaff ? "primary" : "secondary"}
         size="md"
+        onClick={handleLogin}
+        disabled={isSubmitting || !canSubmit}
       >
-        Sign in
+        {isSubmitting ? "Signing in..." : "Sign in"}
       </Button>
+
+      {error && (
+        <p style={{ marginTop: 12, color: colors.red200 }}>
+          {error}
+        </p>
+      )}
 
       {/* Footer */}
       <div style={styles.footer}>
