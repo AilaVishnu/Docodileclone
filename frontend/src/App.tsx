@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import "./styles/globals.css";
-import { AdminLoginPage } from './pages/LoginPage';
-import { BuildYourClinicPage } from './pages/BuildYourClinicPage';
+import { AdminLoginPage, StaffLoginPage } from './pages/LoginPage';
+import { HomePage } from './pages/Home';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -10,9 +10,9 @@ function App() {
     <div className="App">
       <header className="App-header">
         {isLoggedIn ? (
-          <BuildYourClinicPage />
+          <HomePage />
         ) : (
-          <AdminLoginPage onLoginSuccess={() => setIsLoggedIn(true)} />
+          <StaffLoginPage onLoginSuccess={() => setIsLoggedIn(true)} />
         )}
       </header>
     </div>

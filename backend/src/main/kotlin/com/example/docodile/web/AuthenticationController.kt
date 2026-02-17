@@ -1,6 +1,7 @@
 package com.example.docodile.web
 
 import com.example.docodile.service.AuthService
+import com.example.docodile.web.StaffLoginRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.authentication.BadCredentialsException
@@ -16,6 +17,11 @@ class AuthenticationController(private val authService: AuthService) {
     @PostMapping("/login")
     fun login(@RequestBody request: LoginRequest): ResponseEntity<LoginResponse> {
         return ResponseEntity.ok(authService.login(request))
+    }
+
+    @PostMapping("/staff/login")
+    fun staffLogin(@RequestBody request: StaffLoginRequest): ResponseEntity<LoginResponse> {
+        return ResponseEntity.ok(authService.loginStaff(request))
     }
 
     @ExceptionHandler(BadCredentialsException::class)

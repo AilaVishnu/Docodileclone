@@ -22,6 +22,7 @@ type LoginResponse = {
   token: string;
   role: string;
   clinicId: string;
+  clinicName?: string;
 };
 
 export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
@@ -33,11 +34,17 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isStaff = mode === "staff";
-  const canSubmit = email.trim().length > 0 && password.trim().length > 0;
+  const isDomainValid = !isStaff || domain.trim().length > 0;
+  const canSubmit = email.trim().length > 0 && password.trim().length > 0 && isDomainValid;
 
   const handleLogin = async () => {
-    if (!canSubmit) {
+    if (!email.trim() || !password.trim()) {
       setError("Please enter email and password.");
+      return;
+    }
+
+    if (isStaff && !domain.trim()) {
+      setError("Please enter clinic domain.");
       return;
     }
 
@@ -45,10 +52,15 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("http://localhost:8080/auth/login", {
+      const url = isStaff ? "http://localhost:8080/auth/staff/login" : "http://localhost:8080/auth/login";
+      const body = isStaff
+        ? { domain: domain.trim(), email, password }
+        : { email, password };
+
+      const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -59,6 +71,9 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
       localStorage.setItem("docodile_token", data.token);
       localStorage.setItem("docodile_role", data.role);
       localStorage.setItem("docodile_clinic_id", data.clinicId);
+      if (data.clinicName) {
+        localStorage.setItem("docodile_clinic_name", data.clinicName);
+      }
 
       onLoginSuccess?.();
     } catch (err) {

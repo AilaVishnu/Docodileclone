@@ -20,6 +20,8 @@ class ClinicEntity(
 
     var phone: String? = null,
 
+    var domain: String? = null,
+
     @Column(name = "created_at")
     var createdAt: Instant? = null
 )

@@ -8,8 +8,15 @@ data class LoginRequest(
     val password: String
 )
 
+data class StaffLoginRequest(
+    val domain: String,
+    val email: String,
+    val password: String
+)
+
 data class LoginResponse(
     val token: String,
     val role: String,
-    val clinicId: UUID
+    val clinicId: UUID,
+    val clinicName: String
 )

@@ -38,7 +38,7 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
             .httpBasic { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
-                it.requestMatchers("/auth/login").permitAll()
+                it.requestMatchers("/auth/login", "/auth/staff/login").permitAll()
                     .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                     .anyRequest().authenticated()
             }
