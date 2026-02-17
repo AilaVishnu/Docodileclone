@@ -18,8 +18,7 @@ A **multi-tenant Electronic Medical Records (EMR) and Clinic Operations platform
 
 **Database**
 
-* PostgreSQL (schema-per-tenant) – production
-* H2 (in-memory) – local development
+* PostgreSQL (Docker, local)
 
 **DevOps**
 
@@ -50,7 +49,7 @@ Must have the following installed:
 * Git
 * Node.js (LTS)
 * **Java 17 (Temurin / OpenJDK)**
-* Docker & Docker Compose (optional for now)
+* Docker & Docker Compose
 * VS Code (recommended)
 
 ---
@@ -81,6 +80,53 @@ Do **not** use Java 21+ or non-LTS versions for this project.
 
 ---
 
+## Dev Setup (Local)
+
+### 1) Install Docker
+
+Use the official Docker Desktop installers:
+
+* Windows: [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/)
+* macOS: [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/)
+* Linux: [Docker Desktop for Linux](https://docs.docker.com/desktop/setup/install/linux/)
+
+### 2) Verify Docker is running
+
+```bash
+docker version
+docker compose version
+```
+
+### 3) Start PostgreSQL from docker-compose
+
+```bash
+docker compose up -d
+```
+
+This uses `docker-compose.yml` at the repo root and exposes Postgres locally.
+
+### 4) Start backend
+
+```bash
+cd backend
+./gradlew clean bootRun
+```
+
+* Runs at: **[http://localhost:8080](http://localhost:8080)**
+* Flyway migrations run on startup
+
+### 5) Start frontend
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+* Runs at: **[http://localhost:3000](http://localhost:3000)** or **[http://localhost:3001](http://localhost:3001)**
+
+---
+
 ## Backend – Local Development
 
 ```bash
@@ -89,8 +135,8 @@ cd backend
 ```
 
 * Runs at: **[http://localhost:8080](http://localhost:8080)**
-* Uses **H2 in-memory database**
-* No Postgres or Docker required initially
+* Uses **PostgreSQL (Docker)**
+* Flyway manages schema migrations
 
 If startup fails:
 
@@ -112,27 +158,20 @@ npm install
 npm start
 ```
 
-* Runs at: **[http://localhost:3000](http://localhost:3000)**
-* API integration will be added incrementally
+* Runs at: **[http://localhost:3000](http://localhost:3000)** or **[http://localhost:3001](http://localhost:3001)**
 
 ---
 
 ## Security (Development Mode)
 
-* Spring Security runs in default **development mode**
-* A generated password may appear in logs
-* This will be replaced with JWT-based authentication later
+* JWT-based authentication is enabled
 
 ---
 
 ## Multi-Tenancy Strategy (MVP)
 
 * **Single PostgreSQL database**
-* **One schema per clinic (tenant)**
-* No `tenant_id` columns
-* Strong isolation with minimal operational overhead
-
-Local development uses a single schema.
+* **Tenant isolation via clinic_id**
 
 ---
 
@@ -162,10 +201,8 @@ Local development uses a single schema.
 
 ## Notes for Developers
 
-1. Get the **backend running first**
-2. Then start the frontend
-3. Ignore Postgres/Docker until explicitly required
-4. Ask before making architectural changes
+1. Start **Postgres** first using Docker
+2. Start **backend**, then **frontend**
 
 ---
 
