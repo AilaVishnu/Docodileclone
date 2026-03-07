@@ -21,7 +21,7 @@ type LoginCardProps = {
 type LoginResponse = {
   token: string;
   role: string;
-  clinicId: string;
+  clinicId?: string | null;
   clinicName?: string;
 };
 
@@ -70,7 +70,11 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
       const data = (await response.json()) as LoginResponse;
       localStorage.setItem("docodile_token", data.token);
       localStorage.setItem("docodile_role", data.role);
-      localStorage.setItem("docodile_clinic_id", data.clinicId);
+      if (data.clinicId) {
+        localStorage.setItem("docodile_clinic_id", data.clinicId);
+      } else {
+        localStorage.removeItem("docodile_clinic_id");
+      }
       if (data.clinicName) {
         localStorage.setItem("docodile_clinic_name", data.clinicName);
       }

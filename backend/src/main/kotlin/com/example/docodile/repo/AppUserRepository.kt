@@ -7,5 +7,4 @@ import java.util.UUID
 
 interface AppUserRepository : JpaRepository<AppUser, UUID> {
     fun findByEmail(email: String): Optional<AppUser>
-    fun findByEmailAndClinicId(email: String, clinicId: UUID): Optional<AppUser>
 }

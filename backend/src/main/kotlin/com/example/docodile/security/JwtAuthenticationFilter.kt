@@ -35,13 +35,15 @@ class JwtAuthenticationFilter(
         val email = claims["email"] as? String ?: ""
         val role = claims["role"] as? String
         val userId = (claims["user_id"] as? String)?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+        val tenantId = (claims["tenant_id"] as? String)?.let { runCatching { UUID.fromString(it) }.getOrNull() }
         val clinicId = (claims["clinic_id"] as? String)?.let { runCatching { UUID.fromString(it) }.getOrNull() }
 
-        if (role != null && userId != null && clinicId != null
+        if (role != null && userId != null && tenantId != null
             && SecurityContextHolder.getContext().authentication == null
         ) {
             val principal = AppUserPrincipal(
                 userId = userId,
+                tenantId = tenantId,
                 clinicId = clinicId,
                 role = role,
                 email = email,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { AddStaffModal } from "../../components/AddStaffModal";
 import { ClinicTabs, Clinic } from "../../components/ClinicTabs";
 import { styles } from "./BuildYourClinicPage.styles";
@@ -23,6 +23,10 @@ type Staff = {
 };
 
 export function BuildYourClinicPage() {
+  useEffect(() => {
+    document.title = "Docodile | Build Your Clinic";
+  }, []);
+
   const [clinics, setClinics] = useState<Clinic[]>([
     { id: "1", name: "Your Clinic", location: "Add Clinic Address" }
   ]);

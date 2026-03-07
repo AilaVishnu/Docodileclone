@@ -12,11 +12,12 @@ class AppUserDetailsService(private val appUserRepository: AppUserRepository) : 
         val user = appUserRepository.findByEmail(username)
             .orElseThrow { UsernameNotFoundException("User not found") }
 
-        val clinicId = user.clinic?.id ?: throw UsernameNotFoundException("Clinic not found")
+        val tenantId = user.tenant?.id ?: throw UsernameNotFoundException("Tenant not found")
 
         return AppUserPrincipal(
             userId = user.id,
-            clinicId = clinicId,
+            tenantId = tenantId,
+            clinicId = null,
             role = user.role.name,
             email = user.email,
             passwordHash = user.passwordHash,

@@ -11,9 +11,19 @@ class CurrentUser {
         return principal?.userId ?: throw IllegalStateException("Missing user")
     }
 
+    fun tenantId(): UUID {
+        val principal = SecurityContextHolder.getContext().authentication?.principal as? AppUserPrincipal
+        return principal?.tenantId ?: throw IllegalStateException("Missing tenant")
+    }
+
     fun clinicId(): UUID {
         val principal = SecurityContextHolder.getContext().authentication?.principal as? AppUserPrincipal
         return principal?.clinicId ?: throw IllegalStateException("Missing clinic")
+    }
+
+    fun clinicIdOrNull(): UUID? {
+        val principal = SecurityContextHolder.getContext().authentication?.principal as? AppUserPrincipal
+        return principal?.clinicId
     }
 
     fun role(): String {

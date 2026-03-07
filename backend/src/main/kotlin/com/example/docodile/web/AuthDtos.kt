@@ -17,6 +17,6 @@ data class StaffLoginRequest(
 data class LoginResponse(
     val token: String,
     val role: String,
-    val clinicId: UUID,
+    val clinicId: UUID?,
     val clinicName: String
 )

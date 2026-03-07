@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { LoginCard } from "../../components/LoginCard";
 import { styles } from "./LoginPage.styles";
 import StaffBg from "../../assets/staff-illo.svg";
@@ -8,6 +8,10 @@ type StaffLoginPageProps = {
 };
 
 export function StaffLoginPage({ onLoginSuccess }: StaffLoginPageProps) {
+  useEffect(() => {
+    document.title = "Docodile | Login";
+  }, []);
+
   return (
     <div
       style={{
