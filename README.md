@@ -33,10 +33,10 @@ A **multi-tenant Electronic Medical Records (EMR) and Clinic Operations platform
 docodile/
  ├── frontend/          # React (CRA) app
  ├── backend/           # Kotlin Spring Boot app
+ │    └── docker-compose.yml # Local Postgres for backend
  ├── db/                # Flyway migrations (Postgres)
  ├── docker/            # Docker files (future use)
  ├── .github/workflows/ # CI pipelines
- ├── docker-compose.yml
  └── README.md
 ```
 
@@ -100,10 +100,11 @@ docker compose version
 ### 3) Start PostgreSQL from docker-compose
 
 ```bash
-docker compose up -d
+cd backend
+docker compose -f docker-compose.yml up -d
 ```
 
-This uses `docker-compose.yml` at the repo root and exposes Postgres locally.
+This uses `backend/docker-compose.yml` and exposes Postgres locally.
 
 ### 4) Start backend
 
