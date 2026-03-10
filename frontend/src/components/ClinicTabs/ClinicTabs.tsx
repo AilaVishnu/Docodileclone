@@ -1,10 +1,25 @@
 import React from "react";
 import { styles } from "./ClinicTabs.styles";
 
+export type Staff = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  gender: "male" | "female" | "other" | "";
+  role: string;
+  speciality: string;
+  registrationNo: string;
+};
+
 export type Clinic = {
   id: string;
   name: string;
-  location: string;
+  domain: string;
+  phone: string;
+  address: string;
+  specialties: string[];
+  staff: Staff[];
 };
 
 type ClinicTabsProps = {

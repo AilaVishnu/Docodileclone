@@ -10,6 +10,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: spacing.xl,
+    position: "relative",
   },
 
   title: {
@@ -47,5 +48,21 @@ export const styles: Record<string, CSSProperties> = {
     color: "#122525",
     margin: 0,
     cursor: "pointer",
+  },
+
+  supportPopup: {
+    position: "absolute",
+    bottom: -50,
+    left: "50%",
+    transform: "translateX(-50%)",
+    padding: "10px 20px",
+    borderRadius: radii.m,
+    fontSize: fonts.size.s,
+    fontFamily: fonts.family.primary,
+    fontWeight: fonts.weight.medium,
+    zIndex: 10,
+    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+    whiteSpace: "nowrap",
+    transition: "all 0.3s ease",
   },
 };

@@ -47,7 +47,7 @@ function App() {
           <AdminLoginPage onLoginSuccess={handleLoginSuccess} />
         )}
         {view === "build" && <BuildYourClinicPage />}
-        {view === "home" && <HomePage />}
+        {view === "home" && <BuildYourClinicPage />}
       </header>
     </div>
   );

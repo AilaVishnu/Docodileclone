@@ -8,6 +8,7 @@ type TextInputProps = {
   iconLeft?: React.ReactNode;
   iconRight?: React.ReactNode;
   type?: "text" | "password" | "email";
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 };
 
 export function TextInput({
@@ -17,6 +18,7 @@ export function TextInput({
   iconLeft,
   iconRight,
   type = "text",
+  onKeyDown,
 }: TextInputProps) {
   return (
     <div style={styles.container}>
@@ -26,6 +28,7 @@ export function TextInput({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
         style={styles.input}
       />

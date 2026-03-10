@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, KeyboardEvent } from "react";
 import { styles } from "./LoginCard.styles";
 import { TextInput } from "../Input/TextInput";
 import { DomainInput } from "../Input/DomainInput";
@@ -32,7 +32,21 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
 
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (showPopup) {
+      timer = setTimeout(() => {
+        setShowPopup(false);
+      }, 5000);
+    }
+    return () => clearTimeout(timer);
+  }, [showPopup]);
+
+  const showHelpPopup = () => {
+    setShowPopup(true);
+  };
   const isStaff = mode === "staff";
   const isDomainValid = !isStaff || domain.trim().length > 0;
   const canSubmit = email.trim().length > 0 && password.trim().length > 0 && isDomainValid;
@@ -87,6 +101,12 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && canSubmit && !isSubmitting) {
+      handleLogin();
+    }
+  };
+
   return (
     <Card style={{ ...styles.card, width: "40vw", backgroundColor: isStaff ? colors.primary100 : colors.secondary50 }}>
       <h4 style={styles.title}>
@@ -98,6 +118,7 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
         <DomainInput
           value={domain}
           onChange={setDomain}
+          onKeyDown={handleKeyDown}
         />
       )}
 
@@ -108,6 +129,7 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
         onChange={setEmail}
         placeholder="hello@example.com"
         iconLeft={<MailIcon />}
+        onKeyDown={handleKeyDown}
       />
 
       {/* Password */}
@@ -118,6 +140,7 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
           onChange={setPassword}
           placeholder="Enter your password"
           iconLeft={<PasswordIcon />}
+          onKeyDown={handleKeyDown}
           iconRight={<button
             type="button"
             onClick={() => setShowPassword((p) => !p)}
@@ -127,7 +150,7 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
           </button>}
         />
 
-        
+
       </div>
 
       {/* Sign in */}
@@ -148,14 +171,24 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
 
       {/* Footer */}
       <div style={styles.footer}>
-        <p style={styles.footerText}>
+        <p style={styles.footerText} onClick={showHelpPopup}>
           New to docodile? <strong>Book Demo</strong>
         </p>
 
-        <p style={styles.footerText}>
+        <p style={styles.footerText} onClick={showHelpPopup}>
           <strong>Forgot Password</strong>
         </p>
       </div>
+
+      {showPopup && (
+        <div style={{
+          ...styles.supportPopup,
+          backgroundColor: isStaff ? colors.primary700 : colors.secondary700,
+          color: colors.neutral100,
+        }}>
+          Contact Docodile Support Team
+        </div>
+      )}
     </Card>
   );
 }

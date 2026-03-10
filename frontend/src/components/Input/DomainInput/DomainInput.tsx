@@ -6,6 +6,7 @@ type DomainInputProps = {
   onChange: (value: string) => void;
   placeholder?: string;
   suffix?: string;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 };
 
 export function DomainInput({
@@ -13,6 +14,7 @@ export function DomainInput({
   onChange,
   placeholder = "your-clinic-domain",
   suffix = ".docodile.app",
+  onKeyDown,
 }: DomainInputProps) {
   return (
     <div style={styles.container}>
@@ -20,6 +22,7 @@ export function DomainInput({
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
         style={styles.input}
       />
