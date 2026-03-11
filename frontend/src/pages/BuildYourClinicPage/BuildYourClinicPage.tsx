@@ -5,11 +5,11 @@ import { styles } from "./BuildYourClinicPage.styles";
 import { ClinicWorkspace } from "../../components/ClinicWorkspace";
 import { Button } from "../../components/Button";
 import { ClinicInfoCard } from "../../components/ClinicInfoCard";
+import { StaffIllustration } from "../../components/AddStaffModal/StaffIllustration";
 import { ReactComponent as NextIcon } from "../../assets/Arrow Right.svg";
 import { ReactComponent as HelpIcon } from "../../assets/Help.svg";
 import { ReactComponent as PlusIcon } from "../../assets/Plus.svg";
 import { ReactComponent as ClinicRoof } from "../../assets/clinic roof.svg";
-import { ReactComponent as DefaultAvatar } from "../../assets/Doctor Img.svg";
 
 export function BuildYourClinicPage() {
   useEffect(() => {
@@ -105,36 +105,37 @@ export function BuildYourClinicPage() {
                 {/* Roof */}
                 <ClinicRoof style={styles.roofImage} />
 
-                {/* House Body — avatar arches only */}
+                {/* House Body — grouped arches and labels */}
                 <div style={styles.houseBody}>
                   <div style={styles.staffList}>
                     {activeClinic.staff.map((staff: Staff) => (
-                      <div
-                        key={staff.id}
-                        style={styles.staffCard}
-                        onClick={() => handleEditStaff(staff)}
-                      >
-                        <DefaultAvatar style={styles.staffImage} />
+                      <div key={staff.id} style={styles.staffCardWrapper}>
+                        <div
+                          style={styles.staffCard}
+                          onClick={() => handleEditStaff(staff)}
+                        >
+                          <StaffIllustration
+                            role={staff.role}
+                            gender={staff.gender}
+                            width="100%"
+                            height="100%"
+                            borderRadius="60px 60px 0 0"
+                          />
+                        </div>
+                        <div style={styles.staffName}>{staff.name}</div>
+                        <div style={styles.staffRole}>{staff.role}</div>
                       </div>
                     ))}
 
                     {/* Add Staff arch */}
-                    <div style={styles.addStaffCard} onClick={handleOpenAddStaff}>
-                      <PlusIcon style={{ width: 32, height: 32 }} />
+                    <div style={styles.staffCardWrapper}>
+                      <div style={styles.addStaffCard} onClick={handleOpenAddStaff}>
+                        <PlusIcon style={{ width: 32, height: 32 }} />
+                      </div>
+                      <div style={styles.staffName}>&nbsp;</div>
+                      <div style={styles.staffRole}>&nbsp;</div>
                     </div>
                   </div>
-                </div>
-
-                {/* Labels row — below the house body, same background */}
-                <div style={styles.staffLabelsRow}>
-                  {activeClinic.staff.map((staff: Staff) => (
-                    <div key={staff.id} style={styles.staffLabelWrapper}>
-                      <div style={styles.staffName}>{staff.name}</div>
-                      <div style={styles.staffRole}>{staff.role}</div>
-                    </div>
-                  ))}
-                  {/* Spacer for add card column */}
-                  <div style={styles.staffLabelWrapper} />
                 </div>
               </div>
             </div>

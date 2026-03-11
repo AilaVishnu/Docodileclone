@@ -32,18 +32,6 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "stretch",
   },
 
-  illustrationWrapper: {
-    width: 220,
-    height: 220,
-    borderRadius: radii.m,
-    backgroundColor: colors.primary800,
-    display: "flex",
-    alignItems: "flex-end",
-    justifyContent: "center",
-    padding: spacing.m,
-    paddingBottom: 0,
-  },
-
   footer: {
     marginTop: spacing.l,
     display: "flex",
