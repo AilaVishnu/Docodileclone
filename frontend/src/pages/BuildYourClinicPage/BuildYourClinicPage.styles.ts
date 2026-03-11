@@ -66,32 +66,30 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: colors.primary400,
     width: "100%",
     padding: `${spacing.l} ${spacing.xl}`,
-    paddingBottom: 0,
+    paddingBottom: spacing.xl,
     boxSizing: "border-box" as const,
     display: "flex",
-    justifyContent: "center",
-    minHeight: 100,
-    alignItems: "flex-end",
+    flexDirection: "column" as const,
+    minHeight: 140,
     marginTop: -2, // Pull the body up to overlap
     position: "relative" as const,
     zIndex: 1,
   },
 
   staffList: {
-    display: "flex",
-    gap: 15,
-    overflowX: "auto" as const,
+    display: "grid",
+    gridTemplateColumns: "repeat(5, 120px)",
+    gap: "16px 15px",
     width: "100%",
     justifyContent: "center",
-    alignItems: "flex-end",
   },
 
   staffCardWrapper: {
     display: "flex",
     flexDirection: "column" as const,
     alignItems: "center",
-    flexShrink: 0,
-    gap: 6,
+    width: 120,
+    gap: 8,
   },
 
   staffCard: {
@@ -101,32 +99,7 @@ export const styles: Record<string, CSSProperties> = {
     overflow: "hidden",
     cursor: "pointer",
     flexShrink: 0,
-  },
-
-  staffImage: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover" as const,
-  },
-
-  staffLabelsRow: {
-    display: "flex",
-    gap: 15,
-    justifyContent: "center",
-    paddingTop: 8,
-    paddingBottom: 16,
-    backgroundColor: colors.primary400,
-    width: "100%",
-    boxSizing: "border-box" as const,
-    lineHeight: "normal",
-  },
-
-  staffLabelWrapper: {
-    width: 120,
-    display: "flex",
-    flexDirection: "column" as const,
-    alignItems: "center",
-    flexShrink: 0,
+    backgroundColor: "transparent",
   },
 
   staffName: {
@@ -136,6 +109,9 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.blindBlack,
     textAlign: "center" as const,
     width: "100%",
+    whiteSpace: "nowrap" as const,
+    overflow: "hidden" as const,
+    textOverflow: "ellipsis" as const,
   },
 
   staffRole: {
@@ -144,6 +120,9 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral700,
     textAlign: "center" as const,
     width: "100%",
+    whiteSpace: "nowrap" as const,
+    overflow: "hidden" as const,
+    textOverflow: "ellipsis" as const,
   },
 
   addStaffCard: {

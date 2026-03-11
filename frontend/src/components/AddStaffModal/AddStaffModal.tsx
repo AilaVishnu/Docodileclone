@@ -4,7 +4,7 @@ import { StaffDetailsCard } from "../StaffDetailsCard";
 import { Button } from "../Button";
 import { styles } from "./AddStaffModal.styles";
 import { AdditionalStaffDetailsCard } from "../AdditionalStaffDetailsCard";
-import { ReactComponent as StaffIllustration } from "../../assets/Doctor Img.svg";
+import { StaffIllustration } from "./StaffIllustration";
 
 
 export type StaffData = {
@@ -89,9 +89,7 @@ export function AddStaffModal({
 
       {/* Top section: Illustration + Staff details */}
       <div style={styles.topSection}>
-        <div style={styles.illustrationWrapper}>
-          <StaffIllustration />
-        </div>
+        <StaffIllustration role={role} gender={gender} />
 
         <StaffDetailsCard
           name={name}
