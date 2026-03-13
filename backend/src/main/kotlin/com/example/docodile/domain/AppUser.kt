@@ -28,8 +28,8 @@ class AppUser(
 
     var phone: String? = null,
 
-    @Column(name = "password_hash", nullable = false)
-    var passwordHash: String = "",
+    @Column(name = "password_hash")
+    var passwordHash: String? = null,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -37,6 +37,13 @@ class AppUser(
 
     @Column(nullable = false)
     var active: Boolean = true,
+
+    var gender: String? = null,
+
+    var speciality: String? = null,
+
+    @Column(name = "registration_no")
+    var registrationNo: String? = null,
 
     @Column(name = "created_at")
     var createdAt: Instant? = null

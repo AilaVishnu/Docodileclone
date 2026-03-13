@@ -30,14 +30,41 @@ export function BuildYourClinicPage() {
         if (response.ok) {
           const data = await response.json();
           if (data.length > 0) {
-            const mappedClinics: Clinic[] = data.map((c: any) => ({
-              id: c.id,
-              name: c.name || "Your Clinic",
-              domain: c.domain || "",
-              phone: c.phone || "",
-              address: c.address || "",
-              specialties: c.speciality ? c.speciality.split(",") : [],
-              staff: [] // We'll need another endpoint for staff later or include in clinic fetch
+            const mappedClinics: Clinic[] = await Promise.all(data.map(async (c: any) => {
+              // Fetch staff for this clinic
+              let staffList: Staff[] = [];
+              try {
+                const staffResponse = await fetch(`http://localhost:8080/api/tenant/clinics/${c.id}/staff`, {
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
+                  },
+                });
+                if (staffResponse.ok) {
+                  const staffData = await staffResponse.json();
+                  staffList = staffData.map((s: any) => ({
+                    id: s.id,
+                    name: s.name || "",
+                    role: s.role.split("_").map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "),
+                    gender: s.gender || "",
+                    email: s.email || "",
+                    phone: s.phone || "",
+                    speciality: s.speciality || "",
+                    registrationNo: s.registrationNo || ""
+                  }));
+                }
+              } catch (e) {
+                console.error(`Failed to fetch staff for clinic ${c.id}`, e);
+              }
+
+              return {
+                id: c.id,
+                name: c.name || "Your Clinic",
+                domain: c.domain || "",
+                phone: c.phone || "",
+                address: c.address || "",
+                specialties: c.speciality ? c.speciality.split(",") : [],
+                staff: staffList
+              };
             }));
             setClinics(mappedClinics);
             setActiveClinicId(mappedClinics[0].id);
@@ -96,17 +123,59 @@ export function BuildYourClinicPage() {
     setIsAddStaffOpen(true);
   };
 
-  const handleSaveStaff = (data: Omit<Staff, "id">) => {
-    if (editingStaff) {
-      const updatedStaff = activeClinic.staff.map(s =>
-        s.id === editingStaff.id ? { ...data, id: editingStaff.id } : s
-      );
-      handleUpdateClinic({ staff: updatedStaff });
-    } else {
-      const newStaff: Staff = { ...data, id: String(Date.now()) };
-      handleUpdateClinic({ staff: [...activeClinic.staff, newStaff] });
+  const handleSaveStaff = async (data: Omit<Staff, "id">) => {
+    try {
+      const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+      const staffId = editingStaff && isUuid(editingStaff.id) ? editingStaff.id : null;
+
+      const response = await fetch(`http://localhost:8080/api/tenant/clinics/${activeClinicId}/staff`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
+        },
+        body: JSON.stringify({
+          id: staffId,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          gender: data.gender,
+          role: data.role,
+          speciality: data.speciality,
+          registrationNo: data.registrationNo
+        }),
+      });
+
+      if (response.ok) {
+        const savedStaffData = await response.json();
+        const mappedStaff: Staff = {
+          id: savedStaffData.id,
+          name: savedStaffData.name || "",
+          role: savedStaffData.role.split("_").map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "),
+          gender: savedStaffData.gender || "",
+          email: savedStaffData.email || "",
+          phone: savedStaffData.phone || "",
+          speciality: savedStaffData.speciality || "",
+          registrationNo: savedStaffData.registrationNo || ""
+        };
+
+        if (editingStaff) {
+          const updatedStaff = activeClinic.staff.map(s =>
+            s.id === editingStaff.id ? mappedStaff : s
+          );
+          handleUpdateClinic({ staff: updatedStaff });
+        } else {
+          handleUpdateClinic({ staff: [...activeClinic.staff, mappedStaff] });
+        }
+        setIsAddStaffOpen(false);
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || "Failed to save staff member");
+      }
+    } catch (error) {
+      console.error("Failed to save staff", error);
+      alert("An error occurred while saving staff member");
     }
-    setIsAddStaffOpen(false);
   };
 
 

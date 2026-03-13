@@ -8,4 +8,5 @@ import java.util.UUID
 interface ClinicStaffRepository : JpaRepository<ClinicStaff, ClinicStaffId> {
     fun existsByIdClinicIdAndIdStaffId(clinicId: UUID, staffId: UUID): Boolean
     fun countByIdClinicId(clinicId: UUID): Long
+    fun findByClinicId(clinicId: UUID): List<ClinicStaff>
 }

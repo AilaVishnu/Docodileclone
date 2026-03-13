@@ -17,6 +17,7 @@ type StaffDetailsCardProps = {
   setPhone: (val: string) => void;
   gender: "male" | "female" | "other" | "";
   setGender: (val: "male" | "female" | "other" | "") => void;
+  errors?: Record<string, boolean>;
 };
 
 export function StaffDetailsCard({
@@ -28,6 +29,7 @@ export function StaffDetailsCard({
   setPhone,
   gender,
   setGender,
+  errors = {},
 }: StaffDetailsCardProps) {
 
   return (
@@ -37,6 +39,7 @@ export function StaffDetailsCard({
         onChange={setName}
         placeholder="Name"
         iconLeft={<UserIcon />}
+        error={errors.name}
       />
 
       <TextInput
@@ -45,6 +48,7 @@ export function StaffDetailsCard({
         onChange={setEmail}
         placeholder="hello@example.com"
         iconLeft={<MailIcon />}
+        error={errors.email}
       />
 
       <TextInput
@@ -52,9 +56,10 @@ export function StaffDetailsCard({
         onChange={setPhone}
         placeholder="+91 98885672664"
         iconLeft={<PhoneIcon />}
+        error={errors.phone}
       />
 
-      <div style={styles.genderGroup}>
+      <div style={{ ...styles.genderGroup, ...(errors.gender ? { border: "1px solid red", borderRadius: "8px", padding: "4px" } : {}) }}>
         <label style={styles.radioLabel}>
           <input
             type="radio"

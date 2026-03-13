@@ -11,10 +11,18 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 
+import com.example.docodile.repo.AppUserRepository
+import com.example.docodile.domain.Role
+import com.example.docodile.web.StaffRequest
+import com.example.docodile.domain.AppUser
+import com.example.docodile.domain.ClinicStaff
+import com.example.docodile.domain.ClinicStaffId
+
 @Service
 class ClinicStatusService(
     private val clinicEntityRepository: ClinicEntityRepository,
     private val clinicStaffRepository: ClinicStaffRepository,
+    private val appUserRepository: AppUserRepository,
     private val tenantRepository: TenantRepository,
     private val currentUser: CurrentUser
 ) {
@@ -80,5 +88,54 @@ class ClinicStatusService(
 
     fun isDomainAvailable(domain: String): Boolean {
         return !clinicEntityRepository.existsByDomainIgnoreCase(domain)
+    }
+
+    fun getStaffForClinic(clinicId: UUID): List<AppUser> {
+        val associations = clinicStaffRepository.findByClinicId(clinicId)
+        return associations.mapNotNull { it.staff }
+    }
+
+    @Transactional
+    fun saveStaff(clinicId: UUID, request: StaffRequest): AppUser {
+        val tenantId = currentUser.tenantId()
+        val clinic = clinicEntityRepository.findById(clinicId)
+            .filter { it.tenant?.id == tenantId }
+            .orElseThrow { IllegalArgumentException("Clinic not found") }
+
+        val staff = if (request.id != null) {
+            appUserRepository.findById(request.id)
+                .filter { it.tenant?.id == tenantId }
+                .orElseThrow { IllegalArgumentException("Staff member not found") }
+        } else {
+            val tenant = tenantRepository.findById(tenantId)
+                .orElseThrow { IllegalStateException("Tenant not found") }
+            AppUser(tenant = tenant, createdAt = Instant.now())
+        }
+
+        staff.apply {
+            name = request.name
+            email = request.email
+            phone = request.phone
+            gender = request.gender
+            role = Role.valueOf(request.role.uppercase().replace(" ", "_"))
+            speciality = request.speciality
+            registrationNo = request.registrationNo
+            passwordHash = null // As requested
+        }
+
+        val savedStaff = appUserRepository.save(staff)
+
+        // Ensure linked to clinic
+        if (!clinicStaffRepository.existsByIdClinicIdAndIdStaffId(clinicId, savedStaff.id)) {
+            val association = ClinicStaff(
+                id = ClinicStaffId(clinicId = clinicId, staffId = savedStaff.id),
+                clinic = clinic,
+                staff = savedStaff,
+                createdAt = Instant.now()
+            )
+            clinicStaffRepository.save(association)
+        }
+
+        return savedStaff
     }
 }

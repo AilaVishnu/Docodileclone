@@ -20,7 +20,7 @@ class AppUserDetailsService(private val appUserRepository: AppUserRepository) : 
             clinicId = null,
             role = user.role.name,
             email = user.email,
-            passwordHash = user.passwordHash,
+            passwordHash = user.passwordHash ?: "",
             active = user.active
         )
     }

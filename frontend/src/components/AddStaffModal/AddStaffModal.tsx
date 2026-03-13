@@ -40,9 +40,12 @@ export function AddStaffModal({
   const [speciality, setSpeciality] = useState("");
   const [registrationNo, setRegistrationNo] = useState("");
 
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
+
   // Populate or reset form when modal opens or initialData changes
   useEffect(() => {
     if (isOpen) {
+      setErrors({});
       if (initialData) {
         setName(initialData.name);
         setEmail(initialData.email);
@@ -65,14 +68,34 @@ export function AddStaffModal({
   }, [isOpen, initialData]);
 
   const handleSave = () => {
+    const newErrors: Record<string, boolean> = {
+      name: !name.trim(),
+      email: !email.trim(),
+      phone: !phone.trim(),
+      gender: !gender,
+      role: !role,
+    };
+
+    if (role === "Doctor") {
+      newErrors.speciality = !speciality;
+      newErrors.registrationNo = !registrationNo.trim();
+    }
+
+    setErrors(newErrors);
+
+    const hasErrors = Object.values(newErrors).some(Boolean);
+    if (hasErrors) {
+      return;
+    }
+
     onSave({
       name,
       email,
       phone,
       gender,
       role,
-      speciality,
-      registrationNo,
+      speciality: role === "Doctor" ? speciality : "",
+      registrationNo: role === "Doctor" ? registrationNo : "",
     });
   };
 
@@ -100,6 +123,7 @@ export function AddStaffModal({
           setPhone={setPhone}
           gender={gender}
           setGender={setGender}
+          errors={errors}
         />
       </div>
 
@@ -111,6 +135,7 @@ export function AddStaffModal({
         setSpeciality={setSpeciality}
         registrationNo={registrationNo}
         setRegistrationNo={setRegistrationNo}
+        errors={errors}
       />
 
       {/* Footer */}

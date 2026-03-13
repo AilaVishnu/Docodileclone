@@ -31,6 +31,7 @@ type AdditionalStaffDetailsCardProps = {
   setSpeciality: (val: string) => void;
   registrationNo: string;
   setRegistrationNo: (val: string) => void;
+  errors?: Record<string, boolean>;
 };
 
 export function AdditionalStaffDetailsCard({
@@ -40,6 +41,7 @@ export function AdditionalStaffDetailsCard({
   setSpeciality,
   registrationNo,
   setRegistrationNo,
+  errors = {},
 }: AdditionalStaffDetailsCardProps) {
 
   return (
@@ -51,7 +53,7 @@ export function AdditionalStaffDetailsCard({
           <span>Role (select one)</span>
         </div>
 
-        <div style={styles.radioGroup}>
+        <div style={{ ...styles.radioGroup, ...(errors.role ? { border: "1px solid red", borderRadius: "8px", padding: "8px" } : {}) }}>
           {ROLES.map((r) => (
             <label key={r} style={styles.radioLabel}>
               <input
@@ -68,46 +70,50 @@ export function AdditionalStaffDetailsCard({
         </div>
       </div>
 
-      {/* Speciality */}
-      <div style={styles.section}>
-        <div style={styles.label}>Speciality</div>
+      {role === "Doctor" && (
+        <>
+          {/* Speciality */}
+          <div style={styles.section}>
+            <div style={styles.label}>Speciality</div>
 
-        <div style={styles.fieldRow}>
-          <StethoIcon />
+            <div style={styles.fieldRow}>
+              <StethoIcon />
 
-          <select
-            value={speciality}
-            onChange={(e) => setSpeciality(e.target.value)}
-            style={styles.select}
-          >
-            <option value="" disabled>
-              Choose Speciality
-            </option>
-            {SPECIALITIES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+              <select
+                value={speciality}
+                onChange={(e) => setSpeciality(e.target.value)}
+                style={{ ...styles.select, ...(errors.speciality ? { borderColor: "red" } : {}) }}
+              >
+                <option value="" disabled>
+                  Choose Speciality
+                </option>
+                {SPECIALITIES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
+          {/* Registration Number */}
+          <div style={styles.section}>
+            <div style={styles.label}>Reg. No.</div>
 
-      {/* Registration Number */}
-      <div style={styles.section}>
-        <div style={styles.label}>Reg. No.</div>
+            <TextInput
+              value={registrationNo}
+              onChange={setRegistrationNo}
+              placeholder="ABCDEF"
+              iconLeft={<RegIcon />}
+              error={errors.registrationNo}
+            />
 
-        <TextInput
-          value={registrationNo}
-          onChange={setRegistrationNo}
-          placeholder="ABCDEF"
-          iconLeft={<RegIcon />}
-        />
-
-        <div style={styles.hint}>
-          Enter registration number issued by authority
-        </div>
-      </div>
+            <div style={styles.hint}>
+              Enter registration number issued by authority
+            </div>
+          </div>
+        </>
+      )}
 
     </Card>
   );
