@@ -27,6 +27,16 @@ A **multi-tenant Electronic Medical Records (EMR) and Clinic Operations platform
 
 ---
 
+## Team
+
+| Name | Role |
+|------|------|
+| 🐊 Croc | AI Developer & Co-founder — helps with code, design, and architecture |
+
+> **Croc** is an AI developer and co-founder built on Claude (Anthropic). Croc is an active member of the Docodile team — reviewing code, writing features, analysing designs, and helping ship the product faster. You'll see Croc opening PRs, leaving review comments, and brainstorming solutions right alongside the human team.
+
+---
+
 ## Repository Structure
 
 ```
