@@ -41,13 +41,66 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
 
   const displayName = clinicName || domain || "Your Clinic";
 
+  const validatePhone = (p: string) => {
+    if (!p) return true;
+    const regex = /^(\+91)?[6-9]\d{9}$/;
+    return regex.test(p.replace(/\s/g, ""));
+  };
+
+  const isPhoneValid = validatePhone(phone);
+
+  const handleSave = async () => {
+    if (!isPhoneValid) {
+      alert("Please enter a valid Indian phone number");
+      return;
+    }
+
+    try {
+      // Basic UUID validation for existing clinics
+      const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+      const clinicId = isUuid(clinic.id) ? clinic.id : null;
+
+      const response = await fetch("http://localhost:8080/api/tenant/clinic", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
+        },
+        body: JSON.stringify({
+          id: clinicId,
+          name: clinicName,
+          address,
+          phone,
+          domain,
+          speciality: specialties.join(","),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        alert(errorData.error || "Failed to save clinic details");
+        return;
+      }
+
+      const savedClinicData = await response.json();
+      onUpdate({ id: savedClinicData.id });
+      alert("Clinic details saved successfully!");
+    } catch (error) {
+      alert("An error occurred while saving clinic details");
+    }
+  };
+
   return (
     <Card style={styles.outerCard}>
       {/* Clinic display name heading */}
       <h3 style={styles.cardTitle}>{displayName}</h3>
 
       {/* Domain input */}
-      <DomainInput value={domain} onChange={(val) => onUpdate({ domain: val })} />
+      <DomainInput 
+        value={domain} 
+        onChange={(val) => onUpdate({ domain: val })} 
+        disabled={!!clinic.id && !clinic.id.startsWith("new-") && !!domain}
+      />
 
       {/* Inner form card */}
       <Card style={styles.innerCard}>
@@ -63,6 +116,7 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
           onChange={(val) => onUpdate({ phone: val })}
           placeholder="+91 XXXXX XXXXX"
           iconLeft={<PhoneIcon />}
+          error={!isPhoneValid}
         />
 
         {/* Specialty tag input */}
@@ -106,7 +160,7 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
 
       {/* Save button */}
       <div style={styles.saveButton}>
-        <Button size="md" variant="dark">
+        <Button size="md" variant="dark" onClick={handleSave}>
           Save
         </Button>
       </div>

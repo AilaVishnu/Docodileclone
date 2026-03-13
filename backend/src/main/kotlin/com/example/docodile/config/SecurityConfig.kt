@@ -33,7 +33,7 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .csrf { it.disable() }
-            .cors { }
+            .cors { it.configurationSource(corsConfigurationSource()) }
             .formLogin { it.disable() }
             .httpBasic { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }

@@ -12,25 +12,57 @@ import { ReactComponent as PlusIcon } from "../../assets/Plus.svg";
 import { ReactComponent as ClinicRoof } from "../../assets/clinic roof.svg";
 
 export function BuildYourClinicPage() {
-  useEffect(() => {
-    document.title = "Docodile | Build Your Clinic";
-  }, []);
-
-  const [clinics, setClinics] = useState<Clinic[]>([
-    {
-      id: "1",
-      name: "Your Clinic",
-      domain: "",
-      phone: "",
-      address: "",
-      specialties: [],
-      staff: []
-    }
-  ]);
-
-  const [activeClinicId, setActiveClinicId] = useState(clinics[0].id);
+  const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [activeClinicId, setActiveClinicId] = useState<string>("");
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | undefined>(undefined);
+
+  useEffect(() => {
+    document.title = "Docodile | Build Your Clinic";
+    
+    const fetchClinics = async () => {
+      try {
+        const response = await fetch("http://localhost:8080/api/tenant/clinics", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.length > 0) {
+            const mappedClinics: Clinic[] = data.map((c: any) => ({
+              id: c.id,
+              name: c.name || "Your Clinic",
+              domain: c.domain || "",
+              phone: c.phone || "",
+              address: c.address || "",
+              specialties: c.speciality ? c.speciality.split(",") : [],
+              staff: [] // We'll need another endpoint for staff later or include in clinic fetch
+            }));
+            setClinics(mappedClinics);
+            setActiveClinicId(mappedClinics[0].id);
+          } else {
+            // Default first clinic if none exist
+            const defaultClinic: Clinic = {
+              id: "new-1",
+              name: "Your Clinic",
+              domain: "",
+              phone: "",
+              address: "",
+              specialties: [],
+              staff: []
+            };
+            setClinics([defaultClinic]);
+            setActiveClinicId(defaultClinic.id);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch clinics:", error);
+      }
+    };
+
+    fetchClinics();
+  }, []);
 
   const activeClinic = clinics.find(c => c.id === activeClinicId) || clinics[0];
 
@@ -94,51 +126,55 @@ export function BuildYourClinicPage() {
 
         <ClinicWorkspace
           left={
-            <ClinicInfoCard
-              clinic={activeClinic}
-              onUpdate={handleUpdateClinic}
-            />
+            activeClinic ? (
+              <ClinicInfoCard
+                clinic={activeClinic}
+                onUpdate={handleUpdateClinic}
+              />
+            ) : null
           }
           right={
-            <div style={styles.rightContainer}>
-              <div style={styles.houseContainer}>
-                {/* Roof */}
-                <ClinicRoof style={styles.roofImage} />
+            activeClinic ? (
+              <div style={styles.rightContainer}>
+                <div style={styles.houseContainer}>
+                  {/* Roof */}
+                  <ClinicRoof style={styles.roofImage} />
 
-                {/* House Body — grouped arches and labels */}
-                <div style={styles.houseBody}>
-                  <div style={styles.staffList}>
-                    {activeClinic.staff.map((staff: Staff) => (
-                      <div key={staff.id} style={styles.staffCardWrapper}>
-                        <div
-                          style={styles.staffCard}
-                          onClick={() => handleEditStaff(staff)}
-                        >
-                          <StaffIllustration
-                            role={staff.role}
-                            gender={staff.gender}
-                            width="100%"
-                            height="100%"
-                            borderRadius="60px 60px 0 0"
-                          />
+                  {/* House Body — grouped arches and labels */}
+                  <div style={styles.houseBody}>
+                    <div style={styles.staffList}>
+                      {activeClinic.staff.map((staff: Staff) => (
+                        <div key={staff.id} style={styles.staffCardWrapper}>
+                          <div
+                            style={styles.staffCard}
+                            onClick={() => handleEditStaff(staff)}
+                          >
+                            <StaffIllustration
+                              role={staff.role}
+                              gender={staff.gender}
+                              width="100%"
+                              height="100%"
+                              borderRadius="60px 60px 0 0"
+                            />
+                          </div>
+                          <div style={styles.staffName}>{staff.name}</div>
+                          <div style={styles.staffRole}>{staff.role}</div>
                         </div>
-                        <div style={styles.staffName}>{staff.name}</div>
-                        <div style={styles.staffRole}>{staff.role}</div>
-                      </div>
-                    ))}
+                      ))}
 
-                    {/* Add Staff arch */}
-                    <div style={styles.staffCardWrapper}>
-                      <div style={styles.addStaffCard} onClick={handleOpenAddStaff}>
-                        <PlusIcon style={{ width: 32, height: 32 }} />
+                      {/* Add Staff arch */}
+                      <div style={styles.staffCardWrapper}>
+                        <div style={styles.addStaffCard} onClick={handleOpenAddStaff}>
+                          <PlusIcon style={{ width: 32, height: 32 }} />
+                        </div>
+                        <div style={styles.staffName}>&nbsp;</div>
+                        <div style={styles.staffRole}>&nbsp;</div>
                       </div>
-                      <div style={styles.staffName}>&nbsp;</div>
-                      <div style={styles.staffRole}>&nbsp;</div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : null
           }
         />
 

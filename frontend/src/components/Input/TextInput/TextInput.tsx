@@ -9,6 +9,7 @@ type TextInputProps = {
   iconRight?: React.ReactNode;
   type?: "text" | "password" | "email";
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  error?: boolean;
 };
 
 export function TextInput({
@@ -19,9 +20,14 @@ export function TextInput({
   iconRight,
   type = "text",
   onKeyDown,
+  error,
 }: TextInputProps) {
+  const containerStyle = error 
+    ? { ...styles.container, ...styles.errorContainer } 
+    : styles.container;
+
   return (
-    <div style={styles.container}>
+    <div style={containerStyle}>
       {iconLeft && <span style={styles.icon}>{iconLeft}</span>}
 
       <input

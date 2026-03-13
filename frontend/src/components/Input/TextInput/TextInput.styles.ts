@@ -27,4 +27,8 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.m,
     color: colors.neutral900,
   },
+  errorContainer: {
+    borderBottom: `1px solid ${colors.red200}`,
+    backgroundColor: "rgba(255, 0, 0, 0.05)",
+  },
 };
