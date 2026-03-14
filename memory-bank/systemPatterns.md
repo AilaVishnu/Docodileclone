@@ -15,6 +15,7 @@
 - **Styles**: Vanilla CSS modules or co-located `.styles.ts` files using JS objects for CSS.
 - **State Management**: Local state (useState) and React Context (if applicable, though primarily prop-drilling or local state for currently viewed features).
 - **API Communication**: Uses `fetch` API for REST calls, with Bearer token authentication.
+- **SVG Usage**: All SVGs should be stored in `src/assets` and imported using the `ReactComponent` pattern (e.g., `import { ReactComponent as MyIcon } from "../../assets/my-icon.svg"`). This allows for dynamic styling via CSS/props while keeping components clean. Inline SVGs should be avoided.
 
 ## Backend Patterns
 - **Controller-Service-Repository**: Standard Spring Boot layering.

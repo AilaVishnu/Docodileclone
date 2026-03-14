@@ -1,0 +1,35 @@
+import React from 'react';
+
+export function AppointmentsView() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Appointments</h2>
+      <div style={{ padding: '40px', background: 'white', borderRadius: '12px', textAlign: 'center', border: '1px dashed #ccc' }}>
+        Appointment scheduling and management will appear here.
+      </div>
+    </div>
+  );
+}
+
+export function PrescriptionView() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Prescriptions</h2>
+      <div style={{ padding: '40px', background: 'white', borderRadius: '12px', textAlign: 'center', border: '1px dashed #ccc' }}>
+        Prescription history and new prescription entry will appear here.
+      </div>
+    </div>
+  );
+}
+
+export function PatientFilesView() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Patient Files</h2>
+      <div style={{ padding: '40px', background: 'white', borderRadius: '12px', textAlign: 'center', border: '1px dashed #ccc' }}>
+        Patient electronic medical records and file management.
+      </div>
+    </div>
+  );
+}
+// Add others as needed or just use a generic one

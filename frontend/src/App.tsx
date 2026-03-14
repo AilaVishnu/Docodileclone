@@ -42,13 +42,21 @@ function App() {
 
   return (
     <div className="App">
-      <header className="App-header">
-        {view === "login" && (
-          <AdminLoginPage onLoginSuccess={handleLoginSuccess} />
-        )}
-        {view === "build" && <BuildYourClinicPage />}
-        {view === "home" && <BuildYourClinicPage />}
-      </header>
+      {view === "login" && (
+        <div className="centered-layout">
+          <header className="App-header">
+            <AdminLoginPage onLoginSuccess={handleLoginSuccess} />
+          </header>
+        </div>
+      )}
+      {view === "build" && (
+        <div className="centered-layout">
+          <header className="App-header">
+            <BuildYourClinicPage />
+          </header>
+        </div>
+      )}
+      {view === "home" && <HomePage />}
     </div>
   );
 }
