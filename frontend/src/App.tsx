@@ -40,6 +40,17 @@ function App() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("docodile_token");
+    localStorage.removeItem("docodile_role");
+    // Also remove clinic specific data if needed, but token is primary
+    setView("login");
+  };
+
+  const handleNavigateToBuild = () => {
+    setView("build");
+  };
+
   return (
     <div className="App">
       {view === "login" && (
@@ -52,11 +63,16 @@ function App() {
       {view === "build" && (
         <div className="centered-layout">
           <header className="App-header">
-            <BuildYourClinicPage />
+            <BuildYourClinicPage onNext={() => setView("home")} />
           </header>
         </div>
       )}
-      {view === "home" && <HomePage />}
+      {view === "home" && (
+        <HomePage 
+          onLogout={handleLogout} 
+          onViewClinic={handleNavigateToBuild}
+        />
+      )}
     </div>
   );
 }

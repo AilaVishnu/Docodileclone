@@ -4,7 +4,12 @@ import { TopNav } from "../../components/TopNav";
 import { AppointmentsView, PrescriptionView, PatientFilesView } from "./Views";
 import { colors } from "../../styles/theme";
 
-export function HomePage() {
+type HomePageProps = {
+  onLogout: () => void;
+  onViewClinic: () => void;
+};
+
+export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
   const [activeTab, setActiveTab] = useState<NavTab>("Home");
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const clinicName = localStorage.getItem("docodile_clinic_name") || "your clinic";
@@ -78,7 +83,10 @@ export function HomePage() {
         onToggleExpand={() => setIsSidebarExpanded(!isSidebarExpanded)}
       />
       <div style={styles.contentArea}>
-        <TopNav />
+        <TopNav 
+          onViewClinic={onViewClinic} 
+          onLogout={onLogout} 
+        />
         <main style={styles.mainContent}>
           {renderContent()}
         </main>

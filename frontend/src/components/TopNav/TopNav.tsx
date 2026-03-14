@@ -1,12 +1,31 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { colors, fonts, radii, spacing } from '../../styles/theme';
 import { Button } from '../Button';
 import { MessageIcon, BellIcon } from '../SideNav/Icons';
 import { StaffIllustration } from '../AddStaffModal/StaffIllustration';
 import { ReactComponent as SearchIcon } from '../../assets/search.svg'; 
 import { ReactComponent as PlusIcon } from '../../assets/Plus.svg'; 
+import { NavTab } from '../SideNav';
 
-export function TopNav() {
+type TopNavProps = {
+  onViewClinic?: () => void;
+  onLogout?: () => void;
+};
+
+export function TopNav({ onViewClinic, onLogout }: TopNavProps) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const styles = {
     container: {
       display: 'flex',
@@ -59,6 +78,9 @@ export function TopNav() {
       color: colors.neutral900,
       padding: 0,
     },
+    profileWrapper: {
+      position: 'relative' as const,
+    },
     profileAvatar: {
       width: '40px',
       height: '40px',
@@ -70,7 +92,65 @@ export function TopNav() {
       justifyContent: 'center',
       cursor: 'pointer',
     },
+    dropdown: {
+      position: 'absolute' as const,
+      top: '56px',
+      right: 0,
+      backgroundColor: colors.neutral100,
+      borderRadius: radii.m,
+      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+      border: `1px solid ${colors.neutral200}`,
+      padding: spacing.xs,
+      minWidth: '200px',
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: '4px',
+      zIndex: 1000,
+    },
+    dropdownItem: {
+      fontFamily: fonts.family.primary,
+      fontSize: fonts.size.s,
+      color: colors.neutral900,
+      padding: '10px 16px',
+      borderRadius: radii.m,
+      cursor: 'pointer',
+      backgroundColor: 'transparent',
+      border: 'none',
+      textAlign: 'left' as const,
+      transition: 'background-color 0.2s',
+      display: 'block',
+      width: '100%',
+    },
+    dropdownItemHover: {
+      backgroundColor: colors.primary100,
+    },
+    dropdownItemDestructive: {
+      color: colors.red200,
+    }
   } as const;
+
+  const handleDropdownItemClick = (action: () => void) => {
+    setIsDropdownOpen(false);
+    action();
+  };
+
+  const DropdownItem = ({ label, onClick, destructive = false }: { label: string, onClick: () => void, destructive?: boolean }) => {
+    const [isHovered, setIsHovered] = useState(false);
+    return (
+      <button
+        style={{
+          ...styles.dropdownItem,
+          ...(isHovered ? styles.dropdownItemHover : {}),
+          ...(destructive ? styles.dropdownItemDestructive : {})
+        }}
+        onClick={() => handleDropdownItemClick(onClick)}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {label}
+      </button>
+    );
+  };
 
   return (
     <div style={styles.container}>
@@ -103,14 +183,30 @@ export function TopNav() {
           </div>
         </div>
 
-        <div style={styles.profileAvatar}>
-          <StaffIllustration 
-            role="Doctor" 
-            gender="male" 
-            width="36px" 
-            height="36px" 
-            borderRadius="0"
-          />
+        <div style={styles.profileWrapper} ref={dropdownRef}>
+          <div style={styles.profileAvatar} onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
+            <StaffIllustration 
+              role="Doctor" 
+              gender="male" 
+              width="36px" 
+              height="36px" 
+              borderRadius="0"
+            />
+          </div>
+
+          {isDropdownOpen && (
+            <div style={styles.dropdown}>
+              <DropdownItem 
+                label="View Your Clinic" 
+                onClick={() => onViewClinic && onViewClinic()} 
+              />
+              <DropdownItem 
+                label="Logout" 
+                onClick={() => onLogout && onLogout()} 
+                destructive 
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -11,7 +11,7 @@ import { ReactComponent as HelpIcon } from "../../assets/Help.svg";
 import { ReactComponent as PlusIcon } from "../../assets/Plus.svg";
 import { ReactComponent as ClinicRoof } from "../../assets/clinic roof.svg";
 
-export function BuildYourClinicPage() {
+export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [activeClinicId, setActiveClinicId] = useState<string>("");
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
@@ -259,7 +259,7 @@ export function BuildYourClinicPage() {
           <Button size="md" variant="secondaryLight" iconRight={<HelpIcon />}>
             Help
           </Button>
-          <Button size="md" variant="dark" iconRight={<NextIcon />}>
+          <Button size="md" variant="dark" iconRight={<NextIcon />} onClick={onNext}>
             Next
           </Button>
         </div>
