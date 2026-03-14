@@ -2,6 +2,15 @@
 
 A **multi-tenant Electronic Medical Records (EMR) and Clinic Operations platform** designed for small to mid-sized clinics in India.
 
+## 🧠 Memory Bank
+This project uses a "Memory Bank" located in the `memory-bank/` directory to maintain system context. AI assistants should refer to these files to understand the project's architecture, patterns, and current state.
+
+- [Project Brief](memory-bank/projectBrief.md)
+- [Product Context](memory-bank/productContext.md)
+- [System Patterns](memory-bank/systemPatterns.md)
+- [Tech Context](memory-bank/techContext.md)
+- [Active Context](memory-bank/activeContext.md)
+
 ---
 
 ## Tech Stack
