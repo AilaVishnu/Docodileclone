@@ -3,14 +3,15 @@ import { colors, fonts, spacing } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   page: {
+    width: "100%",
     minHeight: "100vh",
-    minWidth: "100vw",
-    padding: "48px 24px",
+    padding: "40px 24px",
     backgroundColor: colors.yellowTeeth,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     boxSizing: "border-box",
+    overflowX: "hidden",
   },
 
   title: {
@@ -22,7 +23,8 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   workspaceContainer: {
-    minWidth: "60vw",
+    width: "100%",
+    maxWidth: "1200px",
     transition: "max-width 0.3s ease",
     display: "flex",
     flexDirection: "column",

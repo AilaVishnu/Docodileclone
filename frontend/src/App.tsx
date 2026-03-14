@@ -61,11 +61,7 @@ function App() {
         </div>
       )}
       {view === "build" && (
-        <div className="centered-layout">
-          <header className="App-header">
-            <BuildYourClinicPage onNext={() => setView("home")} />
-          </header>
-        </div>
+        <BuildYourClinicPage onNext={() => setView("home")} />
       )}
       {view === "home" && (
         <HomePage 
