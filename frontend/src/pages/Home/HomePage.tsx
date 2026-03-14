@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { SideNav, NavTab } from "../../components/SideNav";
+import { TopNav } from "../../components/TopNav";
 import { AppointmentsView, PrescriptionView, PatientFilesView } from "./Views";
+import { colors } from "../../styles/theme";
 
 export function HomePage() {
   const [activeTab, setActiveTab] = useState<NavTab>("Home");
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const clinicName = localStorage.getItem("docodile_clinic_name") || "your clinic";
 
   useEffect(() => {
@@ -15,15 +18,23 @@ export function HomePage() {
       display: "flex",
       width: "100%",
       minHeight: "100vh",
-      backgroundColor: "#F9F9ED",
+      backgroundColor: colors.primary300,
     },
     contentArea: {
-      marginLeft: "204px", // Width of SideNav
+      marginLeft: isSidebarExpanded ? "204px" : "95px",
       flex: 1,
-      padding: "40px",
+      display: "flex",
+      flexDirection: "column" as const,
+      transition: "margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    },
+    mainContent: {
+      padding: "24px 40px",
       display: "flex",
       flexDirection: "column" as const,
       gap: "24px",
+      flex: 1,
+      backgroundColor: colors.yellowTeeth,
+      borderTopLeftRadius: "32px",
     },
     title: {
       fontSize: "24px",
@@ -38,7 +49,7 @@ export function HomePage() {
       case "Home":
         return (
           <div>
-            <h1 style={styles.title}>Welcome to {clinicName}</h1>
+            <h1 style={styles.title}>Welcome back to {clinicName}</h1>
             <p style={{ marginTop: '12px', color: '#666' }}>Select a tab from the sidebar to manage your clinic operations.</p>
           </div>
         );
@@ -60,10 +71,18 @@ export function HomePage() {
 
   return (
     <div style={styles.container}>
-      <SideNav activeTab={activeTab} onTabChange={setActiveTab} />
-      <main style={styles.contentArea}>
-        {renderContent()}
-      </main>
+      <SideNav 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab} 
+        isExpanded={isSidebarExpanded}
+        onToggleExpand={() => setIsSidebarExpanded(!isSidebarExpanded)}
+      />
+      <div style={styles.contentArea}>
+        <TopNav />
+        <main style={styles.mainContent}>
+          {renderContent()}
+        </main>
+      </div>
     </div>
   );
 }

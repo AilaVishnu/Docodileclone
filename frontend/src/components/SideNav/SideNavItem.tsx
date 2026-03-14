@@ -6,9 +6,10 @@ type SideNavItemProps = {
   icon: React.ReactNode;
   active?: boolean;
   onClick: () => void;
+  isExpanded: boolean;
 };
 
-export function SideNavItem({ label, icon, active, onClick }: SideNavItemProps) {
+export function SideNavItem({ label, icon, active, onClick, isExpanded }: SideNavItemProps) {
   const [hovered, setHovered] = useState(false);
 
   const getBackgroundColor = () => {
@@ -20,22 +21,31 @@ export function SideNavItem({ label, icon, active, onClick }: SideNavItemProps) 
   const styles = {
     container: {
       display: 'flex',
+      flexDirection: isExpanded ? 'row' : 'column',
       alignItems: 'center',
-      gap: '12px',
-      padding: '12px 16px',
+      justifyContent: isExpanded ? 'flex-start' : 'center',
+      gap: isExpanded ? '12px' : '4px',
+      padding: isExpanded ? '12px 16px' : '8px 4px',
       cursor: 'pointer',
       backgroundColor: getBackgroundColor(),
-      borderTopLeftRadius: '12px',
-      borderBottomLeftRadius: '12px',
-      marginLeft: '12px',
-      width: 'calc(100% - 12px)',
-      transition: 'background-color 0.2s ease',
+      borderTopLeftRadius: isExpanded ? '12px' : '8px', // Slightly smaller for collapsed
+      borderBottomLeftRadius: isExpanded ? '12px' : '8px',
+      marginLeft: isExpanded ? '12px' : '8px',
+      marginRight: isExpanded ? '0' : '0',
+      width: isExpanded ? 'calc(100% - 12px)' : 'calc(100% - 8px)',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      textAlign: 'center' as const,
     },
     label: {
-      fontSize: '14px',
-      fontWeight: 400,
+      fontSize: isExpanded ? '14px' : '10px',
+      fontWeight: active ? 600 : 400,
       color: colors.neutral900,
       fontFamily: 'Inter, sans-serif',
+      transition: 'all 0.3s ease',
+      whiteSpace: 'nowrap' as const,
+      overflow: 'hidden' as const,
+      textOverflow: 'ellipsis' as const,
+      width: '100%',
     }
   } as const;
 
@@ -45,8 +55,14 @@ export function SideNavItem({ label, icon, active, onClick }: SideNavItemProps) 
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      title={!isExpanded ? label : undefined}
     >
-      <div style={{ display: 'flex', flexShrink: 0 }}>
+      <div style={{ 
+        display: 'flex', 
+        flexShrink: 0,
+        transition: 'transform 0.3s ease',
+        transform: !isExpanded && hovered ? 'scale(1.1)' : 'scale(1)'
+      }}>
         {icon}
       </div>
       <span style={styles.label}>{label}</span>

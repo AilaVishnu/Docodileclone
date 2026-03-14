@@ -11,7 +11,8 @@ import {
 } from './Icons';
 import { SideNavItem } from './SideNavItem';
 import { ReactComponent as LogoIcon } from "../../assets/logo.svg";
-import { fonts } from "../../styles/theme";
+import { ReactComponent as ArrowIcon } from "../../assets/Arrow Right.svg";
+import { fonts, colors } from "../../styles/theme";
 
 export type NavTab = 
   | 'Home' 
@@ -26,27 +27,32 @@ export type NavTab =
 type SideNavProps = {
   activeTab: NavTab;
   onTabChange: (tab: NavTab) => void;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
 };
 
-export function SideNav({ activeTab, onTabChange }: SideNavProps) {
+export function SideNav({ activeTab, onTabChange, isExpanded, onToggleExpand }: SideNavProps) {
   const styles = {
     container: {
-      width: '204px',
+      width: isExpanded ? '204px' : '95px',
       height: '100vh',
-      backgroundColor: '#F3F3DC',
+      backgroundColor: colors.primary300,
       display: 'flex',
       flexDirection: 'column',
       paddingTop: '40px',
       position: 'fixed' as const,
       left: 0,
       top: 0,
-      boxShadow: 'inset -2px 0 10px rgba(0,0,0,0.02)',
+      transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      zIndex: 100,
     },
     logoSection: {
-      padding: '0 24px 48px 24px',
+      padding: isExpanded ? '0 24px 48px 24px' : '0 0 48px 0',
       display: 'flex',
       alignItems: 'center',
+      justifyContent: isExpanded ? 'flex-start' : 'center',
       gap: '8px',
+      position: 'relative' as const,
     },
     logoText: {
       fontSize: '24px',
@@ -55,6 +61,24 @@ export function SideNav({ activeTab, onTabChange }: SideNavProps) {
       fontFamily: fonts.family.secondary,
       fontStyle: 'italic',
       letterSpacing: '-0.5px',
+    },
+    toggleButton: {
+      position: 'absolute' as const,
+      right: '-16px',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      width: '32px',
+      height: '32px',
+      borderRadius: '50%',
+      backgroundColor: colors.primary300,
+      border: '1px solid rgba(0,0,0,0.05)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+      zIndex: 101,
+      transition: 'transform 0.3s ease',
     },
     navList: {
       display: 'flex',
@@ -78,7 +102,7 @@ export function SideNav({ activeTab, onTabChange }: SideNavProps) {
     <div style={styles.container}>
       <div style={styles.logoSection}>
         <LogoIcon style={{ width: 29, height: 24 }} />
-        <span style={styles.logoText}>Docodile</span>
+        {isExpanded && <span style={styles.logoText}>Docodile</span>}
       </div>
 
       <div style={styles.navList}>
@@ -89,8 +113,26 @@ export function SideNav({ activeTab, onTabChange }: SideNavProps) {
             icon={item.icon}
             active={activeTab === item.label}
             onClick={() => onTabChange(item.label)}
+            isExpanded={isExpanded}
           />
         ))}
+      </div>
+
+      <div style={{ position: 'relative', marginTop: '16px' }}>
+        <div 
+          style={styles.toggleButton} 
+          onClick={onToggleExpand}
+          title={isExpanded ? "Collapse" : "Expand"}
+        >
+          <ArrowIcon 
+            style={{ 
+              width: 16, 
+              height: 16, 
+              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.3s ease'
+            }} 
+          />
+        </div>
       </div>
     </div>
   );

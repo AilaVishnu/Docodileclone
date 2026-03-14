@@ -7,6 +7,10 @@ import { ReactComponent as ServicesIconSVG } from "../../assets/services.svg";
 import { ReactComponent as BillingIconSVG } from "../../assets/billing.svg";
 import { ReactComponent as BusinessIconSVG } from "../../assets/business.svg";
 import { ReactComponent as PharmacyIconSVG } from "../../assets/pharmacy.svg";
+import { ReactComponent as MessageIconSVG } from "../../assets/message.svg";
+import { ReactComponent as MessageUnreadIconSVG } from "../../assets/message_unread.svg";
+import { ReactComponent as BellIconSVG } from "../../assets/bell.svg";
+import { ReactComponent as BellActiveIconSVG } from "../../assets/bell_active.svg";
 
 export const HomeIcon = () => <HomeIconSVG />;
 export const AppointmentsIcon = () => <AppointmentsIconSVG />;
@@ -16,3 +20,7 @@ export const ServicesIcon = () => <ServicesIconSVG />;
 export const BillingIcon = () => <BillingIconSVG />;
 export const BusinessIcon = () => <BusinessIconSVG />;
 export const PharmacyIcon = () => <PharmacyIconSVG />;
+export const MessageIcon = () => <MessageIconSVG />;
+export const MessageUnreadIcon = () => <MessageUnreadIconSVG />;
+export const BellIcon = () => <BellIconSVG />;
+export const BellActiveIcon = () => <BellActiveIconSVG />;
