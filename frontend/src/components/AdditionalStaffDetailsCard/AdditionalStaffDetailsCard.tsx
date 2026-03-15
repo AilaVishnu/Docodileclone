@@ -50,7 +50,7 @@ export function AdditionalStaffDetailsCard({
       <div style={styles.section}>
         <div style={styles.sectionTitle}>
           <RoleIcon />
-          <span>Role (select one)</span>
+          <span>Role</span>
         </div>
 
         <div style={{ ...styles.radioGroup, ...(errors.role ? { border: "1px solid red", borderRadius: "8px", padding: "8px" } : {}) }}>

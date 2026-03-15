@@ -67,6 +67,22 @@ export function AddStaffModal({
     }
   }, [isOpen, initialData]);
 
+  // Prefix "Dr. " when role is Doctor, clear if switching away
+  useEffect(() => {
+    if (role === "Doctor") {
+      if (name && !name.toLowerCase().startsWith("dr. ")) {
+        setName(`Dr. ${name}`);
+      } else if (!name) {
+        setName("Dr. ");
+      }
+    } else {
+      // If switching away from Doctor and name starts with Dr., clear it
+      if (name.toLowerCase().startsWith("dr. ")) {
+        setName("");
+      }
+    }
+  }, [role]);
+
   const handleSave = () => {
     const newErrors: Record<string, boolean> = {
       name: !name.trim(),

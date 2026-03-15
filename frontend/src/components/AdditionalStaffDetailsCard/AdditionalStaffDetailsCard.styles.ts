@@ -29,21 +29,24 @@ export const styles: Record<string, CSSProperties> = {
 
   radioGroup: {
     display: "flex",
-    flexDirection: "column",
-    gap: spacing.xs,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.m,
     marginLeft: 28, // aligns under icon
   },
 
   radioLabel: {
     display: "flex",
     alignItems: "center",
-    gap: spacing.s,
+    gap: "6px",
     cursor: "pointer",
     fontSize: fonts.size.s,
     color: colors.blindBlack,
+    lineHeight: 1,
   },
-
+  
   radioInput: {
+    margin: 0,
     accentColor: colors.blindBlack,
     cursor: "pointer",
   },
