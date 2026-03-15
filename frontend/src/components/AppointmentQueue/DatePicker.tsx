@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { styles } from "./DatePicker.styles";
+import { ChevronLeftIcon, ChevronRightIcon } from "../../iconsUtil";
 
 type DatePickerProps = {
   selectedDate: Date;
@@ -10,6 +11,7 @@ type DatePickerProps = {
 export function DatePicker({ selectedDate, onSelect, onClose }: DatePickerProps) {
   const [viewDate, setViewDate] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
   const containerRef = useRef<HTMLDivElement>(null);
+  const { colors } = require("../../styles/theme"); // Fallback check or just use from theme if available
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -90,11 +92,11 @@ export function DatePicker({ selectedDate, onSelect, onClose }: DatePickerProps)
       <div style={styles.container} ref={containerRef}>
         <div style={styles.header}>
           <button onClick={handlePrevMonth} style={styles.navButton}>
-            <span>←</span>
+            <ChevronLeftIcon style={{ width: 16, height: 16 }} />
           </button>
           <h4 style={styles.monthTitle}>{formatMonth(viewDate)}</h4>
           <button onClick={handleNextMonth} style={styles.navButton}>
-            <span>→</span>
+            <ChevronRightIcon style={{ width: 16, height: 16 }} />
           </button>
         </div>
 

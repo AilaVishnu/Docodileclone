@@ -12,6 +12,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    marginTop: "16px",
   },
 
   title: {

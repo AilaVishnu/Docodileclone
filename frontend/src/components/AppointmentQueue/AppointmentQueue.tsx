@@ -4,13 +4,19 @@ import { QueueTable, Appointment } from "./QueueTable";
 import { styles } from "./AppointmentQueue.styles";
 import { DatePicker } from "./DatePicker";
 import { colors } from "../../styles/theme";
+import { BookAppointment } from "./BookAppointment";
 
 type Doctor = {
   id: string;
   name: string;
 };
 
-export function AppointmentQueue() {
+type AppointmentQueueProps = {
+  isBooking?: boolean;
+  onBack?: () => void;
+};
+
+export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [activeDoctorId, setActiveDoctorId] = useState<string>("");
   const [appointments, setAppointments] = useState<Record<string, Appointment[]>>({});
@@ -117,8 +123,9 @@ export function AppointmentQueue() {
 
   return (
     <div style={styles.container}>
-      <header style={{ ...styles.header, marginBottom: "24px", justifyContent: "center", position: "relative" }}>
-        <h2 style={styles.title}>
+      <header style={{ ...styles.header, marginBottom: "24px", position: "relative" }}>
+        <div style={{ flex: 1 }} />
+        <h2 style={{ ...styles.title, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
           <span 
             onClick={() => setShowDatePicker(!showDatePicker)}
             style={{ 
@@ -131,6 +138,10 @@ export function AppointmentQueue() {
           </span> Queue
         </h2>
 
+        <div style={{ display: "flex", gap: "12px" }}>
+          {/* Internal booking trigger removed in favor of TopNav trigger */}
+        </div>
+
         {showDatePicker && (
           <DatePicker 
             selectedDate={selectedDate} 
@@ -142,6 +153,14 @@ export function AppointmentQueue() {
           />
         )}
       </header>
+
+      {isBooking && (
+        <BookAppointment 
+          doctors={doctors} 
+          initialDoctorId={activeDoctorId}
+          onBack={onBack || (() => {})}
+        />
+      )}
 
       {doctors.length > 0 ? (
         <>

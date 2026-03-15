@@ -19,7 +19,13 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
     setActiveTabState(tab);
   };
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  const [isBooking, setIsBooking] = useState(false);
   const clinicName = localStorage.getItem("docodile_clinic_name") || "your clinic";
+
+  const handleNewAppointment = () => {
+    setActiveTab("Appointments");
+    setIsBooking(true);
+  };
 
   useEffect(() => {
     document.title = `Docodile | ${activeTab}`;
@@ -47,6 +53,7 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
       flex: 1,
       backgroundColor: colors.primary200,
       borderTopLeftRadius: "32px",
+      position: "relative",
     },
     title: {
       fontSize: "24px",
@@ -66,7 +73,7 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
           </div>
         );
       case "Appointments":
-        return <AppointmentsView />;
+        return <AppointmentsView isBooking={isBooking} onBack={() => setIsBooking(false)} />;
       case "Prescription":
         return <PrescriptionView />;
       case "Patient Files":
@@ -93,6 +100,8 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
         <TopNav 
           onViewClinic={onViewClinic} 
           onLogout={onLogout} 
+          onNewAppointment={handleNewAppointment}
+          isBooking={isBooking}
         />
         <main style={styles.mainContent}>
           {renderContent()}

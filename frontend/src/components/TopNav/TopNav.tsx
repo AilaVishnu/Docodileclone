@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { colors, fonts, radii, spacing } from '../../styles/theme';
 import { Button } from '../Button';
-import { MessageIcon, BellIcon } from '../SideNav/Icons';
+import { MessageIcon, BellIcon } from '../../iconsUtil';
 import { StaffIllustration } from '../AddStaffModal/StaffIllustration';
 import { ReactComponent as SearchIcon } from '../../assets/search.svg'; 
 import { ReactComponent as PlusIcon } from '../../assets/Plus.svg'; 
@@ -10,9 +10,11 @@ import { NavTab } from '../SideNav';
 type TopNavProps = {
   onViewClinic?: () => void;
   onLogout?: () => void;
+  onNewAppointment?: () => void;
+  isBooking?: boolean;
 };
 
-export function TopNav({ onViewClinic, onLogout }: TopNavProps) {
+export function TopNav({ onViewClinic, onLogout, onNewAppointment, isBooking }: TopNavProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -35,6 +37,8 @@ export function TopNav({ onViewClinic, onLogout }: TopNavProps) {
       height: '80px',
       backgroundColor: colors.primary300,
       width: '100%',
+      zIndex: 900,
+      position: 'relative' as const,
     },
     actions: {
       display: 'flex',
@@ -165,14 +169,17 @@ export function TopNav({ onViewClinic, onLogout }: TopNavProps) {
       </div>
 
       <div style={styles.actions}>
-        <Button 
-          variant="primary" 
-          size="sm" 
-          iconLeft={<PlusIcon style={{width: 14, height: 14, fill: '#fff'}}/>}
-          style={{ height: '32px', fontSize: '14px', padding: '0 12px' }}
-        >
-          New Appointment
-        </Button>
+        {!isBooking && (
+          <Button 
+            variant="primary" 
+            size="sm" 
+            iconLeft={<PlusIcon style={{width: 14, height: 14, fill: '#fff'}}/>}
+            style={{ height: '32px', fontSize: '14px', padding: '0 12px' }}
+            onClick={onNewAppointment}
+          >
+            New Appointment
+          </Button>
+        )}
 
         <div style={styles.iconGroup}>
           <div style={styles.iconButton}>
