@@ -33,9 +33,15 @@ class Appointment(
     @Column(name = "scheduled_time")
     var scheduledTime: LocalDateTime? = null,
 
+    @Column(name = "is_walkin")
+    var isWalkin: Boolean = false,
+
     var status: String? = null,
 
     var type: String? = null,
+
+    @Column(name = "pay_status")
+    var payStatus: String? = null,
 
     var fee: BigDecimal? = null,
 

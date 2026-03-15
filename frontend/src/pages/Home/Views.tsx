@@ -1,13 +1,9 @@
 import React from 'react';
+import { AppointmentQueue } from '../../components/AppointmentQueue';
 
 export function AppointmentsView() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Appointments</h2>
-      <div style={{ padding: '40px', background: 'white', borderRadius: '12px', textAlign: 'center', border: '1px dashed #ccc' }}>
-        Appointment scheduling and management will appear here.
-      </div>
-    </div>
+    <AppointmentQueue />
   );
 }
 

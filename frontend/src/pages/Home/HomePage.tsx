@@ -38,7 +38,7 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
       flexDirection: "column" as const,
       gap: "24px",
       flex: 1,
-      backgroundColor: colors.yellowTeeth,
+      backgroundColor: colors.primary200,
       borderTopLeftRadius: "32px",
     },
     title: {
