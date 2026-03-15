@@ -34,9 +34,10 @@ export function SideNavItem({ label, icon, active, onClick, isExpanded }: SideNa
       marginRight: isExpanded ? '0' : '0',
       width: isExpanded ? 'calc(100% - 12px)' : 'calc(100% - 8px)',
       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      textAlign: 'center' as const,
+      textAlign: isExpanded ? 'left' : 'center' as const,
     },
     label: {
+      textAlign: isExpanded ? 'left' : 'center' as const,
       fontSize: isExpanded ? '14px' : '10px',
       fontWeight: active ? 600 : 400,
       color: colors.neutral900,
