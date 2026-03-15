@@ -10,7 +10,14 @@ type HomePageProps = {
 };
 
 export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
-  const [activeTab, setActiveTab] = useState<NavTab>("Home");
+  const [activeTab, setActiveTabState] = useState<NavTab>(() => {
+    return (localStorage.getItem("docodile_home_tab") as NavTab) || "Home";
+  });
+
+  const setActiveTab = (tab: NavTab) => {
+    localStorage.setItem("docodile_home_tab", tab);
+    setActiveTabState(tab);
+  };
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const clinicName = localStorage.getItem("docodile_clinic_name") || "your clinic";
 

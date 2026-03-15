@@ -5,7 +5,18 @@ import { HomePage } from './pages/Home';
 import { BuildYourClinicPage } from './pages/BuildYourClinicPage';
 
 function App() {
-  const [view, setView] = useState<"login" | "home" | "build">("login");
+  const [view, setViewState] = useState<"login" | "home" | "build">(() => {
+    const savedView = localStorage.getItem("docodile_view") as "login" | "home" | "build";
+    const token = localStorage.getItem("docodile_token");
+    
+    if (!token) return "login";
+    return savedView || "login";
+  });
+
+  const setView = (newView: "login" | "home" | "build") => {
+    localStorage.setItem("docodile_view", newView);
+    setViewState(newView);
+  };
 
   const handleLoginSuccess = async () => {
     const role = localStorage.getItem("docodile_role");
@@ -43,7 +54,8 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem("docodile_token");
     localStorage.removeItem("docodile_role");
-    // Also remove clinic specific data if needed, but token is primary
+    localStorage.removeItem("docodile_view");
+    localStorage.removeItem("docodile_home_tab");
     setView("login");
   };
 

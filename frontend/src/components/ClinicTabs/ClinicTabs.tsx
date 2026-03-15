@@ -1,5 +1,6 @@
 import React from "react";
 import { Tabs, TabItem } from "../Tabs";
+import { colors } from "../../styles/theme";
 
 export type Staff = {
   id: string;
@@ -53,6 +54,7 @@ export function ClinicTabs({
       activeId={activeClinicId}
       onSelect={onSelectClinic}
       actions={actions}
+      activeBackgroundColor={colors.primary200}
     />
   );
 }

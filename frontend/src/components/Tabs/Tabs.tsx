@@ -17,6 +17,7 @@ type TabsProps = {
   activeId: string;
   onSelect: (id: string) => void;
   actions?: ActionButton[];
+  activeBackgroundColor?: string;
 };
 
 export function Tabs({
@@ -24,6 +25,7 @@ export function Tabs({
   activeId,
   onSelect,
   actions,
+  activeBackgroundColor,
 }: TabsProps) {
   return (
     <div style={styles.container}>
@@ -36,7 +38,10 @@ export function Tabs({
             onClick={() => onSelect(item.id)}
             style={{
               ...styles.tab,
-              ...(isActive ? styles.activeTab : {}),
+              ...(isActive ? { 
+                ...styles.activeTab, 
+                backgroundColor: activeBackgroundColor || styles.activeTab.backgroundColor 
+              } : {}),
             }}
           >
             {item.label}
