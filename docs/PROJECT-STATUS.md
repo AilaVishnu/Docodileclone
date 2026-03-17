@@ -55,26 +55,44 @@ All research docs live in `docs/research/` on GitHub.
 
 ## 🔨 Development Backlog (Pending)
 
-### MVP Phase (Priority 1)
+### MVP Phase (Priority 1) — In Progress
 | Module | Research | Development | Notes |
 |--------|----------|-------------|-------|
 | Login + Auth | ✅ Done | 🟡 60% | Needs staff password reset |
 | Build Your Clinic | ✅ Done | ✅ 100% | Complete |
 | Appointments | ✅ Done | 🟡 8% | Queue ready, CRUD in progress |
 
-### Post-MVP Phase (Priority 2)
+### Post-MVP Phase (Priority 2) — Pending Development
 | Module | Research | Development | Notes |
 |--------|----------|-------------|-------|
-| Prescription Pad | ✅ Done | ❌ 0% | Critical for TSkin pilot |
-| Patient File | ✅ Done | ❌ 0% | Spine of the EMR |
-| Billing | ✅ Done | ❌ 0% | Revenue tracking |
+| Prescription Pad | ✅ Done | ❌ Pending | Critical for TSkin pilot |
+| Patient File | ✅ Done | ❌ Pending | Spine of the EMR |
+| Billing | ✅ Done | ❌ Pending | Revenue tracking |
 
-### Future Phase (Priority 3)
+### Future Phase (Priority 3) — Pending Development
 | Module | Research | Development | Notes |
 |--------|----------|-------------|-------|
-| Reports | ✅ Done | ❌ 0% | Analytics & exports |
-| Pharmacy & Inventory | ✅ Done | ❌ 0% | In-house dispensing |
-| Dashboard | ❌ None | ❌ 0% | KPIs & overview |
+| Reports | ✅ Done | ❌ Pending | Analytics & exports |
+| Pharmacy & Inventory | ✅ Done | ❌ Pending | In-house dispensing |
+| Dashboard | ❌ None | ❌ Pending | KPIs & overview |
+
+---
+
+## 📋 Pending Development Summary
+
+All researched modules awaiting development:
+
+| # | Module | Research Doc | Dev Status |
+|---|--------|--------------|------------|
+| 1 | Appointments | `appointment-competitor-analysis.md` | 🟡 8% (in progress) |
+| 2 | Prescription Pad | `prescription-pad-competitor-analysis.md` | ❌ Pending |
+| 3 | Patient File | `patient-file-module-research.md` | ❌ Pending |
+| 4 | Billing | `billing-module-research.md` | ❌ Pending |
+| 5 | Reports | `reports-module-research.md` | ❌ Pending |
+| 6 | Pharmacy & Inventory | `pharmacy-inventory-module-research.md` | ❌ Pending |
+| 7 | Build Your Clinic | `build-your-clinic-module-research.md` | ✅ Complete |
+
+**Total Pending: 5 modules** (Prescription Pad, Patient File, Billing, Reports, Pharmacy & Inventory)
 
 ---
 
