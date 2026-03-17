@@ -2,110 +2,136 @@
 
 ## 🔍 Observations
 
-- Billing is positioned as a **post-consultation action** — it is triggered after the doctor finishes the visit, not as a standalone module
-- Research board contains two dedicated billing sections: one in the UX flows page and one in a dedicated Page 3 deep-dive
-- Competitor screenshots show billing tied directly to the appointment/consultation — bill auto-populates with the consultation fee and any services added during the visit
-- Services are multi-type: consultation fee, treatment charges (e.g. chemical peel, acne/pigmentation), lab tests — all on one bill
-- Payment status (paid / unpaid / partial) and payment mode (cash / digital) are core fields tracked on every bill
-- WhatsApp receipt sharing is a recurring theme — competitors largely do not support this natively, making it a Docodile opportunity
-- Advance deposits are an open question flagged in the research — prepayment flows are underserved across competitors
-- Billing is closely linked to patient files — invoices must be tied to a patient's UHID for history tracking
+- The FigJam board shows **6 competitors** with varying billing approaches — from legacy UIs to modern SaaS patterns
+- Competitor 1 is most documented with multiple entry points: Bills → View bill, Appointments → View bill, Patient files → View bill
+- Users access billing from **3 different places** — this is a key UX pattern to replicate
+- Competitor 4 has unique **OTC (Over-the-Counter) Sale** functionality — indicates clinics may need POS/retail sales separate from consultation billing
+- Sticky notes highlight: treatments/services (chemical peel, etc.), payment status, payment mode, advance deposits, WhatsApp integration
+- Billing is **post-consultation** — services added after the visit, not before
+- Indian market heavily relies on WhatsApp for bill sharing — competitors likely don't have this native
+- Refund workflow exists in Competitor 1 — we should support this too
 
 ---
 
 ## ❓ Questions / Gaps
 
-1. **Bill trigger** — Is billing initiated by the doctor, the front desk, or both? Who "owns" the bill?
-2. **Advance deposits** — Do we support collecting a deposit at appointment booking and adjusting it at billing time?
-3. **Partial payments** — Can a patient pay part now, part later? How is the outstanding balance tracked?
-4. **Split payment modes** — Can a single bill be settled with part cash and part digital?
-5. **Bill editing** — Can a bill be edited after it's marked paid? Who has permission to edit/void a bill?
-6. **GST / Tax** — Do we need to support GST on services for clinics that are GST-registered?
-7. **Insurance billing** — Is third-party insurance billing in scope, or are we cash/self-pay only for MVP?
-8. **Refunds** — What happens when a service is cancelled — how are refunds handled?
-9. **Bill templates** — Should clinics be able to configure default services and prices (a "rate card") for quick billing?
-10. **Multi-doctor clinics** — In a clinic with multiple doctors, can a bill include services from different doctors?
-11. **WhatsApp receipt** — Send bill/receipt via WhatsApp — how does this interact with payment confirmation?
-12. **Reports tie-in** — Billing data feeds into the revenue/business dashboard — what fields are needed for reporting?
+1. **OTC vs Consultation billing** — Do clinics sell products (creams, medicines) separately from consultation fees? Competitor 4 suggests yes
+2. **Advance deposits** — How do we handle prepayments for treatments like chemical peels or laser sessions?
+3. **Split payments** — Can a patient pay part cash, part UPI? Competitors seem weak here
+4. **Tax handling** — GST on medicines vs consultation (different rates)?
+5. **Discount policies** — Who can apply discounts? Doctor only? Front desk too? Any limits?
+6. **Bill editing** — Can bills be edited after creation? What's the audit trail?
+7. **Refund workflow** — How do we handle refunds? Partial refunds? Cash vs digital refund?
+8. **Multi-doctor billing** — In a multi-doctor clinic, how is revenue attributed per doctor?
+9. **Insurance claims** — Any insurance/TPA integration needed for MVP?
+10. **Bill numbering** — Auto-generated sequential bill numbers? Clinic-wise prefix?
 
 ---
 
 ## 💡 UX Insights
 
-1. **One-tap billing from consultation** — After the doctor closes a visit, the front desk should be one tap away from a pre-filled bill — no re-entering data
-2. **Rate card / service picker** — Don't make staff type service names and prices every time; a configurable rate card with quick-add makes billing fast and error-free
-3. **Payment status at a glance** — The bill list view must show paid / unpaid / partial with clear color-coded badges — front desks need to chase dues quickly
-4. **Print + WhatsApp** — Two primary bill sharing actions: print a receipt and send via WhatsApp — both should be one tap from the bill view
-5. **Cash vs digital toggle** — Payment mode should be a prominent, easy toggle — most Indian clinic front desks handle a mix of both daily
-6. **Bill history on patient file** — All bills for a patient should be surfaced in their patient file timeline — the billing module and patient file must be tightly linked
-7. **Pending dues dashboard widget** — A daily "pending dues" count on the front desk dashboard is high-value — helps close the loop on unpaid visits
-8. **Mobile-friendly billing** — Front desk staff in smaller clinics often use tablets or phones; billing UI must work well on smaller screens
+1. **Multiple entry points** — Don't force users to go to a "Bills" page; let them create/view bills from Appointments and Patient Files too
+2. **Auto-populate from consultation** — Bill should pre-fill with consultation fee + any treatments/tests added during the visit
+3. **One-tap payment capture** — Payment mode selection should be dead simple: Cash | UPI | Card — one tap
+4. **Visual payment status** — Use color coding: Green (paid), Yellow (partial), Red (unpaid)
+5. **WhatsApp sharing is critical** — "Send bill to WhatsApp" should be one click, not buried in a menu
+6. **Print preview before print** — Doctors want to see what patients will receive
+7. **Itemized display** — Show line items with quantity × price, not just totals
+8. **Alert for unpaid bills** — Surface unpaid/overdue bills prominently in patient summary
+
+---
+
+## 📊 Competitor Feature Matrix
+
+| Feature | Comp 1 | Comp 2 | Comp 3 | Comp 4 | Comp 5 | Comp 6 (Semble) |
+|---------|--------|--------|--------|--------|--------|-----------------|
+| Multiple entry points | ✅ (3) | ❌ (1) | ✅ | ✅ | ❓ | ✅ |
+| Refund workflow | ✅ | ❌ | ❓ | ❓ | ❓ | ❓ |
+| OTC/POS sales | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Save & Preview | ✅ | ❌ | ❓ | ❓ | ❓ | ✅ |
+| Print support | ✅ | ❌ | ❓ | ✅ | ❓ | ✅ |
+| Payment status alerts | ❌ | ❌ | ❓ | ❓ | ✅ | ❓ |
+| Modern UI | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| Mobile support | ❓ | ❌ | ❓ | ❓ | ❌ | ❌ |
 
 ---
 
 ## 🐊 Croc's MVP Recommendation
 
-Billing is the **revenue nerve of the clinic**. Get it wrong and front desk staff will work around it with pen and paper — which kills adoption. It needs to be fast, obvious, and flexible on payment modes.
+Billing is the **revenue capture point** — if it's clunky, clinics lose money or switch to paper. Keep it fast, simple, and WhatsApp-native.
 
 ### ✅ Include in MVP
-- Bill creation linked to a consultation (auto-populated with consultation fee)
-- Add multiple services / line items per bill (from a configurable rate card)
-- Payment status: paid / unpaid / partial
-- Payment mode: cash, digital (UPI / card)
-- Print receipt
-- WhatsApp receipt sharing
-- Bill history on patient file timeline
-- Pending dues view for front desk
+- Bill creation linked to consultation (auto-populate services)
+- Line items: Consultation fee + treatments + lab tests (qty × price)
+- Payment mode: Cash | UPI | Card
+- Payment status: Paid | Unpaid | Partial
+- Bill preview before saving
+- Print bill
+- WhatsApp bill sharing (PDF or formatted message)
+- Basic refund (full refund only for MVP)
+- Bills list with search/filter
+- Access from: Standalone Bills page + Appointments + Patient Files
 
 ### ⏳ Defer to Phase 2
-- Advance deposit / prepayment flow
-- Split payment across multiple modes on one bill
-- GST / tax configuration
-- Insurance / TPA billing
-- Refund and void workflows
-- Multi-doctor bill splitting
-- Revenue analytics and business reports (beyond basic dashboard)
-- Bill template customization (branded receipt, clinic logo)
+- OTC/POS sales (retail product sales)
+- Advance deposits tracking
+- Split payments (part cash, part digital)
+- Partial refunds
+- GST handling (tax-inclusive vs separate line)
+- Insurance/TPA integration
+- Multi-doctor revenue attribution
+- Discount approval workflow
 
 ---
 
 ## 📋 Billing Flow
 
 ```
-Consultation ends (doctor closes visit)
+Consultation completed
     ↓
-Front desk opens Bill screen
-  → Patient name + UHID auto-linked
-  → Consultation fee pre-filled from appointment
+Bill auto-generated
+  → Consultation fee (from clinic settings)
+  → Treatments/services added during visit
+  → Lab tests requested
     ↓
-Add services (optional)
-  → Pick from rate card (treatments, lab tests, etc.)
-  → Each line item: name | qty | unit price | total
+Front desk reviews
+  → Add/edit line items
+  → Apply discount (if applicable)
+  → Select payment mode
     ↓
-Bill summary
-  → Subtotal | Tax (if applicable) | Grand Total
-  → Payment status: Paid / Unpaid / Partial
-  → Payment mode: Cash | Digital
+Payment captured
+  → Mark as Paid/Partial/Unpaid
+  → Generate bill number (auto)
     ↓
-Settle bill
-  → Mark as Paid
-  → Generate receipt
-    ↓
-Share receipt
-  → Print
-  → Send via WhatsApp
-    ↓
-Bill saved to patient file timeline
-  → Visible in patient history
-  → Reflected in front desk pending dues dashboard
+Actions
+  → Print bill
+  → WhatsApp to patient
+  → View in Patient File
+  → Process refund (if needed)
 ```
 
 ---
 
-## 🔗 Figma Research Source
-- **FigJam Board:** [Docodile Research Study](https://www.figma.com/board/x3MXMqnwuNMNXHiYFEWxoL/Docodile-Research-Study)
-- **Bills — UX flows section:** node `526-2432`
-- **Bills — Deep dive (Page 3):** node `748-3688`
+## 📱 WhatsApp Bill Format (Recommended)
+
+```
+🧾 *Docodile Invoice*
+
+Patient: Ramesh Kumar
+Date: 17 Mar 2026
+Bill #: DC-2026-0042
+
+━━━━━━━━━━━━━━━━
+Consultation Fee    ₹500
+Chemical Peel       ₹1,500
+Blood Test (CBC)    ₹350
+━━━━━━━━━━━━━━━━
+*Total:* ₹2,350
+*Paid:* ₹2,350 (UPI)
+
+Thank you for visiting!
+Dr. Priya Sharma | Skin Care Clinic
+```
 
 ---
 
