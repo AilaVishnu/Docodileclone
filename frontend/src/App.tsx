@@ -3,9 +3,12 @@ import "./styles/globals.css";
 import { AdminLoginPage, StaffLoginPage } from './pages/LoginPage';
 import { HomePage } from './pages/Home';
 import { BuildYourClinicPage } from './pages/BuildYourClinicPage';
+import { AppointmentsPage } from './pages/AppointmentsPage';
+
+type ViewType = "login" | "home" | "build" | "appointments";
 
 function App() {
-  const [view, setView] = useState<"login" | "home" | "build">("login");
+  const [view, setView] = useState<ViewType>("login");
 
   const handleLoginSuccess = async () => {
     const role = localStorage.getItem("docodile_role");
@@ -17,7 +20,8 @@ function App() {
     }
 
     if (role !== "ADMIN") {
-      setView("home");
+      // Non-admin staff go directly to appointments
+      setView("appointments");
       return;
     }
 
@@ -29,14 +33,15 @@ function App() {
       });
 
       if (!response.ok) {
-        setView("home");
+        setView("appointments");
         return;
       }
 
       const data = (await response.json()) as { complete: boolean };
-      setView(data.complete ? "home" : "build");
+      // Admin with complete clinic setup goes to appointments
+      setView(data.complete ? "appointments" : "build");
     } catch {
-      setView("home");
+      setView("appointments");
     }
   };
 
@@ -47,7 +52,8 @@ function App() {
           <AdminLoginPage onLoginSuccess={handleLoginSuccess} />
         )}
         {view === "build" && <BuildYourClinicPage />}
-        {view === "home" && <BuildYourClinicPage />}
+        {view === "home" && <HomePage />}
+        {view === "appointments" && <AppointmentsPage />}
       </header>
     </div>
   );
