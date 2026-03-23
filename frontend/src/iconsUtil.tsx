@@ -22,6 +22,7 @@ import { ReactComponent as PhoneIconSVG } from "./assets/Phone.svg";
 import { ReactComponent as CalendarIconSVG } from "./assets/calendar.svg";
 import { ReactComponent as HashtagIconSVG } from "./assets/hashtag.svg";
 import { ReactComponent as ClockIconSVG } from "./assets/Clock Circle.svg";
+import { ReactComponent as PlusIconSVG } from "./assets/Plus.svg";
 
 export const HomeIcon = () => <HomeIconSVG />;
 export const AppointmentsIcon = () => <AppointmentsIconSVG />;
@@ -44,6 +45,7 @@ export const PhoneIcon = ({ style }: { style?: React.CSSProperties }) => <PhoneI
 export const CalendarIcon = ({ style }: { style?: React.CSSProperties }) => <CalendarIconSVG style={style} />;
 export const HashtagIcon = ({ style }: { style?: React.CSSProperties }) => <HashtagIconSVG style={style} />;
 export const ClockIcon = ({ style }: { style?: React.CSSProperties }) => <ClockIconSVG style={style} />;
+export const PlusIcon = ({ style }: { style?: React.CSSProperties }) => <PlusIconSVG style={style} />;
 
 
 export const StethoscopeIcon = ({ style }: { style?: React.CSSProperties }) => (
