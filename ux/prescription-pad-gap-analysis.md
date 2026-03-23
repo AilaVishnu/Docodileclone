@@ -1,4 +1,55 @@
-# Prescription Pad Module — Research → UX → Final Screen Gap Analysis 🐊
+# Prescription Pad Module — Complete Gap Analysis
+
+*Analysis Date: 2026-03-20*
+
+> Source: Docodile Research Study (FigJam) — UX Page, Prescription Pad Section  
+> Compared against: Competitor Analysis (Competitor 1 + Doctecq)
+
+---
+
+## Research Findings (Competitor Analysis)
+
+### Features Competitors Have
+- Digital prescription writing pad
+- Medicine name suggestions from a publicly available database (auto-complete while typing)
+- Dosage, frequency, and duration fields per medicine
+- Clinical notes / diagnosis section
+- Chief complaint capture
+- Prescription sharing via WhatsApp
+- Prescription print with clinic letterhead / customizable cover
+- Image and file upload on prescription
+- Language translation of prescription
+- Built-in calculators (dosage, BMI, etc.)
+- Prescription history per patient (previous visits)
+- HIPAA-compliant data handling
+
+### User Pain Points from Reviews
+- Medicine database suggestions are outdated or missing Indian brand names
+- Printing prescription requires too many steps / poor formatting
+- Cannot share prescription directly to patient WhatsApp from the pad
+- No way to add lab investigations on the same pad
+- Prescription duplication for follow-up patients is manual and slow
+
+---
+
+## Research UX (Docodile FigJam — Prescription Pad Flow)
+
+### What the UX Covers
+- Prescription pad as core doctor-facing module
+- Medicine entry with suggestions
+- WhatsApp sharing of prescription post-consultation
+- Prescription cover customization for printing
+- Image/file uploading on prescription
+- Language translation of prescription content
+- Calculators integration
+- Publicly available medicine suggestion database while typing
+
+### UX Flows Mapped
+- [ ] Write new prescription
+- [ ] Medicine search and add
+- [ ] Share to WhatsApp
+- [ ] Print with custom cover
+- [ ] Upload image/file
 
 ---
 
@@ -9,7 +60,7 @@ The Figma Design System only has:
 - **Mod 1:** Build Your Clinic ✅
 - **Mod 2:** Book Appointment 🟡
 
-**Prescription Pad (Mod 3) hasn't been designed yet.** So this analysis will tell you what the final screens MUST include based on your Research + UX.
+**Prescription Pad (Mod 3) hasn't been designed yet.** So this analysis tells you what the final screens MUST include based on Research + UX.
 
 ---
 
@@ -36,7 +87,7 @@ Based on research doc, your UX covers these correctly:
 
 ---
 
-### 1. Medicine Auto-Suggest (2-3 Characters)
+### GAP 1 — Medicine Auto-Suggest (2-3 Characters)
 
 | Source | Status |
 |--------|--------|
@@ -50,7 +101,7 @@ Based on research doc, your UX covers these correctly:
 
 ---
 
-### 2. Favourite Templates / Saved Rx Combos
+### GAP 2 — Favourite Templates / Saved Rx Combos
 
 | Source | Status |
 |--------|--------|
@@ -64,7 +115,7 @@ Based on research doc, your UX covers these correctly:
 
 ---
 
-### 3. Follow-Up Date → Auto-Create Appointment
+### GAP 3 — Follow-Up Date → Auto-Create Appointment
 
 | Source | Status |
 |--------|--------|
@@ -78,7 +129,7 @@ Based on research doc, your UX covers these correctly:
 
 ---
 
-### 4. Previous Prescriptions Sidebar
+### GAP 4 — Previous Prescriptions Sidebar
 
 | Source | Status |
 |--------|--------|
@@ -92,7 +143,7 @@ Based on research doc, your UX covers these correctly:
 
 ---
 
-### 5. Doctor Registration Number on Print
+### GAP 5 — Doctor Registration Number on Print
 
 | Source | Status |
 |--------|--------|
@@ -106,11 +157,53 @@ Based on research doc, your UX covers these correctly:
 
 ---
 
-## 🟡 IMPORTANT GAPS — Should Add
+### GAP 6 — Lab Investigation Orders on Same Pad
+
+| Source | Status |
+|--------|--------|
+| Research | Competitor analysis shows this is a top request |
+| UX | ❌ Not in UX scope currently |
+| Final | ❌ Doesn't exist |
+
+**What to design:** Lab investigation section on the prescription pad (simple text field is fine for v1)
+**Why it matters:** Doctor orders "CBC, LFT, KFT" along with medicines — one place for all orders
+**If not done:** Lab orders happen outside the system — data is lost
 
 ---
 
-### 6. Stock Availability While Prescribing
+### GAP 7 — Prescription Duplication for Follow-ups (Copy Last Rx)
+
+| Source | Status |
+|--------|--------|
+| Research | High-frequency use case for chronic patients — competitor pain point |
+| UX | ❌ Missing from flow |
+| Final | ❌ Doesn't exist |
+
+**What to design:** "Copy last prescription" quick action for follow-up consultations
+**Why it matters:** Diabetic patient on same 5 medicines for 2 years. One tap vs retyping every visit.
+**If not done:** Follow-up consultations are slow — doctors retype the same medicines every visit
+
+---
+
+## 🟠 HIGH PRIORITY GAPS — Should Add
+
+---
+
+### GAP 8 — Vital Signs Capture Before Rx
+
+| Source | Status |
+|--------|--------|
+| Research | Common pre-prescription step |
+| UX | ⚠️ Partially covered in vitals modal |
+| Final | ❌ Doesn't exist |
+
+**What to design:** Vitals capture as a pre-pad step (BP, weight, temperature, SpO2)
+**Why it matters:** Complete consultation flow in one place
+**If not done:** Doctors use a separate paper or WhatsApp to note vitals — defeats the EMR purpose
+
+---
+
+### GAP 9 — Stock Availability While Prescribing
 
 | Source | Status |
 |--------|--------|
@@ -124,7 +217,7 @@ Based on research doc, your UX covers these correctly:
 
 ---
 
-### 7. Drug Interaction Warnings
+### GAP 10 — Drug Interaction Warnings
 
 | Source | Status |
 |--------|--------|
@@ -138,7 +231,7 @@ Based on research doc, your UX covers these correctly:
 
 ---
 
-### 8. Examination Section
+### GAP 11 — Examination Section
 
 | Source | Status |
 |--------|--------|
@@ -152,7 +245,7 @@ Based on research doc, your UX covers these correctly:
 
 ---
 
-### 9. Advice/Instructions Section
+### GAP 12 — Advice/Instructions Section
 
 | Source | Status |
 |--------|--------|
@@ -166,15 +259,31 @@ Based on research doc, your UX covers these correctly:
 
 ---
 
+### GAP 13 — Diagnosis / ICD Code Entry
+
+| Source | Status |
+|--------|--------|
+| Research | Competitors include diagnosis field |
+| UX | ❓ Not explicitly mapped |
+| Final | ❌ Doesn't exist |
+
+**What to design:** Diagnosis field with suggestions, optional ICD code linking
+**Why it matters:** Complete medical record, required for insurance claims
+**If not done:** Diagnosis captured informally or not at all
+
+---
+
 ## 🟢 NICE TO HAVE — Phase 2
 
-| Feature | Research Status | Defer? |
-|---------|----------------|--------|
-| Voice-to-text for symptoms | "Doctors are fast talkers, slow typers" | ✅ Phase 2 |
-| Language translation | "Patient-facing WhatsApp in regional language" | ✅ Phase 2 |
-| Generic vs Brand toggle | "Present in some tools" | ✅ Phase 2 |
-| Image/Lab uploads | "MVP or Phase 2?" | ✅ Phase 2 |
-| Drug calculators | Complex dosing | ✅ Phase 2 |
+| Feature | Research Status | Notes |
+|---------|----------------|-------|
+| Voice-to-text for symptoms | "Doctors are fast talkers, slow typers" | Defer to Phase 2 |
+| Language translation | "Patient-facing WhatsApp in regional language" | Defer to Phase 2 |
+| Generic vs Brand toggle | "Present in some tools" | Defer to Phase 2 |
+| Image/Lab uploads | "MVP or Phase 2?" | Defer to Phase 2 |
+| Drug calculators | Complex dosing | Defer to Phase 2 |
+| Prescription templates per condition | Time saver | Can start simple, enhance later |
+| ICD code linking | For insurance | Defer to Phase 2 |
 
 ---
 
@@ -205,8 +314,12 @@ When building Prescription Pad final screens, include:
 - [ ] Instructions (before/after food)
 - [ ] "Add Medicine" button
 
+### Lab Investigations:
+- [ ] Lab test orders section ← CRITICAL
+
 ### Actions:
 - [ ] Favourite Templates button ← CRITICAL
+- [ ] Copy Last Rx button ← CRITICAL
 - [ ] Previous Rx sidebar ← CRITICAL
 - [ ] Private Note toggle
 - [ ] Follow-up date with auto-book ← CRITICAL
@@ -216,3 +329,34 @@ When building Prescription Pad final screens, include:
 - [ ] WhatsApp share
 - [ ] Email
 - [ ] Create Bill prompt
+
+---
+
+## Summary Table
+
+| Gap | Priority | Effort |
+|-----|----------|--------|
+| Medicine auto-suggest | 🔴 Critical | Medium |
+| Favourite templates | 🔴 Critical | Medium |
+| Follow-up auto-book | 🔴 Critical | Low |
+| Previous Rx sidebar | 🔴 Critical | Medium |
+| Doctor reg number on print | 🔴 Critical | Low |
+| Lab investigations section | 🔴 Critical | Low |
+| Copy last Rx | 🔴 Critical | Low |
+| Vitals capture | 🟠 High | Low |
+| Stock availability | 🟠 High | Medium |
+| Drug interaction warnings | 🟠 High | High (needs API) |
+| Examination section | 🟠 High | Low |
+| Advice/Instructions | 🟠 High | Low |
+| Diagnosis/ICD entry | 🟠 High | Medium |
+
+---
+
+## Status
+- [ ] Gap analysis reviewed by product team
+- [ ] Gaps prioritized for design
+- [ ] UX updated to reflect missing flows
+
+---
+
+*Analysis by Croc 🐊 | Docodile AI Co-Founder*
