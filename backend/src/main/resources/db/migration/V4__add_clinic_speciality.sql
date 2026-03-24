@@ -1,0 +1,1 @@
+ALTER TABLE clinic ADD COLUMN speciality VARCHAR(1000);

@@ -47,6 +47,7 @@ docker-data/
 
 # Database
 *.sql
+!**/db/migration/*.sql
 
 
 # Coverage
