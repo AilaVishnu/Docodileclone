@@ -3,5 +3,9 @@ package com.example.docodile.domain
 enum class Role {
     ADMIN,
     DOCTOR,
-    RECEPTIONIST
+    RECEPTIONIST,
+    FRONT_DESK,
+    NURSE,
+    PHARMACY,
+    OTHER
 }

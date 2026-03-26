@@ -1,0 +1,3 @@
+INSERT INTO public.app_user
+(id, "name", email, phone, password_hash, "role", active, created_at, tenant_id, gender, speciality, registration_no)
+VALUES('22222222-2222-2222-2222-222222222222'::uuid, 'Admin User', 'admin@docodile.com', '9999999999', '$2a$06$CEo4PjzT7stmdX.aIoRwguJKaBj7McMMpZiCEvPZHrvBBdBwZYzEu', 'ADMIN', true, '2026-02-17 07:04:32.179', '00000000-0000-0000-0000-000000000001'::uuid, NULL, NULL, NULL);
