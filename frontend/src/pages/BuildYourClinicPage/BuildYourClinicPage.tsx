@@ -182,7 +182,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   return (
     <div style={styles.page}>
       {/* Page title */}
-      <h2 style={{ ...styles.title, marginBottom: 32 }}>Build your Clinic</h2>
+      <h2 style={{ ...styles.title, marginBottom: 12 }}>Build your Clinic</h2>
 
       {/* Clinic tabs + workspace */}
       <div style={styles.workspaceContainer}>

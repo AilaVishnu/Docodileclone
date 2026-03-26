@@ -5,17 +5,19 @@ export const styles: Record<string, CSSProperties> = {
   outerCard: {
     display: "flex",
     flexDirection: "column",
-    gap: spacing.m,
-    marginTop: spacing.xl,
+    gap: spacing.s,
+    marginTop: spacing.s,
   },
 
   cardTitle: {
     fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h4,
+    fontSize: fonts.size.h5,
     fontWeight: fonts.weight.regular,
     color: colors.blindBlack,
     margin: 0,
-    paddingBottom: spacing.xs,
+    paddingBottom: "4px",
+    minHeight: "32px",
+    lineHeight: "32px",
   },
 
   innerCard: {

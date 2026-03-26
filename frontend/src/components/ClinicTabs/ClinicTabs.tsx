@@ -38,7 +38,7 @@ export function ClinicTabs({
 }: ClinicTabsProps) {
   const items: TabItem[] = clinics.map((clinic) => ({
     id: clinic.id,
-    label: clinic.name,
+    label: clinic.name || "Your Clinic",
   }));
 
   const actions = [
