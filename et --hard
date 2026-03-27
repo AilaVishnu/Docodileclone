@@ -1,0 +1,43 @@
+[33ma1f08f6[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mbuildyourclinc[m[33m)[m add svg assets
+[33m458a11d[m[33m ([m[1;31morigin/buildyourclinc[m[33m)[m fix: header size on empty name + view height
+[33m0fa5419[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m track migration dir
+[33m082ea22[m d
+[33mf1ee7f6[m take appointment UI
+[33m0b16150[m s
+[33m3e50da4[m addstaff refactor
+[33mc7d2b06[m tabs refactor
+[33mf811c89[m appointments queue
+[33m56f222b[m flows
+[33meb63a83[m navs
+[33md2e88bc[m top nav
+[33m94e01dc[m svg refactor
+[33m4291239[m added memory bank
+[33m1cee1ab[m byc backend
+[33mbb98590[m byc backend
+[33m5f175c7[m Merge pull request #2 from rahulmahadevan/delete-option-byc
+[33m3cbe786[m[33m ([m[1;31morigin/delete-option-byc[m[33m)[m house with 5 users in each row
+[33m07508a4[m frondend refactor
+[33m2321dd2[m fs
+[33mb34a221[m many
+[33mc5daf5f[m readme
+[33m151197d[m login workflows completed
+[33m905d28b[m login to build your clinic
+[33m26c178f[m flyway mirgation setup
+[33m7ea78b2[m Domain and Auth
+[33mc058833[m db
+[33m77b3afc[m add staff card
+[33mf05c6e9[m add staff card
+[33m8f1dc8a[m build your clinic re-design
+[33m121b7de[m login pages
+[33me0c6326[m admin login screen
+[33mf0e78ac[m byc frontend
+[33m872e0c2[m build your clinic frontend in progress
+[33m11794b8[m login card changes
+[33m6fc9825[m login card
+[33m4f62082[m imported fonts
+[33m843e044[m rounded button component
+[33m0984f0a[m readme
+[33m5fd833e[m be setup
+[33m7631e96[m fe setup
+[33m8aba4a3[m setup
+[33m3df75ea[m Initial commit

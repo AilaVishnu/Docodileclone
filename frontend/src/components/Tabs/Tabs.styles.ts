@@ -50,4 +50,17 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     gap: "8px",
   },
+  disabledActionButton: {
+    padding: "12px 24px",
+    background: "none",
+    border: "none",
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.m,
+    color: colors.blindBlack,
+    opacity: 0.2,
+    cursor: "not-allowed",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
 };
