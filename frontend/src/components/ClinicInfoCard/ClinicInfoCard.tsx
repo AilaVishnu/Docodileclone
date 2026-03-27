@@ -95,7 +95,7 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
   return (
     <Card style={styles.outerCard}>
       {/* Clinic display name heading */}
-      <h3 style={styles.cardTitle}>{displayName}</h3>
+      <h3 style={styles.cardTitle} title={displayName}>{displayName}</h3>
 
       {/* Domain input */}
       <DomainInput
@@ -110,6 +110,7 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
           value={clinicName}
           onChange={(val) => onUpdate({ name: val })}
           placeholder="Clinic Name"
+          maxLength={32}
           iconLeft={<BuildingIcon />}
         />
 

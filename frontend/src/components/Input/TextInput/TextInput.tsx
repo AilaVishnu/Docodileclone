@@ -11,6 +11,7 @@ type TextInputProps = {
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   error?: boolean;
+  maxLength?: number;
 };
 
 export function TextInput({
@@ -23,9 +24,10 @@ export function TextInput({
   onKeyDown,
   onBlur,
   error,
+  maxLength,
 }: TextInputProps) {
-  const containerStyle = error 
-    ? { ...styles.container, ...styles.errorContainer } 
+  const containerStyle = error
+    ? { ...styles.container, ...styles.errorContainer }
     : styles.container;
 
   return (
@@ -39,6 +41,7 @@ export function TextInput({
         onKeyDown={onKeyDown}
         onBlur={onBlur}
         placeholder={placeholder}
+        maxLength={maxLength}
         style={styles.input}
       />
 

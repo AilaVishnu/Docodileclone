@@ -18,6 +18,10 @@ export const styles: Record<string, CSSProperties> = {
     paddingBottom: "4px",
     minHeight: "32px",
     lineHeight: "32px",
+    maxWidth: "320px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
 
   innerCard: {

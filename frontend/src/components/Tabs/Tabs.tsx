@@ -44,6 +44,7 @@ export function Tabs({
                 backgroundColor: activeBackgroundColor || styles.activeTab.backgroundColor 
               } : {}),
             }}
+            title={item.label}
           >
             {item.label}
           </button>
