@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts, spacing } from "../../../styles/theme";
+import { colors, fonts, spacing, radii } from "../../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   container: {

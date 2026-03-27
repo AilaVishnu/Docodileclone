@@ -2,8 +2,10 @@ import React, { useState, KeyboardEvent } from "react";
 import { Card } from "../Card";
 import { TextInput } from "../Input/TextInput";
 import { DomainInput } from "../Input/DomainInput";
+import { Select } from "../Input/Select/Select";
 import { Button } from "../Button";
 import { styles } from "./ClinicInfoCard.styles";
+import { colors } from "../../styles/theme";
 import { ReactComponent as BuildingIcon } from "../../assets/Buildings.svg";
 import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
 import { ReactComponent as SpecialtyIcon } from "../../assets/Stethoscope.svg";
@@ -96,9 +98,9 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
       <h3 style={styles.cardTitle}>{displayName}</h3>
 
       {/* Domain input */}
-      <DomainInput 
-        value={domain} 
-        onChange={(val) => onUpdate({ domain: val })} 
+      <DomainInput
+        value={domain}
+        onChange={(val) => onUpdate({ domain: val })}
         disabled={!!clinic.id && !clinic.id.startsWith("new-") && !!domain}
       />
 
@@ -119,34 +121,32 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
           error={!isPhoneValid}
         />
 
-        {/* Specialty tag input */}
-        <div style={styles.specialtySection}>
-          <div style={styles.rowWithAction}>
-            <div style={styles.specialtyInputWrapper}>
-              <span style={styles.specialtyIcon}><SpecialtyIcon /></span>
-              <div style={styles.tagRow}>
-                {specialties.map((s: string, i: number) => (
-                  <span key={i} style={styles.tag}>
-                    {s}
-                    <button
-                      style={styles.tagRemove}
-                      onClick={() => removeSpecialty(i)}
-                      aria-label={`Remove ${s}`}
-                    >
-                      ✕
-                    </button>
-                  </span>
-                ))}
-                <input
-                  style={styles.tagInput}
-                  value={specialtyInput}
-                  onChange={(e) => setSpecialtyInput(e.target.value)}
-                  onKeyDown={handleSpecialtyKeyDown}
-                  onBlur={addSpecialty}
-                  placeholder={specialties.length === 0 ? "Add specialty" : ""}
-                />
-              </div>
-            </div>
+        {/* Specialty selection */}
+        <div style={{ ...styles.specialtySection, borderBottom: `1px solid ${colors.neutral300}`, paddingBottom: 8 }}>
+          <Select
+            options={["Dermatology", "Cardiology", "Orthopedics", "Gynecology", "Neurology", "Pediatrics", "Ophthalmology", "ENT", "Urology"]}
+            value=""
+            onChange={(val) => {
+              if (val && !specialties.includes(val)) {
+                onUpdate({ specialties: [...specialties, val] });
+              }
+            }}
+            placeholder="Add specialty"
+            iconLeft={<SpecialtyIcon />}
+          />
+          <div style={{ ...styles.tagRow, marginTop: 1, minHeight: 32 }}>
+            {specialties.map((s: string, i: number) => (
+              <span key={i} style={styles.tag}>
+                {s}
+                <button
+                  style={styles.tagRemove}
+                  onClick={() => removeSpecialty(i)}
+                  aria-label={`Remove ${s}`}
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
           </div>
         </div>
 
