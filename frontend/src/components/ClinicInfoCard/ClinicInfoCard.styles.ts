@@ -39,19 +39,19 @@ export const styles: Record<string, CSSProperties> = {
 
   specialtyInputWrapper: {
     display: "flex",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: spacing.xs,
     width: "100%",
-    padding: `${spacing.xs} 0`,
-    borderBottom: `1px solid ${colors.neutral200}`,
+    padding: spacing.xs,
+    borderBottom: `1px solid ${colors.neutral300}`,
     minHeight: 36,
   },
 
   specialtyIcon: {
     display: "flex",
     alignItems: "center",
-    paddingTop: 2,
-    color: colors.neutral500,
+    color: colors.blindBlack,
+    opacity: 0.8,
     flexShrink: 0,
   },
 

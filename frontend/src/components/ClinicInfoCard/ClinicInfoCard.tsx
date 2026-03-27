@@ -6,7 +6,7 @@ import { Button } from "../Button";
 import { styles } from "./ClinicInfoCard.styles";
 import { ReactComponent as BuildingIcon } from "../../assets/Buildings.svg";
 import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
-import { ReactComponent as SpecialtyIcon } from "../../assets/Clock Circle.svg";
+import { ReactComponent as SpecialtyIcon } from "../../assets/Stethoscope.svg";
 import { ReactComponent as LocationIcon } from "../../assets/Map Point.svg";
 import { Clinic } from "../ClinicTabs";
 
