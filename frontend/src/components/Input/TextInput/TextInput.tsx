@@ -9,6 +9,7 @@ type TextInputProps = {
   iconRight?: React.ReactNode;
   type?: "text" | "password" | "email";
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   error?: boolean;
 };
 
@@ -20,6 +21,7 @@ export function TextInput({
   iconRight,
   type = "text",
   onKeyDown,
+  onBlur,
   error,
 }: TextInputProps) {
   const containerStyle = error 
@@ -35,6 +37,7 @@ export function TextInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
+        onBlur={onBlur}
         placeholder={placeholder}
         style={styles.input}
       />

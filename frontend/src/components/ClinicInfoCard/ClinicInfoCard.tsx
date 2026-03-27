@@ -115,7 +115,26 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
 
         <TextInput
           value={phone}
-          onChange={(val) => onUpdate({ phone: val })}
+          onChange={(val) => {
+            let digits = val.replace(/\D/g, "");
+            if (digits.startsWith("91") && val.startsWith("+")) {
+              digits = digits.substring(2);
+            }
+            digits = digits.substring(0, 10);
+            if (digits.length === 0) onUpdate({ phone: "" });
+            else onUpdate({ phone: "+91 " + digits });
+          }}
+          onBlur={() => {
+            let clean = phone.replace(/\D/g, "");
+            if (clean.length === 0) return;
+            if (clean.startsWith("91")) clean = clean.substring(2);
+            clean = clean.substring(0, 10);
+            if (clean.length > 5) {
+              onUpdate({ phone: `+91 ${clean.substring(0, 5)} ${clean.substring(5)}` });
+            } else if (clean.length > 0) {
+              onUpdate({ phone: `+91 ${clean}` });
+            }
+          }}
           placeholder="+91 XXXXX XXXXX"
           iconLeft={<PhoneIcon />}
           error={!isPhoneValid}
@@ -134,7 +153,7 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
             placeholder="Add specialty"
             iconLeft={<SpecialtyIcon />}
           />
-          <div style={{ ...styles.tagRow, marginTop: 1, minHeight: 32 }}>
+          <div style={{ ...styles.tagRow, marginTop: 8, minHeight: 32 }}>
             {specialties.map((s: string, i: number) => (
               <span key={i} style={styles.tag}>
                 {s}
