@@ -145,4 +145,21 @@ export const variants = {
       color: colors.secondary400,
     },
   },
+
+  dangerLight: {
+    default: {
+      borderColor: colors.red200,
+      color: colors.red200,
+      backgroundColor: "transparent",
+    },
+    hover: {
+      backgroundColor: colors.redAlpha10,
+      borderColor: colors.red200,
+      color: colors.red200,
+    },
+    disabled: {
+      borderColor: colors.red100,
+      color: colors.red100,
+    },
+  },
 };

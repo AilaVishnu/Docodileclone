@@ -21,6 +21,7 @@ type AddStaffModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: StaffData) => void;
+  onDelete?: () => void;
   initialData?: StaffData;
 };
 
@@ -28,6 +29,7 @@ export function AddStaffModal({
   isOpen,
   onClose,
   onSave,
+  onDelete,
   initialData,
 }: AddStaffModalProps) {
   // Local state for all fields
@@ -159,13 +161,19 @@ export function AddStaffModal({
 
       {/* Footer */}
       <div style={styles.footer}>
-        <Button variant="light" size="sm" onClick={onClose}>
-          Cancel
-        </Button>
+        <button style={styles.deleteButton} onClick={onDelete}>
+          Delete Staff
+        </button>
 
-        <Button variant="dark" size="sm" onClick={handleSave}>
-          Save
-        </Button>
+        <div style={styles.footerRight}>
+          <Button variant="dangerLight" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+
+          <Button variant="dark" size="sm" onClick={handleSave}>
+            Save
+          </Button>
+        </div>
       </div>
     </Modal>
 

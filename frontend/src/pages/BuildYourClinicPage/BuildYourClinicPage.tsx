@@ -129,6 +129,34 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
     setIsAddStaffOpen(true);
   };
 
+  const handleDeleteStaff = async () => {
+    if (!editingStaff) return;
+
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/tenant/clinics/${activeClinicId}/staff/${editingStaff.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const updatedStaff = activeClinic.staff.filter(s => s.id !== editingStaff.id);
+        handleUpdateClinic({ staff: updatedStaff });
+        setIsAddStaffOpen(false);
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || "Failed to delete staff member");
+      }
+    } catch (error) {
+      console.error("Failed to delete staff", error);
+      alert("An error occurred while deleting staff member");
+    }
+  };
+
   const handleSaveStaff = async (data: Omit<Staff, "id">) => {
     try {
       const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
@@ -260,6 +288,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           isOpen={isAddStaffOpen}
           onClose={() => setIsAddStaffOpen(false)}
           onSave={handleSaveStaff}
+          onDelete={handleDeleteStaff}
           initialData={editingStaff}
         />
 

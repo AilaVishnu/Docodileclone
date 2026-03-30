@@ -35,7 +35,22 @@ export const styles: Record<string, CSSProperties> = {
   footer: {
     marginTop: spacing.s,
     display: "flex",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  footerRight: {
+    display: "flex",
     gap: spacing.m,
+  },
+
+  deleteButton: {
+    background: "none",
+    border: "none",
+    color: colors.red200,
+    fontSize: fonts.size.m,
+    fontFamily: fonts.family.primary,
+    cursor: "pointer",
+    padding: 0,
   },
 };

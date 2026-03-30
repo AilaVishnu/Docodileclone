@@ -152,4 +152,22 @@ class ClinicStatusService(
 
         return savedStaff
     }
+
+    @Transactional
+    fun deleteStaff(clinicId: UUID, staffId: UUID) {
+        val tenantId = currentUser.tenantId()
+        clinicEntityRepository.findById(clinicId)
+            .filter { it.tenant?.id == tenantId }
+            .orElseThrow { IllegalArgumentException("Clinic not found") }
+
+        val staff = appUserRepository.findById(staffId)
+            .filter { it.tenant?.id == tenantId }
+            .orElseThrow { IllegalArgumentException("Staff member not found") }
+
+        // Delete clinic-staff association first, then the user
+        val compositeKey = ClinicStaffId(clinicId = clinicId, staffId = staffId)
+        clinicStaffRepository.deleteById(compositeKey)
+        clinicStaffRepository.flush()
+        appUserRepository.delete(staff)
+    }
 }

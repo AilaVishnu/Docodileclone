@@ -47,6 +47,16 @@ class ClinicStatusController(private val clinicStatusService: ClinicStatusServic
         return clinicStatusService.saveStaff(clinicId, request)
     }
 
+    @DeleteMapping("/clinics/{clinicId}/staff/{staffId}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    fun deleteStaff(
+        @PathVariable clinicId: UUID,
+        @PathVariable staffId: UUID
+    ): ResponseEntity<Void> {
+        clinicStatusService.deleteStaff(clinicId, staffId)
+        return ResponseEntity.noContent().build()
+    }
+
     @GetMapping("/domain/check")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     fun checkDomain(@RequestParam domain: String): Map<String, Boolean> {
