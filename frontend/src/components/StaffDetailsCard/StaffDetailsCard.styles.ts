@@ -5,16 +5,17 @@ export const styles: Record<string, CSSProperties> = {
   card: {
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
+    gap: spacing.xs,
     borderRadius: radii.m,
-    padding: spacing.l,
+    padding: spacing.s,
     backgroundColor: colors.primary100,
     minWidth: "25vw",
+    flex: 1,
   },
   genderGroup: {
     display: "flex",
     gap: 24,
-    marginTop: 12,
+    marginTop: 4,
     alignItems: "center",
   },
 

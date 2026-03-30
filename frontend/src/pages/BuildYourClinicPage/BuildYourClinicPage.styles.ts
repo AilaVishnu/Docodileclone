@@ -4,22 +4,22 @@ import { colors, fonts, spacing } from "../../styles/theme";
 export const styles: Record<string, CSSProperties> = {
   page: {
     width: "100%",
-    minHeight: "100vh",
-    padding: "20px 24px",
+    height: "100vh",
+    padding: "16px 24px",
     backgroundColor: colors.yellowTeeth,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     boxSizing: "border-box",
-    overflowX: "hidden",
+    overflow: "hidden",
   },
 
   title: {
     fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h3,
+    fontSize: fonts.size.h4,
     fontWeight: fonts.weight.regular,
     color: colors.blindBlack,
-    marginBottom: 8,
+    marginBottom: 4,
   },
 
   workspaceContainer: {
@@ -28,31 +28,33 @@ export const styles: Record<string, CSSProperties> = {
     transition: "max-width 0.3s ease",
     display: "flex",
     flexDirection: "column",
+    flex: 1,
+    minHeight: 0,
   },
 
   rightContainer: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: "flex-end",
+    justifyContent: "center",
     gap: 0,
     height: "100%",
-    minHeight: 340,
   },
 
   footer: {
-    marginTop: spacing.l,
+    marginTop: spacing.s,
     display: "flex",
     gap: spacing.xl,
     justifyContent: "center",
+    flexShrink: 0,
   },
 
   houseContainer: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    width: "100%",
-    maxWidth: 600,
+    width: "90%",
+    maxWidth: 500,
     position: "relative" as const,
   },
 
@@ -68,21 +70,20 @@ export const styles: Record<string, CSSProperties> = {
   houseBody: {
     backgroundColor: colors.primary400,
     width: "100%",
-    padding: `${spacing.s} ${spacing.l}`,
-    paddingBottom: spacing.l,
+    padding: `${spacing.xs} ${spacing.s}`,
+    paddingBottom: spacing.s,
     boxSizing: "border-box" as const,
     display: "flex",
     flexDirection: "column" as const,
-    minHeight: 160,
-    marginTop: -2, // Pull the body up to overlap
+    marginTop: -2,
     position: "relative" as const,
     zIndex: 1,
   },
 
   staffList: {
     display: "grid",
-    gridTemplateColumns: "repeat(5, 100px)",
-    gap: "12px 12px",
+    gridTemplateColumns: "repeat(5, 80px)",
+    gap: "8px 8px",
     width: "100%",
     justifyContent: "center",
   },
@@ -91,14 +92,14 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column" as const,
     alignItems: "center",
-    width: 100,
-    gap: 4,
+    width: 80,
+    gap: 2,
   },
 
   staffCard: {
-    width: 100,
-    height: 84,
-    borderRadius: "50px 50px 0 0",
+    width: 80,
+    height: 68,
+    borderRadius: "40px 40px 0 0",
     overflow: "hidden",
     cursor: "pointer",
     flexShrink: 0,
@@ -107,7 +108,7 @@ export const styles: Record<string, CSSProperties> = {
 
   staffName: {
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.s,
+    fontSize: fonts.size.xs,
     fontWeight: fonts.weight.medium,
     color: colors.blindBlack,
     textAlign: "center" as const,
@@ -119,7 +120,7 @@ export const styles: Record<string, CSSProperties> = {
 
   staffRole: {
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.xs,
+    fontSize: "10px",
     color: colors.neutral700,
     textAlign: "center" as const,
     width: "100%",
@@ -129,9 +130,9 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   addStaffCard: {
-    width: 100,
-    height: 84,
-    borderRadius: "50px 50px 0 0",
+    width: 80,
+    height: 68,
+    borderRadius: "40px 40px 0 0",
     border: `2px dashed rgba(255,255,255,0.5)`,
     backgroundColor: "rgba(255,255,255,0.15)",
     display: "flex",
@@ -141,5 +142,15 @@ export const styles: Record<string, CSSProperties> = {
     flexShrink: 0,
     color: "rgba(255,255,255,0.7)",
     boxSizing: "border-box" as const,
+  },
+
+  bushRight: {
+    position: "absolute" as const,
+    bottom: -5,
+    right: -25,
+    width: 65,
+    height: 55,
+    zIndex: 3,
+    transform: "scaleX(-1)",
   },
 };

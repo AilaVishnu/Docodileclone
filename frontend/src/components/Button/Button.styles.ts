@@ -25,8 +25,8 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   mdIcon: {
-    fontSize: fonts.size.l,
-    height: 56,
+    fontSize: fonts.size.m,
+    height: 42,
     padding: spacing.xs
   },
 
@@ -36,8 +36,8 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   md: {
-    fontSize: fonts.size.l,
-    height: 56,
+    fontSize: fonts.size.m,
+    height: 42,
   },
 };
 

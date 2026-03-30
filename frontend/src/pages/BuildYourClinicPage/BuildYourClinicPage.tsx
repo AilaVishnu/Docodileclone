@@ -10,6 +10,7 @@ import { ReactComponent as NextIcon } from "../../assets/Arrow Right.svg";
 import { ReactComponent as HelpIcon } from "../../assets/Help.svg";
 import { ReactComponent as PlusIcon } from "../../assets/Plus.svg";
 import { ReactComponent as ClinicRoof } from "../../assets/clinic roof.svg";
+import { ReactComponent as Bush } from "../../assets/bush.svg";
 
 export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   const [clinics, setClinics] = useState<Clinic[]>([]);
@@ -19,7 +20,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
 
   useEffect(() => {
     document.title = "Docodile | Build Your Clinic";
-    
+
     const fetchClinics = async () => {
       try {
         const response = await fetch("http://localhost:8080/api/tenant/clinics", {
@@ -98,7 +99,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
       alert("Maximum of 5 clinics allowed.");
       return;
     }
-    
+
     const newClinic: Clinic = {
       id: String(Date.now()),
       name: `Your Clinic ${clinics.length + 1}`,
@@ -187,7 +188,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   return (
     <div style={styles.page}>
       {/* Page title */}
-      <h2 style={{ ...styles.title, marginBottom: 12 }}>Build your Clinic</h2>
+      <h2 style={styles.title}>Build your Clinic</h2>
 
       {/* Clinic tabs + workspace */}
       <div style={styles.workspaceContainer}>
@@ -228,7 +229,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                               gender={staff.gender}
                               width="100%"
                               height="100%"
-                              borderRadius="60px 60px 0 0"
+                              borderRadius="40px 40px 0 0"
                             />
                           </div>
                           <div style={styles.staffName}>{staff.name}</div>
@@ -246,6 +247,9 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                       </div>
                     </div>
                   </div>
+
+                  {/* Bush */}
+                  <Bush style={styles.bushRight} />
                 </div>
               </div>
             ) : null

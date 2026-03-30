@@ -15,10 +15,8 @@ export const styles: Record<string, CSSProperties> = {
   content: {
     backgroundColor: colors.primary200,
     borderRadius: radii.primary,
-    padding: 32,
+    padding: 24,
     minWidth: 420,
     maxWidth: "90vw",
-    maxHeight: "90vh",
-    overflowY: "auto",
   },
 };

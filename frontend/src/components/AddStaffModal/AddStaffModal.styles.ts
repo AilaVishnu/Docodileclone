@@ -1,17 +1,17 @@
 import { CSSProperties } from "react";
-import { colors, spacing, radii, fonts } from "../../styles/theme";
+import { colors, spacing, fonts } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.l,
+    marginBottom: spacing.s,
   },
 
   title: {
     fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h4,
+    fontSize: fonts.size.h5,
     fontWeight: fonts.weight.regular,
     margin: 0,
     color: colors.blindBlack,
@@ -27,13 +27,13 @@ export const styles: Record<string, CSSProperties> = {
 
   topSection: {
     display: "flex",
-    gap: spacing.l,
-    marginBottom: spacing.l,
+    gap: spacing.s,
+    marginBottom: spacing.s,
     alignItems: "stretch",
   },
 
   footer: {
-    marginTop: spacing.l,
+    marginTop: spacing.s,
     display: "flex",
     justifyContent: "flex-end",
     gap: spacing.m,
