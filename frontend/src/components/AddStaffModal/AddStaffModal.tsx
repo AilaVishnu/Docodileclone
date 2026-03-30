@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Modal } from "../Modal";
 import { StaffDetailsCard } from "../StaffDetailsCard";
 import { Button } from "../Button";
-import { styles } from "./AddStaffModal.styles";
+import { styles, confirmStyles } from "./AddStaffModal.styles";
 import { AdditionalStaffDetailsCard } from "../AdditionalStaffDetailsCard";
 import { StaffIllustration } from "./StaffIllustration";
 
@@ -43,11 +43,13 @@ export function AddStaffModal({
   const [registrationNo, setRegistrationNo] = useState("");
 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Populate or reset form when modal opens or initialData changes
   useEffect(() => {
     if (isOpen) {
       setErrors({});
+      setShowDeleteConfirm(false);
       if (initialData) {
         setName(initialData.name);
         setEmail(initialData.email);
@@ -121,6 +123,7 @@ export function AddStaffModal({
   };
 
   return (
+    <>
     <Modal isOpen={isOpen} onClose={onClose}>
       {/* Header */}
       <div style={styles.header}>
@@ -161,9 +164,13 @@ export function AddStaffModal({
 
       {/* Footer */}
       <div style={styles.footer}>
-        <button style={styles.deleteButton} onClick={onDelete}>
-          Delete Staff
-        </button>
+        {initialData ? (
+          <button style={styles.deleteButton} onClick={() => setShowDeleteConfirm(true)}>
+            Delete Staff
+          </button>
+        ) : (
+          <div />
+        )}
 
         <div style={styles.footerRight}>
           <Button variant="dangerLight" size="sm" onClick={onClose}>
@@ -177,5 +184,24 @@ export function AddStaffModal({
       </div>
     </Modal>
 
+    {showDeleteConfirm && (
+      <div style={confirmStyles.overlay}>
+        <div style={confirmStyles.dialog}>
+          <h4 style={confirmStyles.title}>Are you sure?</h4>
+          <div style={confirmStyles.actions}>
+            <Button variant="dangerLight" size="sm" onClick={() => setShowDeleteConfirm(false)}>
+              Nope
+            </Button>
+            <Button variant="dark" size="sm" onClick={() => {
+              setShowDeleteConfirm(false);
+              onDelete?.();
+            }}>
+              Yes
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
