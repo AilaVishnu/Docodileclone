@@ -11,12 +11,14 @@ import { ReactComponent as HelpIcon } from "../../assets/Help.svg";
 import { ReactComponent as PlusIcon } from "../../assets/Plus.svg";
 import { ReactComponent as ClinicRoof } from "../../assets/clinic roof.svg";
 import { ReactComponent as Bush } from "../../assets/bush.svg";
+import { Toast } from "../../components/Toast";
 
 export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [activeClinicId, setActiveClinicId] = useState<string>("");
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | undefined>(undefined);
+  const [toastMessage, setToastMessage] = useState("");
 
   useEffect(() => {
     document.title = "Docodile | Build Your Clinic";
@@ -144,9 +146,11 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
       );
 
       if (response.ok) {
+        const deletedName = editingStaff.name;
         const updatedStaff = activeClinic.staff.filter(s => s.id !== editingStaff.id);
         handleUpdateClinic({ staff: updatedStaff });
         setIsAddStaffOpen(false);
+        setToastMessage(`${deletedName} is deleted from your staff`);
       } else {
         const errorData = await response.json();
         alert(errorData.error || "Failed to delete staff member");
@@ -302,6 +306,12 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           </Button>
         </div>
       </div>
+
+      <Toast
+        message={toastMessage}
+        isVisible={!!toastMessage}
+        onClose={() => setToastMessage("")}
+      />
     </div>
   );
 }
