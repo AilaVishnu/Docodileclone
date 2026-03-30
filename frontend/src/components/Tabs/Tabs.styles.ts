@@ -9,7 +9,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   tab: {
-    padding: "12px 36px",
+    padding: "12px 24px",
     borderRadius: `${radii.primary}px ${radii.primary}px 0 0`,
     border: 0,
     borderBottom: 0,
@@ -22,6 +22,10 @@ export const styles: Record<string, CSSProperties> = {
     transition: "all 0.2s ease",
     outline: "none",
     boxShadow: "none",
+    maxWidth: "200px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
 
   activeTab: {
@@ -46,6 +50,19 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.blindBlack,
     opacity: 0.5,
     cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  disabledActionButton: {
+    padding: "12px 24px",
+    background: "none",
+    border: "none",
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.m,
+    color: colors.blindBlack,
+    opacity: 0.2,
+    cursor: "not-allowed",
     display: "flex",
     alignItems: "center",
     gap: "8px",

@@ -10,6 +10,7 @@ type ActionButton = {
   label: string;
   onClick: () => void;
   icon?: ReactNode;
+  disabled?: boolean;
 };
 
 type TabsProps = {
@@ -43,6 +44,7 @@ export function Tabs({
                 backgroundColor: activeBackgroundColor || styles.activeTab.backgroundColor 
               } : {}),
             }}
+            title={item.label}
           >
             {item.label}
           </button>
@@ -54,8 +56,9 @@ export function Tabs({
           {actions.map((action, index) => (
             <button
               key={index}
-              onClick={action.onClick}
-              style={styles.actionButton}
+              onClick={action.disabled ? undefined : action.onClick}
+              disabled={action.disabled}
+              style={action.disabled ? styles.disabledActionButton : styles.actionButton}
             >
               {action.icon}
               {action.label}

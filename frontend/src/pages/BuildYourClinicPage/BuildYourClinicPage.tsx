@@ -94,6 +94,11 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   const activeClinic = clinics.find(c => c.id === activeClinicId) || clinics[0];
 
   const handleAddClinic = () => {
+    if (clinics.length >= 5) {
+      alert("Maximum of 5 clinics allowed.");
+      return;
+    }
+    
     const newClinic: Clinic = {
       id: String(Date.now()),
       name: `Your Clinic ${clinics.length + 1}`,
@@ -182,7 +187,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   return (
     <div style={styles.page}>
       {/* Page title */}
-      <h2 style={{ ...styles.title, marginBottom: 32 }}>Build your Clinic</h2>
+      <h2 style={{ ...styles.title, marginBottom: 12 }}>Build your Clinic</h2>
 
       {/* Clinic tabs + workspace */}
       <div style={styles.workspaceContainer}>

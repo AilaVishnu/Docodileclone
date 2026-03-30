@@ -5,17 +5,23 @@ export const styles: Record<string, CSSProperties> = {
   outerCard: {
     display: "flex",
     flexDirection: "column",
-    gap: spacing.m,
-    marginTop: spacing.xl,
+    gap: spacing.s,
+    marginTop: spacing.s,
   },
 
   cardTitle: {
     fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h4,
+    fontSize: fonts.size.h5,
     fontWeight: fonts.weight.regular,
     color: colors.blindBlack,
     margin: 0,
-    paddingBottom: spacing.xs,
+    paddingBottom: "4px",
+    minHeight: "32px",
+    lineHeight: "32px",
+    maxWidth: "320px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
 
   innerCard: {
@@ -37,19 +43,19 @@ export const styles: Record<string, CSSProperties> = {
 
   specialtyInputWrapper: {
     display: "flex",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: spacing.xs,
     width: "100%",
-    padding: `${spacing.xs} 0`,
-    borderBottom: `1px solid ${colors.neutral200}`,
+    padding: spacing.xs,
+    borderBottom: `1px solid ${colors.neutral300}`,
     minHeight: 36,
   },
 
   specialtyIcon: {
     display: "flex",
     alignItems: "center",
-    paddingTop: 2,
-    color: colors.neutral500,
+    color: colors.blindBlack,
+    opacity: 0.8,
     flexShrink: 0,
   },
 

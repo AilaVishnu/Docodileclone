@@ -54,6 +54,12 @@ class ClinicStatusService(
                 .filter { it.tenant?.id == tenantId }
                 .orElseThrow { IllegalArgumentException("Clinic not found") }
         } else {
+            // Count clinics for this tenant
+            val currentCount = clinicEntityRepository.countByTenantId(tenantId)
+            if (currentCount >= 5) {
+                throw IllegalArgumentException("You can only have up to 5 clinics")
+            }
+
             val tenant = tenantRepository.findById(tenantId)
                 .orElseThrow { IllegalStateException("Tenant not found") }
             ClinicEntity(tenant = tenant, createdAt = Instant.now())
@@ -102,6 +108,14 @@ class ClinicStatusService(
             .filter { it.tenant?.id == tenantId }
             .orElseThrow { IllegalArgumentException("Clinic not found") }
 
+        // Server-side validation
+        if (!request.email.contains("@") || !request.email.contains(".")) {
+             throw IllegalArgumentException("Invalid email format")
+        }
+        if (request.phone.replace("\\D".toRegex(), "").length < 10) {
+             throw IllegalArgumentException("Phone number must have at least 10 digits")
+        }
+
         val staff = if (request.id != null) {
             appUserRepository.findById(request.id)
                 .filter { it.tenant?.id == tenantId }
@@ -114,7 +128,7 @@ class ClinicStatusService(
 
         staff.apply {
             name = request.name
-            email = request.email
+            email = request.email.trim().lowercase()
             phone = request.phone
             gender = request.gender
             role = Role.valueOf(request.role.uppercase().replace(" ", "_"))
