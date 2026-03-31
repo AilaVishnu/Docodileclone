@@ -1,4 +1,4 @@
-import React, { useState, KeyboardEvent } from "react";
+import React, { useState, useEffect, KeyboardEvent } from "react";
 import { Card } from "../Card";
 import { TextInput } from "../Input/TextInput";
 import { DomainInput } from "../Input/DomainInput";
@@ -20,11 +20,16 @@ type ClinicInfoCardProps = {
 
 export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCardProps) {
   const [specialtyInput, setSpecialtyInput] = useState("");
-  const [isSaved, setIsSaved] = useState(
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clinic.id)
-  );
+  const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+  const [isSaved, setIsSaved] = useState(isUuid(clinic.id));
   const [showErrors, setShowErrors] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    setIsSaved(isUuid(clinic.id));
+    setIsEditing(false);
+    setShowErrors(false);
+  }, [clinic.id]);
 
   const { domain, name: clinicName, phone, specialties, address } = clinic;
 
