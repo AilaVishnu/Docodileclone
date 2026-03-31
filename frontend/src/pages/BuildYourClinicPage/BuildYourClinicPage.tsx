@@ -98,7 +98,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
 
   const handleAddClinic = () => {
     if (clinics.length >= 5) {
-      alert("Maximum of 5 clinics allowed.");
+      setToastMessage("Maximum of 5 clinics reached");
       return;
     }
 

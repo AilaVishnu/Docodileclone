@@ -45,7 +45,7 @@ export function ClinicTabs({
     {
       label: "+ Add Clinic",
       onClick: onAddClinic,
-      disabled: clinics.length >= 5,
+      disabled: false,
     },
   ];
 
