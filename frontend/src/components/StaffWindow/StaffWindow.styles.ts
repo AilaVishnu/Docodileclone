@@ -13,7 +13,7 @@ export const styles: Record<string, CSSProperties> = {
     width: 90,
     height: 80,
     borderRadius: 16,
-    border: "3px solid",
+    border: "none",
     overflow: "hidden",
     cursor: "pointer",
     flexShrink: 0,

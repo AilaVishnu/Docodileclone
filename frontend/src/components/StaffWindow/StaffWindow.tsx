@@ -18,7 +18,7 @@ export function StaffWindow({
 
   const windowStyle: React.CSSProperties = dashed
     ? { ...styles.window, ...styles.dashedWindow }
-    : { ...styles.window, borderColor: color };
+    : { ...styles.window, backgroundColor: color };
 
   return (
     <div style={windowStyle} onClick={onClick}>
