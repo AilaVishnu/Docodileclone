@@ -101,7 +101,7 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
       <DomainInput
         value={domain}
         onChange={(val) => onUpdate({ domain: val })}
-        disabled={!!clinic.id && !clinic.id.startsWith("new-") && !!domain}
+        disabled={/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clinic.id) && !!domain}
       />
 
       {/* Inner form card */}

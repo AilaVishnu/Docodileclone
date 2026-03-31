@@ -19,7 +19,7 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.h4,
     fontWeight: fonts.weight.regular,
     color: colors.blindBlack,
-    marginBottom: 2,
+    marginBottom: spacing.s,
   },
 
   workspaceContainer: {
@@ -28,9 +28,7 @@ export const styles: Record<string, CSSProperties> = {
     transition: "max-width 0.3s ease",
     display: "flex",
     flexDirection: "column",
-    flex: 1,
     minHeight: 0,
-    maxHeight: "calc(100vh - 120px)",
   },
 
   rightContainer: {
@@ -44,7 +42,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   footer: {
-    marginTop: spacing.xs,
+    marginTop: spacing.m,
     display: "flex",
     gap: spacing.xl,
     justifyContent: "center",
