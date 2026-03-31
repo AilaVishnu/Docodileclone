@@ -112,4 +112,24 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column" as const,
   },
+
+  editButton: {
+    width: "100%",
+    marginTop: spacing.xs,
+    display: "flex",
+    flexDirection: "column" as const,
+  },
+
+  editButtonInner: {
+    width: "100%",
+    padding: "10px 0",
+    border: `2px dashed ${colors.neutral400}`,
+    borderRadius: radii.pill,
+    backgroundColor: "transparent",
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.m,
+    color: colors.neutral700,
+    cursor: "pointer",
+    textAlign: "center" as const,
+  },
 };

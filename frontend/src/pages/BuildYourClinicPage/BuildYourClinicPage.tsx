@@ -237,6 +237,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
               <ClinicInfoCard
                 clinic={activeClinic}
                 onUpdate={handleUpdateClinic}
+                onShowToast={setToastMessage}
               />
             ) : null
           }

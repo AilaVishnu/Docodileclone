@@ -15,10 +15,14 @@ import { Clinic } from "../ClinicTabs";
 type ClinicInfoCardProps = {
   clinic: Clinic;
   onUpdate: (updates: Partial<Clinic>) => void;
+  onShowToast?: (message: string) => void;
 };
 
-export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
+export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCardProps) {
   const [specialtyInput, setSpecialtyInput] = useState("");
+  const [isSaved, setIsSaved] = useState(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clinic.id)
+  );
 
   const { domain, name: clinicName, phone, specialties, address } = clinic;
 
@@ -86,7 +90,8 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
 
       const savedClinicData = await response.json();
       onUpdate({ id: savedClinicData.id });
-      alert("Clinic details saved successfully!");
+      setIsSaved(true);
+      onShowToast?.("Clinic details saved successfully!");
     } catch (error) {
       alert("An error occurred while saving clinic details");
     }
@@ -179,11 +184,17 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
         />
       </Card>
 
-      {/* Save button */}
+      {/* Save / Edit Details button */}
       <div style={styles.saveButton}>
-        <Button size="md" variant="dark" onClick={handleSave}>
-          Save
-        </Button>
+        {isSaved ? (
+          <Button size="md" variant="light" onClick={() => setIsSaved(false)}>
+            Edit Details
+          </Button>
+        ) : (
+          <Button size="md" variant="dark" onClick={handleSave}>
+            Save
+          </Button>
+        )}
       </div>
     </Card>
   );
