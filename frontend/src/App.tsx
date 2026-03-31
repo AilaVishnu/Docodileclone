@@ -52,6 +52,7 @@ function App() {
             setView("home");
           }}
           onGoToBuild={() => setView("build")}
+          onLogout={handleLogout}
         />
       )}
       {view === "build" && (

@@ -14,9 +14,10 @@ type ClinicData = {
 type ClinicSelectionPageProps = {
   onSelectClinic: (clinicId: string, clinicName: string) => void;
   onGoToBuild: () => void;
+  onLogout?: () => void;
 };
 
-export function ClinicSelectionPage({ onSelectClinic, onGoToBuild }: ClinicSelectionPageProps) {
+export function ClinicSelectionPage({ onSelectClinic, onGoToBuild, onLogout }: ClinicSelectionPageProps) {
   const [clinics, setClinics] = useState<ClinicData[]>([]);
 
   useEffect(() => {
@@ -67,6 +68,10 @@ export function ClinicSelectionPage({ onSelectClinic, onGoToBuild }: ClinicSelec
 
       <button style={styles.buildLink} onClick={onGoToBuild}>
         Go to 'Build Your Clinic'
+      </button>
+
+      <button style={styles.logoutButton} onClick={onLogout}>
+        Logout
       </button>
     </div>
   );

@@ -33,4 +33,18 @@ export const styles: Record<string, CSSProperties> = {
     border: "none",
     padding: 0,
   },
+
+  logoutButton: {
+    position: "fixed" as const,
+    bottom: 20,
+    right: 20,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.xs,
+    color: colors.neutral700,
+    background: "none",
+    border: `1px solid ${colors.neutral400}`,
+    borderRadius: 8,
+    padding: "6px 16px",
+    cursor: "pointer",
+  },
 };

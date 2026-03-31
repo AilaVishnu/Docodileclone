@@ -52,6 +52,7 @@ export const styles: Record<string, CSSProperties> = {
     fontFamily: fonts.family.primary,
     cursor: "pointer",
     padding: "10px",
+    textDecoration: "underline",
   },
 };
 
