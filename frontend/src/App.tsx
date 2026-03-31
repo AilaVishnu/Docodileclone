@@ -3,52 +3,24 @@ import "./styles/globals.css";
 import { AdminLoginPage, StaffLoginPage } from './pages/LoginPage';
 import { HomePage } from './pages/Home';
 import { BuildYourClinicPage } from './pages/BuildYourClinicPage';
+import { ClinicSelectionPage } from './pages/ClinicSelectionPage';
 
 function App() {
-  const [view, setViewState] = useState<"login" | "home" | "build">(() => {
-    const savedView = localStorage.getItem("docodile_view") as "login" | "home" | "build";
+  const [view, setViewState] = useState<"login" | "home" | "build" | "select">(() => {
+    const savedView = localStorage.getItem("docodile_view") as "login" | "home" | "build" | "select";
     const token = localStorage.getItem("docodile_token");
     
     if (!token) return "login";
     return savedView || "login";
   });
 
-  const setView = (newView: "login" | "home" | "build") => {
+  const setView = (newView: "login" | "home" | "build" | "select") => {
     localStorage.setItem("docodile_view", newView);
     setViewState(newView);
   };
 
-  const handleLoginSuccess = async () => {
-    const role = localStorage.getItem("docodile_role");
-    const token = localStorage.getItem("docodile_token");
-
-    if (!token) {
-      setView("login");
-      return;
-    }
-
-    if (role !== "ADMIN") {
-      setView("home");
-      return;
-    }
-
-    try {
-      const response = await fetch("http://localhost:8080/api/tenant/status", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        setView("home");
-        return;
-      }
-
-      const data = (await response.json()) as { complete: boolean };
-      setView(data.complete ? "home" : "build");
-    } catch {
-      setView("home");
-    }
+  const handleLoginSuccess = () => {
+    setView("select");
   };
 
   const handleLogout = () => {
@@ -72,8 +44,18 @@ function App() {
           </header>
         </div>
       )}
+      {view === "select" && (
+        <ClinicSelectionPage
+          onSelectClinic={(clinicId, clinicName) => {
+            localStorage.setItem("docodile_clinic_id", clinicId);
+            localStorage.setItem("docodile_clinic_name", clinicName);
+            setView("home");
+          }}
+          onGoToBuild={() => setView("build")}
+        />
+      )}
       {view === "build" && (
-        <BuildYourClinicPage onNext={() => setView("home")} />
+        <BuildYourClinicPage onNext={() => setView("select")} />
       )}
       {view === "home" && (
         <HomePage 

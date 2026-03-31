@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { styles } from "./Toast.styles";
-import { ReactComponent as UserIcon } from "../../assets/User Hands.svg";
+import { ReactComponent as BuildingIcon } from "../../assets/Buildings.svg";
 
 type ToastProps = {
   message: string;
@@ -21,7 +21,7 @@ export function Toast({ message, isVisible, onClose, duration = 4000 }: ToastPro
 
   return (
     <div style={styles.container}>
-      <UserIcon style={styles.icon} />
+      <BuildingIcon style={styles.icon} />
       <p style={styles.message}>{message}</p>
       <button style={styles.closeButton} onClick={onClose}>
         ✕

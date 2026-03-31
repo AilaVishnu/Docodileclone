@@ -1,12 +1,17 @@
 {
-  "mcpServers": {
-    "figma": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "http://127.0.0.1:3845/sse"
-      ]
-    }
-  }
+	"servers": {
+		"figma": {
+			"url": "http://127.0.0.1:3845/mcp",
+			"type": "http"
+		},
+		"Figma": {
+			"url": "https://mcp.figma.com/mcp",
+			"type": "http"
+		},
+		"my-mcp-server-d68b0d55": {
+			"url": "http://127.0.0.1:3845/mcp",
+			"type": "http"
+		}
+	},
+	"inputs": []
 }
