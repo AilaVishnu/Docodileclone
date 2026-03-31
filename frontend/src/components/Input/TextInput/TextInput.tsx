@@ -73,7 +73,7 @@ export function TextInput({
   };
 
   return (
-    <div>
+    <div style={{ width: "100%" }}>
       <div style={containerStyle}>
         {iconLeft && <span style={{ ...styles.icon, ...(multiline ? { marginTop: 4 } : {}) }}>{iconLeft}</span>}
 
