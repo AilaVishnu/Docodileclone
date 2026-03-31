@@ -42,9 +42,9 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   footer: {
-    marginTop: spacing.m,
+    marginTop: spacing.l,
     display: "flex",
-    gap: spacing.xl,
+    gap: spacing.xxl,
     justifyContent: "center",
     flexShrink: 0,
   },
@@ -53,8 +53,8 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    width: "100%",
-    maxWidth: 600,
+    width: "110%",
+    maxWidth: 700,
     position: "relative" as const,
   },
 
@@ -82,8 +82,8 @@ export const styles: Record<string, CSSProperties> = {
 
   staffList: {
     display: "grid",
-    gridTemplateColumns: "repeat(5, 80px)",
-    gap: "8px 8px",
+    gridTemplateColumns: "repeat(5, 90px)",
+    gap: "8px 12px",
     width: "100%",
     justifyContent: "center",
   },
@@ -92,7 +92,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column" as const,
     alignItems: "center",
-    width: 80,
+    width: 90,
     gap: 2,
   },
 

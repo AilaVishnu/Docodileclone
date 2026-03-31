@@ -6,8 +6,8 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: spacing.s,
-    marginTop: spacing.s,
     maxWidth: 480,
+    margin: "0 auto 0 10px",
   },
 
   cardTitle: {
@@ -107,10 +107,11 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   saveButton: {
-    width: "100%",
+    width: "50%",
     marginTop: spacing.xs,
     display: "flex",
     flexDirection: "column" as const,
+    alignSelf: "center",
   },
 
   editButton: {

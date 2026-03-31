@@ -40,6 +40,7 @@ export function StaffDetailsCard({
         placeholder="Name"
         iconLeft={<UserIcon />}
         error={errors.name}
+        errorMessage="Please enter staff name"
       />
 
       <TextInput
@@ -50,6 +51,7 @@ export function StaffDetailsCard({
         placeholder="hello@example.com"
         iconLeft={<MailIcon />}
         error={errors.email}
+        errorMessage="Please enter a valid email"
       />
 
       <TextInput
@@ -77,6 +79,7 @@ export function StaffDetailsCard({
         placeholder="+91 XXXXX XXXXX"
         iconLeft={<PhoneIcon />}
         error={errors.phone}
+        errorMessage="Please enter a valid phone number"
       />
 
       <div style={{ ...styles.genderGroup, ...(errors.gender ? { border: "1px solid red", borderRadius: "8px", padding: "4px" } : {}) }}>

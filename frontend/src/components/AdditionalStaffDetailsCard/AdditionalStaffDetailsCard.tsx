@@ -97,6 +97,7 @@ export function AdditionalStaffDetailsCard({
               placeholder="ABCDEF"
               iconLeft={<RegIcon />}
               error={errors.registrationNo}
+              errorMessage="Please enter registration number"
             />
 
             <div style={styles.hint}>

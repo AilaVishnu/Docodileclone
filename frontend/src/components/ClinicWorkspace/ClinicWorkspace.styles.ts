@@ -9,17 +9,18 @@ export const styles: Record<string, CSSProperties> = {
     border: `0px solid ${colors.blindBlack}`,
     borderRadius: `0 ${radii.primary}px ${radii.primary}px ${radii.primary}px`,
     display: "flex",
-    padding: spacing.xl,
-    gap: spacing.l,
+    padding: `${spacing.l} ${spacing.xxl}`,
+    gap: spacing.xxl,
     boxSizing: "border-box",
     backgroundColor: colors.primary200,
+    alignItems: "center",
   },
 
   leftPanel: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    paddingRight: spacing.xxl,
+    justifyContent: "center",
   },
 
   rightPanel: {

@@ -23,6 +23,7 @@ type AddStaffModalProps = {
   onSave: (data: StaffData) => void;
   onDelete?: () => void;
   initialData?: StaffData;
+  onShowToast?: (message: string) => void;
 };
 
 export function AddStaffModal({
@@ -31,6 +32,7 @@ export function AddStaffModal({
   onSave,
   onDelete,
   initialData,
+  onShowToast,
 }: AddStaffModalProps) {
   // Local state for all fields
   const [name, setName] = useState("");
@@ -92,7 +94,7 @@ export function AddStaffModal({
     const isEmailValid = emailRegex.test(email.trim());
 
     const newErrors: Record<string, boolean> = {
-      name: !name.trim(),
+      name: !name.trim() || name.trim().toLowerCase() === "dr.",
       email: !email.trim() || !isEmailValid,
       phone: !phone.trim() || phone.length < 10,
       gender: !gender,
@@ -108,6 +110,15 @@ export function AddStaffModal({
 
     const hasErrors = Object.values(newErrors).some(Boolean);
     if (hasErrors) {
+      const messages: string[] = [];
+      if (newErrors.name) messages.push("name");
+      if (newErrors.email) messages.push("valid email");
+      if (newErrors.phone) messages.push("valid phone number");
+      if (newErrors.gender) messages.push("gender");
+      if (newErrors.role) messages.push("role");
+      if (newErrors.speciality) messages.push("speciality");
+      if (newErrors.registrationNo) messages.push("registration number");
+      onShowToast?.(`Please enter ${messages[0]}`);
       return;
     }
 

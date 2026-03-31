@@ -12,6 +12,7 @@ import { ReactComponent as PlusIcon } from "../../assets/Plus.svg";
 import { ReactComponent as ClinicRoof } from "../../assets/clinic roof.svg";
 import { ReactComponent as Bush } from "../../assets/bush.svg";
 import { Toast } from "../../components/Toast";
+import { StaffWindow } from "../../components/StaffWindow";
 
 export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   const [clinics, setClinics] = useState<Clinic[]>([]);
@@ -251,20 +252,17 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                   {/* House Body — grouped arches and labels */}
                   <div style={styles.houseBody}>
                     <div style={styles.staffList}>
-                      {activeClinic.staff.map((staff: Staff) => (
+                      {activeClinic.staff.map((staff: Staff, index: number) => (
                         <div key={staff.id} style={styles.staffCardWrapper}>
-                          <div
-                            style={styles.staffCard}
-                            onClick={() => handleEditStaff(staff)}
-                          >
+                          <StaffWindow colorIndex={index} onClick={() => handleEditStaff(staff)}>
                             <StaffIllustration
                               role={staff.role}
                               gender={staff.gender}
                               width="100%"
                               height="100%"
-                              borderRadius="40px 40px 0 0"
+                              borderRadius="0"
                             />
-                          </div>
+                          </StaffWindow>
                           <div style={styles.staffName}>{staff.name}</div>
                           <div style={styles.staffRole}>{staff.role}</div>
                         </div>
@@ -272,9 +270,9 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
 
                       {/* Add Staff arch */}
                       <div style={styles.staffCardWrapper}>
-                        <div style={styles.addStaffCard} onClick={handleOpenAddStaff}>
+                        <StaffWindow dashed onClick={handleOpenAddStaff}>
                           <PlusIcon style={{ width: 32, height: 32 }} />
-                        </div>
+                        </StaffWindow>
                         <div style={styles.staffName}>&nbsp;</div>
                         <div style={styles.staffRole}>&nbsp;</div>
                       </div>
@@ -295,14 +293,55 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           onSave={handleSaveStaff}
           onDelete={handleDeleteStaff}
           initialData={editingStaff}
+          onShowToast={setToastMessage}
         />
 
         {/* Footer actions */}
         <div style={styles.footer}>
-          <Button size="md" variant="secondaryLight" iconRight={<HelpIcon />}>
+          <Button size="md" variant="secondaryLight" iconRight={<HelpIcon />} style={{ padding: "8px 50px" }}>
             Help
           </Button>
-          <Button size="md" variant="dark" iconRight={<NextIcon />} onClick={onNext}>
+          <Button size="md" variant="dark" iconRight={<NextIcon />} onClick={async () => {
+            const incomplete = clinics.find(c => !c.name.trim() || !c.phone.trim() || !c.domain.trim() || !c.address.trim());
+            if (incomplete) {
+              setActiveClinicId(incomplete.id);
+              setToastMessage(`Please complete all fields for "${incomplete.name || "Your Clinic"}"`);
+              return;
+            }
+
+            const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+            try {
+              for (const c of clinics) {
+                const clinicId = isUuid(c.id) ? c.id : null;
+                const res = await fetch("http://localhost:8080/api/tenant/clinic", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
+                  },
+                  body: JSON.stringify({
+                    id: clinicId,
+                    name: c.name,
+                    address: c.address,
+                    phone: c.phone,
+                    domain: c.domain,
+                    speciality: c.specialties.join(","),
+                  }),
+                });
+                if (!res.ok) {
+                  const err = await res.json();
+                  setActiveClinicId(c.id);
+                  setToastMessage(err.error || `Failed to save "${c.name}"`);
+                  return;
+                }
+                const saved = await res.json();
+                handleUpdateClinic({ id: saved.id });
+              }
+              onNext?.();
+            } catch {
+              setToastMessage("An error occurred while saving clinics");
+            }
+          }} style={{ padding: "8px 100px" }}>
             Next
           </Button>
         </div>

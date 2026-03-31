@@ -11,6 +11,7 @@ type TextInputProps = {
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   error?: boolean;
+  errorMessage?: string;
   maxLength?: number;
   multiline?: boolean;
 };
@@ -46,7 +47,7 @@ function AutoGrowTextarea({ value, onChange, placeholder, maxLength }: {
       placeholder={placeholder}
       maxLength={maxLength}
       rows={1}
-      style={{ ...styles.input, resize: "none" as const, overflow: "hidden" }}
+      style={{ ...styles.input, resize: "none" as const, overflow: "hidden", lineHeight: 1.6 }}
     />
   );
 }
@@ -61,6 +62,7 @@ export function TextInput({
   onKeyDown,
   onBlur,
   error,
+  errorMessage,
   maxLength,
   multiline,
 }: TextInputProps) {
@@ -71,30 +73,37 @@ export function TextInput({
   };
 
   return (
-    <div style={containerStyle}>
-      {iconLeft && <span style={{ ...styles.icon, ...(multiline ? { marginTop: 4 } : {}) }}>{iconLeft}</span>}
+    <div>
+      <div style={containerStyle}>
+        {iconLeft && <span style={{ ...styles.icon, ...(multiline ? { marginTop: 4 } : {}) }}>{iconLeft}</span>}
 
-      {multiline ? (
-        <AutoGrowTextarea
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          maxLength={maxLength}
-        />
-      ) : (
-        <input
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={onKeyDown}
-          onBlur={onBlur}
-          placeholder={placeholder}
-          maxLength={maxLength}
-          style={styles.input}
-        />
+        {multiline ? (
+          <AutoGrowTextarea
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            maxLength={maxLength}
+          />
+        ) : (
+          <input
+            type={type}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={onKeyDown}
+            onBlur={onBlur}
+            placeholder={placeholder}
+            maxLength={maxLength}
+            style={styles.input}
+          />
+        )}
+
+        {iconRight && <span style={styles.icon}>{iconRight}</span>}
+      </div>
+      {error && errorMessage && (
+        <div style={{ color: "#D00416", fontSize: 12, fontFamily: "'inter', sans-serif", marginTop: 2, marginLeft: 4 }}>
+          {errorMessage}
+        </div>
       )}
-
-      {iconRight && <span style={styles.icon}>{iconRight}</span>}
     </div>
   );
 }
