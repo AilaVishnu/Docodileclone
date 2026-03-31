@@ -5,7 +5,7 @@ export const styles: Record<string, CSSProperties> = {
   page: {
     width: "100%",
     height: "100vh",
-    padding: "16px 24px",
+    padding: "12px 24px",
     backgroundColor: colors.yellowTeeth,
     display: "flex",
     flexDirection: "column",
@@ -19,7 +19,7 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.h4,
     fontWeight: fonts.weight.regular,
     color: colors.blindBlack,
-    marginBottom: 4,
+    marginBottom: 2,
   },
 
   workspaceContainer: {
@@ -30,6 +30,7 @@ export const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     flex: 1,
     minHeight: 0,
+    maxHeight: "calc(100vh - 120px)",
   },
 
   rightContainer: {
@@ -39,10 +40,11 @@ export const styles: Record<string, CSSProperties> = {
     justifyContent: "center",
     gap: 0,
     height: "100%",
+    paddingRight: "10%",
   },
 
   footer: {
-    marginTop: spacing.s,
+    marginTop: spacing.xs,
     display: "flex",
     gap: spacing.xl,
     justifyContent: "center",
@@ -53,8 +55,8 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    width: "90%",
-    maxWidth: 500,
+    width: "100%",
+    maxWidth: 600,
     position: "relative" as const,
   },
 

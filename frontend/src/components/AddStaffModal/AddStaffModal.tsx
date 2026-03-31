@@ -60,7 +60,7 @@ export function AddStaffModal({
         setRegistrationNo(initialData.registrationNo);
       } else {
         // Reset form for "Add New"
-        setName("");
+        setName("Dr. ");
         setEmail("");
         setPhone("");
         setGender("");

@@ -175,6 +175,7 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
           onChange={(val) => onUpdate({ address: val })}
           placeholder="Clinic address"
           iconLeft={<LocationIcon />}
+          multiline
         />
       </Card>
 

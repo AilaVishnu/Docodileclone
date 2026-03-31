@@ -7,6 +7,7 @@ export const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     gap: spacing.s,
     marginTop: spacing.s,
+    maxWidth: 480,
   },
 
   cardTitle: {
