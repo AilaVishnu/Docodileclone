@@ -54,8 +54,9 @@ export const styles: Record<string, CSSProperties> = {
   fieldRow: {
     display: "flex",
     alignItems: "center",
-    gap: spacing.xs,
-    width: "100%",
+    gap: spacing.s,
+    borderBottom: `2px solid ${colors.blindBlack}`,
+    paddingBottom: spacing.xs,
   },
 
   select: {

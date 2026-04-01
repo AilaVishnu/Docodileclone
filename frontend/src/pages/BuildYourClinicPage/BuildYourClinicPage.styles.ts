@@ -5,7 +5,7 @@ export const styles: Record<string, CSSProperties> = {
   page: {
     width: "100%",
     minHeight: "100vh",
-    padding: "20px 24px",
+    padding: "40px 24px",
     backgroundColor: colors.yellowTeeth,
     display: "flex",
     flexDirection: "column",
@@ -16,10 +16,10 @@ export const styles: Record<string, CSSProperties> = {
 
   title: {
     fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h3,
+    fontSize: fonts.size.h2,
     fontWeight: fonts.weight.regular,
     color: colors.blindBlack,
-    marginBottom: 8,
+    marginBottom: 16,
   },
 
   workspaceContainer: {
@@ -34,14 +34,13 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: "flex-end",
+    justifyContent: "center",
     gap: 0,
     height: "100%",
-    minHeight: 340,
   },
 
   footer: {
-    marginTop: spacing.l,
+    marginTop: spacing.xxl,
     display: "flex",
     gap: spacing.xl,
     justifyContent: "center",
@@ -52,7 +51,7 @@ export const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     alignItems: "center",
     width: "100%",
-    maxWidth: 600,
+    maxWidth: 708,
     position: "relative" as const,
   },
 
@@ -68,12 +67,12 @@ export const styles: Record<string, CSSProperties> = {
   houseBody: {
     backgroundColor: colors.primary400,
     width: "100%",
-    padding: `${spacing.s} ${spacing.l}`,
-    paddingBottom: spacing.l,
+    padding: `${spacing.l} ${spacing.xl}`,
+    paddingBottom: spacing.xl,
     boxSizing: "border-box" as const,
     display: "flex",
     flexDirection: "column" as const,
-    minHeight: 160,
+    minHeight: 140,
     marginTop: -2, // Pull the body up to overlap
     position: "relative" as const,
     zIndex: 1,
@@ -81,8 +80,8 @@ export const styles: Record<string, CSSProperties> = {
 
   staffList: {
     display: "grid",
-    gridTemplateColumns: "repeat(5, 100px)",
-    gap: "12px 12px",
+    gridTemplateColumns: "repeat(5, 120px)",
+    gap: "16px 15px",
     width: "100%",
     justifyContent: "center",
   },
@@ -91,14 +90,14 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column" as const,
     alignItems: "center",
-    width: 100,
-    gap: 4,
+    width: 120,
+    gap: 8,
   },
 
   staffCard: {
-    width: 100,
-    height: 84,
-    borderRadius: "50px 50px 0 0",
+    width: 120,
+    height: 100,
+    borderRadius: "60px 60px 0 0",
     overflow: "hidden",
     cursor: "pointer",
     flexShrink: 0,
@@ -129,9 +128,9 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   addStaffCard: {
-    width: 100,
-    height: 84,
-    borderRadius: "50px 50px 0 0",
+    width: 120,
+    height: 100,
+    borderRadius: "60px 60px 0 0",
     border: `2px dashed rgba(255,255,255,0.5)`,
     backgroundColor: "rgba(255,255,255,0.15)",
     display: "flex",

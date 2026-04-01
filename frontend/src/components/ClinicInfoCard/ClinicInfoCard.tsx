@@ -2,13 +2,11 @@ import React, { useState, KeyboardEvent } from "react";
 import { Card } from "../Card";
 import { TextInput } from "../Input/TextInput";
 import { DomainInput } from "../Input/DomainInput";
-import { Select } from "../Input/Select/Select";
 import { Button } from "../Button";
 import { styles } from "./ClinicInfoCard.styles";
-import { colors } from "../../styles/theme";
 import { ReactComponent as BuildingIcon } from "../../assets/Buildings.svg";
 import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
-import { ReactComponent as SpecialtyIcon } from "../../assets/Stethoscope.svg";
+import { ReactComponent as SpecialtyIcon } from "../../assets/Clock Circle.svg";
 import { ReactComponent as LocationIcon } from "../../assets/Map Point.svg";
 import { Clinic } from "../ClinicTabs";
 
@@ -95,12 +93,12 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
   return (
     <Card style={styles.outerCard}>
       {/* Clinic display name heading */}
-      <h3 style={styles.cardTitle} title={displayName}>{displayName}</h3>
+      <h3 style={styles.cardTitle}>{displayName}</h3>
 
       {/* Domain input */}
-      <DomainInput
-        value={domain}
-        onChange={(val) => onUpdate({ domain: val })}
+      <DomainInput 
+        value={domain} 
+        onChange={(val) => onUpdate({ domain: val })} 
         disabled={!!clinic.id && !clinic.id.startsWith("new-") && !!domain}
       />
 
@@ -110,63 +108,45 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
           value={clinicName}
           onChange={(val) => onUpdate({ name: val })}
           placeholder="Clinic Name"
-          maxLength={32}
           iconLeft={<BuildingIcon />}
         />
 
         <TextInput
           value={phone}
-          onChange={(val) => {
-            let digits = val.replace(/\D/g, "");
-            if (digits.startsWith("91") && val.startsWith("+")) {
-              digits = digits.substring(2);
-            }
-            digits = digits.substring(0, 10);
-            if (digits.length === 0) onUpdate({ phone: "" });
-            else onUpdate({ phone: "+91 " + digits });
-          }}
-          onBlur={() => {
-            let clean = phone.replace(/\D/g, "");
-            if (clean.length === 0) return;
-            if (clean.startsWith("91")) clean = clean.substring(2);
-            clean = clean.substring(0, 10);
-            if (clean.length > 5) {
-              onUpdate({ phone: `+91 ${clean.substring(0, 5)} ${clean.substring(5)}` });
-            } else if (clean.length > 0) {
-              onUpdate({ phone: `+91 ${clean}` });
-            }
-          }}
+          onChange={(val) => onUpdate({ phone: val })}
           placeholder="+91 XXXXX XXXXX"
           iconLeft={<PhoneIcon />}
           error={!isPhoneValid}
         />
 
-        {/* Specialty selection */}
-        <div style={{ ...styles.specialtySection, borderBottom: `1px solid ${colors.neutral300}`, paddingBottom: 8 }}>
-          <Select
-            options={["Dermatology", "Cardiology", "Orthopedics", "Gynecology", "Neurology", "Pediatrics", "Ophthalmology", "ENT", "Urology"]}
-            value=""
-            onChange={(val) => {
-              if (val && !specialties.includes(val)) {
-                onUpdate({ specialties: [...specialties, val] });
-              }
-            }}
-            placeholder="Add specialty"
-            iconLeft={<SpecialtyIcon />}
-          />
-          <div style={{ ...styles.tagRow, marginTop: 8, minHeight: 32 }}>
-            {specialties.map((s: string, i: number) => (
-              <span key={i} style={styles.tag}>
-                {s}
-                <button
-                  style={styles.tagRemove}
-                  onClick={() => removeSpecialty(i)}
-                  aria-label={`Remove ${s}`}
-                >
-                  ✕
-                </button>
-              </span>
-            ))}
+        {/* Specialty tag input */}
+        <div style={styles.specialtySection}>
+          <div style={styles.rowWithAction}>
+            <div style={styles.specialtyInputWrapper}>
+              <span style={styles.specialtyIcon}><SpecialtyIcon /></span>
+              <div style={styles.tagRow}>
+                {specialties.map((s: string, i: number) => (
+                  <span key={i} style={styles.tag}>
+                    {s}
+                    <button
+                      style={styles.tagRemove}
+                      onClick={() => removeSpecialty(i)}
+                      aria-label={`Remove ${s}`}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+                <input
+                  style={styles.tagInput}
+                  value={specialtyInput}
+                  onChange={(e) => setSpecialtyInput(e.target.value)}
+                  onKeyDown={handleSpecialtyKeyDown}
+                  onBlur={addSpecialty}
+                  placeholder={specialties.length === 0 ? "Add specialty" : ""}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
