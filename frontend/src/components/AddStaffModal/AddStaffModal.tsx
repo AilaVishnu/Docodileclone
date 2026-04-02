@@ -82,9 +82,10 @@ export function AddStaffModal({
         setName("Dr. ");
       }
     } else {
-      // If switching away from Doctor and name starts with Dr., clear it
+      // If switching away from Doctor, remove the "Dr. " prefix but keep the rest
       if (name.toLowerCase().startsWith("dr. ")) {
-        setName("");
+        const nameWithoutPrefix = name.substring(4).trim();
+        setName(nameWithoutPrefix);
       }
     }
   }, [role]);

@@ -10,9 +10,9 @@ export const windowColors = [
 
 export const styles: Record<string, CSSProperties> = {
   window: {
-    width: 90,
-    height: 80,
-    borderRadius: 16,
+    width: 105,
+    height: 90,
+    borderRadius: "35px 35px 0 0",
     border: "none",
     overflow: "hidden",
     cursor: "pointer",
@@ -24,9 +24,9 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   dashedWindow: {
-    border: "2px dashed rgba(255,255,255,0.5)",
-    backgroundColor: "rgba(255,255,255,0.15)",
+    border: "2px dashed #F3F3DC",
+    backgroundColor: "transparent",
     alignItems: "center",
-    color: "rgba(255,255,255,0.7)",
+    color: "#F3F3DC",
   },
 };

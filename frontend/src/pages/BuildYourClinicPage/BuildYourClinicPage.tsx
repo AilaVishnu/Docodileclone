@@ -123,6 +123,10 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   };
 
   const handleOpenAddStaff = () => {
+    if (activeClinic && activeClinic.staff.length >= 10) {
+      setToastMessage("Maximum of 10 staff members reached");
+      return;
+    }
     setEditingStaff(undefined);
     setIsAddStaffOpen(true);
   };
@@ -269,13 +273,15 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                       ))}
 
                       {/* Add Staff arch */}
-                      <div style={styles.staffCardWrapper}>
-                        <StaffWindow dashed onClick={handleOpenAddStaff}>
-                          <PlusIcon style={{ width: 32, height: 32 }} />
-                        </StaffWindow>
-                        <div style={styles.staffName}>&nbsp;</div>
-                        <div style={styles.staffRole}>&nbsp;</div>
-                      </div>
+                      {activeClinic.staff.length < 10 && (
+                        <div style={styles.staffCardWrapper}>
+                          <StaffWindow dashed onClick={handleOpenAddStaff}>
+                            <PlusIcon style={{ width: 32, height: 32 }} />
+                          </StaffWindow>
+                          <div style={styles.staffName}>&nbsp;</div>
+                          <div style={styles.staffRole}>&nbsp;</div>
+                        </div>
+                      )}
                     </div>
                   </div>
 

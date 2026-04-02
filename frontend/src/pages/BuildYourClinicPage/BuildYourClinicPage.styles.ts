@@ -24,7 +24,7 @@ export const styles: Record<string, CSSProperties> = {
 
   workspaceContainer: {
     width: "100%",
-    maxWidth: "1200px",
+    maxWidth: "1220px",
     transition: "max-width 0.3s ease",
     display: "flex",
     flexDirection: "column",
@@ -38,7 +38,7 @@ export const styles: Record<string, CSSProperties> = {
     justifyContent: "center",
     gap: 0,
     height: "100%",
-    paddingRight: "10%",
+    paddingLeft: "2%",
   },
 
   footer: {
@@ -53,9 +53,10 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    width: "110%",
-    maxWidth: 700,
+    width: "105%",
+    maxWidth: 680,
     position: "relative" as const,
+    marginLeft: -60,
   },
 
   roofImage: {
@@ -70,7 +71,7 @@ export const styles: Record<string, CSSProperties> = {
   houseBody: {
     backgroundColor: colors.primary400,
     width: "100%",
-    padding: `${spacing.xs} ${spacing.s}`,
+    padding: `${spacing.xs} ${spacing.s} ${spacing.s} ${spacing.l}`,
     paddingBottom: spacing.s,
     boxSizing: "border-box" as const,
     display: "flex",
@@ -82,17 +83,17 @@ export const styles: Record<string, CSSProperties> = {
 
   staffList: {
     display: "grid",
-    gridTemplateColumns: "repeat(5, 90px)",
-    gap: "8px 12px",
+    gridTemplateColumns: "repeat(5, 105px)",
+    gap: "10px 16px",
     width: "100%",
-    justifyContent: "center",
+    justifyContent: "start",
   },
 
   staffCardWrapper: {
     display: "flex",
     flexDirection: "column" as const,
-    alignItems: "center",
-    width: 90,
+    alignItems: "flex-start",
+    width: 105,
     gap: 2,
   },
 
@@ -111,7 +112,7 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.xs,
     fontWeight: fonts.weight.medium,
     color: colors.blindBlack,
-    textAlign: "center" as const,
+    textAlign: "left" as const,
     width: "100%",
     whiteSpace: "nowrap" as const,
     overflow: "hidden" as const,
@@ -122,7 +123,7 @@ export const styles: Record<string, CSSProperties> = {
     fontFamily: fonts.family.primary,
     fontSize: "10px",
     color: colors.neutral700,
-    textAlign: "center" as const,
+    textAlign: "left" as const,
     width: "100%",
     whiteSpace: "nowrap" as const,
     overflow: "hidden" as const,
@@ -147,7 +148,7 @@ export const styles: Record<string, CSSProperties> = {
   bushRight: {
     position: "absolute" as const,
     bottom: -5,
-    right: -25,
+    right: -40,
     width: 65,
     height: 55,
     zIndex: 3,

@@ -24,7 +24,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   rightPanel: {
-    flex: 1,
+    flex: 1.2,
     display: "flex",
     flexDirection: "column",
   },
