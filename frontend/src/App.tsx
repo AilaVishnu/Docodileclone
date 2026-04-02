@@ -7,11 +7,13 @@ import { ClinicSelectionPage } from './pages/ClinicSelectionPage';
 
 function App() {
   const [view, setViewState] = useState<"login" | "home" | "build" | "select">(() => {
-    const savedView = localStorage.getItem("docodile_view") as "login" | "home" | "build" | "select";
-    const token = localStorage.getItem("docodile_token");
-    
-    if (!token) return "login";
-    return savedView || "login";
+    localStorage.removeItem("docodile_token");
+    localStorage.removeItem("docodile_role");
+    localStorage.removeItem("docodile_view");
+    localStorage.removeItem("docodile_home_tab");
+    localStorage.removeItem("docodile_clinic_id");
+    localStorage.removeItem("docodile_clinic_name");
+    return "login";
   });
 
   const setView = (newView: "login" | "home" | "build" | "select") => {
