@@ -158,17 +158,24 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
         setToastMessage(`${deletedName} is deleted from your staff`);
       } else {
         const errorData = await response.json();
-        alert(errorData.error || "Failed to delete staff member");
+        setToastMessage(errorData.error || "Failed to delete staff member");
       }
     } catch (error) {
       console.error("Failed to delete staff", error);
-      alert("An error occurred while deleting staff member");
+      setToastMessage("An error occurred while deleting staff member");
     }
   };
 
   const handleSaveStaff = async (data: Omit<Staff, "id">) => {
     try {
       const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+      if (!isUuid(activeClinicId)) {
+        setToastMessage("Please save the clinic details first before adding staff");
+        setIsAddStaffOpen(false);
+        return;
+      }
+
       const staffId = editingStaff && isUuid(editingStaff.id) ? editingStaff.id : null;
 
       const response = await fetch(`http://localhost:8080/api/tenant/clinics/${activeClinicId}/staff`, {
@@ -213,11 +220,11 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
         setIsAddStaffOpen(false);
       } else {
         const errorData = await response.json();
-        alert(errorData.error || "Failed to save staff member");
+        setToastMessage(errorData.error || "Failed to save staff member");
       }
     } catch (error) {
       console.error("Failed to save staff", error);
-      alert("An error occurred while saving staff member");
+      setToastMessage("An error occurred while saving staff member");
     }
   };
 

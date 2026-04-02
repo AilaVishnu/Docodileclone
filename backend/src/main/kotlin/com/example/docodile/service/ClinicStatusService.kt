@@ -116,6 +116,18 @@ class ClinicStatusService(
              throw IllegalArgumentException("Phone number must have at least 10 digits")
         }
 
+        // Check email uniqueness
+        val existingByEmail = appUserRepository.findByEmail(request.email.trim().lowercase())
+        if (existingByEmail.isPresent && existingByEmail.get().id != request.id) {
+            throw IllegalArgumentException("Email already exists for another staff member")
+        }
+
+        // Check phone uniqueness
+        if (appUserRepository.existsByPhone(request.phone) &&
+            (request.id == null || !appUserRepository.findById(request.id).map { it.phone == request.phone }.orElse(false))) {
+            throw IllegalArgumentException("Phone number already exists for another staff member")
+        }
+
         val staff = if (request.id != null) {
             appUserRepository.findById(request.id)
                 .filter { it.tenant?.id == tenantId }
