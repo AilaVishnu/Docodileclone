@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Clinic } from "../../components/ClinicTabs";
 import { ClinicDisplayCard } from "../../components/ClinicDisplayCard/ClinicDisplayCard";
 import { styles } from "./ClinicSelectionPage.styles";
+import { API_BASE_URL } from "../../apiConfig";
 import { Button } from "../../components/Button";
 
 type ClinicSelectionPageProps = {
@@ -18,7 +19,7 @@ export function ClinicSelectionPage({ onSelectClinic, onLogout }: ClinicSelectio
     
     const fetchClinics = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/tenant/clinics", {
+        const response = await fetch(`${API_BASE_URL}/api/tenant/clinics`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
           },

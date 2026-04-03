@@ -9,6 +9,7 @@ import { ReactComponent as PasswordIcon } from "../../assets/Key.svg";
 import { ReactComponent as EyeIcon } from "../../assets/Eye.svg";
 import { ReactComponent as EyeClosedIcon } from "../../assets/Eye Closed.svg";
 import { colors } from "../../styles/theme";
+import { API_BASE_URL } from "../../apiConfig";
 
 
 type LoginMode = "admin" | "staff";
@@ -66,7 +67,7 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
     setIsSubmitting(true);
 
     try {
-      const url = isStaff ? "http://localhost:8080/auth/staff/login" : "http://localhost:8080/auth/login";
+      const url = isStaff ? `${API_BASE_URL}/auth/staff/login` : `${API_BASE_URL}/auth/login`;
       const body = isStaff
         ? { domain: domain.trim(), email, password }
         : { email, password };

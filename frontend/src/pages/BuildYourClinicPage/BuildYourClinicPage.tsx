@@ -3,6 +3,7 @@ import { AddStaffModal } from "../../components/AddStaffModal";
 import { ClinicTabs, Clinic, Staff } from "../../components/ClinicTabs";
 import { styles } from "./BuildYourClinicPage.styles";
 import { ClinicWorkspace } from "../../components/ClinicWorkspace";
+import { API_BASE_URL } from "../../apiConfig";
 import { Button } from "../../components/Button";
 import { ClinicInfoCard } from "../../components/ClinicInfoCard";
 import { StaffIllustration } from "../../components/AddStaffModal/StaffIllustration";
@@ -22,7 +23,7 @@ export function BuildYourClinicPage({ onNext, onLogout }: { onNext?: () => void;
     
     const fetchClinics = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/tenant/clinics", {
+        const response = await fetch(`${API_BASE_URL}/api/tenant/clinics`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
           },
@@ -40,7 +41,7 @@ export function BuildYourClinicPage({ onNext, onLogout }: { onNext?: () => void;
               // Fetch staff for this clinic
               let staffList: Staff[] = [];
               try {
-                const staffResponse = await fetch(`http://localhost:8080/api/tenant/clinics/${c.id}/staff`, {
+                const staffResponse = await fetch(`${API_BASE_URL}/api/tenant/clinics/${c.id}/staff`, {
                   headers: {
                     Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
                   },
@@ -152,7 +153,7 @@ export function BuildYourClinicPage({ onNext, onLogout }: { onNext?: () => void;
       const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
       const staffId = editingStaff && isUuid(editingStaff.id) ? editingStaff.id : null;
 
-      const response = await fetch(`http://localhost:8080/api/tenant/clinics/${activeClinicId}/staff`, {
+      const response = await fetch(`${API_BASE_URL}/api/tenant/clinics/${activeClinicId}/staff`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

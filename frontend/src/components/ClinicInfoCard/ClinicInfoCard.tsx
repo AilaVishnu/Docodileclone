@@ -9,6 +9,7 @@ import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
 import { ReactComponent as SpecialtyIcon } from "../../assets/Clock Circle.svg";
 import { ReactComponent as LocationIcon } from "../../assets/Map Point.svg";
 import { Clinic } from "../ClinicTabs";
+import { API_BASE_URL } from "../../apiConfig";
 
 type ClinicInfoCardProps = {
   clinic: Clinic;
@@ -61,7 +62,7 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
       const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
       const clinicId = isUuid(clinic.id) ? clinic.id : null;
 
-      const response = await fetch("http://localhost:8080/api/tenant/clinic", {
+      const response = await fetch(`${API_BASE_URL}/api/tenant/clinic`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

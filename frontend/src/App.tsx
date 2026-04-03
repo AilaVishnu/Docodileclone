@@ -5,6 +5,7 @@ import { HomePage } from './pages/Home';
 import { BuildYourClinicPage } from './pages/BuildYourClinicPage';
 import { ClinicSelectionPage } from './pages/ClinicSelectionPage';
 import { Clinic } from './components/ClinicTabs';
+import { API_BASE_URL } from './apiConfig';
 
 type ViewState = "login" | "home" | "build" | "selection";
 
@@ -43,7 +44,7 @@ function App() {
 
     try {
       // Fetch clinics to determine routing
-      const clinicsResponse = await fetch("http://localhost:8080/api/tenant/clinics", {
+      const clinicsResponse = await fetch(`${API_BASE_URL}/api/tenant/clinics`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
