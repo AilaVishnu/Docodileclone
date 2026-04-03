@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { styles } from "./ClinicSelectionPage.styles";
 import { ClinicCard } from "../../components/ClinicCard";
+import { API_BASE_URL } from "../../apiConfig";
 
 type ClinicData = {
   id: string;
@@ -25,7 +26,7 @@ export function ClinicSelectionPage({ onSelectClinic, onGoToBuild, onLogout }: C
 
     const fetchClinics = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/tenant/clinics", {
+        const response = await fetch(`${API_BASE_URL}/api/tenant/clinics`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
           },

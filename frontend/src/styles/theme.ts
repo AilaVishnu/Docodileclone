@@ -41,6 +41,49 @@ export const colors = {
   redAlpha10: "rgba(251, 55, 72, 0.1)",
   red200: "#D00416",
   red100: "#FB3748",
+
+  // Global Active Theme Colors
+  active: {
+    shade50: "var(--active-shade-50)",
+    shade100: "var(--active-shade-100)",
+    shade200: "var(--active-shade-200)",
+    shade300: "var(--active-shade-300)",
+    shade400: "var(--active-shade-400)",
+    shade500: "var(--active-shade-500)",
+    shade600: "var(--active-shade-600)",
+    shade700: "var(--active-shade-700)",
+    shade800: "var(--active-shade-800)",
+  },
+};
+
+
+
+export type ThemeMode = "primary" | "secondary";
+
+export const getThemePalette = (mode: ThemeMode) => {
+  if (mode === "primary") {
+    return {
+      shade100: colors.primary100,
+      shade200: colors.primary200,
+      shade300: colors.primary300,
+      shade400: colors.primary400,
+      shade500: colors.primary500,
+      shade600: colors.primary600,
+      shade700: colors.primary700,
+      shade800: colors.primary800,
+    };
+  } else {
+    return {
+      shade100: colors.secondary100,
+      shade200: colors.secondary200,
+      shade300: colors.secondary300,
+      shade400: colors.secondary400,
+      shade500: colors.secondary500,
+      shade600: colors.secondary600,
+      shade700: colors.secondary700,
+      shade800: colors.secondary800,
+    };
+  }
 };
 
 export const gradients = {

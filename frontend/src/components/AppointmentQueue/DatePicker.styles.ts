@@ -81,13 +81,18 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   selectedDay: {
-    backgroundColor: colors.primary600,
+    backgroundColor: colors.active.shade600,
     color: "white",
     borderRadius: "999px",
   },
 
   today: {
-    border: `1px solid ${colors.primary600}`,
+    border: `1px solid ${colors.active.shade600}`,
+  },
+
+  disabledDay: {
+    color: colors.neutral300,
+    cursor: "not-allowed",
   },
 
   doneButton: {

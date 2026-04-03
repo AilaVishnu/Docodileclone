@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { styles } from "./DomainInput.styles";
 import { colors, fonts } from "../../../styles/theme";
+import { API_BASE_URL } from "../../../apiConfig";
 
 type DomainInputProps = {
   value: string;
@@ -34,7 +35,7 @@ export function DomainInput({
     timerRef.current = setTimeout(async () => {
       try {
         const res = await fetch(
-          `http://localhost:8080/api/tenant/domain/check?domain=${encodeURIComponent(value.trim())}`,
+          `${API_BASE_URL}/api/tenant/domain/check?domain=${encodeURIComponent(value.trim())}`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,

@@ -13,7 +13,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   content: {
-    backgroundColor: colors.primary200,
+    backgroundColor: colors.active.shade200,
     borderRadius: radii.primary,
     padding: 24,
     minWidth: 420,

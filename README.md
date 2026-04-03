@@ -216,6 +216,40 @@ npm start
 
 ---
 
+---
+
+## Production Deployment (Productionalizing)
+
+To deploy the Docodile application to production using the free-tier stack (Neon, Render, Vercel), follow these steps to set up your environment variables.
+
+### 1) Database (Neon)
+*   Create a project on [Neon.tech](https://neon.tech).
+*   In the **Connection Details** section, copy the JDBC connection string.
+*   Note down your **URL**, **Username**, and **Password**.
+
+### 2) Backend (Render)
+*   Deploy a **Web Service** on Render pointing to your GitHub repo.
+*   Use the `Dockerfile` located in the `backend/` directory.
+*   Add the following **Environment Variables**:
+
+| Variable Name | Description |
+| :--- | :--- |
+| `SPRING_DATASOURCE_URL` | Your Neon JDBC URL |
+| `SPRING_DATASOURCE_USERNAME` | Your Neon Database Username |
+| `SPRING_DATASOURCE_PASSWORD` | Your Neon Database Password |
+| `JWT_SECRET` | A long random string for securing tokens |
+| `ALLOWED_ORIGINS` | Your frontend URL (e.g., `https://your-app.vercel.app`) |
+
+### 3) Frontend (Vercel)
+*   Deploy your project on **Vercel** pointing to the `frontend/` directory.
+*   Add the following **Environment Variable**:
+
+| Variable Name | Description |
+| :--- | :--- |
+| `REACT_APP_API_URL` | Your Render backend URL (e.g., `https://your-api.onrender.com`) |
+
+---
+
 ## License
 
 Private / Internal – MVP stage

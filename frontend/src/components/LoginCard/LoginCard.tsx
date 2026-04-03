@@ -1,4 +1,4 @@
-import React, { useState, useEffect, KeyboardEvent } from "react";
+import React, { useState, useEffect } from "react";
 import { styles } from "./LoginCard.styles";
 import { TextInput } from "../Input/TextInput";
 import { DomainInput } from "../Input/DomainInput";
@@ -9,6 +9,7 @@ import { ReactComponent as PasswordIcon } from "../../assets/Key.svg";
 import { ReactComponent as EyeIcon } from "../../assets/Eye.svg";
 import { ReactComponent as EyeClosedIcon } from "../../assets/Eye Closed.svg";
 import { colors } from "../../styles/theme";
+import { API_BASE_URL } from "../../apiConfig";
 
 
 type LoginMode = "admin" | "staff";
@@ -66,7 +67,7 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
     setIsSubmitting(true);
 
     try {
-      const url = isStaff ? "http://localhost:8080/auth/staff/login" : "http://localhost:8080/auth/login";
+      const url = isStaff ? `${API_BASE_URL}/auth/staff/login` : `${API_BASE_URL}/auth/login`;
       const body = isStaff
         ? { domain: domain.trim(), email, password }
         : { email, password };
@@ -108,7 +109,7 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
   };
 
   return (
-    <Card style={{ ...styles.card, width: "40vw", backgroundColor: isStaff ? colors.primary100 : colors.secondary50 }}>
+    <Card style={{ ...styles.card, width: "40vw", backgroundColor: isStaff ? colors.active.shade100 : colors.secondary50 }}>
       <h4 style={styles.title}>
         Login as {isStaff ? "Staff" : "Admin"}
       </h4>
@@ -189,7 +190,7 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
       {showPopup && (
         <div style={{
           ...styles.supportPopup,
-          backgroundColor: isStaff ? colors.primary700 : colors.secondary700,
+          backgroundColor: isStaff ? colors.active.shade700 : colors.secondary700,
           color: colors.neutral100,
         }}>
           Contact Docodile Support Team

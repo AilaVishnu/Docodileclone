@@ -4,6 +4,7 @@ import { ClinicTabs, Clinic, Staff } from "../../components/ClinicTabs";
 import { styles } from "./BuildYourClinicPage.styles";
 import { ClinicWorkspace } from "../../components/ClinicWorkspace";
 import { Button } from "../../components/Button";
+import { API_BASE_URL } from "../../apiConfig";
 import { ClinicInfoCard } from "../../components/ClinicInfoCard";
 import { StaffIllustration } from "../../components/AddStaffModal/StaffIllustration";
 import { ReactComponent as NextIcon } from "../../assets/Arrow Right.svg";
@@ -26,7 +27,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
 
     const fetchClinics = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/tenant/clinics", {
+        const response = await fetch(`${API_BASE_URL}/api/tenant/clinics`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
           },
@@ -38,7 +39,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
               // Fetch staff for this clinic
               let staffList: Staff[] = [];
               try {
-                const staffResponse = await fetch(`http://localhost:8080/api/tenant/clinics/${c.id}/staff`, {
+                const staffResponse = await fetch(`${API_BASE_URL}/api/tenant/clinics/${c.id}/staff`, {
                   headers: {
                     Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
                   },
@@ -141,7 +142,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
 
     try {
       const response = await fetch(
-        `http://localhost:8080/api/tenant/clinics/${activeClinicId}/staff/${editingStaff.id}`,
+        `${API_BASE_URL}/api/tenant/clinics/${activeClinicId}/staff/${editingStaff.id}`,
         {
           method: "DELETE",
           headers: {
@@ -178,7 +179,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
 
       const staffId = editingStaff && isUuid(editingStaff.id) ? editingStaff.id : null;
 
-      const response = await fetch(`http://localhost:8080/api/tenant/clinics/${activeClinicId}/staff`, {
+      const response = await fetch(`${API_BASE_URL}/api/tenant/clinics/${activeClinicId}/staff`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -326,7 +327,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
             try {
               for (const c of clinics) {
                 const clinicId = isUuid(c.id) ? c.id : null;
-                const res = await fetch("http://localhost:8080/api/tenant/clinic", {
+                const res = await fetch(`${API_BASE_URL}/api/tenant/clinic`, {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",

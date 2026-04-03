@@ -5,6 +5,7 @@ import { styles } from "./AppointmentQueue.styles";
 import { DatePicker } from "./DatePicker";
 import { colors } from "../../styles/theme";
 import { BookAppointment } from "./BookAppointment";
+import { API_BASE_URL } from "../../apiConfig";
 
 type Doctor = {
   id: string;
@@ -38,7 +39,7 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
       try {
         // 1. Fetch Staff (to filter doctors)
         if (doctors.length === 0) {
-          const staffRes = await fetch(`http://localhost:8080/api/tenant/clinics/${clinicId}/staff`, {
+          const staffRes = await fetch(`${API_BASE_URL}/api/tenant/clinics/${clinicId}/staff`, {
             headers: { Authorization: `Bearer ${token}` },
           });
 
@@ -57,7 +58,7 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
 
         // 2. Fetch appointments for selected date
         const dateStr = selectedDate.toISOString().split('T')[0];
-        const aptRes = await fetch(`http://localhost:8080/api/appointments?date=${dateStr}`, {
+        const aptRes = await fetch(`${API_BASE_URL}/api/appointments?date=${dateStr}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -131,7 +132,7 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
             style={{ 
               textDecoration: "underline", 
               cursor: "pointer",
-              color: colors.primary700
+              color: colors.active.shade700
             }}
           >
             {dateText}

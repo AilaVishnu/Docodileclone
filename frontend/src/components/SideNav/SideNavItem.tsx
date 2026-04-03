@@ -13,7 +13,7 @@ export function SideNavItem({ label, icon, active, onClick, isExpanded }: SideNa
   const [hovered, setHovered] = useState(false);
 
   const getBackgroundColor = () => {
-    if (active) return colors.primary100;
+    if (active) return colors.active.shade100;
     if (hovered) return colors.neutralAlphaBlack;
     return 'transparent';
   };

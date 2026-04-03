@@ -41,12 +41,18 @@ function App() {
     localStorage.removeItem("docodile_role");
     localStorage.removeItem("docodile_view");
     localStorage.removeItem("docodile_home_tab");
+    localStorage.removeItem("docodile_clinic_id");
+    localStorage.removeItem("docodile_clinic_name");
     sessionStorage.removeItem("docodile_session");
     setView("login");
   };
 
   const handleNavigateToBuild = () => {
     setView("build");
+  };
+
+  const handleNavigateToSelection = () => {
+    setView("select");
   };
 
   return (
@@ -73,9 +79,10 @@ function App() {
         <BuildYourClinicPage onNext={() => setView("select")} />
       )}
       {view === "home" && (
-        <HomePage 
-          onLogout={handleLogout} 
+        <HomePage
+          onLogout={handleLogout}
           onViewClinic={handleNavigateToBuild}
+          onViewAllClinics={handleNavigateToSelection}
         />
       )}
     </div>

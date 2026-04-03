@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts, spacing, radii } from "../../styles/theme";
+import { colors } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   container: {
@@ -23,7 +23,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   tableContainer: {
-    backgroundColor: colors.primary100,
+    backgroundColor: colors.active.shade50,
     borderRadius: "0 0 24px 24px",
     padding: "24px",
     boxShadow: "0 8px 30px rgba(0, 0, 0, 0.03)",
@@ -65,7 +65,7 @@ export const styles: Record<string, CSSProperties> = {
 
   time: {
     fontWeight: 600,
-    color: colors.primary400,
+    color: colors.active.shade400,
   },
 
   walkinBadge: {

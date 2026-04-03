@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts, spacing, radii } from "../../styles/theme";
+import { colors, fonts, radii } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   overlay: {
@@ -8,8 +8,8 @@ export const styles: Record<string, CSSProperties> = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.primary200,
-    zIndex: 95,
+    backgroundColor: colors.active.shade200,
+    zIndex: 2000,
     padding: "24px 40px",
     display: "flex",
     flexDirection: "column",
@@ -67,7 +67,7 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "stretch",
   },
   card: {
-    backgroundColor: "white",
+    backgroundColor: colors.active.shade50,
     borderRadius: radii.m,
     padding: "16px",
     display: "flex",
@@ -114,7 +114,8 @@ export const styles: Record<string, CSSProperties> = {
     gridRow: "1 / span 2",
     gap: "12px",
     padding: "12px 20px",
-    height: "100%",
+    height: "fit-content",
+    alignSelf: "start",
   },
   billingTitle: {
     margin: 0,
@@ -259,7 +260,7 @@ export const styles: Record<string, CSSProperties> = {
     borderRadius: radii.m,
     border: `1px solid ${colors.neutral300}`,
     fontSize: "15px",
-    backgroundColor: "white",
+    backgroundColor: colors.active.shade50,
     cursor: "pointer",
   },
   billingValue: {
@@ -276,16 +277,6 @@ export const styles: Record<string, CSSProperties> = {
     justifyContent: "space-between",
     alignItems: "center",
     color: colors.neutral900,
-  },
-  buttonGroup: {
-    display: "flex",
-    gap: "12px",
-    marginTop: "auto",
-  },
-  smallButton: {
-    padding: "6px 12px",
-    fontSize: "14px",
-    minHeight: "unset",
   },
   footerButtonGroup: {
     gridRow: "3",

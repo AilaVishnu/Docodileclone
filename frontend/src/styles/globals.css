@@ -6,7 +6,32 @@
   --blindBlack: #122525;
   --sunset : linear-gradient(180deg, #F9F9ED 0%, #FFD0BF 100%);
   --sunrise: linear-gradient(135deg, #F9F9ED 0%, #ECF1FE 100%);
+
+  /* Default Active Theme (Primary/Yellow) */
+  --active-shade-50: #FCFCF5;
+  --active-shade-100: #F9F9ED;
+  --active-shade-200: #F3F3DC;
+  --active-shade-300: #EDDFBA;
+  --active-shade-400: #EDCA99;
+  --active-shade-500: #ECA66D;
+  --active-shade-600: #E48647;
+  --active-shade-700: #D26D2A;
+  --active-shade-800: #AE561A;
 }
+
+[data-theme="secondary"] {
+  --active-shade-50: #F1F6E7;
+  --active-shade-100: #E3EAD7;
+  --active-shade-200: #C8D4B0;
+  --active-shade-300: #ACBF88;
+  --active-shade-400: #98B06C;
+  --active-shade-500: #849D54;
+  --active-shade-600: #6C8145;
+  --active-shade-700: #556536;
+  --active-shade-800: #3D4927;
+}
+
+
 
 
 * {
