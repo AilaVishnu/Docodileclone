@@ -22,6 +22,10 @@ export const styles: Record<string, CSSProperties> = {
     transition: "all 0.2s ease",
     outline: "none",
     boxShadow: "none",
+    maxWidth: 200,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
 
   activeTab: {
