@@ -20,7 +20,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   activeTab: {
-    backgroundColor: colors.primary200,
+    backgroundColor: colors.active.shade200,
     borderBottom: "none",
     top: 1,
     zIndex: 2,

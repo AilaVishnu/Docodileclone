@@ -6,12 +6,12 @@ type DatePickerProps = {
   selectedDate: Date;
   onSelect: (date: Date) => void;
   onClose: () => void;
+  style?: React.CSSProperties;
 };
 
-export function DatePicker({ selectedDate, onSelect, onClose }: DatePickerProps) {
+export function DatePicker({ selectedDate, onSelect, onClose, style }: DatePickerProps) {
   const [viewDate, setViewDate] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
   const containerRef = useRef<HTMLDivElement>(null);
-  const { colors } = require("../../styles/theme"); // Fallback check or just use from theme if available
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -52,7 +52,13 @@ export function DatePicker({ selectedDate, onSelect, onClose }: DatePickerProps)
       cells.push(<div key={`empty-${i}`} style={styles.emptyCell} />);
     }
 
+    const todayAtMidnight = new Date();
+    todayAtMidnight.setHours(0, 0, 0, 0);
+
     for (let day = 1; day <= totalDays; day++) {
+      const currentDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
+      const isPast = currentDay < todayAtMidnight;
+
       const isSelected = 
         selectedDate.getDate() === day && 
         selectedDate.getMonth() === viewDate.getMonth() && 
@@ -67,6 +73,7 @@ export function DatePicker({ selectedDate, onSelect, onClose }: DatePickerProps)
         <div
           key={day}
           onClick={(e) => {
+            if (isPast) return;
             e.stopPropagation();
             onSelect(new Date(viewDate.getFullYear(), viewDate.getMonth(), day));
           }}
@@ -74,6 +81,7 @@ export function DatePicker({ selectedDate, onSelect, onClose }: DatePickerProps)
             ...styles.dayCell,
             ...(isSelected ? styles.selectedDay : {}),
             ...(isToday && !isSelected ? styles.today : {}),
+            ...(isPast ? styles.disabledDay : {}),
           }}
         >
           {day}
@@ -83,15 +91,23 @@ export function DatePicker({ selectedDate, onSelect, onClose }: DatePickerProps)
     return cells;
   };
 
+  const isCurrentMonth = 
+    viewDate.getMonth() === new Date().getMonth() && 
+    viewDate.getFullYear() === new Date().getFullYear();
+
   const formatMonth = (date: Date) => {
     return date.toLocaleString("default", { month: "long", year: "numeric" });
   };
 
   return (
-    <div style={styles.overlay} onClick={(e) => e.stopPropagation()}>
+    <div style={{ ...styles.overlay, ...style }} onClick={(e) => e.stopPropagation()}>
       <div style={styles.container} ref={containerRef}>
         <div style={styles.header}>
-          <button onClick={handlePrevMonth} style={styles.navButton}>
+          <button 
+            onClick={handlePrevMonth} 
+            style={{ ...styles.navButton, opacity: isCurrentMonth ? 0.3 : 1, cursor: isCurrentMonth ? "default" : "pointer" }}
+            disabled={isCurrentMonth}
+          >
             <ChevronLeftIcon style={{ width: 16, height: 16 }} />
           </button>
           <h4 style={styles.monthTitle}>{formatMonth(viewDate)}</h4>

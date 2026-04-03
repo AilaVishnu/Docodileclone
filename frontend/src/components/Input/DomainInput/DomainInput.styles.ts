@@ -9,7 +9,7 @@ export const styles: Record<string, CSSProperties> = {
     borderRadius: radii.m,
     gap: spacing.xs,
     overflow: "hidden",
-    backgroundColor: "transparent",
+    backgroundColor: colors.neutralAlphaBlack,
     height: 54,
     width: "100%",
   },

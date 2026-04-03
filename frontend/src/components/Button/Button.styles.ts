@@ -79,36 +79,36 @@ export const variants = {
 
   primary: {
     default: {
-      backgroundColor: colors.primary700,
-      borderColor: colors.primary700,
+      backgroundColor: colors.active.shade700,
+      borderColor: colors.active.shade700,
       color: colors.neutral100,
     },
     hover: {
-      backgroundColor: colors.primary800,
-      borderColor: colors.primary800,
+      backgroundColor: colors.active.shade800,
+      borderColor: colors.active.shade800,
       color: colors.neutral100,
     },
     disabled: {
-      backgroundColor: colors.primary300,
-      borderColor: colors.primary300,
+      backgroundColor: colors.active.shade300,
+      borderColor: colors.active.shade300,
       color: colors.neutral100,
     },
   },
 
   primaryLight: {
     default: {
-      borderColor: colors.primary600,
-      color: colors.primary600,
+      borderColor: colors.active.shade600,
+      color: colors.active.shade600,
       backgroundColor: "transparent",
     },
     hover: {
       backgroundColor: colors.neutralAlphaBlack,
-      borderColor: colors.primary700,
-      color: colors.primary700,
+      borderColor: colors.active.shade700,
+      color: colors.active.shade700,
     },
     disabled: {
-      borderColor: colors.primary400,
-      color: colors.primary400,
+      borderColor: colors.active.shade400,
+      color: colors.active.shade400,
     },
   },
 

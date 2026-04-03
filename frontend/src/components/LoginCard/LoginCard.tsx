@@ -1,4 +1,4 @@
-import React, { useState, useEffect, KeyboardEvent } from "react";
+import React, { useState, useEffect } from "react";
 import { styles } from "./LoginCard.styles";
 import { TextInput } from "../Input/TextInput";
 import { DomainInput } from "../Input/DomainInput";
@@ -108,7 +108,7 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
   };
 
   return (
-    <Card style={{ ...styles.card, width: "40vw", backgroundColor: isStaff ? colors.primary100 : colors.secondary50 }}>
+    <Card style={{ ...styles.card, width: "40vw", backgroundColor: isStaff ? colors.active.shade100 : colors.secondary50 }}>
       <h4 style={styles.title}>
         Login as {isStaff ? "Staff" : "Admin"}
       </h4>
@@ -183,7 +183,7 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
       {showPopup && (
         <div style={{
           ...styles.supportPopup,
-          backgroundColor: isStaff ? colors.primary700 : colors.secondary700,
+          backgroundColor: isStaff ? colors.active.shade700 : colors.secondary700,
           color: colors.neutral100,
         }}>
           Contact Docodile Support Team

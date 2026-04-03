@@ -8,7 +8,7 @@ export const styles: Record<string, CSSProperties> = {
     gap: "10px",
     borderRadius: radii.m,
     padding: spacing.l,
-    backgroundColor: colors.primary100,
+    backgroundColor: colors.active.shade100,
     minWidth: "25vw",
   },
   genderGroup: {

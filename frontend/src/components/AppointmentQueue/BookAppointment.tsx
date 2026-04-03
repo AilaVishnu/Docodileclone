@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { styles } from "./BookAppointment.styles";
 import { colors } from "../../styles/theme";
 import { DatePicker } from "./DatePicker";
-import { Button } from "../Button";
+import { TimePicker } from "./TimePicker";
 import {
   StethoscopeIcon,
   PulseIcon,
@@ -50,6 +50,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
   });
 
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const activeDoctor = doctors.find(d => d.id === selectedDoctorId) || doctors[0];
 
@@ -242,11 +243,6 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
               <span>₹{total.toFixed(2)}</span>
             </div>
           </div>
-
-          <div style={styles.buttonGroup}>
-            <Button variant="secondary" style={{ flex: 1, ...styles.smallButton }}>Print</Button>
-            <Button variant="primary" style={{ flex: 1, ...styles.smallButton }}>Generate</Button>
-          </div>
         </Card>
 
         <div style={styles.scheduleColumn}>
@@ -278,7 +274,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
               </span>
             </div>
             {showDatePicker && (
-              <div style={{ position: "absolute", bottom: "100%", left: 0, zIndex: 1000 }}>
+              <div style={{ position: "absolute", bottom: "100%", left: "50%", zIndex: 1100 }}>
                 <DatePicker
                   selectedDate={form.date}
                   onSelect={(date: Date) => {
@@ -286,21 +282,35 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
                     setShowDatePicker(false);
                   }}
                   onClose={() => setShowDatePicker(false)}
+                  style={{ top: "auto", bottom: "8px" }}
                 />
               </div>
             )}
           </Card>
 
-          <Card style={{ ...styles.card, ...styles.scheduleMiniCard }}>
-            <div style={{ ...styles.iconField, borderBottom: "none", padding: 0 }}>
+          <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative" }}>
+            <div
+              style={{ ...styles.iconField, borderBottom: "none", cursor: "pointer", padding: 0, justifyContent: "space-between" }}
+              onClick={() => setShowTimePicker(true)}
+            >
+              <span style={{ fontSize: "16px", color: form.time ? colors.neutral900 : colors.neutral500 }}>
+                {form.time || "Select Time"}
+              </span>
               <ClockIcon style={styles.iconFieldIcon} />
-              <input
-                style={styles.iconFieldInput}
-                type="time"
-                value={form.time}
-                onChange={(e) => setForm({ ...form, time: e.target.value })}
-              />
             </div>
+            {showTimePicker && (
+              <div style={{ position: "absolute", bottom: "100%", left: "50%", zIndex: 1100 }}>
+                <TimePicker
+                  initialTime={form.time}
+                  onSelect={(time: string) => {
+                    setForm({ ...form, time });
+                    setShowTimePicker(false);
+                  }}
+                  onClose={() => setShowTimePicker(false)}
+                  style={{ top: "auto", bottom: "8px" }}
+                />
+              </div>
+            )}
           </Card>
         </div>
 
@@ -337,11 +347,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
         <div style={styles.footerButtonGroup}>
           <button style={styles.pillButtonSecondary}>
             <PlusIcon style={{ width: "20px", height: "20px" }} />
-            Add Patient
+            Book Now Pay Later
           </button>
           <button style={styles.pillButtonPrimary}>
             <CalendarIcon style={{ width: "20px", height: "20px", color: "white" }} />
-            Add Patient & Book
+            Pay & Book
           </button>
         </div>
       </div>

@@ -11,7 +11,7 @@ import { ReactComponent as HelpIcon } from "../../assets/Help.svg";
 import { ReactComponent as PlusIcon } from "../../assets/Plus.svg";
 import { ReactComponent as ClinicRoof } from "../../assets/clinic roof.svg";
 
-export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
+export function BuildYourClinicPage({ onNext, onLogout }: { onNext?: () => void; onLogout: () => void }) {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [activeClinicId, setActiveClinicId] = useState<string>("");
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
@@ -27,9 +27,15 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
             Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
           },
         });
+        
+        if (response.status === 401 || response.status === 403) {
+          onLogout();
+          return;
+        }
+
         if (response.ok) {
           const data = await response.json();
-          if (data.length > 0) {
+          if (Array.isArray(data) && data.length > 0) {
             const mappedClinics: Clinic[] = await Promise.all(data.map(async (c: any) => {
               // Fetch staff for this clinic
               let staffList: Staff[] = [];
@@ -39,18 +45,25 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                     Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
                   },
                 });
+
+                if (staffResponse.status === 401 || staffResponse.status === 403) {
+                  onLogout();
+                  return null as any;
+                }
                 if (staffResponse.ok) {
                   const staffData = await staffResponse.json();
-                  staffList = staffData.map((s: any) => ({
-                    id: s.id,
-                    name: s.name || "",
-                    role: s.role.split("_").map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "),
-                    gender: s.gender || "",
-                    email: s.email || "",
-                    phone: s.phone || "",
-                    speciality: s.speciality || "",
-                    registrationNo: s.registrationNo || ""
-                  }));
+                  if (Array.isArray(staffData)) {
+                    staffList = staffData.map((s: any) => ({
+                      id: s.id,
+                      name: s.name || "",
+                      role: s.role.split("_").map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "),
+                      gender: s.gender || "",
+                      email: s.email || "",
+                      phone: s.phone || "",
+                      speciality: s.speciality || "",
+                      registrationNo: s.registrationNo || ""
+                    }));
+                  }
                 }
               } catch (e) {
                 console.error(`Failed to fetch staff for clinic ${c.id}`, e);
@@ -95,7 +108,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
 
   const handleAddClinic = () => {
     const newClinic: Clinic = {
-      id: String(Date.now()),
+      id: `new-${Date.now()}`,
       name: `Your Clinic ${clinics.length + 1}`,
       domain: "",
       phone: "",
@@ -111,14 +124,25 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
     setClinics(clinics.map(c =>
       c.id === activeClinicId ? { ...c, ...updates } : c
     ));
+    if (updates.id) {
+      setActiveClinicId(updates.id);
+    }
   };
 
   const handleOpenAddStaff = () => {
+    if (activeClinicId.startsWith("new-")) {
+      alert("Please save the clinic details first before adding staff.");
+      return;
+    }
     setEditingStaff(undefined);
     setIsAddStaffOpen(true);
   };
 
   const handleEditStaff = (staff: Staff) => {
+    if (activeClinicId.startsWith("new-")) {
+      alert("Please save the clinic details first.");
+      return;
+    }
     setEditingStaff(staff);
     setIsAddStaffOpen(true);
   };
@@ -145,6 +169,11 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           registrationNo: data.registrationNo
         }),
       });
+
+      if (response.status === 401 || response.status === 403) {
+        onLogout();
+        return;
+      }
 
       if (response.ok) {
         const savedStaffData = await response.json();
@@ -197,6 +226,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           left={
             activeClinic ? (
               <ClinicInfoCard
+                key={activeClinic.id}
                 clinic={activeClinic}
                 onUpdate={handleUpdateClinic}
               />
@@ -233,7 +263,13 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
 
                       {/* Add Staff arch */}
                       <div style={styles.staffCardWrapper}>
-                        <div style={styles.addStaffCard} onClick={handleOpenAddStaff}>
+                        <div 
+                          style={{ 
+                            ...styles.addStaffCard, 
+                            ...(activeClinicId.startsWith("new-") ? { opacity: 0.5, cursor: "not-allowed" } : {}) 
+                          }} 
+                          onClick={handleOpenAddStaff}
+                        >
                           <PlusIcon style={{ width: 32, height: 32 }} />
                         </div>
                         <div style={styles.staffName}>&nbsp;</div>

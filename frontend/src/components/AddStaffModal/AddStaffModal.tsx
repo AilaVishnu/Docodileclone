@@ -36,7 +36,7 @@ export function AddStaffModal({
   const [phone, setPhone] = useState("");
   const [gender, setGender] = useState<"male" | "female" | "other" | "">("");
 
-  const [role, setRole] = useState<string>("Doctor");
+  const [role, setRole] = useState<string>("Front Desk");
   const [speciality, setSpeciality] = useState("");
   const [registrationNo, setRegistrationNo] = useState("");
 
@@ -60,7 +60,7 @@ export function AddStaffModal({
         setEmail("");
         setPhone("");
         setGender("");
-        setRole("Doctor");
+        setRole("Front Desk");
         setSpeciality("");
         setRegistrationNo("");
       }

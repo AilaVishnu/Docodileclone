@@ -16,6 +16,7 @@ type ClinicInfoCardProps = {
 };
 
 export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
+  const [isInitialEmptyDomain] = useState(!clinic.domain);
   const [specialtyInput, setSpecialtyInput] = useState("");
 
   const { domain, name: clinicName, phone, specialties, address } = clinic;
@@ -99,7 +100,7 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
       <DomainInput 
         value={domain} 
         onChange={(val) => onUpdate({ domain: val })} 
-        disabled={!!clinic.id && !clinic.id.startsWith("new-") && !!domain}
+        disabled={!!clinic.id && !clinic.id.startsWith("new-") && !isInitialEmptyDomain}
       />
 
       {/* Inner form card */}

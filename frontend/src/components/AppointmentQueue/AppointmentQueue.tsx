@@ -131,7 +131,7 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
             style={{ 
               textDecoration: "underline", 
               cursor: "pointer",
-              color: colors.primary700
+              color: colors.active.shade700
             }}
           >
             {dateText}

@@ -12,7 +12,7 @@ import {
 import { SideNavItem } from './SideNavItem';
 import { ReactComponent as LogoIcon } from "../../assets/logo.svg";
 import { ReactComponent as ArrowIcon } from "../../assets/Arrow Right.svg";
-import { fonts, colors } from "../../styles/theme";
+import { fonts, colors, ThemeMode } from "../../styles/theme";
 
 export type NavTab = 
   | 'Home' 
@@ -29,6 +29,7 @@ type SideNavProps = {
   onTabChange: (tab: NavTab) => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  themeMode?: ThemeMode;
 };
 
 export function SideNav({ activeTab, onTabChange, isExpanded, onToggleExpand }: SideNavProps) {
@@ -36,7 +37,7 @@ export function SideNav({ activeTab, onTabChange, isExpanded, onToggleExpand }: 
     container: {
       width: isExpanded ? '204px' : '95px',
       height: '100vh',
-      backgroundColor: colors.primary300,
+      backgroundColor: colors.active.shade300,
       display: 'flex',
       flexDirection: 'column',
       paddingTop: '40px',
@@ -70,7 +71,7 @@ export function SideNav({ activeTab, onTabChange, isExpanded, onToggleExpand }: 
       width: '32px',
       height: '32px',
       borderRadius: '50%',
-      backgroundColor: colors.primary300,
+      backgroundColor: colors.active.shade300,
       border: '1px solid rgba(0,0,0,0.05)',
       display: 'flex',
       alignItems: 'center',

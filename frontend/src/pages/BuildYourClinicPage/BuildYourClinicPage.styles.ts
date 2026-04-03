@@ -65,7 +65,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   houseBody: {
-    backgroundColor: colors.primary400,
+    backgroundColor: colors.active.shade400,
     width: "100%",
     padding: `${spacing.l} ${spacing.xl}`,
     paddingBottom: spacing.xl,

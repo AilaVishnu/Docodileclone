@@ -8,7 +8,7 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing.l,
     borderRadius: radii.m,
     padding: spacing.xl,
-    backgroundColor: colors.primary100,
+    backgroundColor: colors.active.shade100,
     minWidth: "25vw",
   },
 

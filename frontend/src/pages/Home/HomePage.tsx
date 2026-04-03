@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { SideNav, NavTab } from "../../components/SideNav";
 import { TopNav } from "../../components/TopNav";
-import { AppointmentsView, PrescriptionView, PatientFilesView } from "./Views";
-import { colors } from "../../styles/theme";
+import { PrescriptionView, PatientFilesView, AppointmentsView } from "./Views";
+import { colors, ThemeMode } from "../../styles/theme";
 
 type HomePageProps = {
   onLogout: () => void;
   onViewClinic: () => void;
+  onViewAllClinics: () => void;
 };
 
-export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
+export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageProps) {
   const [activeTab, setActiveTabState] = useState<NavTab>(() => {
     return (localStorage.getItem("docodile_home_tab") as NavTab) || "Home";
   });
@@ -20,6 +21,10 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
   };
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isBooking, setIsBooking] = useState(false);
+  
+  // Selected theme mode
+  const [themeMode] = useState<ThemeMode>("secondary");
+
   const clinicName = localStorage.getItem("docodile_clinic_name") || "your clinic";
 
   const handleNewAppointment = () => {
@@ -36,7 +41,7 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
       display: "flex",
       width: "100%",
       minHeight: "100vh",
-      backgroundColor: colors.primary300,
+      backgroundColor: colors.active.shade300,
     },
     contentArea: {
       marginLeft: isSidebarExpanded ? "204px" : "95px",
@@ -51,7 +56,7 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
       flexDirection: "column" as const,
       gap: "24px",
       flex: 1,
-      backgroundColor: colors.primary200,
+      backgroundColor: colors.active.shade200,
       borderTopLeftRadius: "32px",
       position: "relative",
     },
@@ -62,6 +67,7 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
       margin: 0,
     }
   } as const;
+
 
   const renderContent = () => {
     switch (activeTab) {
@@ -89,7 +95,7 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
   };
 
   return (
-    <div style={styles.container}>
+    <div style={styles.container} data-theme={themeMode}>
       <SideNav 
         activeTab={activeTab} 
         onTabChange={setActiveTab} 
@@ -97,15 +103,18 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
         onToggleExpand={() => setIsSidebarExpanded(!isSidebarExpanded)}
       />
       <div style={styles.contentArea}>
-        <TopNav 
-          onViewClinic={onViewClinic} 
-          onLogout={onLogout} 
-          onNewAppointment={handleNewAppointment}
-          isBooking={isBooking}
-        />
-        <main style={styles.mainContent}>
-          {renderContent()}
-        </main>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <TopNav 
+            onBuildClinic={onViewClinic} 
+            onViewAllClinics={onViewAllClinics}
+            onLogout={onLogout} 
+            onNewAppointment={handleNewAppointment}
+            isBooking={isBooking}
+          />
+          <main style={styles.mainContent}>
+            {renderContent()}
+          </main>
+        </div>
       </div>
     </div>
   );

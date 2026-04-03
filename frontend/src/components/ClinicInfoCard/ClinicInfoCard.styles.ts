@@ -16,6 +16,7 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.blindBlack,
     margin: 0,
     paddingBottom: spacing.xs,
+    textAlign: "left",
   },
 
   innerCard: {

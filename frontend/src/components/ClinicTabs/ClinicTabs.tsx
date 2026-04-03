@@ -54,7 +54,7 @@ export function ClinicTabs({
       activeId={activeClinicId}
       onSelect={onSelectClinic}
       actions={actions}
-      activeBackgroundColor={colors.primary200}
+      activeBackgroundColor={colors.active.shade200}
     />
   );
 }

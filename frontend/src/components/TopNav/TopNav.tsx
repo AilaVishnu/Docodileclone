@@ -5,16 +5,16 @@ import { MessageIcon, BellIcon } from '../../iconsUtil';
 import { StaffIllustration } from '../AddStaffModal/StaffIllustration';
 import { ReactComponent as SearchIcon } from '../../assets/search.svg'; 
 import { ReactComponent as PlusIcon } from '../../assets/Plus.svg'; 
-import { NavTab } from '../SideNav';
 
 type TopNavProps = {
-  onViewClinic?: () => void;
+  onBuildClinic?: () => void;
+  onViewAllClinics?: () => void;
   onLogout?: () => void;
   onNewAppointment?: () => void;
   isBooking?: boolean;
 };
 
-export function TopNav({ onViewClinic, onLogout, onNewAppointment, isBooking }: TopNavProps) {
+export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, isBooking }: TopNavProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -35,7 +35,7 @@ export function TopNav({ onViewClinic, onLogout, onNewAppointment, isBooking }: 
       justifyContent: 'space-between',
       padding: `0 ${spacing.xl}`,
       height: '80px',
-      backgroundColor: colors.primary300,
+      backgroundColor: colors.active.shade300,
       width: '100%',
       zIndex: 900,
       position: 'relative' as const,
@@ -65,7 +65,7 @@ export function TopNav({ onViewClinic, onLogout, onNewAppointment, isBooking }: 
     searchBarContainer: {
       display: 'flex',
       alignItems: 'center',
-      backgroundColor: colors.primary100,
+      backgroundColor: colors.active.shade100,
       borderRadius: '55px',
       padding: '0 16px',
       width: '416px',
@@ -126,7 +126,7 @@ export function TopNav({ onViewClinic, onLogout, onNewAppointment, isBooking }: 
       width: '100%',
     },
     dropdownItemHover: {
-      backgroundColor: colors.primary100,
+      backgroundColor: colors.active.shade100,
     },
     dropdownItemDestructive: {
       color: colors.red200,
@@ -204,8 +204,12 @@ export function TopNav({ onViewClinic, onLogout, onNewAppointment, isBooking }: 
           {isDropdownOpen && (
             <div style={styles.dropdown}>
               <DropdownItem 
-                label="View Your Clinic" 
-                onClick={() => onViewClinic && onViewClinic()} 
+                label="Build Your Clinic" 
+                onClick={() => onBuildClinic && onBuildClinic()} 
+              />
+              <DropdownItem 
+                label="View All Clinics" 
+                onClick={() => onViewAllClinics && onViewAllClinics()} 
               />
               <DropdownItem 
                 label="Logout" 

@@ -11,7 +11,7 @@ export const styles: Record<string, CSSProperties> = {
     padding: spacing.xxl,
     gap: spacing.xl,
     boxSizing: "border-box",
-    backgroundColor: colors.primary200,
+    backgroundColor: colors.active.shade200,
   },
 
   leftPanel: {

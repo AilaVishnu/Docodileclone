@@ -3,17 +3,26 @@ import "./styles/globals.css";
 import { AdminLoginPage, StaffLoginPage } from './pages/LoginPage';
 import { HomePage } from './pages/Home';
 import { BuildYourClinicPage } from './pages/BuildYourClinicPage';
+import { ClinicSelectionPage } from './pages/ClinicSelectionPage';
+import { Clinic } from './components/ClinicTabs';
+
+type ViewState = "login" | "home" | "build" | "selection";
 
 function App() {
-  const [view, setViewState] = useState<"login" | "home" | "build">(() => {
-    const savedView = localStorage.getItem("docodile_view") as "login" | "home" | "build";
+  const [view, setViewState] = useState<ViewState>(() => {
+    const savedView = localStorage.getItem("docodile_view") as ViewState;
     const token = localStorage.getItem("docodile_token");
     
     if (!token) return "login";
-    return savedView || "login";
+    
+    const validViews: ViewState[] = ["login", "home", "build", "selection"];
+    if (savedView && validViews.includes(savedView)) {
+      return savedView;
+    }
+    return "login";
   });
 
-  const setView = (newView: "login" | "home" | "build") => {
+  const setView = (newView: ViewState) => {
     localStorage.setItem("docodile_view", newView);
     setViewState(newView);
   };
@@ -33,19 +42,34 @@ function App() {
     }
 
     try {
-      const response = await fetch("http://localhost:8080/api/tenant/status", {
+      // Fetch clinics to determine routing
+      const clinicsResponse = await fetch("http://localhost:8080/api/tenant/clinics", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (!response.ok) {
+      if (!clinicsResponse.ok) {
         setView("home");
         return;
       }
 
-      const data = (await response.json()) as { complete: boolean };
-      setView(data.complete ? "home" : "build");
+      const clinics = (await clinicsResponse.json()) as any[];
+
+      if (clinics.length === 0) {
+        setView("build");
+        return;
+      }
+
+      if (clinics.length === 1) {
+        localStorage.setItem("docodile_clinic_id", clinics[0].id);
+        localStorage.setItem("docodile_clinic_name", clinics[0].name);
+        setView("home");
+        return;
+      }
+
+      // If more than 1 clinic, go to selection
+      setView("selection");
     } catch {
       setView("home");
     }
@@ -56,11 +80,23 @@ function App() {
     localStorage.removeItem("docodile_role");
     localStorage.removeItem("docodile_view");
     localStorage.removeItem("docodile_home_tab");
+    localStorage.removeItem("docodile_clinic_id");
+    localStorage.removeItem("docodile_clinic_name");
     setView("login");
   };
 
   const handleNavigateToBuild = () => {
     setView("build");
+  };
+
+  const handleNavigateToSelection = () => {
+    setView("selection");
+  };
+
+  const handleSelectClinic = (clinic: Clinic) => {
+    localStorage.setItem("docodile_clinic_id", clinic.id);
+    localStorage.setItem("docodile_clinic_name", clinic.name);
+    setView("home");
   };
 
   return (
@@ -73,12 +109,22 @@ function App() {
         </div>
       )}
       {view === "build" && (
-        <BuildYourClinicPage onNext={() => setView("home")} />
+        <BuildYourClinicPage 
+          onNext={() => setView("home")} 
+          onLogout={handleLogout}
+        />
+      )}
+      {view === "selection" && (
+        <ClinicSelectionPage 
+          onSelectClinic={handleSelectClinic} 
+          onLogout={handleLogout}
+        />
       )}
       {view === "home" && (
         <HomePage 
           onLogout={handleLogout} 
           onViewClinic={handleNavigateToBuild}
+          onViewAllClinics={handleNavigateToSelection}
         />
       )}
     </div>
