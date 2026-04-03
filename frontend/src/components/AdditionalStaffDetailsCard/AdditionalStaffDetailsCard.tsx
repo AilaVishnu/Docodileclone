@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Card } from "../Card";
 import { TextInput } from "../Input/TextInput";
-import { Select } from "../Input/Select/Select";
 import { styles } from "./AdditionalStaffDetailsCard.styles";
 
 // Icons
@@ -19,8 +18,10 @@ const ROLES = [
 
 const SPECIALITIES = [
   "Dermatology",
-  "Cardiology",
-  "Orthopedics", "Gynecology", "Neurology", "Pediatrics", "Ophthalmology", "ENT", "Urology"
+  "Ophthalmology",
+  "Dentistry",
+  "General Medicine",
+  "Pediatrics",
 ];
 
 type AdditionalStaffDetailsCardProps = {
@@ -76,14 +77,22 @@ export function AdditionalStaffDetailsCard({
             <div style={styles.label}>Speciality</div>
 
             <div style={styles.fieldRow}>
-              <Select
+              <StethoIcon />
+
+              <select
                 value={speciality}
-                onChange={setSpeciality}
-                options={SPECIALITIES}
-                placeholder="Choose Speciality"
-                iconLeft={<StethoIcon />}
-                error={errors.speciality}
-              />
+                onChange={(e) => setSpeciality(e.target.value)}
+                style={{ ...styles.select, ...(errors.speciality ? { borderColor: "red" } : {}) }}
+              >
+                <option value="" disabled>
+                  Choose Speciality
+                </option>
+                {SPECIALITIES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

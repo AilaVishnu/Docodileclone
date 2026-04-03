@@ -38,14 +38,13 @@ export function ClinicTabs({
 }: ClinicTabsProps) {
   const items: TabItem[] = clinics.map((clinic) => ({
     id: clinic.id,
-    label: clinic.name || "Your Clinic",
+    label: clinic.name,
   }));
 
   const actions = [
     {
       label: "+ Add Clinic",
       onClick: onAddClinic,
-      disabled: clinics.length >= 5,
     },
   ];
 

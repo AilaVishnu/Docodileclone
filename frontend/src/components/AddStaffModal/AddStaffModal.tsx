@@ -84,13 +84,10 @@ export function AddStaffModal({
   }, [role]);
 
   const handleSave = () => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isEmailValid = emailRegex.test(email.trim());
-
     const newErrors: Record<string, boolean> = {
       name: !name.trim(),
-      email: !email.trim() || !isEmailValid,
-      phone: !phone.trim() || phone.length < 10,
+      email: !email.trim(),
+      phone: !phone.trim(),
       gender: !gender,
       role: !role,
     };
