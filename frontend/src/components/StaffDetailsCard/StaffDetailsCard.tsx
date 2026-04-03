@@ -47,6 +47,7 @@ export function StaffDetailsCard({
         type="email"
         value={email}
         onChange={setEmail}
+        onBlur={() => setEmail(email.trim().toLowerCase())}
         placeholder="hello@example.com"
         iconLeft={<MailIcon />}
         error={errors.email}
@@ -55,8 +56,27 @@ export function StaffDetailsCard({
 
       <TextInput
         value={phone}
-        onChange={setPhone}
-        placeholder="+91 98885672664"
+        onChange={(val) => {
+          let digits = val.replace(/\D/g, "");
+          if (digits.startsWith("91") && val.startsWith("+")) {
+            digits = digits.substring(2);
+          }
+          digits = digits.substring(0, 10);
+          if (digits.length === 0) setPhone("");
+          else setPhone("+91 " + digits);
+        }}
+        onBlur={() => {
+          let clean = phone.replace(/\D/g, "");
+          if (clean.length === 0) return;
+          if (clean.startsWith("91")) clean = clean.substring(2);
+          clean = clean.substring(0, 10);
+          if (clean.length > 5) {
+            setPhone(`+91 ${clean.substring(0, 5)} ${clean.substring(5)}`);
+          } else {
+            setPhone(`+91 ${clean}`);
+          }
+        }}
+        placeholder="+91 XXXXX XXXXX"
         iconLeft={<PhoneIcon />}
         error={errors.phone}
         errorMessage="Please enter a valid phone number"

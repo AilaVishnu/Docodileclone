@@ -9,7 +9,7 @@ type TextInputProps = {
   iconRight?: React.ReactNode;
   type?: "text" | "password" | "email";
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  onBlur?: (e?: React.FocusEvent<HTMLInputElement>) => void;
   error?: boolean;
   errorMessage?: string;
   maxLength?: number;
