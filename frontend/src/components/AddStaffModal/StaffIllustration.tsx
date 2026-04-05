@@ -19,8 +19,8 @@ type IllustrationProps = {
 export function StaffIllustration({
   role,
   gender,
-  width = 220,
-  height = 220,
+  width = 180,
+  height = "100%",
   borderRadius = 8,
 }: IllustrationProps) {
   const isFemale = gender === "female" || gender === "other" || gender === "";
@@ -63,6 +63,7 @@ export function StaffIllustration({
         borderRadius,
         position: "relative",
         overflow: "hidden",
+        flexShrink: 0,
         display: "flex",
         alignItems: "flex-end",
         justifyContent: "center",
@@ -75,15 +76,16 @@ export function StaffIllustration({
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         preserveAspectRatio="xMidYMax meet"
+        style={{ display: "block" }}
       >
-        {/* Face Fragment */}
-        <g transform="translate(61.53, 49.91)">
-          <FaceIcon />
-        </g>
-
         {/* Body Fragment */}
         <g transform="translate(50.02, 109.89)" style={{ color: getBodyColor() }}>
           <BodyIcon />
+        </g>
+
+        {/* Face Fragment */}
+        <g transform="translate(61.53, 49.91)">
+          <FaceIcon />
         </g>
 
         {/* Hair Fragment */}

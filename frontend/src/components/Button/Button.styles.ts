@@ -25,8 +25,8 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   mdIcon: {
-    fontSize: fonts.size.l,
-    height: 56,
+    fontSize: fonts.size.m,
+    height: 42,
     padding: spacing.xs
   },
 
@@ -36,8 +36,8 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   md: {
-    fontSize: fonts.size.l,
-    height: 56,
+    fontSize: fonts.size.m,
+    height: 42,
   },
 };
 
@@ -143,6 +143,23 @@ export const variants = {
     disabled: {
       borderColor: colors.secondary400,
       color: colors.secondary400,
+    },
+  },
+
+  dangerLight: {
+    default: {
+      borderColor: colors.red200,
+      color: colors.red200,
+      backgroundColor: "transparent",
+    },
+    hover: {
+      backgroundColor: colors.redAlpha10,
+      borderColor: colors.red200,
+      color: colors.red200,
+    },
+    disabled: {
+      borderColor: colors.red100,
+      color: colors.red100,
     },
   },
 };

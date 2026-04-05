@@ -38,13 +38,14 @@ export function ClinicTabs({
 }: ClinicTabsProps) {
   const items: TabItem[] = clinics.map((clinic) => ({
     id: clinic.id,
-    label: clinic.name,
+    label: clinic.name || "Your Clinic",
   }));
 
   const actions = [
     {
       label: "+ Add Clinic",
       onClick: onAddClinic,
+      disabled: false,
     },
   ];
 
@@ -54,7 +55,7 @@ export function ClinicTabs({
       activeId={activeClinicId}
       onSelect={onSelectClinic}
       actions={actions}
-      activeBackgroundColor={colors.active.shade200}
+      activeBackgroundColor={colors.primary200}
     />
   );
 }

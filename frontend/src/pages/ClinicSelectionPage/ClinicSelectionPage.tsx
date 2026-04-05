@@ -1,22 +1,29 @@
 import React, { useEffect, useState } from "react";
-import { Clinic } from "../../components/ClinicTabs";
-import { ClinicDisplayCard } from "../../components/ClinicDisplayCard/ClinicDisplayCard";
 import { styles } from "./ClinicSelectionPage.styles";
+import { ClinicCard } from "../../components/ClinicCard";
 import { API_BASE_URL } from "../../apiConfig";
-import { Button } from "../../components/Button";
 
-type ClinicSelectionPageProps = {
-  onSelectClinic: (clinic: Clinic) => void;
-  onLogout: () => void;
+type ClinicData = {
+  id: string;
+  name: string;
+  domain: string;
+  phone: string;
+  address: string;
+  specialties: string[];
 };
 
-export function ClinicSelectionPage({ onSelectClinic, onLogout }: ClinicSelectionPageProps) {
-  const [clinics, setClinics] = useState<Clinic[]>([]);
-  const [loading, setLoading] = useState(true);
+type ClinicSelectionPageProps = {
+  onSelectClinic: (clinicId: string, clinicName: string) => void;
+  onGoToBuild: () => void;
+  onLogout?: () => void;
+};
+
+export function ClinicSelectionPage({ onSelectClinic, onGoToBuild, onLogout }: ClinicSelectionPageProps) {
+  const [clinics, setClinics] = useState<ClinicData[]>([]);
 
   useEffect(() => {
     document.title = "Docodile | Select Clinic";
-    
+
     const fetchClinics = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/tenant/clinics`, {
@@ -24,72 +31,49 @@ export function ClinicSelectionPage({ onSelectClinic, onLogout }: ClinicSelectio
             Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
           },
         });
-        
-        if (response.status === 401 || response.status === 403) {
-          onLogout();
-          return;
-        }
-
         if (response.ok) {
           const data = await response.json();
-          if (Array.isArray(data)) {
-            const mappedClinics: Clinic[] = data.map((c: any) => ({
-              id: c.id,
-              name: c.name || "Your Clinic",
-              domain: c.domain || "",
-              phone: c.phone || "",
-              address: c.address || "",
-              specialties: c.speciality ? c.speciality.split(",") : [],
-              staff: [] // We don't need staff for selection card
-            }));
-            setClinics(mappedClinics);
-          } else {
-            console.error("API did not return an array of clinics", data);
-            setClinics([]);
-          }
-        } else {
-          console.error("Failed to fetch clinics, status:", response.status);
+          const mapped: ClinicData[] = data.map((c: any) => ({
+            id: c.id,
+            name: c.name || "Your Clinic",
+            domain: c.domain || "",
+            phone: c.phone || "",
+            address: c.address || "",
+            specialties: c.speciality ? c.speciality.split(",") : [],
+          }));
+          setClinics(mapped);
         }
       } catch (error) {
         console.error("Failed to fetch clinics:", error);
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchClinics();
   }, []);
 
-  if (loading) {
-    return (
-      <div style={styles.page}>
-        <div style={styles.loaderArea}>
-          <p style={styles.loadingText}>Loading your clinics...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div style={styles.page}>
-      <div style={styles.grid}>
-        {clinics.length > 0 ? (
-          clinics.map((clinic) => (
-            <ClinicDisplayCard 
-              key={clinic.id} 
-              clinic={clinic} 
-              onSelect={() => onSelectClinic(clinic)} 
-            />
-          ))
-        ) : (
-          <div style={{ ...styles.loaderArea, flexDirection: "column", gap: "20px" }}>
-            <p style={styles.loadingText}>No clinics found.</p>
-            <Button variant="dark" onClick={() => (window.location.href = "/build")}>
-              Create Your First Clinic
-            </Button>
-          </div>
-        )}
+      <div style={styles.cardGrid}>
+        {clinics.map((clinic) => (
+          <ClinicCard
+            key={clinic.id}
+            name={clinic.name}
+            domain={clinic.domain}
+            phone={clinic.phone}
+            address={clinic.address}
+            specialties={clinic.specialties}
+            onGoToDashboard={() => onSelectClinic(clinic.id, clinic.name)}
+          />
+        ))}
       </div>
+
+      <button style={styles.buildLink} onClick={onGoToBuild}>
+        Go to 'Build Your Clinic'
+      </button>
+
+      <button style={styles.logoutButton} onClick={onLogout}>
+        Logout
+      </button>
     </div>
   );
 }

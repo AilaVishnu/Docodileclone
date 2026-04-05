@@ -54,6 +54,12 @@ class ClinicStatusService(
                 .filter { it.tenant?.id == tenantId }
                 .orElseThrow { IllegalArgumentException("Clinic not found") }
         } else {
+            // Count clinics for this tenant
+            val currentCount = clinicEntityRepository.countByTenantId(tenantId)
+            if (currentCount >= 5) {
+                throw IllegalArgumentException("You can only have up to 5 clinics")
+            }
+
             val tenant = tenantRepository.findById(tenantId)
                 .orElseThrow { IllegalStateException("Tenant not found") }
             ClinicEntity(tenant = tenant, createdAt = Instant.now())
@@ -102,6 +108,26 @@ class ClinicStatusService(
             .filter { it.tenant?.id == tenantId }
             .orElseThrow { IllegalArgumentException("Clinic not found") }
 
+        // Server-side validation
+        if (!request.email.contains("@") || !request.email.contains(".")) {
+             throw IllegalArgumentException("Invalid email format")
+        }
+        if (request.phone.replace("\\D".toRegex(), "").length < 10) {
+             throw IllegalArgumentException("Phone number must have at least 10 digits")
+        }
+
+        // Check email uniqueness
+        val existingByEmail = appUserRepository.findByEmail(request.email.trim().lowercase())
+        if (existingByEmail.isPresent && existingByEmail.get().id != request.id) {
+            throw IllegalArgumentException("Email already exists for another staff member")
+        }
+
+        // Check phone uniqueness
+        if (appUserRepository.existsByPhone(request.phone) &&
+            (request.id == null || !appUserRepository.findById(request.id).map { it.phone == request.phone }.orElse(false))) {
+            throw IllegalArgumentException("Phone number already exists for another staff member")
+        }
+
         val staff = if (request.id != null) {
             appUserRepository.findById(request.id)
                 .filter { it.tenant?.id == tenantId }
@@ -114,7 +140,7 @@ class ClinicStatusService(
 
         staff.apply {
             name = request.name
-            email = request.email
+            email = request.email.trim().lowercase()
             phone = request.phone
             gender = request.gender
             role = Role.valueOf(request.role.uppercase().replace(" ", "_"))
@@ -137,5 +163,23 @@ class ClinicStatusService(
         }
 
         return savedStaff
+    }
+
+    @Transactional
+    fun deleteStaff(clinicId: UUID, staffId: UUID) {
+        val tenantId = currentUser.tenantId()
+        clinicEntityRepository.findById(clinicId)
+            .filter { it.tenant?.id == tenantId }
+            .orElseThrow { IllegalArgumentException("Clinic not found") }
+
+        val staff = appUserRepository.findById(staffId)
+            .filter { it.tenant?.id == tenantId }
+            .orElseThrow { IllegalArgumentException("Staff member not found") }
+
+        // Delete clinic-staff association first, then the user
+        val compositeKey = ClinicStaffId(clinicId = clinicId, staffId = staffId)
+        clinicStaffRepository.deleteById(compositeKey)
+        clinicStaffRepository.flush()
+        appUserRepository.delete(staff)
     }
 }

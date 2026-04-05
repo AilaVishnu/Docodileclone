@@ -3,24 +3,28 @@ import { AddStaffModal } from "../../components/AddStaffModal";
 import { ClinicTabs, Clinic, Staff } from "../../components/ClinicTabs";
 import { styles } from "./BuildYourClinicPage.styles";
 import { ClinicWorkspace } from "../../components/ClinicWorkspace";
-import { API_BASE_URL } from "../../apiConfig";
 import { Button } from "../../components/Button";
+import { API_BASE_URL } from "../../apiConfig";
 import { ClinicInfoCard } from "../../components/ClinicInfoCard";
 import { StaffIllustration } from "../../components/AddStaffModal/StaffIllustration";
 import { ReactComponent as NextIcon } from "../../assets/Arrow Right.svg";
 import { ReactComponent as HelpIcon } from "../../assets/Help.svg";
 import { ReactComponent as PlusIcon } from "../../assets/Plus.svg";
 import { ReactComponent as ClinicRoof } from "../../assets/clinic roof.svg";
+import { ReactComponent as Bush } from "../../assets/bush.svg";
+import { Toast } from "../../components/Toast";
+import { StaffWindow } from "../../components/StaffWindow";
 
-export function BuildYourClinicPage({ onNext, onLogout }: { onNext?: () => void; onLogout: () => void }) {
+export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [activeClinicId, setActiveClinicId] = useState<string>("");
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | undefined>(undefined);
+  const [toastMessage, setToastMessage] = useState("");
 
   useEffect(() => {
     document.title = "Docodile | Build Your Clinic";
-    
+
     const fetchClinics = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/tenant/clinics`, {
@@ -28,15 +32,9 @@ export function BuildYourClinicPage({ onNext, onLogout }: { onNext?: () => void;
             Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
           },
         });
-        
-        if (response.status === 401 || response.status === 403) {
-          onLogout();
-          return;
-        }
-
         if (response.ok) {
           const data = await response.json();
-          if (Array.isArray(data) && data.length > 0) {
+          if (data.length > 0) {
             const mappedClinics: Clinic[] = await Promise.all(data.map(async (c: any) => {
               // Fetch staff for this clinic
               let staffList: Staff[] = [];
@@ -46,25 +44,18 @@ export function BuildYourClinicPage({ onNext, onLogout }: { onNext?: () => void;
                     Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
                   },
                 });
-
-                if (staffResponse.status === 401 || staffResponse.status === 403) {
-                  onLogout();
-                  return null as any;
-                }
                 if (staffResponse.ok) {
                   const staffData = await staffResponse.json();
-                  if (Array.isArray(staffData)) {
-                    staffList = staffData.map((s: any) => ({
-                      id: s.id,
-                      name: s.name || "",
-                      role: s.role.split("_").map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "),
-                      gender: s.gender || "",
-                      email: s.email || "",
-                      phone: s.phone || "",
-                      speciality: s.speciality || "",
-                      registrationNo: s.registrationNo || ""
-                    }));
-                  }
+                  staffList = staffData.map((s: any) => ({
+                    id: s.id,
+                    name: s.name || "",
+                    role: s.role.split("_").map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "),
+                    gender: s.gender || "",
+                    email: s.email || "",
+                    phone: s.phone || "",
+                    speciality: s.speciality || "",
+                    registrationNo: s.registrationNo || ""
+                  }));
                 }
               } catch (e) {
                 console.error(`Failed to fetch staff for clinic ${c.id}`, e);
@@ -108,8 +99,13 @@ export function BuildYourClinicPage({ onNext, onLogout }: { onNext?: () => void;
   const activeClinic = clinics.find(c => c.id === activeClinicId) || clinics[0];
 
   const handleAddClinic = () => {
+    if (clinics.length >= 5) {
+      setToastMessage("Maximum of 5 clinics reached");
+      return;
+    }
+
     const newClinic: Clinic = {
-      id: `new-${Date.now()}`,
+      id: String(Date.now()),
       name: `Your Clinic ${clinics.length + 1}`,
       domain: "",
       phone: "",
@@ -125,14 +121,11 @@ export function BuildYourClinicPage({ onNext, onLogout }: { onNext?: () => void;
     setClinics(clinics.map(c =>
       c.id === activeClinicId ? { ...c, ...updates } : c
     ));
-    if (updates.id) {
-      setActiveClinicId(updates.id);
-    }
   };
 
   const handleOpenAddStaff = () => {
-    if (activeClinicId.startsWith("new-")) {
-      alert("Please save the clinic details first before adding staff.");
+    if (activeClinic && activeClinic.staff.length >= 10) {
+      setToastMessage("Maximum of 10 staff members reached");
       return;
     }
     setEditingStaff(undefined);
@@ -140,17 +133,50 @@ export function BuildYourClinicPage({ onNext, onLogout }: { onNext?: () => void;
   };
 
   const handleEditStaff = (staff: Staff) => {
-    if (activeClinicId.startsWith("new-")) {
-      alert("Please save the clinic details first.");
-      return;
-    }
     setEditingStaff(staff);
     setIsAddStaffOpen(true);
+  };
+
+  const handleDeleteStaff = async () => {
+    if (!editingStaff) return;
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/tenant/clinics/${activeClinicId}/staff/${editingStaff.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const deletedName = editingStaff.name;
+        const updatedStaff = activeClinic.staff.filter(s => s.id !== editingStaff.id);
+        handleUpdateClinic({ staff: updatedStaff });
+        setIsAddStaffOpen(false);
+        setToastMessage(`${deletedName} is deleted from your staff`);
+      } else {
+        const errorData = await response.json();
+        setToastMessage(errorData.error || "Failed to delete staff member");
+      }
+    } catch (error) {
+      console.error("Failed to delete staff", error);
+      setToastMessage("An error occurred while deleting staff member");
+    }
   };
 
   const handleSaveStaff = async (data: Omit<Staff, "id">) => {
     try {
       const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+      if (!isUuid(activeClinicId)) {
+        setToastMessage("Please save the clinic details first before adding staff");
+        setIsAddStaffOpen(false);
+        return;
+      }
+
       const staffId = editingStaff && isUuid(editingStaff.id) ? editingStaff.id : null;
 
       const response = await fetch(`${API_BASE_URL}/api/tenant/clinics/${activeClinicId}/staff`, {
@@ -170,11 +196,6 @@ export function BuildYourClinicPage({ onNext, onLogout }: { onNext?: () => void;
           registrationNo: data.registrationNo
         }),
       });
-
-      if (response.status === 401 || response.status === 403) {
-        onLogout();
-        return;
-      }
 
       if (response.ok) {
         const savedStaffData = await response.json();
@@ -200,11 +221,11 @@ export function BuildYourClinicPage({ onNext, onLogout }: { onNext?: () => void;
         setIsAddStaffOpen(false);
       } else {
         const errorData = await response.json();
-        alert(errorData.error || "Failed to save staff member");
+        setToastMessage(errorData.error || "Failed to save staff member");
       }
     } catch (error) {
       console.error("Failed to save staff", error);
-      alert("An error occurred while saving staff member");
+      setToastMessage("An error occurred while saving staff member");
     }
   };
 
@@ -212,7 +233,7 @@ export function BuildYourClinicPage({ onNext, onLogout }: { onNext?: () => void;
   return (
     <div style={styles.page}>
       {/* Page title */}
-      <h2 style={{ ...styles.title, marginBottom: 32 }}>Build your Clinic</h2>
+      <h2 style={styles.title}>Build your Clinic</h2>
 
       {/* Clinic tabs + workspace */}
       <div style={styles.workspaceContainer}>
@@ -227,9 +248,9 @@ export function BuildYourClinicPage({ onNext, onLogout }: { onNext?: () => void;
           left={
             activeClinic ? (
               <ClinicInfoCard
-                key={activeClinic.id}
                 clinic={activeClinic}
                 onUpdate={handleUpdateClinic}
+                onShowToast={setToastMessage}
               />
             ) : null
           }
@@ -243,41 +264,37 @@ export function BuildYourClinicPage({ onNext, onLogout }: { onNext?: () => void;
                   {/* House Body — grouped arches and labels */}
                   <div style={styles.houseBody}>
                     <div style={styles.staffList}>
-                      {activeClinic.staff.map((staff: Staff) => (
+                      {activeClinic.staff.map((staff: Staff, index: number) => (
                         <div key={staff.id} style={styles.staffCardWrapper}>
-                          <div
-                            style={styles.staffCard}
-                            onClick={() => handleEditStaff(staff)}
-                          >
+                          <StaffWindow colorIndex={index} onClick={() => handleEditStaff(staff)}>
                             <StaffIllustration
                               role={staff.role}
                               gender={staff.gender}
                               width="100%"
                               height="100%"
-                              borderRadius="60px 60px 0 0"
+                              borderRadius="0"
                             />
-                          </div>
+                          </StaffWindow>
                           <div style={styles.staffName}>{staff.name}</div>
                           <div style={styles.staffRole}>{staff.role}</div>
                         </div>
                       ))}
 
                       {/* Add Staff arch */}
-                      <div style={styles.staffCardWrapper}>
-                        <div 
-                          style={{ 
-                            ...styles.addStaffCard, 
-                            ...(activeClinicId.startsWith("new-") ? { opacity: 0.5, cursor: "not-allowed" } : {}) 
-                          }} 
-                          onClick={handleOpenAddStaff}
-                        >
-                          <PlusIcon style={{ width: 32, height: 32 }} />
+                      {activeClinic.staff.length < 10 && (
+                        <div style={styles.staffCardWrapper}>
+                          <StaffWindow dashed onClick={handleOpenAddStaff}>
+                            <PlusIcon style={{ width: 32, height: 32 }} />
+                          </StaffWindow>
+                          <div style={styles.staffName}>&nbsp;</div>
+                          <div style={styles.staffRole}>&nbsp;</div>
                         </div>
-                        <div style={styles.staffName}>&nbsp;</div>
-                        <div style={styles.staffRole}>&nbsp;</div>
-                      </div>
+                      )}
                     </div>
                   </div>
+
+                  {/* Bush */}
+                  <Bush style={styles.bushRight} />
                 </div>
               </div>
             ) : null
@@ -288,19 +305,67 @@ export function BuildYourClinicPage({ onNext, onLogout }: { onNext?: () => void;
           isOpen={isAddStaffOpen}
           onClose={() => setIsAddStaffOpen(false)}
           onSave={handleSaveStaff}
+          onDelete={handleDeleteStaff}
           initialData={editingStaff}
+          onShowToast={setToastMessage}
         />
 
         {/* Footer actions */}
         <div style={styles.footer}>
-          <Button size="md" variant="secondaryLight" iconRight={<HelpIcon />}>
+          <Button size="md" variant="secondaryLight" iconRight={<HelpIcon />} style={{ padding: "8px 50px" }}>
             Help
           </Button>
-          <Button size="md" variant="dark" iconRight={<NextIcon />} onClick={onNext}>
+          <Button size="md" variant="dark" iconRight={<NextIcon />} onClick={async () => {
+            const incomplete = clinics.find(c => !c.name.trim() || !c.phone.trim() || !c.domain.trim() || !c.address.trim());
+            if (incomplete) {
+              setActiveClinicId(incomplete.id);
+              setToastMessage(`Please complete all fields for "${incomplete.name || "Your Clinic"}"`);
+              return;
+            }
+
+            const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+            try {
+              for (const c of clinics) {
+                const clinicId = isUuid(c.id) ? c.id : null;
+                const res = await fetch(`${API_BASE_URL}/api/tenant/clinic`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
+                  },
+                  body: JSON.stringify({
+                    id: clinicId,
+                    name: c.name,
+                    address: c.address,
+                    phone: c.phone,
+                    domain: c.domain,
+                    speciality: c.specialties.join(","),
+                  }),
+                });
+                if (!res.ok) {
+                  const err = await res.json();
+                  setActiveClinicId(c.id);
+                  setToastMessage(err.error || `Failed to save "${c.name}"`);
+                  return;
+                }
+                const saved = await res.json();
+                handleUpdateClinic({ id: saved.id });
+              }
+              onNext?.();
+            } catch {
+              setToastMessage("An error occurred while saving clinics");
+            }
+          }} style={{ padding: "8px 100px" }}>
             Next
           </Button>
         </div>
       </div>
+
+      <Toast
+        message={toastMessage}
+        isVisible={!!toastMessage}
+        onClose={() => setToastMessage("")}
+      />
     </div>
   );
 }

@@ -4,76 +4,36 @@ import { AdminLoginPage, StaffLoginPage } from './pages/LoginPage';
 import { HomePage } from './pages/Home';
 import { BuildYourClinicPage } from './pages/BuildYourClinicPage';
 import { ClinicSelectionPage } from './pages/ClinicSelectionPage';
-import { Clinic } from './components/ClinicTabs';
-import { API_BASE_URL } from './apiConfig';
-
-type ViewState = "login" | "home" | "build" | "selection";
 
 function App() {
-  const [view, setViewState] = useState<ViewState>(() => {
-    const savedView = localStorage.getItem("docodile_view") as ViewState;
+  const [view, setViewState] = useState<"login" | "home" | "build" | "select">(() => {
     const token = localStorage.getItem("docodile_token");
-    
-    if (!token) return "login";
-    
-    const validViews: ViewState[] = ["login", "home", "build", "selection"];
-    if (savedView && validViews.includes(savedView)) {
-      return savedView;
+    const sessionActive = sessionStorage.getItem("docodile_session");
+
+    if (!token || !sessionActive) {
+      // New browser session — clear everything and go to login
+      localStorage.removeItem("docodile_token");
+      localStorage.removeItem("docodile_role");
+      localStorage.removeItem("docodile_view");
+      localStorage.removeItem("docodile_home_tab");
+      localStorage.removeItem("docodile_clinic_id");
+      localStorage.removeItem("docodile_clinic_name");
+      return "login";
     }
-    return "login";
+
+    // Existing session (refresh) — restore saved view
+    const savedView = localStorage.getItem("docodile_view") as "login" | "home" | "build" | "select";
+    return savedView || "select";
   });
 
-  const setView = (newView: ViewState) => {
+  const setView = (newView: "login" | "home" | "build" | "select") => {
     localStorage.setItem("docodile_view", newView);
     setViewState(newView);
   };
 
-  const handleLoginSuccess = async () => {
-    const role = localStorage.getItem("docodile_role");
-    const token = localStorage.getItem("docodile_token");
-
-    if (!token) {
-      setView("login");
-      return;
-    }
-
-    if (role !== "ADMIN") {
-      setView("home");
-      return;
-    }
-
-    try {
-      // Fetch clinics to determine routing
-      const clinicsResponse = await fetch(`${API_BASE_URL}/api/tenant/clinics`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!clinicsResponse.ok) {
-        setView("home");
-        return;
-      }
-
-      const clinics = (await clinicsResponse.json()) as any[];
-
-      if (clinics.length === 0) {
-        setView("build");
-        return;
-      }
-
-      if (clinics.length === 1) {
-        localStorage.setItem("docodile_clinic_id", clinics[0].id);
-        localStorage.setItem("docodile_clinic_name", clinics[0].name);
-        setView("home");
-        return;
-      }
-
-      // If more than 1 clinic, go to selection
-      setView("selection");
-    } catch {
-      setView("home");
-    }
+  const handleLoginSuccess = () => {
+    sessionStorage.setItem("docodile_session", "true");
+    setView("select");
   };
 
   const handleLogout = () => {
@@ -83,6 +43,7 @@ function App() {
     localStorage.removeItem("docodile_home_tab");
     localStorage.removeItem("docodile_clinic_id");
     localStorage.removeItem("docodile_clinic_name");
+    sessionStorage.removeItem("docodile_session");
     setView("login");
   };
 
@@ -91,13 +52,7 @@ function App() {
   };
 
   const handleNavigateToSelection = () => {
-    setView("selection");
-  };
-
-  const handleSelectClinic = (clinic: Clinic) => {
-    localStorage.setItem("docodile_clinic_id", clinic.id);
-    localStorage.setItem("docodile_clinic_name", clinic.name);
-    setView("home");
+    setView("select");
   };
 
   return (
@@ -109,21 +64,23 @@ function App() {
           </header>
         </div>
       )}
-      {view === "build" && (
-        <BuildYourClinicPage 
-          onNext={() => setView("home")} 
+      {view === "select" && (
+        <ClinicSelectionPage
+          onSelectClinic={(clinicId, clinicName) => {
+            localStorage.setItem("docodile_clinic_id", clinicId);
+            localStorage.setItem("docodile_clinic_name", clinicName);
+            setView("home");
+          }}
+          onGoToBuild={() => setView("build")}
           onLogout={handleLogout}
         />
       )}
-      {view === "selection" && (
-        <ClinicSelectionPage 
-          onSelectClinic={handleSelectClinic} 
-          onLogout={handleLogout}
-        />
+      {view === "build" && (
+        <BuildYourClinicPage onNext={() => setView("select")} />
       )}
       {view === "home" && (
-        <HomePage 
-          onLogout={handleLogout} 
+        <HomePage
+          onLogout={handleLogout}
           onViewClinic={handleNavigateToBuild}
           onViewAllClinics={handleNavigateToSelection}
         />

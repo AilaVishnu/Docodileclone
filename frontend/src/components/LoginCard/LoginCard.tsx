@@ -172,8 +172,14 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
 
       {/* Footer */}
       <div style={styles.footer}>
-        <p style={styles.footerText} onClick={showHelpPopup}>
-          New to docodile? <strong>Book Demo</strong>
+        <p style={styles.footerText}>
+          New to docodile?{" "}
+          <strong
+            style={{ cursor: "pointer" }}
+            onClick={() => window.open("https://calendar.app.google/uQskDY6DM4F8q8Kd9", "_blank")}
+          >
+            Book Demo
+          </strong>
         </p>
 
         <p style={styles.footerText} onClick={showHelpPopup}>

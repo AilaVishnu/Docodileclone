@@ -10,4 +10,5 @@ interface ClinicEntityRepository : JpaRepository<ClinicEntity, UUID> {
     fun existsByDomainIgnoreCase(domain: String): Boolean
     fun findFirstByTenantId(tenantId: UUID): Optional<ClinicEntity>
     fun findAllByTenantId(tenantId: UUID): List<ClinicEntity>
+    fun countByTenantId(tenantId: UUID): Long
 }

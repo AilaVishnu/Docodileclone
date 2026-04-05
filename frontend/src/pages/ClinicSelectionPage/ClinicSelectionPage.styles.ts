@@ -1,32 +1,50 @@
+import { CSSProperties } from "react";
 import { colors, fonts, spacing } from "../../styles/theme";
 
-export const styles = {
+export const styles: Record<string, CSSProperties> = {
   page: {
-    minHeight: "100vh",
     width: "100%",
+    minHeight: "100vh",
     backgroundColor: colors.secondary200,
     display: "flex",
-    flexDirection: "column" as const,
+    flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: `${spacing.xxl} 40px`,
+    padding: spacing.xl,
+    boxSizing: "border-box",
   },
-  grid: {
+
+  cardGrid: {
     display: "flex",
-    flexWrap: "wrap" as const,
+    flexWrap: "wrap",
+    gap: spacing.xl,
     justifyContent: "center",
-    gap: "32px",
-    maxWidth: "1200px",
-    width: "100%",
+    marginTop: spacing.xxl,
   },
-  loaderArea: {
-    flex: 1,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+
+  buildLink: {
+    marginTop: spacing.xxl,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    color: colors.blindBlack,
+    textDecoration: "underline",
+    cursor: "pointer",
+    background: "none",
+    border: "none",
+    padding: 0,
   },
-  loadingText: {
-    fontSize: fonts.size.l,
+
+  logoutButton: {
+    position: "fixed" as const,
+    bottom: 20,
+    right: 20,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.xs,
     color: colors.neutral700,
-  }
-} as const;
+    background: "none",
+    border: `1px solid ${colors.neutral400}`,
+    borderRadius: 8,
+    padding: "6px 16px",
+    cursor: "pointer",
+  },
+};

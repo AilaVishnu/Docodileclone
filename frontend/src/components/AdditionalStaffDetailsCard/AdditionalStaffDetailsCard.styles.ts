@@ -5,10 +5,10 @@ export const styles: Record<string, CSSProperties> = {
   card: {
     display: "flex",
     flexDirection: "column",
-    gap: spacing.l,
+    gap: spacing.s,
     borderRadius: radii.m,
-    padding: spacing.xl,
-    backgroundColor: colors.active.shade100,
+    padding: spacing.s,
+    backgroundColor: colors.primary100,
     minWidth: "25vw",
   },
 
@@ -54,9 +54,8 @@ export const styles: Record<string, CSSProperties> = {
   fieldRow: {
     display: "flex",
     alignItems: "center",
-    gap: spacing.s,
-    borderBottom: `2px solid ${colors.blindBlack}`,
-    paddingBottom: spacing.xs,
+    gap: spacing.xs,
+    width: "100%",
   },
 
   select: {

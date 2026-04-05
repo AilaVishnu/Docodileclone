@@ -1,1 +1,1 @@
-export * from "./ClinicSelectionPage";
+export { ClinicSelectionPage } from "./ClinicSelectionPage";
