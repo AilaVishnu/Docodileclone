@@ -45,7 +45,7 @@ export function SideNav({ activeTab, onTabChange, isExpanded, onToggleExpand }: 
       left: 0,
       top: 0,
       transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      zIndex: 1000,
+      zIndex: 3000,
     },
     logoSection: {
       padding: isExpanded ? '0 24px 48px 24px' : '0 0 48px 0',
