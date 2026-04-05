@@ -37,7 +37,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       height: '80px',
       backgroundColor: colors.active.shade300,
       width: '100%',
-      zIndex: 900,
+      zIndex: 3000,
       position: 'relative' as const,
     },
     actions: {
@@ -109,7 +109,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       display: 'flex',
       flexDirection: 'column' as const,
       gap: '4px',
-      zIndex: 1000,
+      zIndex: 3100,
     },
     dropdownItem: {
       fontFamily: fonts.family.primary,
