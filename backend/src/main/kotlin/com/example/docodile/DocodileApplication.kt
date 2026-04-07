@@ -7,5 +7,6 @@ import org.springframework.boot.runApplication
 class DocodileApplication
 
 fun main(args: Array<String>) {
+    java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Asia/Kolkata"))
     runApplication<DocodileApplication>(*args)
 }
