@@ -16,6 +16,7 @@ import {
   PlusIcon
 } from "../../iconsUtil";
 import { Card } from "../Card/Card";
+import { Toast } from "../Toast";
 import { API_BASE_URL } from "../../apiConfig";
 
 type Doctor = {
@@ -54,6 +55,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [dobDigits, setDobDigits] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
 
   const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -99,10 +101,22 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
 
   const isValidEmail = (email: string) => !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
+  const isValidPhone = (phone: string) => {
+    if (!phone) return true;
+    const digits = phone.replace(/\D/g, "");
+    const cleaned = digits.startsWith("91") && digits.length > 10 ? digits.substring(2) : digits;
+    if (cleaned.length === 0) return true; // truly empty after stripping prefix
+    return cleaned.length === 10;
+  };
+
   const handleBook = async (payStatus: string) => {
-    if (!form.name.trim()) { alert("Please enter patient name"); return; }
-    if (form.email && !isValidEmail(form.email)) { alert("Please enter a valid email"); return; }
-    if (!activeDoctor) { alert("Please select a doctor"); return; }
+    if (!form.name.trim()) { setToastMessage("Please enter patient name"); return; }
+    if (!form.email.trim()) { setToastMessage("Please enter email address"); return; }
+    if (!isValidEmail(form.email)) { setToastMessage("Please enter a valid email address"); return; }
+    if (!form.phone.trim() || form.phone.trim() === "+91") { setToastMessage("Please enter phone number"); return; }
+    if (!isValidPhone(form.phone)) { setToastMessage("Please enter a valid 10-digit phone number"); return; }
+    if (!form.dob && !form.age) { setToastMessage("Please enter date of birth or age"); return; }
+    if (!activeDoctor) { setToastMessage("Please select a doctor"); return; }
 
     setSubmitting(true);
     try {
@@ -117,7 +131,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
         patientGender: form.gender || null,
         patientDob: form.dob || null,
         doctorId: selectedDoctorId,
-        scheduledTime: scheduledTime.toISOString().replace("Z", ""),
+        scheduledTime: scheduledTime.getFullYear() + "-" +
+          String(scheduledTime.getMonth() + 1).padStart(2, "0") + "-" +
+          String(scheduledTime.getDate()).padStart(2, "0") + "T" +
+          String(scheduledTime.getHours()).padStart(2, "0") + ":" +
+          String(scheduledTime.getMinutes()).padStart(2, "0") + ":00",
         type: form.type,
         service: form.service,
         isWalkin: false,
@@ -139,11 +157,16 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
       if (res.ok) {
         onBack();
       } else {
-        const err = await res.json();
-        alert(err.error || "Failed to book appointment");
+        try {
+          const err = await res.json();
+          setToastMessage(err.error || err.message || "Failed to book appointment");
+        } catch {
+          setToastMessage(`Failed to book appointment (${res.status})`);
+        }
       }
-    } catch {
-      alert("An error occurred while booking");
+    } catch (e) {
+      console.error("Booking error:", e);
+      setToastMessage("An error occurred while booking. Check console for details.");
     } finally {
       setSubmitting(false);
     }
@@ -495,6 +518,12 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
           </button>
         </div>
       </div>
+
+      <Toast
+        message={toastMessage}
+        isVisible={!!toastMessage}
+        onClose={() => setToastMessage("")}
+      />
     </div>
   );
 }

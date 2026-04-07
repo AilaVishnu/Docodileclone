@@ -12,7 +12,7 @@ import java.time.LocalDate
 class AppointmentController(private val appointmentService: AppointmentService) {
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST')")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun getAppointments(
         @RequestParam(required = false)
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
@@ -23,7 +23,7 @@ class AppointmentController(private val appointmentService: AppointmentService) 
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST')")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun bookAppointment(@RequestBody request: BookAppointmentRequest): ResponseEntity<Any> {
         return try {
             val appointment = appointmentService.bookAppointment(request)
