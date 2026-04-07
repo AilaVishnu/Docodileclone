@@ -16,6 +16,7 @@ import {
   PlusIcon
 } from "../../iconsUtil";
 import { Card } from "../Card/Card";
+import { UnderlineSelect } from "../Input/UnderlineSelect/UnderlineSelect";
 import { Toast } from "../Toast";
 import { API_BASE_URL } from "../../apiConfig";
 
@@ -199,10 +200,14 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
 
         <div style={styles.titleContainer}>
           <h2 style={styles.title}>
-            Book an appointment for
-            <span style={styles.clickableDoctor} onClick={handleDoctorCycle}>
-              {activeDoctor?.name}
-            </span>
+            Book an appointment for{" "}
+            <UnderlineSelect
+              options={doctors.map(d => ({ label: d.name, value: d.id }))}
+              value={selectedDoctorId}
+              onChange={(val) => setSelectedDoctorId(val)}
+              placeholder="Select Doctor"
+              fontSize="24px"
+            />
           </h2>
         </div>
       </header>

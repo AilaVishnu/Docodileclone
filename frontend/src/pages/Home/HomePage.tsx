@@ -23,7 +23,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   const [isBooking, setIsBooking] = useState(false);
   
   // Selected theme mode
-  const [themeMode] = useState<ThemeMode>("secondary");
+  const [themeMode] = useState<ThemeMode>("primary");
 
   const clinicName = localStorage.getItem("docodile_clinic_name") || "your clinic";
 
