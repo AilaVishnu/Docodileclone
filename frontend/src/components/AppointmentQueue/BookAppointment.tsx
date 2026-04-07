@@ -290,10 +290,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
                 }}
                 onChange={() => {}}
                 onFocus={() => {
-                  if (dobDigits.length === 8) {
-                    setDobDigits("");
-                    setForm((prev) => ({ ...prev, dob: "", age: "" }));
-                  }
+                  // Keep digits so user can backspace and edit
                 }}
               />
             </div>
