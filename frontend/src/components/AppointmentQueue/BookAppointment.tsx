@@ -53,6 +53,41 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [dobDigits, setDobDigits] = useState("");
+
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  const formatDob = (digits: string): string => {
+    const dd = digits.slice(0, 2);
+    const mm = digits.slice(2, 4);
+    const yyyy = digits.slice(4, 8);
+    if (digits.length <= 2) return dd;
+    if (digits.length <= 4) {
+      if (mm.length === 2) {
+        const mIdx = Number(mm) - 1;
+        return (mIdx >= 0 && mIdx <= 11) ? `${dd} ${MONTHS[mIdx]}` : `${dd} ${mm}`;
+      }
+      return `${dd} ${mm}`;
+    }
+    const mIdx = Number(mm) - 1;
+    const monName = (mIdx >= 0 && mIdx <= 11) ? MONTHS[mIdx] : mm;
+    return `${dd} ${monName} ${yyyy}`;
+  };
+
+  const calcAge = (digits: string): string => {
+    if (digits.length !== 8) return form.age;
+    const d = Number(digits.slice(0, 2));
+    const mIdx = Number(digits.slice(2, 4)) - 1;
+    const y = Number(digits.slice(4, 8));
+    if (d < 1 || d > 31 || mIdx < 0 || mIdx > 11 || y <= 1900) return form.age;
+    const birth = new Date(y, mIdx, d);
+    const today = new Date();
+    if (birth > today) return form.age;
+    let age = today.getFullYear() - birth.getFullYear();
+    const mDiff = today.getMonth() - birth.getMonth();
+    if (mDiff < 0 || (mDiff === 0 && today.getDate() < birth.getDate())) age--;
+    return String(age);
+  };
 
   const parseTimeTo24h = (time: string): { hour: number; minute: number } => {
     const [timePart, period] = time.split(" ");
@@ -192,11 +227,28 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
               <input
                 style={styles.iconFieldInput}
                 type="text"
-                placeholder="Enter date of birth"
-                value={form.dob}
-                onChange={(e) => setForm({ ...form, dob: e.target.value })}
-                onFocus={(e) => (e.target.type = "date")}
-                onBlur={(e) => (e.target.type = "text")}
+                placeholder="DD MM YYYY"
+                value={formatDob(dobDigits)}
+                onKeyDown={(e) => {
+                  if (e.key === "Backspace") {
+                    e.preventDefault();
+                    const next = dobDigits.slice(0, -1);
+                    setDobDigits(next);
+                    setForm((prev) => ({ ...prev, dob: formatDob(next), age: next.length === 8 ? calcAge(next) : "" }));
+                  } else if (/^[0-9]$/.test(e.key) && dobDigits.length < 8) {
+                    e.preventDefault();
+                    const next = dobDigits + e.key;
+                    setDobDigits(next);
+                    setForm((prev) => ({ ...prev, dob: formatDob(next), age: calcAge(next) }));
+                  }
+                }}
+                onChange={() => {}}
+                onFocus={() => {
+                  if (dobDigits.length === 8) {
+                    setDobDigits("");
+                    setForm((prev) => ({ ...prev, dob: "", age: "" }));
+                  }
+                }}
               />
             </div>
             <div style={{ fontSize: "16px", color: colors.neutral900 }}>or</div>
@@ -206,8 +258,14 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
                 style={styles.iconFieldInput}
                 placeholder="Age"
                 type="number"
+                min="0"
+                max="150"
                 value={form.age}
-                onChange={(e) => setForm({ ...form, age: e.target.value })}
+                onChange={(e) => {
+                  const ageStr = e.target.value;
+                  setDobDigits("");
+                  setForm({ ...form, age: ageStr, dob: "" });
+                }}
               />
             </div>
           </div>
