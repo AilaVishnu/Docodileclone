@@ -16,6 +16,7 @@ import {
   PlusIcon
 } from "../../iconsUtil";
 import { Card } from "../Card/Card";
+import { API_BASE_URL } from "../../apiConfig";
 
 type Doctor = {
   id: string;
@@ -51,6 +52,64 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const parseTimeTo24h = (time: string): { hour: number; minute: number } => {
+    const [timePart, period] = time.split(" ");
+    let [hour, minute] = timePart.split(":").map(Number);
+    if (period === "PM" && hour !== 12) hour += 12;
+    if (period === "AM" && hour === 12) hour = 0;
+    return { hour, minute };
+  };
+
+  const handleBook = async (payStatus: string) => {
+    if (!form.name.trim()) { alert("Please enter patient name"); return; }
+    if (!activeDoctor) { alert("Please select a doctor"); return; }
+
+    setSubmitting(true);
+    try {
+      const { hour, minute } = parseTimeTo24h(form.time);
+      const scheduledTime = new Date(form.date);
+      scheduledTime.setHours(hour, minute, 0, 0);
+
+      const body = {
+        patientName: form.name,
+        patientEmail: form.email || null,
+        patientPhone: form.phone || null,
+        patientGender: form.gender || null,
+        patientDob: form.dob || null,
+        doctorId: selectedDoctorId,
+        scheduledTime: scheduledTime.toISOString().replace("Z", ""),
+        type: form.type,
+        service: form.service,
+        isWalkin: false,
+        paymentMethod: form.paymentMethod,
+        notes: form.note || null,
+        fee: total > 0 ? total : null,
+        payStatus,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/appointments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (res.ok) {
+        onBack();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to book appointment");
+      }
+    } catch {
+      alert("An error occurred while booking");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const activeDoctor = doctors.find(d => d.id === selectedDoctorId) || doctors[0];
 
@@ -345,13 +404,13 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
 
         {/* Footer Buttons */}
         <div style={styles.footerButtonGroup}>
-          <button style={styles.pillButtonSecondary}>
+          <button style={styles.pillButtonSecondary} onClick={() => handleBook("Unpaid")} disabled={submitting}>
             <PlusIcon style={{ width: "20px", height: "20px" }} />
-            Book Now Pay Later
+            {submitting ? "Booking..." : "Book Now Pay Later"}
           </button>
-          <button style={styles.pillButtonPrimary}>
+          <button style={styles.pillButtonPrimary} onClick={() => handleBook("Paid")} disabled={submitting}>
             <CalendarIcon style={{ width: "20px", height: "20px", color: "white" }} />
-            Pay & Book
+            {submitting ? "Booking..." : "Pay & Book"}
           </button>
         </div>
       </div>
