@@ -349,13 +349,13 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
 
           <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative" }}>
             <div
-              style={{ ...styles.iconField, borderBottom: "none", cursor: "pointer", padding: 0, justifyContent: "space-between" }}
+              style={{ ...styles.iconField, borderBottom: "none", cursor: "pointer", padding: 0 }}
               onClick={() => setShowTimePicker(true)}
             >
+              <ClockIcon style={styles.iconFieldIcon} />
               <span style={{ fontSize: "16px", color: form.time ? colors.neutral900 : colors.neutral500 }}>
                 {form.time || "Select Time"}
               </span>
-              <ClockIcon style={styles.iconFieldIcon} />
             </div>
             {showTimePicker && (
               <div style={{ position: "absolute", bottom: "100%", left: "50%", zIndex: 1100 }}>
