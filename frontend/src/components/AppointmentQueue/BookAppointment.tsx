@@ -16,7 +16,9 @@ import {
   PlusIcon
 } from "../../iconsUtil";
 import { Card } from "../Card/Card";
+import { BillCard } from "../BillCard/BillCard";
 import { UnderlineSelect } from "../Input/UnderlineSelect/UnderlineSelect";
+import { Select } from "../Input/Select/Select";
 import { Toast } from "../Toast";
 import { API_BASE_URL } from "../../apiConfig";
 
@@ -48,7 +50,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
     paymentMethod: "Cash",
     note: "",
     subtotal: 500.0,
-    tax: 0.0,
+    tax: "" as string,
     discount: 0.0,
   });
 
@@ -58,7 +60,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
   const [dobDigits, setDobDigits] = useState("");
   const [toastMessage, setToastMessage] = useState("");
 
-  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   const formatDob = (digits: string): string => {
     const dd = digits.slice(0, 2);
@@ -181,7 +183,9 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
     setSelectedDoctorId(doctors[nextIndex].id);
   };
 
-  const total = (Number(form.subtotal) || 0) + (Number(form.tax) || 0) - (Number(form.discount) || 0);
+  const taxPercent = parseFloat(String(form.tax).replace("%", "")) || 0;
+  const taxAmount = (Number(form.subtotal) || 0) * taxPercent / 100;
+  const total = (Number(form.subtotal) || 0) + taxAmount - (Number(form.discount) || 0);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-GB", {
@@ -293,7 +297,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
                     setForm((prev) => ({ ...prev, dob: formatDob(next), age: calcAge(next) }));
                   }
                 }}
-                onChange={() => {}}
+                onChange={() => { }}
                 onFocus={() => {
                   // Keep digits so user can backspace and edit
                 }}
@@ -334,81 +338,21 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
         </Card>
 
         {/* Billing Card */}
-        <Card style={{ ...styles.card, ...styles.billingCard }}>
-          <h3 style={styles.billingTitle}>Bill</h3>
-          
-          <div style={styles.billingRowInline}>
-            <label style={styles.billingLabel}>Method</label>
-            <div style={styles.radioGroupInline}>
-              {["Cash", "Card", "UPI", "No Bill"].map((m) => (
-                <label key={m} style={styles.radioLabelSmall}>
-                  <input 
-                    type="radio" 
-                    name="payment" 
-                    checked={form.paymentMethod === m}
-                    onChange={() => setForm({ ...form, paymentMethod: m })}
-                  />
-                  {m}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div style={styles.billingRowInline}>
-            <label style={styles.billingLabel}>Note</label>
-            <div style={styles.billingValueArea}>
-              <input 
-                style={styles.borderlessInput}
-                placeholder="Internal notes..."
-                value={form.note}
-                onChange={(e) => setForm({ ...form, note: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "4px" }}>
-            <div style={styles.billingRowInline}>
-              <label style={styles.billingLabel}>Subtotal</label>
-              <div style={styles.billingValueArea}>
-                <input 
-                  style={styles.borderlessInput}
-                  type="number"
-                  value={form.subtotal}
-                  onChange={(e) => setForm({ ...form, subtotal: Number(e.target.value) })}
-                />
-              </div>
-            </div>
-
-            <div style={styles.billingRowInline}>
-              <label style={styles.billingLabel}>Tax</label>
-              <div style={styles.billingValueArea}>
-                <input 
-                  style={styles.borderlessInput}
-                  type="number"
-                  value={form.tax}
-                  onChange={(e) => setForm({ ...form, tax: Number(e.target.value) })}
-                />
-              </div>
-            </div>
-
-            <div style={styles.billingRowInline}>
-              <label style={styles.billingLabel}>Discount</label>
-              <div style={styles.billingValueArea}>
-                <input 
-                  style={styles.borderlessInput}
-                  type="number"
-                  value={form.discount}
-                  onChange={(e) => setForm({ ...form, discount: Number(e.target.value) })}
-                />
-              </div>
-            </div>
-
-            <div style={styles.totalRow}>
-              <span>Total</span>
-              <span>₹{total.toFixed(2)}</span>
-            </div>
-          </div>
-        </Card>
+        <div style={{ gridColumn: "3", gridRow: "1 / span 2", alignSelf: "stretch" }}>
+          <BillCard
+            paymentMethod={form.paymentMethod}
+            onPaymentMethodChange={(m) => setForm({ ...form, paymentMethod: m })}
+            note={form.note}
+            onNoteChange={(n) => setForm({ ...form, note: n })}
+            subtotal={form.subtotal}
+            onSubtotalChange={(v) => setForm({ ...form, subtotal: v })}
+            tax={form.tax}
+            onTaxChange={(v) => setForm({ ...form, tax: v })}
+            discount={form.discount}
+            onDiscountChange={(v) => setForm({ ...form, discount: v })}
+            total={total}
+          />
+        </div>
 
         <div style={styles.scheduleColumn}>
           {/* Schedule Mini Cards Stack */}
@@ -486,15 +430,14 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
               <StethoscopeIcon style={styles.appointmentIcon} />
               <label style={styles.fieldLabel}>Doctor</label>
             </div>
-            <select
-              style={styles.select}
-              value={selectedDoctorId}
-              onChange={(e) => setSelectedDoctorId(e.target.value)}
-            >
-              {doctors.map(d => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
-            </select>
+            <div style={{ flex: 1 }}>
+              <Select
+                options={doctors.map(d => ({ label: d.name, value: d.id }))}
+                value={selectedDoctorId}
+                onChange={(val: string) => setSelectedDoctorId(val)}
+                placeholder="Select Doctor"
+              />
+            </div>
           </div>
 
           <div style={styles.appointmentRow}>
@@ -502,9 +445,14 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
               <PulseIcon style={styles.appointmentIcon} />
               <label style={styles.fieldLabel}>Service</label>
             </div>
-            <select style={styles.select} value={form.service} onChange={(e) => setForm({ ...form, service: e.target.value })}>
-              <option value="Consultation">Consultation</option>
-            </select>
+            <div style={{ flex: 1 }}>
+              <Select
+                options={["Consultation"]}
+                value={form.service}
+                onChange={(val: string) => setForm({ ...form, service: val })}
+                placeholder="Select Service"
+              />
+            </div>
           </div>
         </Card>
 
