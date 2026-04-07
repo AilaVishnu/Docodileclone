@@ -97,8 +97,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
     return { hour, minute };
   };
 
+  const isValidEmail = (email: string) => !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
   const handleBook = async (payStatus: string) => {
     if (!form.name.trim()) { alert("Please enter patient name"); return; }
+    if (form.email && !isValidEmail(form.email)) { alert("Please enter a valid email"); return; }
     if (!activeDoctor) { alert("Please select a doctor"); return; }
 
     setSubmitting(true);
@@ -205,18 +208,38 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
               <LetterIcon style={styles.iconFieldIcon} />
               <input
                 style={styles.iconFieldInput}
+                type="text"
                 placeholder="hello@example.com"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
+                onBlur={() => setForm((prev) => ({ ...prev, email: prev.email.trim().toLowerCase() }))}
               />
             </div>
             <div style={{ ...styles.iconField, width: "180px" }}>
               <PhoneIcon style={styles.iconFieldIcon} />
               <input
                 style={styles.iconFieldInput}
-                placeholder="+91xxxxxxxxxx"
+                placeholder="+91 XXXXX XXXXX"
                 value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9+ ]/g, "");
+                  // Extract only digits to check length
+                  let digits = val.replace(/\D/g, "");
+                  if (digits.startsWith("91") && digits.length > 10) digits = digits.substring(2);
+                  if (digits.length > 10) return; // Block input beyond 10 digits
+                  setForm({ ...form, phone: val });
+                }}
+                onBlur={() => {
+                  let clean = form.phone.replace(/\D/g, "");
+                  if (clean.startsWith("91") && clean.length > 10) clean = clean.substring(2);
+                  clean = clean.substring(0, 10);
+                  if (clean.length === 0) { setForm((prev) => ({ ...prev, phone: "" })); return; }
+                  if (clean.length > 5) {
+                    setForm((prev) => ({ ...prev, phone: `+91 ${clean.substring(0, 5)} ${clean.substring(5)}` }));
+                  } else {
+                    setForm((prev) => ({ ...prev, phone: `+91 ${clean}` }));
+                  }
+                }}
               />
             </div>
           </div>
