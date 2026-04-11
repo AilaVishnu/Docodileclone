@@ -92,7 +92,7 @@ export const styles: Record<string, CSSProperties> = {
   },
   actionMenu: {
     position: "absolute" as const,
-    right: 0,
+    left: 0,
     top: "100%",
     backgroundColor: "#fff",
     borderRadius: "12px",
