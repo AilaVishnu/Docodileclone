@@ -39,6 +39,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       width: '100%',
       zIndex: 3000,
       position: 'relative' as const,
+      flexShrink: 0,
     },
     actions: {
       display: 'flex',

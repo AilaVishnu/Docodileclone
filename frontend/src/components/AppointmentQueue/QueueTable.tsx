@@ -39,7 +39,7 @@ type QueueTableProps = {
   menuItems?: MenuItem[];
 };
 
-function ActionMenu({ appointment, menuItems }: { appointment: Appointment; menuItems: MenuItem[] }) {
+function ActionMenu({ appointment, menuItems, openUpward }: { appointment: Appointment; menuItems: MenuItem[]; openUpward?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -57,7 +57,7 @@ function ActionMenu({ appointment, menuItems }: { appointment: Appointment; menu
         <span style={{ fontSize: "18px", fontWeight: "bold" }}>...</span>
       </button>
       {isOpen && (
-        <div style={styles.actionMenu}>
+        <div style={{ ...styles.actionMenu, ...(openUpward ? { top: "auto", bottom: "100%" } : {}) }}>
           {menuItems.map((item, i) => (
             <div
               key={i}
@@ -119,7 +119,7 @@ export function QueueTable({ appointments, doctorName, menuItems }: QueueTablePr
                 </td>
                 <td style={styles.td}>
                   {menuItems && menuItems.length > 0 ? (
-                    <ActionMenu appointment={apt} menuItems={menuItems} />
+                    <ActionMenu appointment={apt} menuItems={menuItems} openUpward={index >= appointments.length - 2} />
                   ) : (
                     <button style={styles.actionButton}>
                       <span style={{ fontSize: "18px", fontWeight: "bold" }}>...</span>

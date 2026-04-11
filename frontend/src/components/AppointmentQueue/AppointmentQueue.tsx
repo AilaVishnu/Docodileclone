@@ -25,6 +25,7 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [editingAppointment, setEditingAppointment] = useState<EditAppointmentData | undefined>(undefined);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -100,7 +101,7 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
     };
 
     fetchData();
-  }, [selectedDate]);
+  }, [selectedDate, refreshKey]);
 
   const tabItems: TabItem[] = doctors.map(d => ({
     id: d.id,
@@ -169,13 +170,14 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
           initialDoctorId={activeDoctorId}
           onBack={() => {
             setEditingAppointment(undefined);
+            setRefreshKey((k) => k + 1);
             onBack?.();
           }}
           editingAppointment={editingAppointment}
         />
       )}
 
-      {doctors.length > 0 ? (
+      {!isBooking && !editingAppointment && doctors.length > 0 ? (
         <>
           <Tabs 
             items={tabItems} 

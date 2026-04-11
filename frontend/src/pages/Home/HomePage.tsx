@@ -56,6 +56,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       flexDirection: "column" as const,
       gap: "24px",
       flex: 1,
+      overflow: "auto" as const,
       backgroundColor: colors.active.shade200,
       borderTopLeftRadius: "32px",
       position: "relative",
@@ -103,7 +104,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         onToggleExpand={() => setIsSidebarExpanded(!isSidebarExpanded)}
       />
       <div style={styles.contentArea}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
           <TopNav 
             onBuildClinic={onViewClinic} 
             onViewAllClinics={onViewAllClinics}
