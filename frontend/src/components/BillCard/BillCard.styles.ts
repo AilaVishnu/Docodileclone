@@ -100,6 +100,36 @@ export const styles: Record<string, CSSProperties> = {
     padding: 0,
   },
 
+  toggleGroup: {
+    display: "flex",
+    border: `1px solid ${colors.neutral300}`,
+    borderRadius: "6px",
+    overflow: "hidden",
+    flexShrink: 0,
+  },
+
+  toggleActive: {
+    padding: "4px 10px",
+    border: "none",
+    backgroundColor: colors.active.shade100,
+    color: colors.blindBlack,
+    fontSize: "13px",
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: fonts.family.primary,
+  },
+
+  toggleInactive: {
+    padding: "4px 10px",
+    border: "none",
+    backgroundColor: "transparent",
+    color: colors.neutral700,
+    fontSize: "13px",
+    fontWeight: 500,
+    cursor: "pointer",
+    fontFamily: fonts.family.primary,
+  },
+
   totalRow: {
     display: "flex",
     alignItems: "center",

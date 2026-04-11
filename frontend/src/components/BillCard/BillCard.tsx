@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { styles } from "./BillCard.styles";
 
 type BillCardProps = {
@@ -13,6 +13,8 @@ type BillCardProps = {
   discount: number;
   onDiscountChange: (val: number) => void;
   total: number;
+  onTaxModeChange?: (mode: "%" | "₹") => void;
+  onDiscountModeChange?: (mode: "%" | "₹") => void;
 };
 
 export function BillCard({
@@ -27,7 +29,22 @@ export function BillCard({
   discount,
   onDiscountChange,
   total,
+  onTaxModeChange,
+  onDiscountModeChange,
 }: BillCardProps) {
+  const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
+  const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
+
+  const handleTaxMode = (mode: "%" | "₹") => {
+    setTaxMode(mode);
+    onTaxModeChange?.(mode);
+  };
+
+  const handleDiscountMode = (mode: "%" | "₹") => {
+    setDiscountMode(mode);
+    onDiscountModeChange?.(mode);
+  };
+
   return (
     <div style={styles.wrapper}>
       <div style={styles.card}>
@@ -63,7 +80,7 @@ export function BillCard({
           <input
             style={styles.input}
             type="number"
-            value={subtotal}
+            value={subtotal || ""}
             onChange={(e) => onSubtotalChange(Number(e.target.value))}
           />
         </div>
@@ -72,10 +89,21 @@ export function BillCard({
           <label style={styles.label}>Tax</label>
           <input
             style={styles.input}
-            placeholder="10%"
+            type="number"
+            placeholder="0"
             value={tax}
             onChange={(e) => onTaxChange(e.target.value)}
           />
+          <div style={styles.toggleGroup}>
+            <button
+              style={taxMode === "%" ? styles.toggleActive : styles.toggleInactive}
+              onClick={() => handleTaxMode("%")}
+            >%</button>
+            <button
+              style={taxMode === "₹" ? styles.toggleActive : styles.toggleInactive}
+              onClick={() => handleTaxMode("₹")}
+            >₹</button>
+          </div>
         </div>
 
         <div style={styles.fieldRow}>
@@ -83,9 +111,20 @@ export function BillCard({
           <input
             style={styles.input}
             type="number"
-            value={discount}
+            placeholder="0"
+            value={discount || ""}
             onChange={(e) => onDiscountChange(Number(e.target.value))}
           />
+          <div style={styles.toggleGroup}>
+            <button
+              style={discountMode === "%" ? styles.toggleActive : styles.toggleInactive}
+              onClick={() => handleDiscountMode("%")}
+            >%</button>
+            <button
+              style={discountMode === "₹" ? styles.toggleActive : styles.toggleInactive}
+              onClick={() => handleDiscountMode("₹")}
+            >₹</button>
+          </div>
         </div>
 
         <div style={styles.totalRow}>

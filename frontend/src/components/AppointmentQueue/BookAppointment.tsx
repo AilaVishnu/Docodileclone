@@ -59,6 +59,8 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
   const [submitting, setSubmitting] = useState(false);
   const [dobDigits, setDobDigits] = useState("");
   const [toastMessage, setToastMessage] = useState("");
+  const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
+  const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
 
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -183,9 +185,12 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
     setSelectedDoctorId(doctors[nextIndex].id);
   };
 
-  const taxPercent = parseFloat(String(form.tax).replace("%", "")) || 0;
-  const taxAmount = (Number(form.subtotal) || 0) * taxPercent / 100;
-  const total = (Number(form.subtotal) || 0) + taxAmount - (Number(form.discount) || 0);
+  const subtotal = Number(form.subtotal) || 0;
+  const taxVal = parseFloat(String(form.tax)) || 0;
+  const taxAmount = taxMode === "%" ? subtotal * taxVal / 100 : taxVal;
+  const discountVal = Number(form.discount) || 0;
+  const discountAmount = discountMode === "%" ? subtotal * discountVal / 100 : discountVal;
+  const total = subtotal + taxAmount - discountAmount;
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-GB", {
@@ -350,7 +355,9 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
             onTaxChange={(v) => setForm({ ...form, tax: v })}
             discount={form.discount}
             onDiscountChange={(v) => setForm({ ...form, discount: v })}
-            total={total}
+            total={Math.round(total)}
+            onTaxModeChange={setTaxMode}
+            onDiscountModeChange={setDiscountMode}
           />
         </div>
 
