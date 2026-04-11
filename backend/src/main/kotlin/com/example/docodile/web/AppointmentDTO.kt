@@ -17,6 +17,7 @@ data class AppointmentDTO(
     val isWalkin: Boolean,
     val status: String?,
     val type: String?,
+    val service: String?,
     val payStatus: String?,
     val notes: String?,
     val fee: java.math.BigDecimal?

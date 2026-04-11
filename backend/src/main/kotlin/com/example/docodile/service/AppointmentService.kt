@@ -63,6 +63,7 @@ class AppointmentService(
             isWalkin = request.isWalkin,
             status = "Scheduled",
             type = request.type,
+            service = request.service,
             payStatus = request.payStatus,
             fee = request.fee,
             notes = request.notes,
@@ -98,6 +99,7 @@ class AppointmentService(
         appointment.scheduledTime = request.scheduledTime
         appointment.isWalkin = request.isWalkin
         appointment.type = request.type
+        appointment.service = request.service
         appointment.payStatus = request.payStatus
         appointment.fee = request.fee
         appointment.notes = request.notes
@@ -120,6 +122,7 @@ class AppointmentService(
             isWalkin = this.isWalkin,
             status = this.status,
             type = this.type,
+            service = this.service,
             payStatus = this.payStatus,
             notes = this.notes,
             fee = this.fee

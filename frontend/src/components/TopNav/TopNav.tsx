@@ -204,18 +204,26 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
 
           {isDropdownOpen && (
             <div style={styles.dropdown}>
-              <DropdownItem 
-                label="Build Your Clinic" 
-                onClick={() => onBuildClinic && onBuildClinic()} 
+              <DropdownItem
+                label="My Profile"
+                onClick={() => {}}
               />
-              <DropdownItem 
-                label="View All Clinics" 
-                onClick={() => onViewAllClinics && onViewAllClinics()} 
+              <DropdownItem
+                label="Settings"
+                onClick={() => {}}
               />
-              <DropdownItem 
-                label="Logout" 
-                onClick={() => onLogout && onLogout()} 
-                destructive 
+              <DropdownItem
+                label="Build Your Clinic"
+                onClick={() => onBuildClinic && onBuildClinic()}
+              />
+              <DropdownItem
+                label="View All Clinics"
+                onClick={() => onViewAllClinics && onViewAllClinics()}
+              />
+              <DropdownItem
+                label="Logout"
+                onClick={() => onLogout && onLogout()}
+                destructive
               />
             </div>
           )}

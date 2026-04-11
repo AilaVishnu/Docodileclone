@@ -19,6 +19,7 @@ export type Appointment = {
   patientDob?: string;
   patientAge?: number;
   type: "New" | "Review";
+  service?: string;
   scheduledTime: string;
   rawScheduledTime?: string;
   isWalkin: boolean;
@@ -85,6 +86,7 @@ export function QueueTable({ appointments, doctorName, menuItems }: QueueTablePr
             <th style={styles.th}>#</th>
             <th style={styles.th}>Name</th>
             <th style={styles.th}>Phone</th>
+            <th style={{ ...styles.th, textAlign: "center" }}>Service</th>
             <th style={styles.th}>Type</th>
             <th style={styles.th}>Time</th>
             <th style={styles.th}>Status</th>
@@ -95,7 +97,7 @@ export function QueueTable({ appointments, doctorName, menuItems }: QueueTablePr
         <tbody>
           {appointments.length === 0 ? (
             <tr>
-              <td colSpan={8} style={{ ...styles.td, textAlign: "center", padding: "48px", color: "#666" }}>
+              <td colSpan={9} style={{ ...styles.td, textAlign: "center", padding: "48px", color: "#666" }}>
                 No Appointments for {doctorName || "this doctor"} today
               </td>
             </tr>
@@ -105,6 +107,7 @@ export function QueueTable({ appointments, doctorName, menuItems }: QueueTablePr
                 <td style={styles.td}>{index + 1}</td>
                 <td style={{ ...styles.td, fontWeight: 500 }}>{apt.patientName}</td>
                 <td style={styles.td}>{apt.patientPhone}</td>
+                <td style={{ ...styles.td, textAlign: "center" }}>{apt.service === "Consultation" ? "C" : apt.service || "—"}</td>
                 <td style={styles.td}>{apt.type}</td>
                 <td style={styles.td}>
                   <span style={styles.time}>{apt.scheduledTime}</span>

@@ -5,6 +5,7 @@ import { styles } from "./AppointmentQueue.styles";
 import { DatePicker } from "./DatePicker";
 import { colors } from "../../styles/theme";
 import { BookAppointment, EditAppointmentData } from "./BookAppointment";
+import { DoctorStatusCard } from "./DoctorStatusCard";
 import { Toast } from "../Toast";
 import { API_BASE_URL } from "../../apiConfig";
 
@@ -79,6 +80,7 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
               patientName: apt.patientName,
               patientPhone: apt.patientPhone,
               type: apt.type === "REVIEW" ? "Review" : "New",
+              service: apt.service || "",
               scheduledTime: apt.scheduledTime ? new Date(apt.scheduledTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Walk-in",
               rawScheduledTime: apt.scheduledTime || undefined,
               isWalkin: apt.isWalkin,
@@ -183,11 +185,13 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
 
       {!isBooking && !editingAppointment && doctors.length > 0 ? (
         <>
-          <Tabs 
-            items={tabItems} 
-            activeId={activeDoctorId} 
-            onSelect={setActiveDoctorId} 
+          <Tabs
+            items={tabItems}
+            activeId={activeDoctorId}
+            onSelect={setActiveDoctorId}
           />
+          <div style={{ display: "flex", gap: "24px" }}>
+          <div style={{ flex: 1 }}>
           <QueueTable
             appointments={activeQueue}
             doctorName={doctors.find(d => d.id === activeDoctorId)?.name}
@@ -212,6 +216,13 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
               { label: "Generate Bill", onClick: (apt) => console.log("Generate", apt.id) },
             ]}
           />
+          </div>
+          <DoctorStatusCard
+            doctorName={doctors.find(d => d.id === activeDoctorId)?.name || ""}
+            doctorGender="male"
+            appointments={activeQueue}
+          />
+          </div>
         </>
       ) : (
         <div style={{ padding: "48px", textAlign: "center", backgroundColor: "white", borderRadius: "24px" }}>
