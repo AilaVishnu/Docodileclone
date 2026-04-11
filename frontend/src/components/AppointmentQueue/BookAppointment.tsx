@@ -525,7 +525,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             <div style={styles.appointmentRow}>
               <div style={styles.appointmentLabelGroup}>
                 <PulseIcon style={styles.appointmentIcon} />
-                <label style={styles.fieldLabel}>{form.services.length === 0 ? "Service" : ""}</label>
+                <label style={styles.fieldLabel}>Service</label>
               </div>
               <div style={{ flex: 1 }}>
                 <Select

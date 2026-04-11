@@ -79,7 +79,7 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
               id: apt.id,
               patientName: apt.patientName,
               patientPhone: apt.patientPhone,
-              type: apt.type === "REVIEW" ? "Review" : "New",
+              type: apt.type?.toUpperCase() === "REVIEW" ? "Review" : "New",
               service: apt.service || "",
               scheduledTime: apt.scheduledTime ? new Date(apt.scheduledTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Walk-in",
               rawScheduledTime: apt.scheduledTime || undefined,
@@ -216,6 +216,17 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
               { label: "Bill Medicines", onClick: (apt) => console.log("Bill", apt.id) },
               { label: "Generate Bill", onClick: (apt) => console.log("Generate", apt.id) },
             ]}
+            onStatusChange={(aptId, newStatus) => {
+              setAppointments((prev) => {
+                const updated = { ...prev };
+                Object.keys(updated).forEach((docId) => {
+                  updated[docId] = updated[docId].map((a) =>
+                    a.id === aptId ? { ...a, status: newStatus as any } : a
+                  );
+                });
+                return updated;
+              });
+            }}
           />
           </div>
           <DoctorStatusCard

@@ -37,35 +37,105 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   th: {
-    padding: "16px 12px",
+    padding: "12px 12px",
     borderBottom: `1px solid ${colors.neutral200}`,
-    color: colors.neutral700,
+    color: colors.neutral500,
     fontWeight: 500,
-    fontSize: "14px",
+    fontSize: "13px",
+    letterSpacing: "0.01em",
   },
 
   tr: {
-    borderBottom: `1px solid ${colors.neutral100}`,
+    borderBottom: `1px solid ${colors.neutral200}`,
+    transition: "background-color 0.15s ease",
   },
 
   td: {
-    padding: "16px 12px",
-    fontSize: "15px",
+    padding: "14px 12px",
+    fontSize: "14px",
     color: colors.blindBlack,
+    verticalAlign: "middle",
+    fontWeight: 400,
+    whiteSpace: "nowrap" as const,
+  },
+
+  // Serial number cell
+  serialCell: {
+    padding: "14px 12px",
+    fontSize: "14px",
+    color: colors.neutral500,
+    verticalAlign: "middle",
+    fontWeight: 500,
+  },
+
+  // Name cell with gender/age sub-detail
+  nameCell: {
+    padding: "14px 12px",
     verticalAlign: "middle",
   },
 
+  namePrimary: {
+    fontSize: "14px",
+    fontWeight: 600,
+    color: colors.blindBlack,
+    display: "block",
+    lineHeight: "1.3",
+  },
+
+  nameMeta: {
+    fontSize: "12px",
+    color: colors.neutral500,
+    fontWeight: 400,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "4px",
+    marginTop: "1px",
+  },
+
+  nameMetaDot: {
+    color: colors.neutral300,
+    fontSize: "12px",
+  },
+
+  // Status badge - filled pill
   statusBadge: {
-    padding: "6px 12px",
-    borderRadius: "20px",
+    padding: "5px 14px",
+    borderRadius: "999px",
     fontSize: "12px",
     fontWeight: 600,
     display: "inline-block",
+    letterSpacing: "0.01em",
   },
 
+  // Pay status cell (icon + text inline)
+  payCell: {
+    padding: "14px 12px",
+    verticalAlign: "middle",
+  },
+
+  payInner: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "5px",
+    fontSize: "14px",
+    fontWeight: 600,
+  },
+
+  // Type badge (star icon + text)
+  typeBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "5px",
+    fontSize: "13px",
+    fontWeight: 500,
+    color: colors.neutral700,
+  },
+
+  // Time
   time: {
     fontWeight: 600,
-    color: colors.active.shade400,
+    fontSize: "14px",
+    color: colors.neutral800,
   },
 
   walkinBadge: {
@@ -76,7 +146,7 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.primary400,
     marginLeft: "8px",
     fontWeight: 700,
-    textTransform: "uppercase",
+    textTransform: "uppercase" as const,
   },
 
   payStatus: {
@@ -87,12 +157,19 @@ export const styles: Record<string, CSSProperties> = {
     background: "none",
     border: "none",
     cursor: "pointer",
-    padding: "4px",
-    color: colors.neutral500,
+    padding: "6px 8px",
+    color: colors.neutral400,
+    borderRadius: "6px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "background-color 0.15s ease",
   },
+
   actionMenu: {
     position: "absolute" as const,
-    left: 0,
+    right: 0,
+    left: "auto",
     top: "100%",
     backgroundColor: "#fff",
     borderRadius: "12px",
@@ -102,6 +179,7 @@ export const styles: Record<string, CSSProperties> = {
     padding: "8px",
     border: `1px solid ${colors.neutral200}`,
   },
+
   actionMenuItem: {
     padding: "12px 16px",
     cursor: "pointer",
@@ -113,32 +191,43 @@ export const styles: Record<string, CSSProperties> = {
   },
 };
 
+// ── Status badge colours ────────────────────────────────────────────────────
 export const getStatusStyle = (status: string): CSSProperties => {
   switch (status?.toUpperCase()) {
     case "WAITING":
-      return { backgroundColor: "#FFF4E5", color: "#B76E00" };
+      // Figma: amber/yellow filled pill
+      return { backgroundColor: "#FFDB43", color: "#7A5800" };
     case "IN_PROGRESS":
-      return { backgroundColor: "#E6F6FF", color: "#0070B7" };
+      return { backgroundColor: "#DBEAFE", color: "#1D4ED8" };
     case "COMPLETED":
-      return { backgroundColor: "#E6FFF1", color: "#008A45" };
+      return { backgroundColor: "#DCFCE7", color: "#166534" };
     case "NO_SHOW":
-      return { backgroundColor: "#F5F5F5", color: "#666666" };
+      return { backgroundColor: "#F3F4F6", color: "#6B7280" };
     case "CANCELLED":
-      return { backgroundColor: "#FFE6E6", color: "#B70000" };
+      return { backgroundColor: "#FFE4E6", color: "#9F1239" };
     default:
-      return { backgroundColor: "#F5F5F5", color: "#666666" };
+      return { backgroundColor: "#F3F4F6", color: "#6B7280" };
   }
 };
 
+// ── Status display label (title-cased) ─────────────────────────────────────
+export const getStatusLabel = (status: string): string => {
+  switch (status?.toUpperCase()) {
+    case "WAITING":      return "Waiting";
+    case "IN_PROGRESS":  return "In Progress";
+    case "COMPLETED":    return "Completed";
+    case "NO_SHOW":      return "No Show";
+    case "CANCELLED":    return "Cancelled";
+    default:             return status;
+  }
+};
+
+// ── Pay status colours ──────────────────────────────────────────────────────
 export const getPayStyle = (status: string): CSSProperties => {
   switch (status?.toUpperCase()) {
-    case "PAID":
-      return { color: "#008A45" };
-    case "DUE":
-      return { color: "#B70000" };
-    case "NO PAY":
-      return { color: "#666666" };
-    default:
-      return { color: "#666666" };
+    case "PAID":    return { color: "#16A34A" };  // green
+    case "DUE":     return { color: "#D97706" };  // amber – matches ⚠ warning
+    case "NO PAY":  return { color: "#9CA3AF" };  // muted
+    default:        return { color: "#9CA3AF" };
   }
 };
