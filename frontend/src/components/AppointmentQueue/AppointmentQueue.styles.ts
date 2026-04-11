@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors } from "../../styles/theme";
+import { colors, fonts } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   container: {
@@ -27,7 +27,7 @@ export const styles: Record<string, CSSProperties> = {
     borderRadius: "0 0 24px 24px",
     padding: "24px",
     boxShadow: "0 8px 30px rgba(0, 0, 0, 0.03)",
-    overflow: "hidden",
+    overflow: "visible",
   },
 
   table: {
@@ -89,7 +89,28 @@ export const styles: Record<string, CSSProperties> = {
     cursor: "pointer",
     padding: "4px",
     color: colors.neutral500,
-  }
+  },
+  actionMenu: {
+    position: "absolute" as const,
+    right: 0,
+    top: "100%",
+    backgroundColor: "#fff",
+    borderRadius: "12px",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+    zIndex: 100,
+    minWidth: "200px",
+    padding: "8px",
+    border: `1px solid ${colors.neutral200}`,
+  },
+  actionMenuItem: {
+    padding: "12px 16px",
+    cursor: "pointer",
+    borderRadius: "8px",
+    fontSize: fonts.size.m,
+    fontFamily: fonts.family.primary,
+    color: colors.blindBlack,
+    transition: "background-color 0.15s",
+  },
 };
 
 export const getStatusStyle = (status: string): CSSProperties => {

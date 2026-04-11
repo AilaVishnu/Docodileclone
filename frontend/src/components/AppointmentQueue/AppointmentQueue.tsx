@@ -170,9 +170,15 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
             activeId={activeDoctorId} 
             onSelect={setActiveDoctorId} 
           />
-          <QueueTable 
-            appointments={activeQueue} 
+          <QueueTable
+            appointments={activeQueue}
             doctorName={doctors.find(d => d.id === activeDoctorId)?.name}
+            menuItems={[
+              { label: "Edit Appointment", onClick: (apt) => console.log("Edit", apt.id) },
+              { label: "View Patient File", onClick: (apt) => console.log("View", apt.id) },
+              { label: "Bill Medicines", onClick: (apt) => console.log("Bill", apt.id) },
+              { label: "Generate Bill", onClick: (apt) => console.log("Generate", apt.id) },
+            ]}
           />
         </>
       ) : (

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { styles, getStatusStyle, getPayStyle } from "./AppointmentQueue.styles";
 
 export type AppointmentStatus = 
@@ -21,12 +21,54 @@ export type Appointment = {
   payStatus: PayStatus;
 };
 
+type MenuItem = {
+  label: string;
+  onClick: (appointment: Appointment) => void;
+};
+
 type QueueTableProps = {
   appointments: Appointment[];
   doctorName?: string;
+  menuItems?: MenuItem[];
 };
 
-export function QueueTable({ appointments, doctorName }: QueueTableProps) {
+function ActionMenu({ appointment, menuItems }: { appointment: Appointment; menuItems: MenuItem[] }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button style={styles.actionButton} onClick={() => setIsOpen(!isOpen)}>
+        <span style={{ fontSize: "18px", fontWeight: "bold" }}>...</span>
+      </button>
+      {isOpen && (
+        <div style={styles.actionMenu}>
+          {menuItems.map((item, i) => (
+            <div
+              key={i}
+              style={styles.actionMenuItem}
+              onClick={() => { item.onClick(appointment); setIsOpen(false); }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f5f5f5"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+            >
+              {item.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function QueueTable({ appointments, doctorName, menuItems }: QueueTableProps) {
   return (
     <div style={styles.tableContainer}>
       <table style={styles.table}>
@@ -69,9 +111,13 @@ export function QueueTable({ appointments, doctorName }: QueueTableProps) {
                   {apt.payStatus}
                 </td>
                 <td style={styles.td}>
-                  <button style={styles.actionButton}>
-                    <span style={{ fontSize: "18px", fontWeight: "bold" }}>...</span>
-                  </button>
+                  {menuItems && menuItems.length > 0 ? (
+                    <ActionMenu appointment={apt} menuItems={menuItems} />
+                  ) : (
+                    <button style={styles.actionButton}>
+                      <span style={{ fontSize: "18px", fontWeight: "bold" }}>...</span>
+                    </button>
+                  )}
                 </td>
               </tr>
             ))
