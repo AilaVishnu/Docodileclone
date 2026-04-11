@@ -47,7 +47,9 @@ class AppointmentService(
             clinic = clinic,
             name = request.patientName,
             phone = request.patientPhone,
+            email = request.patientEmail,
             gender = request.patientGender,
+            dob = request.patientDob?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() },
             createdAt = Instant.now()
         )
         val savedPatient = patientRepository.save(patient)
@@ -76,13 +78,17 @@ class AppointmentService(
             patientId = this.patient?.id ?: UUID.randomUUID(),
             patientName = this.patient?.name ?: "Unknown Patient",
             patientPhone = this.patient?.phone ?: "N/A",
+            patientEmail = this.patient?.email,
+            patientGender = this.patient?.gender,
+            patientDob = this.patient?.dob?.toString(),
             doctorId = this.doctor?.id ?: UUID.randomUUID(),
             scheduledTime = this.scheduledTime,
             isWalkin = this.isWalkin,
             status = this.status,
             type = this.type,
             payStatus = this.payStatus,
-            notes = this.notes
+            notes = this.notes,
+            fee = this.fee
         )
     }
 }

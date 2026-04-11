@@ -4,7 +4,7 @@ import { QueueTable, Appointment } from "./QueueTable";
 import { styles } from "./AppointmentQueue.styles";
 import { DatePicker } from "./DatePicker";
 import { colors } from "../../styles/theme";
-import { BookAppointment } from "./BookAppointment";
+import { BookAppointment, EditAppointmentData } from "./BookAppointment";
 import { API_BASE_URL } from "../../apiConfig";
 
 type Doctor = {
@@ -23,6 +23,7 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
   const [appointments, setAppointments] = useState<Record<string, Appointment[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [editingAppointment, setEditingAppointment] = useState<EditAppointmentData | undefined>(undefined);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
@@ -76,9 +77,16 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
               patientPhone: apt.patientPhone,
               type: apt.type === "REVIEW" ? "Review" : "New",
               scheduledTime: apt.scheduledTime ? new Date(apt.scheduledTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Walk-in",
+              rawScheduledTime: apt.scheduledTime || undefined,
               isWalkin: apt.isWalkin,
               status: apt.status || "WAITING",
               payStatus: apt.payStatus || "DUE",
+              doctorId: apt.doctorId,
+              patientEmail: apt.patientEmail || "",
+              patientGender: apt.patientGender || "",
+              patientDob: apt.patientDob || "",
+              notes: apt.notes || "",
+              fee: apt.fee || 0,
             });
           });
 
@@ -155,11 +163,15 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
         )}
       </header>
 
-      {isBooking && (
-        <BookAppointment 
-          doctors={doctors} 
+      {(isBooking || editingAppointment) && (
+        <BookAppointment
+          doctors={doctors}
           initialDoctorId={activeDoctorId}
-          onBack={onBack || (() => {})}
+          onBack={() => {
+            setEditingAppointment(undefined);
+            onBack?.();
+          }}
+          editingAppointment={editingAppointment}
         />
       )}
 
@@ -174,7 +186,20 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
             appointments={activeQueue}
             doctorName={doctors.find(d => d.id === activeDoctorId)?.name}
             menuItems={[
-              { label: "Edit Appointment", onClick: (apt) => console.log("Edit", apt.id) },
+              { label: "Edit Appointment", onClick: (apt) => setEditingAppointment({
+                id: apt.id,
+                patientName: apt.patientName,
+                patientPhone: apt.patientPhone,
+                patientEmail: apt.patientEmail,
+                patientGender: apt.patientGender,
+                patientDob: apt.patientDob,
+                type: apt.type,
+                scheduledTime: apt.rawScheduledTime || "",
+                doctorId: apt.doctorId || activeDoctorId,
+                payStatus: apt.payStatus,
+                notes: apt.notes,
+                fee: apt.fee,
+              }) },
               { label: "View Patient File", onClick: (apt) => console.log("View", apt.id) },
               { label: "Bill Medicines", onClick: (apt) => console.log("Bill", apt.id) },
               { label: "Generate Bill", onClick: (apt) => console.log("Generate", apt.id) },

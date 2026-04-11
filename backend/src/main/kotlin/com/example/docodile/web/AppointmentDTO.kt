@@ -8,11 +8,15 @@ data class AppointmentDTO(
     val patientId: UUID,
     val patientName: String,
     val patientPhone: String,
+    val patientEmail: String?,
+    val patientGender: String?,
+    val patientDob: String?,
     val doctorId: UUID,
     val scheduledTime: LocalDateTime?,
     val isWalkin: Boolean,
     val status: String?,
     val type: String?,
     val payStatus: String?,
-    val notes: String?
+    val notes: String?,
+    val fee: java.math.BigDecimal?
 )

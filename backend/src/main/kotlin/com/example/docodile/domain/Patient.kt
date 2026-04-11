@@ -26,6 +26,8 @@ class Patient(
 
     var phone: String? = null,
 
+    var email: String? = null,
+
     var gender: String? = null,
 
     var dob: LocalDate? = null,

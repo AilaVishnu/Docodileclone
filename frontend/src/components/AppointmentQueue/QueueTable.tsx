@@ -14,11 +14,18 @@ export type Appointment = {
   id: string;
   patientName: string;
   patientPhone: string;
+  patientEmail?: string;
+  patientGender?: string;
+  patientDob?: string;
   type: "New" | "Review";
   scheduledTime: string;
+  rawScheduledTime?: string;
   isWalkin: boolean;
   status: AppointmentStatus;
   payStatus: PayStatus;
+  doctorId?: string;
+  notes?: string;
+  fee?: number;
 };
 
 type MenuItem = {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { styles } from "./BookAppointment.styles";
 import { colors } from "../../styles/theme";
 import { DatePicker } from "./DatePicker";
@@ -27,29 +27,65 @@ type Doctor = {
   name: string;
 };
 
+export type EditAppointmentData = {
+  id: string;
+  patientName: string;
+  patientPhone: string;
+  patientEmail?: string;
+  patientGender?: string;
+  patientDob?: string;
+  type: string;
+  scheduledTime: string;
+  doctorId: string;
+  payStatus?: string;
+  notes?: string;
+  fee?: number;
+};
+
 type BookAppointmentProps = {
   doctors: Doctor[];
   initialDoctorId?: string;
   onBack: () => void;
+  editingAppointment?: EditAppointmentData;
 };
 
-export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppointmentProps) {
-  const [selectedDoctorId, setSelectedDoctorId] = useState(initialDoctorId || (doctors.length > 0 ? doctors[0].id : ""));
-  const [patientId] = useState("T023"); // Default for now
+export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppointment }: BookAppointmentProps) {
+  const parseScheduledTime = (time?: string) => {
+    if (!time) return { date: new Date(), timeStr: "10:00 AM" };
+    // Parse as local time (not UTC)
+    const parts = time.split("T");
+    const dateParts = parts[0].split("-");
+    const timeParts = (parts[1] || "10:00:00").split(":");
+    const d = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]),
+      Number(timeParts[0]), Number(timeParts[1]), 0);
+    let hours = d.getHours();
+    const mins = d.getMinutes();
+    const period = hours >= 12 ? "PM" : "AM";
+    if (hours > 12) hours -= 12;
+    if (hours === 0) hours = 12;
+    return { date: d, timeStr: `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")} ${period}` };
+  };
+
+  const initTime = editingAppointment ? parseScheduledTime(editingAppointment.scheduledTime) : null;
+
+  const [selectedDoctorId, setSelectedDoctorId] = useState(
+    editingAppointment?.doctorId || initialDoctorId || (doctors.length > 0 ? doctors[0].id : "")
+  );
+  const [patientId] = useState("T023");
   const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
+    name: editingAppointment?.patientName || "",
+    email: editingAppointment?.patientEmail || "",
+    phone: editingAppointment?.patientPhone || "",
     dob: "",
     age: "",
-    gender: "Male",
-    type: "New", // New or Review
+    gender: editingAppointment?.patientGender || "Male",
+    type: editingAppointment?.type || "New",
     service: "Consultation",
-    date: new Date(),
-    time: "10:00 AM",
+    date: initTime?.date || new Date(),
+    time: initTime?.timeStr || "10:00 AM",
     paymentMethod: "Cash",
-    note: "",
-    subtotal: 500.0,
+    note: editingAppointment?.notes || "",
+    subtotal: editingAppointment?.fee || 500.0,
     tax: "" as string,
     discount: 0.0,
   });
@@ -96,6 +132,18 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
     return String(age);
   };
 
+  // Pre-fill DOB when editing
+  useEffect(() => {
+    if (editingAppointment?.patientDob) {
+      const parts = editingAppointment.patientDob.split("-");
+      if (parts.length === 3) {
+        const digits = parts[2] + parts[1] + parts[0]; // "2005-11-07" → "07112005"
+        setDobDigits(digits);
+        setForm((prev) => ({ ...prev, dob: formatDob(digits), age: calcAge(digits) }));
+      }
+    }
+  }, []);
+
   const parseTimeTo24h = (time: string): { hour: number; minute: number } => {
     const [timePart, period] = time.split(" ");
     let [hour, minute] = timePart.split(":").map(Number);
@@ -134,7 +182,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
         patientEmail: form.email || null,
         patientPhone: form.phone || null,
         patientGender: form.gender || null,
-        patientDob: form.dob || null,
+        patientDob: dobDigits.length === 8 ? `${dobDigits.slice(4,8)}-${dobDigits.slice(2,4)}-${dobDigits.slice(0,2)}` : null,
         doctorId: selectedDoctorId,
         scheduledTime: scheduledTime.getFullYear() + "-" +
           String(scheduledTime.getMonth() + 1).padStart(2, "0") + "-" +
