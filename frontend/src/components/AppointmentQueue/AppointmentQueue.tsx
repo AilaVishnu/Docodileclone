@@ -216,7 +216,18 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
               { label: "Bill Medicines", onClick: (apt) => console.log("Bill", apt.id) },
               { label: "Generate Bill", onClick: (apt) => console.log("Generate", apt.id) },
             ]}
-            onStatusChange={(aptId, newStatus) => {
+            onStatusChange={async (aptId, newStatus) => {
+              const token = localStorage.getItem("docodile_token");
+              try {
+                await fetch(`${API_BASE_URL}/api/tenant/appointments/${aptId}/status`, {
+                  method: "PATCH",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({ status: newStatus }),
+                });
+              } catch {}
               setAppointments((prev) => {
                 const updated = { ...prev };
                 Object.keys(updated).forEach((docId) => {

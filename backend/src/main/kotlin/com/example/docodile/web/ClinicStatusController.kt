@@ -96,6 +96,20 @@ class ClinicStatusController(
         }
     }
 
+    @PatchMapping("/appointments/{appointmentId}/status")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    fun updateAppointmentStatus(
+        @PathVariable appointmentId: UUID,
+        @RequestBody body: Map<String, String>
+    ): ResponseEntity<Any> {
+        return try {
+            val status = body["status"] ?: throw IllegalArgumentException("Status is required")
+            ResponseEntity.ok(appointmentService.updateStatus(appointmentId, status))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
+        }
+    }
+
     @GetMapping("/domain/check")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     fun checkDomain(@RequestParam domain: String): Map<String, Boolean> {

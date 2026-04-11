@@ -40,7 +40,8 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
     container: {
       display: "flex",
       width: "100%",
-      minHeight: "100vh",
+      height: "100vh",
+      overflow: "hidden" as const,
       backgroundColor: colors.active.shade300,
     },
     contentArea: {
@@ -56,7 +57,8 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       flexDirection: "column" as const,
       gap: "24px",
       flex: 1,
-      overflow: "auto" as const,
+      overflowY: "auto" as const,
+      overflowX: "hidden" as const,
       backgroundColor: colors.active.shade200,
       borderTopLeftRadius: "32px",
       position: "relative",

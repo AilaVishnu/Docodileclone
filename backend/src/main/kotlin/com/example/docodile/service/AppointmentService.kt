@@ -107,6 +107,14 @@ class AppointmentService(
         return appointmentRepository.save(appointment).toDTO()
     }
 
+    @Transactional
+    fun updateStatus(appointmentId: UUID, status: String): AppointmentDTO {
+        val appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow { IllegalArgumentException("Appointment not found") }
+        appointment.status = status
+        return appointmentRepository.save(appointment).toDTO()
+    }
+
     private fun Appointment.toDTO(): AppointmentDTO {
         return AppointmentDTO(
             id = this.id,
