@@ -148,7 +148,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack }: BookAppoin
         payStatus,
       };
 
-      const res = await fetch(`${API_BASE_URL}/api/appointments`, {
+      const res = await fetch(`${API_BASE_URL}/api/tenant/appointments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

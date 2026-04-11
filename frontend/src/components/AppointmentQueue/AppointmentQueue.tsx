@@ -57,8 +57,8 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
         }
 
         // 2. Fetch appointments for selected date
-        const dateStr = selectedDate.toISOString().split('T')[0];
-        const aptRes = await fetch(`${API_BASE_URL}/api/appointments?date=${dateStr}`, {
+        const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+        const aptRes = await fetch(`${API_BASE_URL}/api/tenant/appointments?date=${dateStr}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
