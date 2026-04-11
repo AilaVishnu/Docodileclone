@@ -45,7 +45,7 @@ export type EditAppointmentData = {
 type BookAppointmentProps = {
   doctors: Doctor[];
   initialDoctorId?: string;
-  onBack: () => void;
+  onBack: (successMessage?: string) => void;
   editingAppointment?: EditAppointmentData;
 };
 
@@ -198,8 +198,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         payStatus,
       };
 
-      const res = await fetch(`${API_BASE_URL}/api/tenant/appointments`, {
-        method: "POST",
+      const url = editingAppointment
+        ? `${API_BASE_URL}/api/tenant/appointments/${editingAppointment.id}`
+        : `${API_BASE_URL}/api/tenant/appointments`;
+      const res = await fetch(url, {
+        method: editingAppointment ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
@@ -208,7 +211,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       });
 
       if (res.ok) {
-        onBack();
+        onBack(editingAppointment ? "Appointment updated successfully" : "Appointment booked successfully");
       } else {
         try {
           const err = await res.json();
@@ -251,7 +254,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   return (
     <div style={styles.overlay}>
       <header style={styles.header}>
-        <button style={styles.backButton} onClick={onBack} title="Back to Appointments">
+        <button style={styles.backButton} onClick={() => onBack()} title="Back to Appointments">
           <BackIcon style={{ color: colors.neutral700 }} />
         </button>
 

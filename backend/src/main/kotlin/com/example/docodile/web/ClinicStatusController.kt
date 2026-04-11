@@ -83,6 +83,19 @@ class ClinicStatusController(
         }
     }
 
+    @PutMapping("/appointments/{appointmentId}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    fun updateAppointment(
+        @PathVariable appointmentId: UUID,
+        @RequestBody request: BookAppointmentRequest
+    ): ResponseEntity<Any> {
+        return try {
+            ResponseEntity.ok(appointmentService.updateAppointment(appointmentId, request))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
+        }
+    }
+
     @GetMapping("/domain/check")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     fun checkDomain(@RequestParam domain: String): Map<String, Boolean> {

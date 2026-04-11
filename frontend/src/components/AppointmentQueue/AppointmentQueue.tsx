@@ -5,6 +5,7 @@ import { styles } from "./AppointmentQueue.styles";
 import { DatePicker } from "./DatePicker";
 import { colors } from "../../styles/theme";
 import { BookAppointment, EditAppointmentData } from "./BookAppointment";
+import { Toast } from "../Toast";
 import { API_BASE_URL } from "../../apiConfig";
 
 type Doctor = {
@@ -26,6 +27,7 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
   const [editingAppointment, setEditingAppointment] = useState<EditAppointmentData | undefined>(undefined);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [toastMessage, setToastMessage] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -168,9 +170,10 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
         <BookAppointment
           doctors={doctors}
           initialDoctorId={activeDoctorId}
-          onBack={() => {
+          onBack={(msg?: string) => {
             setEditingAppointment(undefined);
             setRefreshKey((k) => k + 1);
+            if (msg) setToastMessage(msg);
             onBack?.();
           }}
           editingAppointment={editingAppointment}
@@ -213,6 +216,12 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
           No doctors found for this clinic. Please add staff in Clinic Setup.
         </div>
       )}
+
+      <Toast
+        message={toastMessage}
+        isVisible={!!toastMessage}
+        onClose={() => setToastMessage("")}
+      />
     </div>
   );
 }

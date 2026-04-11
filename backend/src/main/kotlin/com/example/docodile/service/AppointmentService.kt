@@ -72,6 +72,37 @@ class AppointmentService(
         return saved.toDTO()
     }
 
+    @Transactional
+    fun updateAppointment(appointmentId: UUID, request: BookAppointmentRequest): AppointmentDTO {
+        val appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow { IllegalArgumentException("Appointment not found") }
+
+        val doctor = appUserRepository.findById(request.doctorId)
+            .orElseThrow { IllegalArgumentException("Doctor not found") }
+
+        // Update patient
+        val patient = appointment.patient
+        if (patient != null) {
+            patient.name = request.patientName
+            patient.phone = request.patientPhone
+            patient.email = request.patientEmail
+            patient.gender = request.patientGender
+            patient.dob = request.patientDob?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
+            patientRepository.save(patient)
+        }
+
+        // Update appointment
+        appointment.doctor = doctor
+        appointment.scheduledTime = request.scheduledTime
+        appointment.isWalkin = request.isWalkin
+        appointment.type = request.type
+        appointment.payStatus = request.payStatus
+        appointment.fee = request.fee
+        appointment.notes = request.notes
+
+        return appointmentRepository.save(appointment).toDTO()
+    }
+
     private fun Appointment.toDTO(): AppointmentDTO {
         return AppointmentDTO(
             id = this.id,
