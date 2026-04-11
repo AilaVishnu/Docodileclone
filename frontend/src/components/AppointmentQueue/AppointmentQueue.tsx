@@ -204,6 +204,7 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
                 patientGender: apt.patientGender,
                 patientDob: apt.patientDob,
                 patientAge: apt.patientAge,
+                service: apt.service,
                 type: apt.type,
                 scheduledTime: apt.rawScheduledTime || "",
                 doctorId: apt.doctorId || activeDoctorId,

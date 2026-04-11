@@ -35,6 +35,7 @@ export type EditAppointmentData = {
   patientGender?: string;
   patientDob?: string;
   patientAge?: number;
+  service?: string;
   type: string;
   scheduledTime: string;
   doctorId: string;
@@ -81,7 +82,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     age: editingAppointment?.patientAge ? String(editingAppointment.patientAge) : "",
     gender: editingAppointment?.patientGender || "Male",
     type: editingAppointment?.type || "New",
-    service: "Consultation",
+    services: editingAppointment?.service ? editingAppointment.service.split(" + ").filter(Boolean) : ["Consultation"],
     date: initTime?.date || new Date(),
     time: initTime?.timeStr || "10:00 AM",
     paymentMethod: "Cash",
@@ -192,7 +193,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
           String(scheduledTime.getHours()).padStart(2, "0") + ":" +
           String(scheduledTime.getMinutes()).padStart(2, "0") + ":00",
         type: form.type,
-        service: form.service,
+        service: form.services.join(" + "),
         isWalkin: false,
         paymentMethod: form.paymentMethod,
         notes: form.note || null,
@@ -500,20 +501,42 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             </div>
           </div>
 
-          <div style={styles.appointmentRow}>
-            <div style={styles.appointmentLabelGroup}>
-              <PulseIcon style={styles.appointmentIcon} />
-              <label style={styles.fieldLabel}>Service</label>
+          {form.services.map((svc, i) => (
+            <div key={i} style={styles.appointmentRow}>
+              <div style={styles.appointmentLabelGroup}>
+                <PulseIcon style={styles.appointmentIcon} />
+                <label style={styles.fieldLabel}>Service</label>
+              </div>
+              <div style={{ flex: 1 }}>
+                <Select
+                  options={["Consultation", "PRP"].filter(s => s === svc || !form.services.includes(s))}
+                  value={svc}
+                  onChange={(val: string) => {
+                    const updated = [...form.services];
+                    updated[i] = val;
+                    setForm({ ...form, services: updated });
+                  }}
+                  placeholder="Select Service"
+                />
+              </div>
             </div>
-            <div style={{ flex: 1 }}>
-              <Select
-                options={["Consultation"]}
-                value={form.service}
-                onChange={(val: string) => setForm({ ...form, service: val })}
-                placeholder="Select Service"
-              />
+          ))}
+          {["Consultation", "PRP"].filter(s => !form.services.includes(s)).length > 0 && (
+            <div style={styles.appointmentRow}>
+              <div style={styles.appointmentLabelGroup}>
+                <PulseIcon style={styles.appointmentIcon} />
+                <label style={styles.fieldLabel}>{form.services.length === 0 ? "Service" : ""}</label>
+              </div>
+              <div style={{ flex: 1 }}>
+                <Select
+                  options={["Consultation", "PRP"].filter(s => !form.services.includes(s))}
+                  value=""
+                  onChange={(val: string) => setForm({ ...form, services: [...form.services, val] })}
+                  placeholder="+ Add Service"
+                />
+              </div>
             </div>
-          </div>
+          )}
         </Card>
 
         {/* Footer Buttons */}
