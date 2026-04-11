@@ -168,9 +168,8 @@ export const styles: Record<string, CSSProperties> = {
 
   actionMenu: {
     position: "absolute" as const,
-    right: 0,
-    left: "auto",
-    top: "100%",
+    left: "100%",
+    top: 0,
     backgroundColor: "#fff",
     borderRadius: "12px",
     boxShadow: "0 4px 20px rgba(0,0,0,0.12)",

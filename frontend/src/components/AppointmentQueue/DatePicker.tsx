@@ -100,6 +100,8 @@ export function DatePicker({ selectedDate, onSelect, onClose, style }: DatePicke
   };
 
   return (
+    <>
+    <div style={styles.backdrop} onClick={onClose} />
     <div style={{ ...styles.overlay, ...style }} onClick={(e) => e.stopPropagation()}>
       <div style={styles.container} ref={containerRef}>
         <div style={styles.header}>
@@ -137,5 +139,6 @@ export function DatePicker({ selectedDate, onSelect, onClose, style }: DatePicke
         </button>
       </div>
     </div>
+    </>
   );
 }
