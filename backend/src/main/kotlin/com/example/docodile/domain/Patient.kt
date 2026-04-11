@@ -32,6 +32,8 @@ class Patient(
 
     var dob: LocalDate? = null,
 
+    var age: Int? = null,
+
     var address: String? = null,
 
     @Column(name = "created_at")

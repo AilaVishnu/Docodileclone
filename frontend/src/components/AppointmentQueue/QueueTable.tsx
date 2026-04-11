@@ -17,6 +17,7 @@ export type Appointment = {
   patientEmail?: string;
   patientGender?: string;
   patientDob?: string;
+  patientAge?: number;
   type: "New" | "Review";
   scheduledTime: string;
   rawScheduledTime?: string;

@@ -88,6 +88,7 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
               patientEmail: apt.patientEmail || "",
               patientGender: apt.patientGender || "",
               patientDob: apt.patientDob || "",
+              patientAge: apt.patientAge || undefined,
               notes: apt.notes || "",
               fee: apt.fee || 0,
             });
@@ -198,6 +199,7 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
                 patientEmail: apt.patientEmail,
                 patientGender: apt.patientGender,
                 patientDob: apt.patientDob,
+                patientAge: apt.patientAge,
                 type: apt.type,
                 scheduledTime: apt.rawScheduledTime || "",
                 doctorId: apt.doctorId || activeDoctorId,

@@ -9,6 +9,7 @@ data class BookAppointmentRequest(
     val patientPhone: String? = null,
     val patientGender: String? = null,
     val patientDob: String? = null,
+    val patientAge: Int? = null,
     val doctorId: UUID,
     val scheduledTime: LocalDateTime,
     val type: String? = "New",

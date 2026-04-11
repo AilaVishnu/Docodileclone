@@ -11,6 +11,7 @@ data class AppointmentDTO(
     val patientEmail: String?,
     val patientGender: String?,
     val patientDob: String?,
+    val patientAge: Int?,
     val doctorId: UUID,
     val scheduledTime: LocalDateTime?,
     val isWalkin: Boolean,

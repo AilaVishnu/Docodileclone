@@ -34,6 +34,7 @@ export type EditAppointmentData = {
   patientEmail?: string;
   patientGender?: string;
   patientDob?: string;
+  patientAge?: number;
   type: string;
   scheduledTime: string;
   doctorId: string;
@@ -77,7 +78,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     email: editingAppointment?.patientEmail || "",
     phone: editingAppointment?.patientPhone || "",
     dob: "",
-    age: "",
+    age: editingAppointment?.patientAge ? String(editingAppointment.patientAge) : "",
     gender: editingAppointment?.patientGender || "Male",
     type: editingAppointment?.type || "New",
     service: "Consultation",
@@ -183,6 +184,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         patientPhone: form.phone || null,
         patientGender: form.gender || null,
         patientDob: dobDigits.length === 8 ? `${dobDigits.slice(4,8)}-${dobDigits.slice(2,4)}-${dobDigits.slice(0,2)}` : null,
+        patientAge: form.age ? Number(form.age) : null,
         doctorId: selectedDoctorId,
         scheduledTime: scheduledTime.getFullYear() + "-" +
           String(scheduledTime.getMonth() + 1).padStart(2, "0") + "-" +
