@@ -26,7 +26,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   tableContainer: {
-    backgroundColor: colors.active.shade50,
+    backgroundColor: colors.primary100,
     borderRadius: "0 0 24px 24px",
     padding: "24px",
     boxShadow: "0 8px 30px rgba(0, 0, 0, 0.03)",

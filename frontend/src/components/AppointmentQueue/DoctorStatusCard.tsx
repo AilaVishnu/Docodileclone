@@ -265,7 +265,6 @@ const cardStyles: Record<string, React.CSSProperties> = {
     backgroundColor: "#fff",
     zIndex: 2,
     marginBottom: "-30px",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
   },
 
   card: {
@@ -277,7 +276,6 @@ const cardStyles: Record<string, React.CSSProperties> = {
     flexDirection: "column",
     gap: "2px",
     width: "246px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
   },
 
   doctorName: {
