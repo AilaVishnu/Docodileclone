@@ -27,7 +27,7 @@ export const styles: Record<string, CSSProperties> = {
 
   tableContainer: {
     backgroundColor: colors.primary100,
-    borderRadius: "0 0 24px 24px",
+    borderRadius: "0 24px 24px 24px",
     padding: "24px",
     boxShadow: "0 8px 30px rgba(0, 0, 0, 0.03)",
     overflow: "visible",
@@ -75,9 +75,13 @@ export const styles: Record<string, CSSProperties> = {
   nameCell: {
     padding: "14px 12px",
     verticalAlign: "middle",
+  },
+
+  nameInner: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
+    whiteSpace: "nowrap" as const,
   },
 
   namePrimary: {
@@ -85,6 +89,7 @@ export const styles: Record<string, CSSProperties> = {
     fontWeight: 600,
     color: colors.blindBlack,
     lineHeight: "1.3",
+    whiteSpace: "nowrap" as const,
   },
 
   nameMeta: {
@@ -125,14 +130,17 @@ export const styles: Record<string, CSSProperties> = {
     fontWeight: 600,
   },
 
-  // Type badge (star icon + text)
+  // Type badge (star icon + text) — Figma: Inter 12/16 regular, 4px gap, neutral900
   typeBadge: {
     display: "inline-flex",
     alignItems: "center",
-    gap: "5px",
-    fontSize: "13px",
-    fontWeight: 500,
-    color: colors.neutral700,
+    justifyContent: "flex-start",
+    gap: "4px",
+    width: "70px",
+    fontSize: "12px",
+    lineHeight: "16px",
+    fontWeight: 400,
+    color: colors.neutral900,
   },
 
   // Time

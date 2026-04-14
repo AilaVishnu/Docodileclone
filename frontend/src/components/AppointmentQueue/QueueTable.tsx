@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { styles } from "./AppointmentQueue.styles";
 import { StatusBadge, PayBadge } from "./StatusBadge";
+import { ReactComponent as StarOutlineIcon } from "../../assets/icons/star.svg";
+import { ReactComponent as ReorderDotsIcon } from "../../assets/icons/reorder.svg";
+import { ReactComponent as RestartArrowIcon } from "../../assets/icons/restart.svg";
 
 export type AppointmentStatus =
   | "WAITING"
@@ -118,51 +121,14 @@ function TypeBadge({ type }: { type: "New" | "Review" }) {
   if (type === "New") {
     return (
       <span style={styles.typeBadge}>
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          style={{ flexShrink: 0 }}
-        >
-          <path
-            d="M12 2L14.85 9.27L22.6 9.27L16.37 13.9L18.73 21.23L12 16.77L5.27 21.23L7.63 13.9L1.4 9.27L9.15 9.27L12 2Z"
-            stroke="#585858"
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        </svg>
+        <StarOutlineIcon width={18} height={18} style={{ flexShrink: 0 }} />
         New
       </span>
     );
   }
   return (
     <span style={styles.typeBadge}>
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        style={{ flexShrink: 0 }}
-      >
-        <path
-          d="M1 4V10H7"
-          stroke="#585858"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M3.51 15a9 9 0 1 0 .49-4.95L1 10"
-          stroke="#585858"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
+      <RestartArrowIcon width={18} height={18} style={{ flexShrink: 0 }} />
       Review
     </span>
   );
@@ -202,12 +168,7 @@ function ActionMenu({
           (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
         }}
       >
-        {/* Vertical three-dot icon */}
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="12" cy="5"  r="1.5" fill="#8F8F8F" />
-          <circle cx="12" cy="12" r="1.5" fill="#8F8F8F" />
-          <circle cx="12" cy="19" r="1.5" fill="#8F8F8F" />
-        </svg>
+        <ReorderDotsIcon width={18} height={18} />
       </button>
       {isOpen && (
         <div
@@ -254,12 +215,12 @@ export function QueueTable({
           <tr>
             <th style={styles.th}>#</th>
             <th style={styles.th}>Name</th>
-            <th style={styles.th}>Phone</th>
+            <th style={{ ...styles.th, textAlign: "center" }}>Phone</th>
             <th style={{ ...styles.th, textAlign: "center" }}>Service</th>
-            <th style={styles.th}>Type</th>
-            <th style={styles.th}>Time</th>
-            <th style={styles.th}>Status</th>
-            <th style={styles.th}>Pay</th>
+            <th style={{ ...styles.th, textAlign: "center" }}>Type</th>
+            <th style={{ ...styles.th, textAlign: "center" }}>Time</th>
+            <th style={{ ...styles.th, textAlign: "center" }}>Status</th>
+            <th style={{ ...styles.th, textAlign: "center" }}>Pay</th>
             <th style={{ ...styles.th, width: "40px" }}></th>
           </tr>
         </thead>
@@ -297,22 +258,24 @@ export function QueueTable({
 
                 {/* Name + gender/age */}
                 <td style={styles.nameCell}>
-                  <span style={styles.namePrimary}>{apt.patientName}</span>
-                  {(apt.patientGender || apt.patientAge) && (
-                    <span style={styles.nameMeta}>
-                      {apt.patientGender && (
-                        <span>{apt.patientGender.charAt(0).toUpperCase()}</span>
-                      )}
-                      {apt.patientGender && apt.patientAge && (
-                        <span style={styles.nameMetaDot}>|</span>
-                      )}
-                      {apt.patientAge && <span>{apt.patientAge}</span>}
-                    </span>
-                  )}
+                  <div style={styles.nameInner}>
+                    <span style={styles.namePrimary}>{apt.patientName}</span>
+                    {(apt.patientGender || apt.patientAge) && (
+                      <span style={styles.nameMeta}>
+                        {apt.patientGender && (
+                          <span>{apt.patientGender.charAt(0).toUpperCase()}</span>
+                        )}
+                        {apt.patientGender && apt.patientAge && (
+                          <span style={styles.nameMetaDot}>|</span>
+                        )}
+                        {apt.patientAge && <span>{apt.patientAge}</span>}
+                      </span>
+                    )}
+                  </div>
                 </td>
 
                 {/* Phone */}
-                <td style={styles.td}>{apt.patientPhone}</td>
+                <td style={{ ...styles.td, textAlign: "center" }}>{apt.patientPhone}</td>
 
                 {/* Service */}
                 <td style={{ ...styles.td, textAlign: "center" }}>
@@ -322,12 +285,12 @@ export function QueueTable({
                 </td>
 
                 {/* Type */}
-                <td style={styles.td}>
+                <td style={{ ...styles.td, textAlign: "center" }}>
                   <TypeBadge type={apt.type} />
                 </td>
 
                 {/* Time */}
-                <td style={styles.td}>
+                <td style={{ ...styles.td, textAlign: "center" }}>
                   <span style={styles.time}>{apt.scheduledTime}</span>
                   {apt.isWalkin && (
                     <span style={styles.walkinBadge}>Walk-in</span>
@@ -335,7 +298,7 @@ export function QueueTable({
                 </td>
 
                 {/* Status badge */}
-                <td style={styles.td}>
+                <td style={{ ...styles.td, textAlign: "center" }}>
                   {onStatusChange ? (
                     <StatusDropdown
                       appointment={apt}
@@ -348,7 +311,7 @@ export function QueueTable({
                 </td>
 
                 {/* Pay status */}
-                <td style={styles.payCell}>
+                <td style={{ ...styles.payCell, textAlign: "center" }}>
                   <PayBadge status={apt.payStatus} />
                 </td>
 

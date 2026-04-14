@@ -1,5 +1,6 @@
 import React from "react";
 import { fonts } from "../../styles/theme";
+import { ReactComponent as DangerTriangleIcon } from "../../assets/icons/danger-triangle.svg";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -54,32 +55,12 @@ const PAY_CONFIG: Record<
   DUE: {
     color: "#202020",
     label: "Due",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M12 3L2 21h20L12 3Z"
-          fill="#DFB400"
-          strokeLinejoin="round"
-        />
-        <line x1="12" y1="10" x2="12" y2="15" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-        <circle cx="12" cy="17.5" r="1" fill="#fff" />
-      </svg>
-    ),
+    icon: <DangerTriangleIcon width={20} height={20} />,
   },
   UNPAID: {
     color: "#202020",
     label: "Unpaid",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M12 3L2 21h20L12 3Z"
-          fill="#DFB400"
-          strokeLinejoin="round"
-        />
-        <line x1="12" y1="10" x2="12" y2="15" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-        <circle cx="12" cy="17.5" r="1" fill="#fff" />
-      </svg>
-    ),
+    icon: <DangerTriangleIcon width={20} height={20} />,
   },
   "NO PAY": {
     color: "#6B7280",
@@ -147,7 +128,9 @@ export function PayBadge({ status }: PayBadgeProps) {
       style={{
         display: "inline-flex",
         alignItems: "center",
+        justifyContent: "flex-start",
         gap: "4px",
+        width: "80px",
         fontSize: "12px",
         fontFamily: fonts.family.primary,
         fontWeight: 400,
