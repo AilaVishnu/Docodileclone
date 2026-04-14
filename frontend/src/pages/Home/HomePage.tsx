@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { SideNav, NavTab } from "../../components/SideNav";
 import { TopNav } from "../../components/TopNav";
 import { PrescriptionView, PatientFilesView, AppointmentsView } from "./Views";
-import { colors, ThemeMode } from "../../styles/theme";
+import { colors, fonts, ThemeMode } from "../../styles/theme";
 
 type HomePageProps = {
   onLogout: () => void;
@@ -60,12 +60,14 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       overflowY: "auto" as const,
       overflowX: "hidden" as const,
       backgroundColor: colors.active.shade200,
-      borderTopLeftRadius: "32px",
+      borderTopLeftRadius: "16px",
       position: "relative",
     },
     title: {
+      fontFamily: fonts.family.secondary,
       fontSize: "24px",
-      fontWeight: 600,
+      fontWeight: 400,
+      lineHeight: "34px",
       color: "#202020",
       margin: 0,
     }
