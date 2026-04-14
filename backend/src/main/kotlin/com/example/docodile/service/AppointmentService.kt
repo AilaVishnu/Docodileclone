@@ -61,7 +61,7 @@ class AppointmentService(
             doctor = doctor,
             scheduledTime = request.scheduledTime,
             isWalkin = request.isWalkin,
-            status = "Scheduled",
+            status = "BOOKED",
             type = request.type,
             service = request.service,
             payStatus = request.payStatus,

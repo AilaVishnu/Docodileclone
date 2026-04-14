@@ -73,7 +73,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const [selectedDoctorId, setSelectedDoctorId] = useState(
     editingAppointment?.doctorId || initialDoctorId || (doctors.length > 0 ? doctors[0].id : "")
   );
-  const [patientId] = useState("T023");
+  const [patientId] = useState(() => {
+    const key = "docodile_patient_counter";
+    const current = parseInt(localStorage.getItem(key) || "0", 10);
+    return "T" + String(current + 1).padStart(3, "0");
+  });
   const [form, setForm] = useState({
     name: editingAppointment?.patientName || "",
     email: editingAppointment?.patientEmail || "",
@@ -214,6 +218,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       });
 
       if (res.ok) {
+        if (!editingAppointment) {
+          const key = "docodile_patient_counter";
+          const current = parseInt(localStorage.getItem(key) || "0", 10);
+          localStorage.setItem(key, String(current + 1));
+        }
         onBack(editingAppointment ? "Appointment updated successfully" : "Appointment booked successfully");
       } else {
         try {

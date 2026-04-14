@@ -5,7 +5,6 @@ export const styles: Record<string, CSSProperties> = {
   wrapper: {
     display: "flex",
     flexDirection: "column",
-    filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.08))",
     height: "100%",
   },
 

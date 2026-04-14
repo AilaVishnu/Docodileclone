@@ -24,6 +24,7 @@ const STATUS_CONFIG: Record<
   string,
   { bg: string; color: string; label: string }
 > = {
+  BOOKED: { bg: "#F3F4F6", color: "#4B4B4B", label: "Booked" },
   WAITING: { bg: "#FFDB43", color: "#122525", label: "Waiting" },
   SCHEDULED: { bg: "#F3F4F6", color: "#4B4B4B", label: "Scheduled" },
   ARRIVED: { bg: "#f3f3dcff", color: "#122525", label: "Arrived" },
