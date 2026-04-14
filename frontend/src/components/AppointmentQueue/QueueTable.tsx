@@ -47,11 +47,10 @@ type QueueTableProps = {
 };
 
 const STATUS_OPTIONS = [
-  { label: "Arrived", value: "ARRIVED" },
-  { label: "In Progress", value: "IN_PROGRESS" },
-  { label: "Reschedule", value: "WAITING" },
-  { label: "Cancel", value: "CANCELLED" },
   { label: "No-Show", value: "NO_SHOW" },
+  { label: "Arrived", value: "WAITING" },
+  { label: "Send to Doc", value: "IN_PROGRESS" },
+  { label: "Cancel", value: "CANCELLED" },
 ];
 
 function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
@@ -211,17 +210,28 @@ export function QueueTable({
   return (
     <div style={styles.tableContainer}>
       <table style={styles.table}>
+        <colgroup>
+          <col style={{ width: "40px" }} />
+          <col style={{ width: "28%" }} />
+          <col style={{ width: "14%" }} />
+          <col style={{ width: "9%" }} />
+          <col style={{ width: "9%" }} />
+          <col style={{ width: "9%" }} />
+          <col style={{ width: "11%" }} />
+          <col style={{ width: "11%" }} />
+          <col style={{ width: "48px" }} />
+        </colgroup>
         <thead>
           <tr>
-            <th style={styles.th}>#</th>
-            <th style={styles.th}>Name</th>
+            <th style={{ ...styles.th, paddingLeft: "8px", paddingRight: "8px" }}>#</th>
+            <th style={{ ...styles.th, paddingLeft: "8px" }}>Name</th>
             <th style={{ ...styles.th, textAlign: "center" }}>Phone</th>
             <th style={{ ...styles.th, textAlign: "center" }}>Service</th>
             <th style={{ ...styles.th, textAlign: "center" }}>Type</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Time</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Status</th>
-            <th style={{ ...styles.th, textAlign: "left", width: "80px", paddingLeft: "24px" }}>Pay</th>
-            <th style={{ ...styles.th, width: "40px" }}></th>
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "40px" }}>Time</th>
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "50px" }}>Status</th>
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "50px" }}>Pay</th>
+            <th style={styles.th}></th>
           </tr>
         </thead>
         <tbody>
@@ -244,100 +254,100 @@ export function QueueTable({
               const isCompleted = apt.status === "COMPLETED";
               const baseBg = isCompleted ? "#F1F6E7" : "transparent";
               return (
-              <tr
-                key={apt.id}
-                style={{ ...styles.tr, backgroundColor: baseBg }}
-                onMouseEnter={(e) => {
-                  if (!isCompleted) {
-                    (e.currentTarget as HTMLElement).style.backgroundColor =
-                      "rgba(0,0,0,0.018)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.backgroundColor = baseBg;
-                }}
-              >
-                {/* # */}
-                <td style={styles.serialCell}>{String(index + 1).padStart(2, "0")}</td>
+                <tr
+                  key={apt.id}
+                  style={{ ...styles.tr, backgroundColor: baseBg }}
+                  onMouseEnter={(e) => {
+                    if (!isCompleted) {
+                      (e.currentTarget as HTMLElement).style.backgroundColor =
+                        "rgba(0,0,0,0.018)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.backgroundColor = baseBg;
+                  }}
+                >
+                  {/* # */}
+                  <td style={styles.serialCell}>{String(index + 1).padStart(2, "0")}</td>
 
-                {/* Name + gender/age */}
-                <td style={styles.nameCell}>
-                  <div style={styles.nameInner}>
-                    <span style={styles.namePrimary}>{apt.patientName}</span>
-                    {(apt.patientGender || apt.patientAge) && (
-                      <span style={styles.nameMeta}>
-                        {apt.patientGender && (
-                          <span>{apt.patientGender.charAt(0).toUpperCase()}</span>
-                        )}
-                        {apt.patientGender && apt.patientAge && (
-                          <span style={styles.nameMetaDot}>|</span>
-                        )}
-                        {apt.patientAge && <span>{apt.patientAge}</span>}
-                      </span>
+                  {/* Name + gender/age */}
+                  <td style={styles.nameCell}>
+                    <div style={styles.nameInner}>
+                      <span style={styles.namePrimary}>{apt.patientName}</span>
+                      {(apt.patientGender || apt.patientAge) && (
+                        <span style={styles.nameMeta}>
+                          {apt.patientGender && (
+                            <span>{apt.patientGender.charAt(0).toUpperCase()}</span>
+                          )}
+                          {apt.patientGender && apt.patientAge && (
+                            <span style={styles.nameMetaDot}>|</span>
+                          )}
+                          {apt.patientAge && <span>{apt.patientAge}</span>}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Phone */}
+                  <td style={{ ...styles.td, textAlign: "center" }}>{apt.patientPhone}</td>
+
+                  {/* Service */}
+                  <td style={{ ...styles.td, textAlign: "center" }}>
+                    {apt.service
+                      ? apt.service.replace(/Consultation/gi, "C")
+                      : "—"}
+                  </td>
+
+                  {/* Type */}
+                  <td style={{ ...styles.td, textAlign: "center" }}>
+                    <TypeBadge type={apt.type} />
+                  </td>
+
+                  {/* Time */}
+                  <td style={{ ...styles.td, textAlign: "center" }}>
+                    <span style={styles.time}>{apt.scheduledTime}</span>
+                    {apt.isWalkin && (
+                      <span style={styles.walkinBadge}>Walk-in</span>
                     )}
-                  </div>
-                </td>
+                  </td>
 
-                {/* Phone */}
-                <td style={{ ...styles.td, textAlign: "center" }}>{apt.patientPhone}</td>
+                  {/* Status badge */}
+                  <td style={{ ...styles.td, textAlign: "center" }}>
+                    {onStatusChange ? (
+                      <StatusDropdown
+                        appointment={apt}
+                        currentStatus={apt.status}
+                        onStatusChange={onStatusChange}
+                      />
+                    ) : (
+                      <StatusBadge status={apt.status} />
+                    )}
+                  </td>
 
-                {/* Service */}
-                <td style={{ ...styles.td, textAlign: "center" }}>
-                  {apt.service
-                    ? apt.service.replace(/Consultation/gi, "C")
-                    : "—"}
-                </td>
+                  {/* Pay status */}
+                  <td style={{ ...styles.payCell, textAlign: "left", paddingLeft: "40px" }}>
+                    <PayBadge status={apt.payStatus} />
+                  </td>
 
-                {/* Type */}
-                <td style={{ ...styles.td, textAlign: "center" }}>
-                  <TypeBadge type={apt.type} />
-                </td>
-
-                {/* Time */}
-                <td style={{ ...styles.td, textAlign: "center" }}>
-                  <span style={styles.time}>{apt.scheduledTime}</span>
-                  {apt.isWalkin && (
-                    <span style={styles.walkinBadge}>Walk-in</span>
-                  )}
-                </td>
-
-                {/* Status badge */}
-                <td style={{ ...styles.td, textAlign: "center" }}>
-                  {onStatusChange ? (
-                    <StatusDropdown
-                      appointment={apt}
-                      currentStatus={apt.status}
-                      onStatusChange={onStatusChange}
-                    />
-                  ) : (
-                    <StatusBadge status={apt.status} />
-                  )}
-                </td>
-
-                {/* Pay status */}
-                <td style={{ ...styles.payCell, textAlign: "left", width: "80px" }}>
-                  <PayBadge status={apt.payStatus} />
-                </td>
-
-                {/* Action menu */}
-                <td style={{ ...styles.td, padding: "14px 8px" }}>
-                  {menuItems && menuItems.length > 0 ? (
-                    <ActionMenu
-                      appointment={apt}
-                      menuItems={menuItems}
-                      openUpward={index >= appointments.length - 2}
-                    />
-                  ) : (
-                    <button style={styles.actionButton}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="5"  r="1.5" fill="#8F8F8F" />
-                        <circle cx="12" cy="12" r="1.5" fill="#8F8F8F" />
-                        <circle cx="12" cy="19" r="1.5" fill="#8F8F8F" />
-                      </svg>
-                    </button>
-                  )}
-                </td>
-              </tr>
+                  {/* Action menu */}
+                  <td style={{ ...styles.td, padding: "14px 24px 14px 8px" }}>
+                    {menuItems && menuItems.length > 0 ? (
+                      <ActionMenu
+                        appointment={apt}
+                        menuItems={menuItems}
+                        openUpward={index >= appointments.length - 2}
+                      />
+                    ) : (
+                      <button style={styles.actionButton}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="12" cy="5" r="1.5" fill="#8F8F8F" />
+                          <circle cx="12" cy="12" r="1.5" fill="#8F8F8F" />
+                          <circle cx="12" cy="19" r="1.5" fill="#8F8F8F" />
+                        </svg>
+                      </button>
+                    )}
+                  </td>
+                </tr>
               );
             })
           )}

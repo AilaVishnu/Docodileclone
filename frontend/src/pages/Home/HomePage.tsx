@@ -46,10 +46,10 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
     },
     contentArea: {
       marginLeft: isSidebarExpanded ? "204px" : "95px",
-      flex: 1,
+      width: isSidebarExpanded ? "calc(100% - 204px)" : "calc(100% - 95px)",
       display: "flex",
       flexDirection: "column" as const,
-      transition: "margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      transition: "margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     },
     mainContent: {
       padding: "24px 40px",

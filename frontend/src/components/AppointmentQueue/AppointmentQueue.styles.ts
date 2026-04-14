@@ -34,17 +34,20 @@ export const styles: Record<string, CSSProperties> = {
 
   table: {
     width: "100%",
+    maxWidth: "100%",
     borderCollapse: "collapse",
     textAlign: "left",
+    tableLayout: "fixed" as const,
   },
 
   th: {
-    padding: "12px 12px",
+    padding: "12px 28px",
     borderBottom: `1px solid ${colors.primary300}`,
-    color: colors.neutral900,
-    fontWeight: 500,
-    fontSize: "13px",
-    letterSpacing: "0.01em",
+    color: "rgba(0, 0, 0, 0.3)",
+    fontWeight: 400,
+    fontSize: "14px",
+    lineHeight: "20px",
+    letterSpacing: 0,
   },
 
   tr: {
@@ -53,7 +56,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   td: {
-    padding: "14px 12px",
+    padding: "14px 28px",
     fontSize: "14px",
     color: colors.blindBlack,
     verticalAlign: "middle",
@@ -63,16 +66,16 @@ export const styles: Record<string, CSSProperties> = {
 
   // Serial number cell
   serialCell: {
-    padding: "14px 12px",
+    padding: "14px 8px",
     fontSize: "14px",
-    color: colors.neutral500,
+    color: colors.neutral900,
     verticalAlign: "middle",
-    fontWeight: 500,
+    fontWeight: 400,
   },
 
   // Name cell with gender/age sub-detail
   nameCell: {
-    padding: "14px 12px",
+    padding: "14px 8px",
     verticalAlign: "middle",
   },
 
@@ -85,7 +88,7 @@ export const styles: Record<string, CSSProperties> = {
 
   namePrimary: {
     fontSize: "14px",
-    fontWeight: 600,
+    fontWeight: 400,
     color: colors.blindBlack,
     lineHeight: "1.3",
     whiteSpace: "nowrap" as const,
@@ -144,7 +147,7 @@ export const styles: Record<string, CSSProperties> = {
 
   // Time
   time: {
-    fontWeight: 600,
+    fontWeight: 400,
     fontSize: "14px",
     color: colors.neutral800,
   },

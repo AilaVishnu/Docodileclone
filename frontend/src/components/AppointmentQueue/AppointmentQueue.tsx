@@ -190,8 +190,8 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
             activeId={activeDoctorId}
             onSelect={setActiveDoctorId}
           />
-          <div style={{ display: "flex", gap: "24px" }}>
-          <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", gap: "24px", minWidth: 0, width: "100%" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
           <QueueTable
             appointments={activeQueue}
             doctorName={doctors.find(d => d.id === activeDoctorId)?.name}
@@ -240,7 +240,7 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
             }}
           />
           </div>
-          <div style={{ marginTop: "-30px" }}>
+          <div style={{ marginTop: "-30px", flexShrink: 0 }}>
             <DoctorStatusCard
               doctorName={doctors.find(d => d.id === activeDoctorId)?.name || ""}
               doctorGender="male"
