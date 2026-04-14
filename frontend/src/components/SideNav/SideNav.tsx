@@ -12,7 +12,8 @@ import {
 import { SideNavItem } from './SideNavItem';
 import { ReactComponent as LogoSmall } from "../../assets/logo-small.svg";
 import { ReactComponent as LogoFull } from "../../assets/logo-full.svg";
-import { ReactComponent as ArrowIcon } from "../../assets/Arrow Right.svg";
+import { ReactComponent as ChevronLeftIcon } from "../../assets/chevron_left.svg";
+import { ReactComponent as ChevronRightIcon } from "../../assets/chevron_right.svg";
 import { fonts, colors, ThemeMode } from "../../styles/theme";
 
 export type NavTab = 
@@ -123,20 +124,17 @@ export function SideNav({ activeTab, onTabChange, isExpanded, onToggleExpand }: 
         ))}
       </div>
 
-      <div style={{ position: 'relative', marginTop: '16px' }}>
+      <div style={{ position: 'relative', marginTop: 'auto', marginBottom: '24px' }}>
         <div 
           style={styles.toggleButton} 
           onClick={onToggleExpand}
           title={isExpanded ? "Collapse" : "Expand"}
         >
-          <ArrowIcon 
-            style={{ 
-              width: 16, 
-              height: 16, 
-              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.3s ease'
-            }} 
-          />
+          {isExpanded ? (
+            <ChevronLeftIcon style={{ width: 16, height: 16 }} />
+          ) : (
+            <ChevronRightIcon style={{ width: 16, height: 16 }} />
+          )}
         </div>
       </div>
     </div>

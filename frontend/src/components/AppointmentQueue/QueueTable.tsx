@@ -220,7 +220,7 @@ export function QueueTable({
             <th style={{ ...styles.th, textAlign: "center" }}>Type</th>
             <th style={{ ...styles.th, textAlign: "center" }}>Time</th>
             <th style={{ ...styles.th, textAlign: "center" }}>Status</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Pay</th>
+            <th style={{ ...styles.th, textAlign: "left", width: "80px", paddingLeft: "24px" }}>Pay</th>
             <th style={{ ...styles.th, width: "40px" }}></th>
           </tr>
         </thead>
@@ -240,17 +240,21 @@ export function QueueTable({
               </td>
             </tr>
           ) : (
-            appointments.map((apt, index) => (
+            appointments.map((apt, index) => {
+              const isCompleted = apt.status === "COMPLETED";
+              const baseBg = isCompleted ? "#F1F6E7" : "transparent";
+              return (
               <tr
                 key={apt.id}
-                style={styles.tr}
+                style={{ ...styles.tr, backgroundColor: baseBg }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.backgroundColor =
-                    "rgba(0,0,0,0.018)";
+                  if (!isCompleted) {
+                    (e.currentTarget as HTMLElement).style.backgroundColor =
+                      "rgba(0,0,0,0.018)";
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.backgroundColor =
-                    "transparent";
+                  (e.currentTarget as HTMLElement).style.backgroundColor = baseBg;
                 }}
               >
                 {/* # */}
@@ -279,9 +283,9 @@ export function QueueTable({
 
                 {/* Service */}
                 <td style={{ ...styles.td, textAlign: "center" }}>
-                  {apt.service === "Consultation"
-                    ? "C"
-                    : apt.service || "—"}
+                  {apt.service
+                    ? apt.service.replace(/Consultation/gi, "C")
+                    : "—"}
                 </td>
 
                 {/* Type */}
@@ -311,7 +315,7 @@ export function QueueTable({
                 </td>
 
                 {/* Pay status */}
-                <td style={{ ...styles.payCell, textAlign: "center" }}>
+                <td style={{ ...styles.payCell, textAlign: "left", width: "80px" }}>
                   <PayBadge status={apt.payStatus} />
                 </td>
 
@@ -334,7 +338,8 @@ export function QueueTable({
                   )}
                 </td>
               </tr>
-            ))
+              );
+            })
           )}
         </tbody>
       </table>

@@ -1,6 +1,11 @@
 import React from "react";
 import { colors, fonts } from "../../styles/theme";
 import { StaffIllustration } from "../AddStaffModal/StaffIllustration";
+import { ReactComponent as IconStopwatch } from "../../assets/icons/stopwatch.svg";
+import { ReactComponent as IconUser } from "../../assets/icons/user.svg";
+import { ReactComponent as IconHourglass } from "../../assets/icons/hourglass.svg";
+import { ReactComponent as IconUserCheck } from "../../assets/icons/user-check.svg";
+import { ReactComponent as IconUsersGroup } from "../../assets/icons/users-group.svg";
 
 type DoctorStatusCardProps = {
   doctorName: string;
@@ -11,120 +16,6 @@ type DoctorStatusCardProps = {
     scheduledTime?: string;
   }[];
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Icons — Solid/Filled style matching Figma screenshots exactly
-// Color tokens from Figma variables:
-//   amber:  #DFB400  (Colors/Yellow/200)
-//   green:  #1FC16B  (Colors/Green/200)
-//   green-light: #84EBB4  (Colors/Green/100)
-//   peach:  #EDCA99  (Colors/Primary/400)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** Stopwatch — filled amber circle face with stem knob on top */
-function IconStopwatch() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Crown / knob */}
-      <rect x="8.25" y="1" width="3.5" height="1.8" rx="0.9" fill="#DFB400" />
-      {/* Stem */}
-      <rect x="9.4" y="2.5" width="1.2" height="1.6" fill="#DFB400" />
-      {/* Side button */}
-      <rect x="13.5" y="3.2" width="2.2" height="1.2" rx="0.6" fill="#DFB400" transform="rotate(40 13.5 3.2)" />
-      {/* Main circle face */}
-      <circle cx="10" cy="12" r="7.2" fill="#DFB400" />
-      {/* Inner lighter circle for clock face */}
-      <circle cx="10" cy="12" r="5.5" fill="#F5C800" opacity="0.35" />
-      {/* Clock hand */}
-      <path d="M10 9.5V12.5L12 14" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-      {/* Center dot */}
-      <circle cx="10" cy="12" r="0.8" fill="#fff" />
-    </svg>
-  );
-}
-
-/** User — solid filled amber person silhouette */
-function IconUser() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Head */}
-      <circle cx="10" cy="6" r="3.5" fill="#DFB400" />
-      {/* Body — rounded shoulders */}
-      <path
-        d="M3.5 18c0-3.59 2.91-6.5 6.5-6.5s6.5 2.91 6.5 6.5H3.5Z"
-        fill="#DFB400"
-      />
-    </svg>
-  );
-}
-
-/** Hourglass — solid fully-filled golden hourglass */
-function IconHourglass() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Top cap bar */}
-      <rect x="3.5" y="2" width="13" height="2" rx="1" fill="#DFB400" />
-      {/* Bottom cap bar */}
-      <rect x="3.5" y="16" width="13" height="2" rx="1" fill="#DFB400" />
-      {/* Upper triangle (sand falling down) */}
-      <path d="M5 4h10L10 11 5 4Z" fill="#DFB400" />
-      {/* Lower triangle  */}
-      <path d="M5 16h10L10 11 5 16Z" fill="#DFB400" opacity="0.55" />
-    </svg>
-  );
-}
-
-/** User Check — teal/green filled person + badge circle with checkmark */
-function IconUserCheck() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Head */}
-      <circle cx="8.5" cy="5.5" r="3.2" fill="#1FC16B" />
-      {/* Body */}
-      <path
-        d="M2 17.5c0-3.31 2.91-6 6.5-6 1.2 0 2.32.33 3.28.9"
-        stroke="#1FC16B"
-        strokeWidth="0.1"
-        fill="#1FC16B"
-      />
-      <path
-        d="M2 17.5c0-3.31 2.91-6 6.5-6 1.1 0 2.15.28 3.05.77L11 17.5H2Z"
-        fill="#1FC16B"
-      />
-      {/* Badge circle */}
-      <circle cx="15.5" cy="14.5" r="3.8" fill="#84EBB4" />
-      {/* Checkmark in badge */}
-      <path
-        d="M13.5 14.5l1.5 1.5 2.5-2.5"
-        stroke="#fff"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-/** Users Group Two Rounded — two stacked peach silhouettes */
-function IconUsersGroup() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Back person (smaller, offset right) */}
-      <circle cx="14" cy="6" r="2.8" fill="#EDCA99" opacity="0.7" />
-      <path
-        d="M10.5 17.5c0-2.8 1.57-4.8 3.5-5.2 1.93.4 3.5 2.4 3.5 5.2H10.5Z"
-        fill="#EDCA99"
-        opacity="0.7"
-      />
-      {/* Front person (larger) */}
-      <circle cx="8" cy="6.5" r="3.2" fill="#EDCA99" />
-      <path
-        d="M2 17.5c0-3.04 2.69-5.5 6-5.5s6 2.46 6 5.5H2Z"
-        fill="#EDCA99"
-      />
-    </svg>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Stat Row

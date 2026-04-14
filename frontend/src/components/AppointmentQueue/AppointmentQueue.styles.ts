@@ -29,7 +29,6 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: colors.primary100,
     borderRadius: "0 24px 24px 24px",
     padding: "24px",
-    boxShadow: "0 8px 30px rgba(0, 0, 0, 0.03)",
     overflow: "visible",
   },
 
@@ -41,7 +40,7 @@ export const styles: Record<string, CSSProperties> = {
 
   th: {
     padding: "12px 12px",
-    borderBottom: `1px solid ${colors.neutral200}`,
+    borderBottom: `1px solid ${colors.primary300}`,
     color: colors.neutral900,
     fontWeight: 500,
     fontSize: "13px",
@@ -49,7 +48,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   tr: {
-    borderBottom: `1px solid ${colors.neutral200}`,
+    borderBottom: `1px solid ${colors.primary300}`,
     transition: "background-color 0.15s ease",
   },
 

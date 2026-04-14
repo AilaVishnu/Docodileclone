@@ -1,6 +1,7 @@
 import React from "react";
 import { fonts } from "../../styles/theme";
 import { ReactComponent as DangerTriangleIcon } from "../../assets/icons/danger-triangle.svg";
+import { ReactComponent as CheckCircleIcon } from "../../assets/icons/check-circle.svg";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -37,20 +38,9 @@ const PAY_CONFIG: Record<
   { color: string; label: string; icon: React.ReactNode }
 > = {
   PAID: {
-    color: "#122525",
+    color: "#202020",
     label: "Paid",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="10" fill="#6B8E23" />
-        <path
-          d="M7.5 12.5L10.5 15.5L16.5 9.5"
-          stroke="#fff"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
+    icon: <CheckCircleIcon width={20} height={20} />,
   },
   DUE: {
     color: "#202020",
@@ -59,7 +49,7 @@ const PAY_CONFIG: Record<
   },
   UNPAID: {
     color: "#202020",
-    label: "Unpaid",
+    label: "Due",
     icon: <DangerTriangleIcon width={20} height={20} />,
   },
   "NO PAY": {
@@ -138,7 +128,18 @@ export function PayBadge({ status }: PayBadgeProps) {
         color: cfg.color,
       }}
     >
-      {cfg.icon}
+      <span
+        style={{
+          width: 20,
+          height: 20,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        {cfg.icon}
+      </span>
       {cfg.label}
     </span>
   );
