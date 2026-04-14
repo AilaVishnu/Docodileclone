@@ -141,12 +141,12 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
       <header style={{ ...styles.header, marginBottom: "24px", position: "relative" }}>
         <div style={{ flex: 1 }} />
         <h2 style={{ ...styles.title, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
-          <span 
+          <span
             onClick={() => setShowDatePicker(!showDatePicker)}
-            style={{ 
-              textDecoration: "underline", 
+            style={{
+              textDecoration: "underline",
               cursor: "pointer",
-              color: colors.active.shade700
+              color: colors.neutral900
             }}
           >
             {dateText}
@@ -240,11 +240,13 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
             }}
           />
           </div>
-          <DoctorStatusCard
-            doctorName={doctors.find(d => d.id === activeDoctorId)?.name || ""}
-            doctorGender="male"
-            appointments={activeQueue}
-          />
+          <div style={{ marginTop: "-30px" }}>
+            <DoctorStatusCard
+              doctorName={doctors.find(d => d.id === activeDoctorId)?.name || ""}
+              doctorGender="male"
+              appointments={activeQueue}
+            />
+          </div>
           </div>
         </>
       ) : (

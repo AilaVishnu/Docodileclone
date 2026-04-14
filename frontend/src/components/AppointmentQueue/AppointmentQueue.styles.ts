@@ -16,10 +16,13 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   title: {
+    fontFamily: fonts.family.secondary,
     fontSize: "24px",
-    fontWeight: 600,
-    color: colors.blindBlack,
+    fontWeight: 400,
+    lineHeight: "34px",
+    color: colors.neutral900,
     margin: 0,
+    fontStyle: "normal",
   },
 
   tableContainer: {
@@ -39,7 +42,7 @@ export const styles: Record<string, CSSProperties> = {
   th: {
     padding: "12px 12px",
     borderBottom: `1px solid ${colors.neutral200}`,
-    color: colors.neutral500,
+    color: colors.neutral900,
     fontWeight: 500,
     fontSize: "13px",
     letterSpacing: "0.01em",
@@ -72,13 +75,15 @@ export const styles: Record<string, CSSProperties> = {
   nameCell: {
     padding: "14px 12px",
     verticalAlign: "middle",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
   },
 
   namePrimary: {
     fontSize: "14px",
     fontWeight: 600,
     color: colors.blindBlack,
-    display: "block",
     lineHeight: "1.3",
   },
 
@@ -89,7 +94,6 @@ export const styles: Record<string, CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     gap: "4px",
-    marginTop: "1px",
   },
 
   nameMetaDot: {

@@ -24,7 +24,7 @@ const STATUS_CONFIG: Record<
 > = {
   WAITING: { bg: "#FFDB43", color: "#122525", label: "Waiting" },
   SCHEDULED: { bg: "#F3F4F6", color: "#4B4B4B", label: "Scheduled" },
-  ARRIVED: { bg: "#f3f3dcff", color: "#1349A0", label: "Arrived" },
+  ARRIVED: { bg: "#f3f3dcff", color: "#122525", label: "Arrived" },
   IN_PROGRESS: { bg: "#ffffffff", color: "#122525", label: "In Progress" },
   COMPLETED: { bg: "#84EBB4", color: "#0D5C30", label: "Completed" },
   NO_SHOW: { bg: "#B0B0B0", color: "#FFFFFF", label: "No Show" },
@@ -52,10 +52,10 @@ const PAY_CONFIG: Record<
     ),
   },
   DUE: {
-    color: "#122525",
+    color: "#202020",
     label: "Due",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
         <path
           d="M12 3L2 21h20L12 3Z"
           fill="#DFB400"
@@ -67,10 +67,10 @@ const PAY_CONFIG: Record<
     ),
   },
   UNPAID: {
-    color: "#122525",
+    color: "#202020",
     label: "Unpaid",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
         <path
           d="M12 3L2 21h20L12 3Z"
           fill="#DFB400"
@@ -147,11 +147,11 @@ export function PayBadge({ status }: PayBadgeProps) {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: "5px",
-        fontSize: "14px",
+        gap: "4px",
+        fontSize: "12px",
         fontFamily: fonts.family.primary,
-        fontWeight: 500,
-        lineHeight: "20px",
+        fontWeight: 400,
+        lineHeight: "16px",
         color: cfg.color,
       }}
     >
