@@ -41,6 +41,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       position: 'relative' as const,
       flexShrink: 0,
     },
+
     actions: {
       display: 'flex',
       alignItems: 'center',
@@ -71,6 +72,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       padding: '0 16px',
       width: '364px',
       height: '40px',
+      boxSizing: 'border-box',
       gap: '12px',
     },
     searchInput: {
@@ -161,12 +163,19 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
     <div style={styles.container}>
       {/* Search Bar */}
       <div style={styles.searchBarContainer}>
-        <SearchIcon style={{ width: 20, height: 20 }} />
+        <SearchIcon style={{ width: 20, height: 20, color: '#ABABAB' }} />
         <input
           type="text"
           placeholder="Search for anything..."
+          className="topnav-search-input"
           style={styles.searchInput}
         />
+        <style>{`
+          .topnav-search-input::placeholder {
+            color: #ABABAB;
+            opacity: 1;
+          }
+        `}</style>
       </div>
 
       <div style={styles.actions}>
