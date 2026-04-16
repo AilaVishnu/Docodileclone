@@ -173,8 +173,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
   const handleBook = async (payStatus: string) => {
     if (!form.name.trim()) { setToastMessage("Please enter patient name"); return; }
-    if (!form.email.trim()) { setToastMessage("Please enter email address"); return; }
-    if (!isValidEmail(form.email)) { setToastMessage("Please enter a valid email address"); return; }
+    if (form.email.trim() && !isValidEmail(form.email)) { setToastMessage("Please enter a valid email address"); return; }
     if (!form.phone.trim() || form.phone.trim() === "+91") { setToastMessage("Please enter phone number"); return; }
     if (!isValidPhone(form.phone)) { setToastMessage("Please enter a valid 10-digit phone number"); return; }
     if (!form.dob && !form.age) { setToastMessage("Please enter date of birth or age"); return; }
