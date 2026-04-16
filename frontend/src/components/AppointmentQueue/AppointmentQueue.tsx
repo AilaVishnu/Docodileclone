@@ -123,7 +123,19 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
     label: d.name
   }));
 
-  const activeQueue = activeDoctorId ? appointments[activeDoctorId] || [] : [];
+  const STATUS_PRIORITY: Record<string, number> = {
+    "IN_PROGRESS": 0,
+    "WAITING": 1,
+    "BOOKED": 2,
+    "SCHEDULED": 2,
+    "COMPLETED": 3,
+    "CANCELLED": 4,
+    "NO_SHOW": 5,
+  };
+
+  const activeQueue = (activeDoctorId ? appointments[activeDoctorId] || [] : [])
+    .slice()
+    .sort((a, b) => (STATUS_PRIORITY[a.status] ?? 99) - (STATUS_PRIORITY[b.status] ?? 99));
 
   const isToday = (date: Date) => {
     const today = new Date();
