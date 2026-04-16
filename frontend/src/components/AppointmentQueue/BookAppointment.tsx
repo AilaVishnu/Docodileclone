@@ -90,7 +90,14 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       ? editingAppointment.service.split(" + ").filter(Boolean)
       : [],
     date: initTime?.date || new Date(),
-    time: initTime?.timeStr || "10:00 AM",
+    time: initTime?.timeStr || (() => {
+      const now = new Date();
+      let h = now.getHours();
+      const m = now.getMinutes();
+      const period = h >= 12 ? "PM" : "AM";
+      h = h % 12 || 12;
+      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} ${period}`;
+    })(),
     paymentMethod: "Cash",
     note: editingAppointment?.notes || "",
     subtotal: editingAppointment?.fee || 500.0,
