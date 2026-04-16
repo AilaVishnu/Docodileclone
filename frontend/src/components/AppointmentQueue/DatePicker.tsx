@@ -114,16 +114,6 @@ export function DatePicker({ selectedDate, onSelect, onClose, style }: DatePicke
         <div style={styles.daysGrid}>
           {renderDays()}
         </div>
-
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-          }} 
-          style={styles.doneButton}
-        >
-          Done
-        </button>
       </div>
     </div>
     </>

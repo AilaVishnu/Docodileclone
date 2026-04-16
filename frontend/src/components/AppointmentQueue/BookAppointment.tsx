@@ -90,14 +90,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       ? editingAppointment.service.split(" + ").filter(Boolean)
       : [],
     date: initTime?.date || new Date(),
-    time: initTime?.timeStr || (() => {
-      const now = new Date();
-      let h = now.getHours();
-      const m = now.getMinutes();
-      const period = h >= 12 ? "PM" : "AM";
-      h = h % 12 || 12;
-      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} ${period}`;
-    })(),
+    time: initTime?.timeStr || "",
     paymentMethod: "Cash",
     note: editingAppointment?.notes || "",
     subtotal: editingAppointment?.fee || 500.0,
@@ -107,6 +100,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showDobPicker, setShowDobPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [dobDigits, setDobDigits] = useState("");
   const [toastMessage, setToastMessage] = useState("");
@@ -186,6 +180,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     if (!form.dob && !form.age) { setToastMessage("Please enter date of birth or age"); return; }
     if (!activeDoctor) { setToastMessage("Please select a doctor"); return; }
     if (form.services.length === 0) { setToastMessage("Please select at least one service"); return; }
+    if (!form.time) { setToastMessage("Please select a time"); return; }
 
     setSubmitting(true);
     try {
@@ -354,8 +349,10 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
           </div>
 
           <div style={styles.row}>
-            <div style={styles.iconField}>
-              <CalendarIcon style={styles.iconFieldIcon} />
+            <div style={{ ...styles.iconField, position: "relative" }}>
+              <span onClick={() => setShowDobPicker(true)} style={{ cursor: "pointer", display: "flex" }}>
+                <CalendarIcon style={styles.iconFieldIcon} />
+              </span>
               <input
                 style={styles.iconFieldInput}
                 type="text"
@@ -375,10 +372,24 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   }
                 }}
                 onChange={() => { }}
-                onFocus={() => {
-                  // Keep digits so user can backspace and edit
-                }}
               />
+              {showDobPicker && (
+                <div style={{ position: "absolute", bottom: "100%", left: 0, zIndex: 1100 }}>
+                  <DatePicker
+                    selectedDate={new Date()}
+                    onSelect={(date: Date) => {
+                      const dd = String(date.getDate()).padStart(2, "0");
+                      const mm = String(date.getMonth() + 1).padStart(2, "0");
+                      const yyyy = String(date.getFullYear());
+                      const digits = dd + mm + yyyy;
+                      setDobDigits(digits);
+                      setForm((prev) => ({ ...prev, dob: formatDob(digits), age: calcAge(digits) }));
+                      setShowDobPicker(false);
+                    }}
+                    onClose={() => setShowDobPicker(false)}
+                  />
+                </div>
+              )}
             </div>
             <div style={{ fontSize: "16px", color: colors.neutral900 }}>or</div>
             <div style={{ ...styles.iconField, width: "180px" }}>
