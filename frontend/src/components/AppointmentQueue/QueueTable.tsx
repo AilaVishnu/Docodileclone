@@ -225,7 +225,7 @@ export function QueueTable({
           <tr>
             <th style={{ ...styles.th, paddingLeft: "8px", paddingRight: "8px" }}>#</th>
             <th style={{ ...styles.th, paddingLeft: "8px" }}>Name</th>
-            <th style={{ ...styles.th, textAlign: "right", paddingLeft: "0px" }}>Phone</th>
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "20px" }}>Phone</th>
             <th style={{ ...styles.th, textAlign: "center" }}>Service</th>
             <th style={{ ...styles.th, textAlign: "center" }}>Type</th>
             <th style={{ ...styles.th, textAlign: "center", paddingLeft: "40px" }}>Time</th>

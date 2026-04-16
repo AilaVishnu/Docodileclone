@@ -3,6 +3,8 @@ import { SideNav, NavTab } from "../../components/SideNav";
 import { TopNav } from "../../components/TopNav";
 import { PrescriptionView, PatientFilesView, AppointmentsView } from "./Views";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
+import { confirmStyles } from "../../components/AddStaffModal/AddStaffModal.styles";
+import { Button } from "../../components/Button";
 
 type HomePageProps = {
   onLogout: () => void;
@@ -27,9 +29,26 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
 
   const clinicName = localStorage.getItem("docodile_clinic_name") || "your clinic";
 
+  const [bookingKey, setBookingKey] = useState(0);
+  const [isEditing, setIsEditing] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
   const handleNewAppointment = () => {
+    if (isBooking || isEditing) {
+      setShowConfirm(true);
+      return;
+    }
     setActiveTab("Appointments");
     setIsBooking(true);
+    setBookingKey((k) => k + 1);
+  };
+
+  const handleConfirmNewAppointment = () => {
+    setShowConfirm(false);
+    setIsEditing(false);
+    setActiveTab("Appointments");
+    setIsBooking(true);
+    setBookingKey((k) => k + 1);
   };
 
   useEffect(() => {
@@ -84,7 +103,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
           </div>
         );
       case "Appointments":
-        return <AppointmentsView isBooking={isBooking} onBack={() => setIsBooking(false)} />;
+        return <AppointmentsView isBooking={isBooking} bookingKey={bookingKey} onBack={() => { setIsBooking(false); setIsEditing(false); }} onEditStart={() => setIsEditing(true)} />;
       case "Prescription":
         return <PrescriptionView />;
       case "Patient Files":
@@ -100,6 +119,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   };
 
   return (
+    <>
     <div style={styles.container} data-theme={themeMode}>
       <SideNav 
         activeTab={activeTab} 
@@ -122,5 +142,23 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         </div>
       </div>
     </div>
+
+    {showConfirm && (
+      <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>
+        <div style={confirmStyles.dialog}>
+          <h4 style={confirmStyles.title}>Are you sure?</h4>
+          <p style={{ margin: 0, fontSize: "13px", color: "#747474", textAlign: "center" }}>Current booking data will be discarded.</p>
+          <div style={confirmStyles.actions}>
+            <Button variant="dangerLight" size="sm" onClick={() => setShowConfirm(false)}>
+              Nope
+            </Button>
+            <Button variant="dark" size="sm" onClick={handleConfirmNewAppointment}>
+              Yes
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

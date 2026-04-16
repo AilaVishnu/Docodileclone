@@ -16,10 +16,12 @@ type Doctor = {
 
 type AppointmentQueueProps = {
   isBooking?: boolean;
+  bookingKey?: number;
   onBack?: () => void;
+  onEditStart?: () => void;
 };
 
-export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
+export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }: AppointmentQueueProps) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [activeDoctorId, setActiveDoctorId] = useState<string>("");
   const [appointments, setAppointments] = useState<Record<string, Appointment[]>>({});
@@ -29,6 +31,13 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [toastMessage, setToastMessage] = useState("");
+
+  // Clear editing state when New Appointment is clicked
+  useEffect(() => {
+    if (isBooking) {
+      setEditingAppointment(undefined);
+    }
+  }, [bookingKey]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -171,6 +180,7 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
 
       {(isBooking || editingAppointment) && (
         <BookAppointment
+          key={`booking-${bookingKey}-${editingAppointment?.id || "new"}`}
           doctors={doctors}
           initialDoctorId={activeDoctorId}
           onBack={(msg?: string) => {
@@ -196,22 +206,25 @@ export function AppointmentQueue({ isBooking, onBack }: AppointmentQueueProps) {
             appointments={activeQueue}
             doctorName={doctors.find(d => d.id === activeDoctorId)?.name}
             menuItems={[
-              { label: "Edit Appointment", onClick: (apt) => setEditingAppointment({
-                id: apt.id,
-                patientName: apt.patientName,
-                patientPhone: apt.patientPhone,
-                patientEmail: apt.patientEmail,
-                patientGender: apt.patientGender,
-                patientDob: apt.patientDob,
-                patientAge: apt.patientAge,
-                service: apt.service,
-                type: apt.type,
-                scheduledTime: apt.rawScheduledTime || "",
-                doctorId: apt.doctorId || activeDoctorId,
-                payStatus: apt.payStatus,
-                notes: apt.notes,
-                fee: apt.fee,
-              }) },
+              { label: "Edit Appointment", onClick: (apt) => {
+                setEditingAppointment({
+                  id: apt.id,
+                  patientName: apt.patientName,
+                  patientPhone: apt.patientPhone,
+                  patientEmail: apt.patientEmail,
+                  patientGender: apt.patientGender,
+                  patientDob: apt.patientDob,
+                  patientAge: apt.patientAge,
+                  service: apt.service,
+                  type: apt.type,
+                  scheduledTime: apt.rawScheduledTime || "",
+                  doctorId: apt.doctorId || activeDoctorId,
+                  payStatus: apt.payStatus,
+                  notes: apt.notes,
+                  fee: apt.fee,
+                });
+                onEditStart?.();
+              } },
               { label: "View Patient File", onClick: (apt) => console.log("View", apt.id) },
               { label: "Bill Medicines", onClick: (apt) => console.log("Bill", apt.id) },
               { label: "Generate Bill", onClick: (apt) => console.log("Generate", apt.id) },

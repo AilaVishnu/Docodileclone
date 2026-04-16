@@ -1,9 +1,9 @@
 import React from 'react';
 import { AppointmentQueue } from '../../components/AppointmentQueue';
 
-export function AppointmentsView({ isBooking, onBack }: { isBooking?: boolean, onBack?: () => void }) {
+export function AppointmentsView({ isBooking, bookingKey, onBack, onEditStart }: { isBooking?: boolean, bookingKey?: number, onBack?: () => void, onEditStart?: () => void }) {
   return (
-    <AppointmentQueue isBooking={isBooking} onBack={onBack} />
+    <AppointmentQueue isBooking={isBooking} bookingKey={bookingKey} onBack={onBack} onEditStart={onEditStart} />
   );
 }
 
