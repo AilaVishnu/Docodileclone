@@ -225,7 +225,7 @@ export function QueueTable({
           <tr>
             <th style={{ ...styles.th, paddingLeft: "8px", paddingRight: "8px" }}>#</th>
             <th style={{ ...styles.th, paddingLeft: "8px" }}>Name</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Phone</th>
+            <th style={{ ...styles.th, textAlign: "right", paddingLeft: "0px" }}>Phone</th>
             <th style={{ ...styles.th, textAlign: "center" }}>Service</th>
             <th style={{ ...styles.th, textAlign: "center" }}>Type</th>
             <th style={{ ...styles.th, textAlign: "center", paddingLeft: "40px" }}>Time</th>
@@ -289,12 +289,17 @@ export function QueueTable({
                   </td>
 
                   {/* Phone */}
-                  <td style={{ ...styles.td, textAlign: "center" }}>{apt.patientPhone}</td>
+                  <td style={{ ...styles.td, textAlign: "left", paddingLeft: "8px" }}>{apt.patientPhone}</td>
 
                   {/* Service */}
                   <td style={{ ...styles.td, textAlign: "center" }}>
                     {apt.service
-                      ? apt.service.replace(/Consultation/gi, "C")
+                      ? apt.service
+                        .replace(/Consultation/gi, "C")
+                        .replace(/Hydrafacial/gi, "HF")
+                        .replace(/Laser Hair Removal/gi, "LHR")
+                        .replace(/Skin Tag Removal/gi, "SKR")
+                        .replace(/Acne Scar Treatment/gi, "AST")
                       : "—"}
                   </td>
 
