@@ -6,7 +6,6 @@ import { TimePicker } from "./TimePicker";
 import {
   StethoscopeIcon,
   PulseIcon,
-  BackIcon,
   UserHandsIcon,
   LetterIcon,
   PhoneIcon,
@@ -22,6 +21,7 @@ import { Select } from "../Input/Select/Select";
 import { Toast } from "../Toast";
 import { API_BASE_URL } from "../../apiConfig";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
+import { ReactComponent as ArrowIcon } from "../../assets/Arrow Right.svg";
 
 type Doctor = {
   id: string;
@@ -74,11 +74,10 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const [selectedDoctorId, setSelectedDoctorId] = useState(
     editingAppointment?.doctorId || initialDoctorId || (doctors.length > 0 ? doctors[0].id : "")
   );
-  const [patientId] = useState(() => {
-    const key = "docodile_patient_counter";
-    const current = parseInt(localStorage.getItem(key) || "0", 10);
-    return "T" + String(current + 1).padStart(3, "0");
-  });
+  const patientCounterRef = React.useRef(
+    parseInt(localStorage.getItem("docodile_patient_counter") || "0", 10)
+  );
+  const patientId = "T" + String(patientCounterRef.current + 1).padStart(3, "0");
   const [form, setForm] = useState({
     name: editingAppointment?.patientName || "",
     email: editingAppointment?.patientEmail || "",
@@ -230,9 +229,8 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
       if (res.ok) {
         if (!editingAppointment) {
-          const key = "docodile_patient_counter";
-          const current = parseInt(localStorage.getItem(key) || "0", 10);
-          localStorage.setItem(key, String(current + 1));
+          const next = patientCounterRef.current + 1;
+          localStorage.setItem("docodile_patient_counter", String(next));
         }
         onBack(editingAppointment ? "Appointment updated successfully" : "Appointment booked successfully");
       } else {
@@ -278,7 +276,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     <div style={styles.overlay}>
       <header style={styles.header}>
         <button style={styles.backButton} onClick={() => onBack()} title="Back to Appointments">
-          <BackIcon style={{ color: colors.neutral700 }} />
+          <ArrowIcon style={{ width: 16, height: 16, transform: "rotate(180deg)" }} />
         </button>
 
         <div style={styles.titleContainer}>
@@ -542,8 +540,10 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 </div>
                 <button
                   onClick={() => {
+                    const removed = form.services[i];
                     const updated = form.services.filter((_, idx) => idx !== i);
                     setForm({ ...form, services: updated });
+                    setToastMessage(`${removed} removed`);
                   }}
                   style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center", flexShrink: 0 }}
                 >
