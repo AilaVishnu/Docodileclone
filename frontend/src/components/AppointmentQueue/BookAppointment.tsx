@@ -21,6 +21,7 @@ import { UnderlineSelect } from "../Input/UnderlineSelect/UnderlineSelect";
 import { Select } from "../Input/Select/Select";
 import { Toast } from "../Toast";
 import { API_BASE_URL } from "../../apiConfig";
+import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
 
 type Doctor = {
   id: string;
@@ -526,17 +527,28 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 <PulseIcon style={styles.appointmentIcon} />
                 <label style={styles.fieldLabel}>Service</label>
               </div>
-              <div style={{ flex: 1 }}>
-                <Select
-                  options={["Consultation", "PRP", "Hydrafacial", "Laser Hair Removal", "Skin Tag Removal", "Acne Scar Treatment"]}
-                  value={svc}
-                  onChange={(val: string) => {
-                    const updated = [...form.services];
-                    updated[i] = val;
+              <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px" }}>
+                <div style={{ flex: 1 }}>
+                  <Select
+                    options={["Consultation", "PRP", "Hydrafacial", "Laser Hair Removal", "Skin Tag Removal", "Acne Scar Treatment"]}
+                    value={svc}
+                    onChange={(val: string) => {
+                      const updated = [...form.services];
+                      updated[i] = val;
+                      setForm({ ...form, services: updated });
+                    }}
+                    placeholder="Select Service"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    const updated = form.services.filter((_, idx) => idx !== i);
                     setForm({ ...form, services: updated });
                   }}
-                  placeholder="Select Service"
-                />
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center", flexShrink: 0 }}
+                >
+                  <TrashIcon width={20} height={20} />
+                </button>
               </div>
             </div>
           ))}
@@ -545,13 +557,16 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               <PulseIcon style={styles.appointmentIcon} />
               <label style={styles.fieldLabel}>Service</label>
             </div>
-            <div style={{ flex: 1 }}>
-              <Select
-                options={["Consultation", "PRP", "Hydrafacial", "Laser Hair Removal", "Skin Tag Removal", "Acne Scar Treatment"]}
-                value=""
-                onChange={(val: string) => setForm({ ...form, services: [...form.services, val] })}
-                placeholder="+ Add Service"
-              />
+            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ flex: 1 }}>
+                <Select
+                  options={["Consultation", "PRP", "Hydrafacial", "Laser Hair Removal", "Skin Tag Removal", "Acne Scar Treatment"]}
+                  value=""
+                  onChange={(val: string) => setForm({ ...form, services: [...form.services, val] })}
+                  placeholder="+ Add Service"
+                />
+              </div>
+              <div style={{ width: "28px", flexShrink: 0 }} />
             </div>
           </div>
         </Card>
