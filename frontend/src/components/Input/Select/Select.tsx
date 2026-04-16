@@ -56,12 +56,12 @@ export function Select({
     >
       {iconLeft && <span style={{ display: "flex", alignItems: "center", opacity: 0.8 }}>{iconLeft}</span>}
       
-      <div 
+      <div
         ref={containerRef}
         style={{
           ...styles.container,
           flex: 1,
-          border: `1px solid ${colors.neutral300}`,
+          border: selectedOption ? `1.5px solid ${colors.neutral900}` : `1px solid ${colors.neutral300}`,
           ...(error ? styles.errorContainer : {})
         }}
         onClick={() => setIsOpen(!isOpen)}
