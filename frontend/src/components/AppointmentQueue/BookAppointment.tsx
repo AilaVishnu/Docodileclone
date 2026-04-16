@@ -21,6 +21,7 @@ import { Select } from "../Input/Select/Select";
 import { Toast } from "../Toast";
 import { API_BASE_URL } from "../../apiConfig";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
+import { ReactComponent as EditPencilIcon } from "../../assets/icons/edit-pencil.svg";
 import { ReactComponent as ArrowIcon } from "../../assets/Arrow Right.svg";
 
 type Doctor = {
@@ -618,14 +619,23 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
         {/* Footer Buttons */}
         <div style={styles.footerButtonGroup}>
-          <button style={styles.pillButtonSecondary} onClick={() => handleBook("Unpaid")} disabled={submitting}>
-            <PlusIcon style={{ width: "20px", height: "20px" }} />
-            {submitting ? "Booking..." : "Book Now Pay Later"}
-          </button>
-          <button style={styles.pillButtonPrimary} onClick={() => handleBook("Paid")} disabled={submitting}>
-            <CalendarIcon style={{ width: "20px", height: "20px", color: "white" }} />
-            {submitting ? "Booking..." : "Pay & Book"}
-          </button>
+          {editingAppointment ? (
+            <button style={styles.pillButtonPrimary} onClick={() => handleBook(form.paymentMethod === "No Bill" ? "NO PAY" : editingAppointment.payStatus || "Unpaid")} disabled={submitting}>
+              <EditPencilIcon width={18} height={18} style={{ color: "white" }} />
+              {submitting ? "Saving..." : "Save Edits"}
+            </button>
+          ) : (
+            <>
+              <button style={styles.pillButtonSecondary} onClick={() => handleBook("Unpaid")} disabled={submitting}>
+                <PlusIcon style={{ width: "20px", height: "20px" }} />
+                {submitting ? "Booking..." : "Book Now Pay Later"}
+              </button>
+              <button style={styles.pillButtonPrimary} onClick={() => handleBook("Paid")} disabled={submitting}>
+                <CalendarIcon style={{ width: "20px", height: "20px", color: "white" }} />
+                {submitting ? "Booking..." : "Pay & Book"}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
