@@ -86,7 +86,9 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     age: editingAppointment?.patientAge ? String(editingAppointment.patientAge) : "",
     gender: editingAppointment?.patientGender || "Male",
     type: editingAppointment?.type || "New",
-    services: editingAppointment?.service ? editingAppointment.service.split(" + ").filter(Boolean) : ["Consultation"],
+    services: editingAppointment?.service
+      ? editingAppointment.service.split(" + ").filter(Boolean)
+      : [],
     date: initTime?.date || new Date(),
     time: initTime?.timeStr || "10:00 AM",
     paymentMethod: "Cash",
@@ -518,7 +520,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               </div>
               <div style={{ flex: 1 }}>
                 <Select
-                  options={["Consultation", "PRP"].filter(s => s === svc || !form.services.includes(s))}
+                  options={["Consultation", "PRP", "Hydrafacial", "Laser Hair Removal", "Skin Tag Removal", "Acne Scar Treatment"]}
                   value={svc}
                   onChange={(val: string) => {
                     const updated = [...form.services];
@@ -530,22 +532,20 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               </div>
             </div>
           ))}
-          {["Consultation", "PRP"].filter(s => !form.services.includes(s)).length > 0 && (
-            <div style={styles.appointmentRow}>
-              <div style={styles.appointmentLabelGroup}>
-                <PulseIcon style={styles.appointmentIcon} />
-                <label style={styles.fieldLabel}>Service</label>
-              </div>
-              <div style={{ flex: 1 }}>
-                <Select
-                  options={["Consultation", "PRP"].filter(s => !form.services.includes(s))}
-                  value=""
-                  onChange={(val: string) => setForm({ ...form, services: [...form.services, val] })}
-                  placeholder="+ Add Service"
-                />
-              </div>
+          <div style={styles.appointmentRow}>
+            <div style={styles.appointmentLabelGroup}>
+              <PulseIcon style={styles.appointmentIcon} />
+              <label style={styles.fieldLabel}>Service</label>
             </div>
-          )}
+            <div style={{ flex: 1 }}>
+              <Select
+                options={["Consultation", "PRP", "Hydrafacial", "Laser Hair Removal", "Skin Tag Removal", "Acne Scar Treatment"]}
+                value=""
+                onChange={(val: string) => setForm({ ...form, services: [...form.services, val] })}
+                placeholder="+ Add Service"
+              />
+            </div>
+          </div>
         </Card>
 
         {/* Footer Buttons */}
