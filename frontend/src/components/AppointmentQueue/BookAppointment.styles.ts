@@ -107,6 +107,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: "12px",
+    alignSelf: "start",
   },
   scheduleMiniCard: {
     padding: "6px 12px",
@@ -167,6 +168,9 @@ export const styles: Record<string, CSSProperties> = {
     gap: "8px",
     padding: "12px 20px",
     justifyContent: "center",
+    alignSelf: "start",
+    minHeight: "144px",
+    boxSizing: "border-box",
   },
   appointmentRow: {
     display: "flex",
