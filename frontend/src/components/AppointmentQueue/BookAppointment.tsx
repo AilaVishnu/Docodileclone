@@ -178,6 +178,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     if (!isValidPhone(form.phone)) { setToastMessage("Please enter a valid 10-digit phone number"); return; }
     if (!form.dob && !form.age) { setToastMessage("Please enter date of birth or age"); return; }
     if (!activeDoctor) { setToastMessage("Please select a doctor"); return; }
+    if (form.services.length === 0) { setToastMessage("Please select at least one service"); return; }
 
     setSubmitting(true);
     try {
