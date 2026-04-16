@@ -83,7 +83,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     email: editingAppointment?.patientEmail || "",
     phone: editingAppointment?.patientPhone || "",
     dob: "",
-    age: editingAppointment?.patientAge ? String(editingAppointment.patientAge) : "",
+    age: editingAppointment?.patientAge ? `${Math.floor(editingAppointment.patientAge / 12)} / ${editingAppointment.patientAge % 12}` : "",
     gender: editingAppointment?.patientGender || "Male",
     type: editingAppointment?.type || "New",
     services: editingAppointment?.service
@@ -108,6 +108,8 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
 
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const hasDob = dobDigits.length > 0;
+  const hasManualAge = !hasDob && form.age.replace(/[^0-9]/g, "").length > 0;
 
   const formatDob = (digits: string): string => {
     const dd = digits.slice(0, 2);
@@ -135,10 +137,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     const birth = new Date(y, mIdx, d);
     const today = new Date();
     if (birth > today) return form.age;
-    let age = today.getFullYear() - birth.getFullYear();
-    const mDiff = today.getMonth() - birth.getMonth();
-    if (mDiff < 0 || (mDiff === 0 && today.getDate() < birth.getDate())) age--;
-    return String(age);
+    let years = today.getFullYear() - birth.getFullYear();
+    let months = today.getMonth() - birth.getMonth();
+    if (today.getDate() < birth.getDate()) months--;
+    if (months < 0) { years--; months += 12; }
+    return `${years} / ${months}`;
   };
 
   // Pre-fill DOB when editing
@@ -193,7 +196,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         patientPhone: form.phone || null,
         patientGender: form.gender || null,
         patientDob: dobDigits.length === 8 ? `${dobDigits.slice(4,8)}-${dobDigits.slice(2,4)}-${dobDigits.slice(0,2)}` : null,
-        patientAge: form.age ? Number(form.age) : null,
+        patientAge: form.age ? (() => {
+          const yPart = parseInt(form.age.split("/")[0]?.trim() || "0", 10) || 0;
+          const mPart = parseInt(form.age.split("/")[1]?.trim() || "0", 10) || 0;
+          return yPart * 12 + mPart;
+        })() : null,
         doctorId: selectedDoctorId,
         scheduledTime: scheduledTime.getFullYear() + "-" +
           String(scheduledTime.getMonth() + 1).padStart(2, "0") + "-" +
@@ -353,9 +360,10 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 <CalendarIcon style={styles.iconFieldIcon} />
               </span>
               <input
-                style={styles.iconFieldInput}
+                style={{ ...styles.iconFieldInput, opacity: hasManualAge ? 0.4 : 1 }}
                 type="text"
                 placeholder="DD MM YYYY"
+                disabled={hasManualAge}
                 value={formatDob(dobDigits)}
                 onKeyDown={(e) => {
                   if (e.key === "Backspace") {
@@ -391,21 +399,48 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               )}
             </div>
             <div style={{ fontSize: "16px", color: colors.neutral900 }}>or</div>
-            <div style={{ ...styles.iconField, width: "180px" }}>
+            <div style={{ ...styles.iconField, width: "200px", gap: "4px" }}>
               <HashtagIcon style={styles.iconFieldIcon} />
               <input
-                style={styles.iconFieldInput}
-                placeholder="Age"
+                className="text-input-field"
+                style={{ ...styles.iconFieldInput, width: "28px", textAlign: "center", MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
+                placeholder="0"
                 type="number"
                 min="0"
                 max="150"
-                value={form.age}
+                disabled={hasDob}
+                value={form.age.split("/")[0]?.trim() || ""}
                 onChange={(e) => {
-                  const ageStr = e.target.value;
+                  const y = e.target.value;
+                  const m = form.age.split("/")[1]?.trim() || "";
                   setDobDigits("");
-                  setForm({ ...form, age: ageStr, dob: "" });
+                  setForm({ ...form, age: `${y} / ${m}`, dob: "" });
                 }}
               />
+              <style>{`
+                input[type=number]::-webkit-outer-spin-button,
+                input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+                input[type=number] { -moz-appearance: textfield; }
+              `}</style>
+              <span style={{ fontSize: "12px", color: "#747474" }}>yr</span>
+              <span style={{ fontSize: "16px", color: "#747474" }}>/</span>
+              <input
+                className="text-input-field"
+                style={{ ...styles.iconFieldInput, width: "28px", textAlign: "center", MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
+                placeholder="0"
+                type="number"
+                min="0"
+                max="11"
+                disabled={hasDob}
+                value={form.age.split("/")[1]?.trim() || ""}
+                onChange={(e) => {
+                  const m = e.target.value;
+                  const y = form.age.split("/")[0]?.trim() || "";
+                  setDobDigits("");
+                  setForm({ ...form, age: `${y} / ${m}`, dob: "" });
+                }}
+              />
+              <span style={{ fontSize: "12px", color: "#747474" }}>mo</span>
             </div>
           </div>
 

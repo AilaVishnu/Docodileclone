@@ -282,7 +282,13 @@ export function QueueTable({
                           {apt.patientGender && apt.patientAge && (
                             <span style={styles.nameMetaDot}>|</span>
                           )}
-                          {apt.patientAge && <span>{apt.patientAge}</span>}
+                          {apt.patientAge != null && apt.patientAge > 0 && (
+                            <span>
+                              {Math.floor(apt.patientAge / 12) > 0
+                                ? `${Math.floor(apt.patientAge / 12)}Y`
+                                : `${apt.patientAge % 12}M`}
+                            </span>
+                          )}
                         </span>
                       )}
                     </div>
