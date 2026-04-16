@@ -11,8 +11,8 @@ export const styles: Record<string, CSSProperties> = {
   card: {
     display: "flex",
     flexDirection: "column",
-    gap: "24px",
-    padding: "28px 28px 24px",
+    gap: "12px",
+    padding: "24px",
     backgroundColor: colors.neutral100,
     borderRadius: "16px 16px 0 0",
     flex: 1,
@@ -30,10 +30,103 @@ export const styles: Record<string, CSSProperties> = {
   title: {
     margin: 0,
     fontSize: "20px",
-    fontWeight: 700,
+    fontWeight: 600,
     textAlign: "center",
     fontFamily: fonts.family.secondary,
-    color: colors.blindBlack,
+    color: colors.neutral900,
+    lineHeight: "28px",
+  },
+
+  servicesContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+
+  serviceItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "8px 12px",
+    backgroundColor: "#f5f5f5",
+    borderRadius: "4px",
+    fontSize: "16px",
+    fontFamily: fonts.family.primary,
+    fontWeight: 400,
+    color: colors.neutral900,
+    lineHeight: "22px",
+  },
+
+  fieldsContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+  },
+
+  fieldRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    height: "40px",
+  },
+
+  label: {
+    fontSize: "16px",
+    fontWeight: 400,
+    fontFamily: fonts.family.primary,
+    color: colors.neutral900,
+    width: "65px",
+    flexShrink: 0,
+    lineHeight: "22px",
+  },
+
+  fieldValue: {
+    flex: 1,
+    display: "flex",
+    alignItems: "center",
+    gap: "0",
+    borderBottom: `1px solid ${colors.neutral300}`,
+    padding: "8px",
+    fontSize: "16px",
+    fontFamily: fonts.family.primary,
+    color: colors.neutral900,
+    lineHeight: "22px",
+  },
+
+  input: {
+    flex: 1,
+    border: "none",
+    outline: "none",
+    fontSize: "16px",
+    fontFamily: fonts.family.primary,
+    color: colors.neutral900,
+    backgroundColor: "transparent",
+    padding: 0,
+    lineHeight: "22px",
+  },
+
+  totalRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "4px",
+    backgroundColor: colors.primary100,
+  },
+
+  totalLabel: {
+    fontSize: "16px",
+    fontWeight: 600,
+    fontFamily: fonts.family.primary,
+    color: colors.neutral900,
+    lineHeight: "22px",
+  },
+
+  totalValue: {
+    fontSize: "32px",
+    fontWeight: 400,
+    fontFamily: fonts.family.secondary,
+    color: colors.neutral900,
+    lineHeight: "44px",
   },
 
   methodRow: {
@@ -45,46 +138,16 @@ export const styles: Record<string, CSSProperties> = {
   radioLabel: {
     display: "flex",
     alignItems: "center",
-    gap: "4px",
-    fontSize: fonts.size.s,
+    gap: "6px",
+    fontSize: "16px",
     fontFamily: fonts.family.primary,
     cursor: "pointer",
-    color: colors.blindBlack,
-    whiteSpace: "nowrap",
+    color: colors.neutral900,
   },
 
   radioInput: {
     margin: 0,
     cursor: "pointer",
-    accentColor: colors.blindBlack,
-  },
-
-  fieldRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "16px",
-    borderBottom: `1px solid ${colors.neutral200}`,
-    paddingBottom: "8px",
-  },
-
-  label: {
-    fontSize: fonts.size.s,
-    fontWeight: 600,
-    fontFamily: fonts.family.primary,
-    color: colors.blindBlack,
-    width: "80px",
-    flexShrink: 0,
-  },
-
-  input: {
-    flex: 1,
-    border: "none",
-    outline: "none",
-    fontSize: fonts.size.s,
-    fontFamily: fonts.family.primary,
-    color: colors.neutral700,
-    backgroundColor: "transparent",
-    padding: 0,
   },
 
   noteInput: {
@@ -111,7 +174,7 @@ export const styles: Record<string, CSSProperties> = {
     padding: "4px 10px",
     border: "none",
     backgroundColor: colors.active.shade100,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     fontSize: "13px",
     fontWeight: 600,
     cursor: "pointer",
@@ -127,31 +190,5 @@ export const styles: Record<string, CSSProperties> = {
     fontWeight: 500,
     cursor: "pointer",
     fontFamily: fonts.family.primary,
-  },
-
-  totalRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "16px",
-    borderBottom: `1px solid ${colors.neutral200}`,
-    paddingBottom: "8px",
-    paddingTop: "4px",
-  },
-
-  totalLabel: {
-    fontSize: fonts.size.s,
-    fontWeight: 700,
-    fontFamily: fonts.family.primary,
-    color: colors.blindBlack,
-    width: "80px",
-    flexShrink: 0,
-  },
-
-  totalValue: {
-    flex: 1,
-    fontSize: fonts.size.s,
-    fontWeight: 600,
-    fontFamily: fonts.family.primary,
-    color: colors.blindBlack,
   },
 };

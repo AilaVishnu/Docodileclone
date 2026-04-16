@@ -45,6 +45,9 @@ class Appointment(
     @Column(name = "pay_status")
     var payStatus: String? = null,
 
+    @Column(name = "payment_method")
+    var paymentMethod: String? = null,
+
     var fee: BigDecimal? = null,
 
     var notes: String? = null,

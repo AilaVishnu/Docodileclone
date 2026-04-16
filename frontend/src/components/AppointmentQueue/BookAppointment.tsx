@@ -42,6 +42,7 @@ export type EditAppointmentData = {
   scheduledTime: string;
   doctorId: string;
   payStatus?: string;
+  paymentMethod?: string;
   notes?: string;
   fee?: number;
 };
@@ -70,6 +71,15 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     return { date: d, timeStr: `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")} ${period}` };
   };
 
+  const SERVICE_PRICES: Record<string, number> = {
+    "Consultation": 500,
+    "PRP": 1500,
+    "Hydrafacial": 2000,
+    "Laser Hair Removal": 2500,
+    "Skin Tag Removal": 1000,
+    "Acne Scar Treatment": 3000,
+  };
+
   const initTime = editingAppointment ? parseScheduledTime(editingAppointment.scheduledTime) : null;
 
   const [selectedDoctorId, setSelectedDoctorId] = useState(
@@ -92,9 +102,9 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       : [],
     date: initTime?.date || new Date(),
     time: initTime?.timeStr || "",
-    paymentMethod: "Cash",
+    paymentMethod: editingAppointment?.paymentMethod || "",
     note: editingAppointment?.notes || "",
-    subtotal: editingAppointment?.fee || 500.0,
+    subtotal: editingAppointment?.fee || 0,
     tax: "" as string,
     discount: 0.0,
   });
@@ -184,6 +194,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     if (!activeDoctor) { setToastMessage("Please select a doctor"); return; }
     if (form.services.length === 0) { setToastMessage("Please select at least one service"); return; }
     if (!form.time) { setToastMessage("Please select a time"); return; }
+    if (!form.paymentMethod) { setToastMessage("Please select a payment method"); return; }
 
     setSubmitting(true);
     try {
@@ -259,7 +270,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     setSelectedDoctorId(doctors[nextIndex].id);
   };
 
-  const subtotal = Number(form.subtotal) || 0;
+  const subtotal = form.services.reduce((sum, svc) => sum + (SERVICE_PRICES[svc] || 0), 0);
   const taxVal = parseFloat(String(form.tax)) || 0;
   const taxAmount = taxMode === "%" ? subtotal * taxVal / 100 : taxVal;
   const discountVal = Number(form.discount) || 0;
@@ -464,10 +475,21 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         <div style={{ gridColumn: "3", gridRow: "1 / span 2", alignSelf: "stretch" }}>
           <BillCard
             paymentMethod={form.paymentMethod}
-            onPaymentMethodChange={(m) => setForm({ ...form, paymentMethod: m })}
+            onPaymentMethodChange={(m) => {
+              if (m === "No Bill") {
+                setDiscountMode("%");
+                setForm({ ...form, paymentMethod: m, discount: 100 });
+              } else {
+                if (form.paymentMethod === "No Bill") {
+                  setForm({ ...form, paymentMethod: m, discount: 0 });
+                } else {
+                  setForm({ ...form, paymentMethod: m });
+                }
+              }
+            }}
             note={form.note}
             onNoteChange={(n) => setForm({ ...form, note: n })}
-            subtotal={form.subtotal}
+            subtotal={subtotal}
             onSubtotalChange={(v) => setForm({ ...form, subtotal: v })}
             tax={form.tax}
             onTaxChange={(v) => setForm({ ...form, tax: v })}
@@ -476,6 +498,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             total={Math.round(total)}
             onTaxModeChange={setTaxMode}
             onDiscountModeChange={setDiscountMode}
+            services={form.services.map(svc => ({ name: svc, price: SERVICE_PRICES[svc] || 0 }))}
           />
         </div>
 
@@ -620,7 +643,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         {/* Footer Buttons */}
         <div style={styles.footerButtonGroup}>
           {editingAppointment ? (
-            <button style={styles.pillButtonPrimary} onClick={() => handleBook(form.paymentMethod === "No Bill" ? "NO PAY" : editingAppointment.payStatus || "Unpaid")} disabled={submitting}>
+            <button style={styles.pillButtonPrimary} onClick={() => handleBook(editingAppointment.payStatus || "Unpaid")} disabled={submitting}>
               <EditPencilIcon width={18} height={18} style={{ color: "white" }} />
               {submitting ? "Saving..." : "Save Edits"}
             </button>

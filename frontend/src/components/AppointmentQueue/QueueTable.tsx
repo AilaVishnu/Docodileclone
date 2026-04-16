@@ -29,6 +29,7 @@ export type Appointment = {
   isWalkin: boolean;
   status: AppointmentStatus;
   payStatus: PayStatus;
+  paymentMethod?: string;
   doctorId?: string;
   notes?: string;
   fee?: number;

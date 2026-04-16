@@ -78,14 +78,14 @@ export const styles: Record<string, CSSProperties> = {
   },
   grid: {
     display: "grid",
-    gridTemplateColumns: "200px 540px 440px",
+    gridTemplateColumns: "200px 560px 360px",
     gridTemplateRows: "auto auto auto",
     gap: "16px",
     justifyContent: "center",
     alignItems: "stretch",
   },
   card: {
-    backgroundColor: colors.active.shade50,
+    backgroundColor: colors.neutral100,
     borderRadius: radii.m,
     padding: "16px",
     display: "flex",

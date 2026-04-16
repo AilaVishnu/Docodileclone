@@ -95,6 +95,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
               isWalkin: apt.isWalkin,
               status: apt.status || "WAITING",
               payStatus: apt.payStatus || "DUE",
+              paymentMethod: apt.paymentMethod || "",
               doctorId: apt.doctorId,
               patientEmail: apt.patientEmail || "",
               patientGender: apt.patientGender || "",
@@ -220,6 +221,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
                   scheduledTime: apt.rawScheduledTime || "",
                   doctorId: apt.doctorId || activeDoctorId,
                   payStatus: apt.payStatus,
+                  paymentMethod: apt.paymentMethod,
                   notes: apt.notes,
                   fee: apt.fee,
                 });

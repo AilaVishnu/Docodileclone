@@ -65,6 +65,7 @@ class AppointmentService(
             type = request.type,
             service = request.service,
             payStatus = request.payStatus,
+            paymentMethod = request.paymentMethod,
             fee = request.fee,
             notes = request.notes,
             createdAt = Instant.now()
@@ -101,6 +102,7 @@ class AppointmentService(
         appointment.type = request.type
         appointment.service = request.service
         appointment.payStatus = request.payStatus
+        appointment.paymentMethod = request.paymentMethod
         appointment.fee = request.fee
         appointment.notes = request.notes
 
@@ -132,6 +134,7 @@ class AppointmentService(
             type = this.type,
             service = this.service,
             payStatus = this.payStatus,
+            paymentMethod = this.paymentMethod,
             notes = this.notes,
             fee = this.fee
         )

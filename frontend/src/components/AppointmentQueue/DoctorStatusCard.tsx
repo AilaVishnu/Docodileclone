@@ -161,7 +161,7 @@ const cardStyles: Record<string, React.CSSProperties> = {
   card: {
     backgroundColor: colors.primary100,   // #F9F9ED — warm cream from Figma
     borderRadius: "20px",
-    border: `1px solid ${colors.primary300}`,
+    border: "none",
     padding: "40px 20px 20px",
     display: "flex",
     flexDirection: "column",

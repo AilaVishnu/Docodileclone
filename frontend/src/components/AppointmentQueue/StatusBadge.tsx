@@ -54,9 +54,9 @@ const PAY_CONFIG: Record<
     icon: <DangerTriangleIcon width={20} height={20} />,
   },
   "NO PAY": {
-    color: "#6B7280",
-    label: "No Pay",
-    icon: null,
+    color: "#202020",
+    label: "Due",
+    icon: <DangerTriangleIcon width={20} height={20} />,
   },
 };
 

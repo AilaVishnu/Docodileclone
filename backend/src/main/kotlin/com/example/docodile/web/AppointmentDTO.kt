@@ -19,6 +19,7 @@ data class AppointmentDTO(
     val type: String?,
     val service: String?,
     val payStatus: String?,
+    val paymentMethod: String?,
     val notes: String?,
     val fee: java.math.BigDecimal?
 )
