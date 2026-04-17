@@ -255,7 +255,8 @@ export function QueueTable({
               const isCompleted = apt.status === "COMPLETED";
               const isNoShow = apt.status === "NO_SHOW";
               const isInProgress = apt.status === "IN_PROGRESS";
-              const baseBg = isInProgress ? "#F3F3DC" : isCompleted ? "#F1F6E7" : isNoShow ? "rgba(0,0,0,0.04)" : "transparent";
+              const isCancelled = apt.status === "CANCELLED";
+              const baseBg = isInProgress ? "#F3F3DC" : isCompleted ? "#F1F6E7" : (isNoShow || isCancelled) ? "rgba(0,0,0,0.04)" : "transparent";
               const prevStatus = index > 0 ? appointments[index - 1].status : apt.status;
               const isNewGroup = index > 0 && apt.status !== prevStatus;
               return (
@@ -279,7 +280,7 @@ export function QueueTable({
                   <tr
                     style={{ ...styles.tr, backgroundColor: baseBg }}
                     onMouseEnter={(e) => {
-                      if (!isCompleted && !isNoShow && !isInProgress) {
+                      if (!isCompleted && !isNoShow && !isInProgress && !isCancelled) {
                         (e.currentTarget as HTMLElement).style.backgroundColor =
                           "rgba(0,0,0,0.018)";
                       }
