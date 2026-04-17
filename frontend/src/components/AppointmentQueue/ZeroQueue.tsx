@@ -24,10 +24,10 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: "48px 24px",
+    padding: "72px 24px",
     backgroundColor: colors.primary100,
     borderRadius: "0 12px 12px 12px",
-    minHeight: "400px",
+    minHeight: "530px",
   },
   content: {
     display: "flex",

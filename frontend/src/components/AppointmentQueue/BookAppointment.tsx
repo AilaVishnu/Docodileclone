@@ -569,17 +569,28 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               </span>
             </div>
             {showTimePicker && (
-              <div style={{ position: "absolute", bottom: "100%", left: "50%", zIndex: 1100 }}>
-                <TimePicker
-                  initialTime={form.time}
-                  onSelect={(time: string) => {
-                    setForm({ ...form, time });
-                    setShowTimePicker(false);
+              <>
+                <div
+                  style={{
+                    position: "fixed",
+                    inset: 0,
+                    backgroundColor: "rgba(0, 0, 0, 0.5)",
+                    zIndex: 1050,
                   }}
-                  onClose={() => setShowTimePicker(false)}
-                  style={{ top: "auto", bottom: "8px" }}
+                  onClick={() => setShowTimePicker(false)}
                 />
-              </div>
+                <div style={{ position: "absolute", bottom: "100%", left: "50%", zIndex: 1100 }}>
+                  <TimePicker
+                    initialTime={form.time}
+                    onSelect={(time: string) => {
+                      setForm({ ...form, time });
+                      setShowTimePicker(false);
+                    }}
+                    onClose={() => setShowTimePicker(false)}
+                    style={{ top: "auto", bottom: "8px" }}
+                  />
+                </div>
+              </>
             )}
           </Card>
         </div>
