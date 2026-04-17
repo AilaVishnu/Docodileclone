@@ -52,10 +52,12 @@ export function BillCard({
   return (
     <div style={styles.wrapper}>
       <div style={styles.card}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-          <h3 style={{ ...styles.title, flex: 1 }}>Bill</h3>
-          <PrinterIcon width={15} height={15} style={{ cursor: "pointer" }} />
-          <ScaleIcon width={15} height={15} style={{ cursor: "pointer" }} />
+        <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <h3 style={styles.title}>Bill</h3>
+          <div style={{ position: "absolute", right: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+            <PrinterIcon width={15} height={15} style={{ cursor: "pointer" }} />
+            <ScaleIcon width={15} height={15} style={{ cursor: "pointer" }} />
+          </div>
         </div>
 
         {/* Service Items */}

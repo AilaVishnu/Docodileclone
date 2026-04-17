@@ -261,13 +261,19 @@ export function QueueTable({
               return (
                 <React.Fragment key={apt.id}>
                   {isNewGroup && (
-                    <tr><td colSpan={9} style={{ height: "36px", border: "none", textAlign: "center" }}>
+                    <tr><td colSpan={9} style={{ height: "40px", border: "none", padding: 0 }}>
                       <div style={{
-                        display: "inline-block",
-                        width: "1.5px",
-                        height: "28px",
-                        backgroundColor: "#EDDFBA",
-                      }} />
+                        height: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}>
+                        <div style={{
+                          width: "1.5px",
+                          height: "20px",
+                          backgroundColor: "#EDDFBA",
+                        }} />
+                      </div>
                     </td></tr>
                   )}
                   <tr

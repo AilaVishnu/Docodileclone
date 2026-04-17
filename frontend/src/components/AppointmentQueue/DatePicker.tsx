@@ -8,11 +8,12 @@ type DatePickerProps = {
   onClose: () => void;
   style?: React.CSSProperties;
   disablePast?: boolean;
+  showDoneButton?: boolean;
 };
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export function DatePicker({ selectedDate, onSelect, onClose, style, disablePast }: DatePickerProps) {
+export function DatePicker({ selectedDate, onSelect, onClose, style, disablePast, showDoneButton }: DatePickerProps) {
   const [viewDate, setViewDate] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
   const [viewMode, setViewMode] = useState<"days" | "months" | "years">("days");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -210,6 +211,19 @@ export function DatePicker({ selectedDate, onSelect, onClose, style, disablePast
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", padding: "8px 0" }}>
             {renderYears()}
           </div>
+        )}
+
+        {showDoneButton && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(new Date());
+              onClose();
+            }}
+            style={styles.doneButton}
+          >
+            Go to today
+          </button>
         )}
       </div>
     </div>

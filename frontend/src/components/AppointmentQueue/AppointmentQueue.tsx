@@ -180,13 +180,14 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
         </div>
 
         {showDatePicker && (
-          <DatePicker 
-            selectedDate={selectedDate} 
+          <DatePicker
+            selectedDate={selectedDate}
             onSelect={(date) => {
               setSelectedDate(date);
               setShowDatePicker(false);
-            }} 
+            }}
             onClose={() => setShowDatePicker(false)}
+            showDoneButton
           />
         )}
       </header>
