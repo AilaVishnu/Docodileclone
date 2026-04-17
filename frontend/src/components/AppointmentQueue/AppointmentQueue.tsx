@@ -259,9 +259,11 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
               setAppointments((prev) => {
                 const updated = { ...prev };
                 Object.keys(updated).forEach((docId) => {
-                  updated[docId] = updated[docId].map((a) =>
-                    a.id === aptId ? { ...a, status: newStatus as any } : a
-                  );
+                  const idx = updated[docId].findIndex((a) => a.id === aptId);
+                  if (idx === -1) return;
+                  const others = updated[docId].filter((a) => a.id !== aptId);
+                  const moved = { ...updated[docId][idx], status: newStatus as any };
+                  updated[docId] = [...others, moved];
                 });
                 return updated;
               });

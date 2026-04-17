@@ -262,7 +262,8 @@ export function QueueTable({
               const isCancelled = apt.status === "CANCELLED";
               const baseBg = isInProgress ? "#F3F3DC" : isCompleted ? "#F1F6E7" : (isNoShow || isCancelled) ? "rgba(0,0,0,0.04)" : "transparent";
               const prevStatus = index > 0 ? appointments[index - 1].status : apt.status;
-              const isNewGroup = index > 0 && apt.status !== prevStatus;
+              const groupKey = (s: string) => (s === "CANCELLED" || s === "NO_SHOW") ? "INACTIVE" : s;
+              const isNewGroup = index > 0 && groupKey(apt.status) !== groupKey(prevStatus);
               return (
                 <React.Fragment key={apt.id}>
                   {isNewGroup && (
