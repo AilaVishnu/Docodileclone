@@ -499,6 +499,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             onTaxModeChange={setTaxMode}
             onDiscountModeChange={setDiscountMode}
             services={form.services.map(svc => ({ name: svc, price: SERVICE_PRICES[svc] || 0 }))}
+            isPaid={editingAppointment?.payStatus?.toUpperCase() === "PAID"}
           />
         </div>
 
@@ -574,71 +575,87 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
         {/* Appointment Details Card */}
         <Card style={{ ...styles.card, ...styles.appointmentDetailsCard }}>
-          <div style={styles.appointmentRow}>
-            <div style={styles.appointmentLabelGroup}>
-              <StethoscopeIcon style={styles.appointmentIcon} />
-              <label style={styles.fieldLabel}>Doctor</label>
-            </div>
-            <div style={{ flex: 1 }}>
-              <Select
-                options={doctors.map(d => ({ label: d.name, value: d.id }))}
-                value={selectedDoctorId}
-                onChange={(val: string) => setSelectedDoctorId(val)}
-                placeholder="Select Doctor"
-              />
-            </div>
-          </div>
-
-          {form.services.map((svc, i) => (
-            <div key={i} style={styles.appointmentRow}>
-              <div style={styles.appointmentLabelGroup}>
-                <PulseIcon style={styles.appointmentIcon} />
-                <label style={styles.fieldLabel}>Service</label>
-              </div>
-              <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px" }}>
-                <div style={{ flex: 1 }}>
+          {(() => {
+            const doctorLocked = editingAppointment?.payStatus?.toUpperCase() === "PAID";
+            return (
+              <div style={styles.appointmentRow}>
+                <div style={styles.appointmentLabelGroup}>
+                  <StethoscopeIcon style={styles.appointmentIcon} />
+                  <label style={styles.fieldLabel}>Doctor</label>
+                </div>
+                <div style={{ flex: 1, pointerEvents: doctorLocked ? "none" : "auto", opacity: doctorLocked ? 0.6 : 1 }}>
                   <Select
-                    options={["Consultation", "PRP", "Hydrafacial", "Laser Hair Removal", "Skin Tag Removal", "Acne Scar Treatment"]}
-                    value={svc}
-                    onChange={(val: string) => {
-                      const updated = [...form.services];
-                      updated[i] = val;
-                      setForm({ ...form, services: updated });
-                    }}
-                    placeholder="Select Service"
+                    options={doctors.map(d => ({ label: d.name, value: d.id }))}
+                    value={selectedDoctorId}
+                    onChange={(val: string) => setSelectedDoctorId(val)}
+                    placeholder="Select Doctor"
                   />
                 </div>
-                <button
-                  onClick={() => {
-                    const removed = form.services[i];
-                    const updated = form.services.filter((_, idx) => idx !== i);
-                    setForm({ ...form, services: updated });
-                    setToastMessage(`${removed} removed`);
-                  }}
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center", flexShrink: 0 }}
-                >
-                  <TrashIcon width={20} height={20} />
-                </button>
               </div>
-            </div>
-          ))}
-          <div style={styles.appointmentRow}>
-            <div style={styles.appointmentLabelGroup}>
-              <PulseIcon style={styles.appointmentIcon} />
-              <label style={styles.fieldLabel}>Service</label>
-            </div>
-            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px" }}>
-              <div style={{ flex: 1 }}>
-                <Select
-                  options={["Consultation", "PRP", "Hydrafacial", "Laser Hair Removal", "Skin Tag Removal", "Acne Scar Treatment"]}
-                  value=""
-                  onChange={(val: string) => setForm({ ...form, services: [...form.services, val] })}
-                  placeholder="+ Add Service"
-                />
-              </div>
-              <div style={{ width: "28px", flexShrink: 0 }} />
-            </div>
-          </div>
+            );
+          })()}
+
+          {(() => {
+            const servicesLocked = editingAppointment?.payStatus?.toUpperCase() === "PAID";
+            return <>
+              {form.services.map((svc, i) => (
+                <div key={i} style={styles.appointmentRow}>
+                  <div style={styles.appointmentLabelGroup}>
+                    <PulseIcon style={styles.appointmentIcon} />
+                    <label style={styles.fieldLabel}>Service</label>
+                  </div>
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", pointerEvents: servicesLocked ? "none" : "auto", opacity: servicesLocked ? 0.6 : 1 }}>
+                    <div style={{ flex: 1 }}>
+                      <Select
+                        options={["Consultation", "PRP", "Hydrafacial", "Laser Hair Removal", "Skin Tag Removal", "Acne Scar Treatment"]}
+                        value={svc}
+                        onChange={(val: string) => {
+                          const updated = [...form.services];
+                          updated[i] = val;
+                          setForm({ ...form, services: updated });
+                        }}
+                        placeholder="Select Service"
+                      />
+                    </div>
+                    {!servicesLocked ? (
+                      <button
+                        onClick={() => {
+                          const removed = form.services[i];
+                          const updated = form.services.filter((_, idx) => idx !== i);
+                          setForm({ ...form, services: updated });
+                          setToastMessage(`${removed} removed`);
+                        }}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center", flexShrink: 0 }}
+                      >
+                        <TrashIcon width={20} height={20} />
+                      </button>
+                    ) : (
+                      <div style={{ width: "28px", flexShrink: 0 }} />
+                    )}
+                  </div>
+                </div>
+              ))}
+              {!servicesLocked && (
+                <div style={styles.appointmentRow}>
+                  <div style={styles.appointmentLabelGroup}>
+                    <PulseIcon style={styles.appointmentIcon} />
+                    <label style={styles.fieldLabel}>Service</label>
+                  </div>
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div style={{ flex: 1 }}>
+                      <Select
+                        options={["Consultation", "PRP", "Hydrafacial", "Laser Hair Removal", "Skin Tag Removal", "Acne Scar Treatment"]}
+                        value=""
+                        onChange={(val: string) => setForm({ ...form, services: [...form.services, val] })}
+                        placeholder="+ Add Service"
+                      />
+                    </div>
+                    <div style={{ width: "28px", flexShrink: 0 }} />
+                  </div>
+                </div>
+              )}
+            </>;
+          })()}
         </Card>
 
         {/* Footer Buttons */}

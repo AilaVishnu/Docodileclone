@@ -2,10 +2,12 @@ import React, { useState } from "react";
 import { styles } from "./BillCard.styles";
 import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
 import { ReactComponent as ScaleIcon } from "../../assets/icons/scale.svg";
+import { ReactComponent as PaidStamp } from "../../assets/icons/paid-stamp.svg";
 
 type BillCardProps = {
   paymentMethod: string;
   onPaymentMethodChange: (method: string) => void;
+  isPaid?: boolean;
   note: string;
   onNoteChange: (note: string) => void;
   subtotal: number;
@@ -35,6 +37,7 @@ export function BillCard({
   onTaxModeChange,
   onDiscountModeChange,
   services = [],
+  isPaid = false,
 }: BillCardProps) {
   const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
   const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
@@ -50,7 +53,19 @@ export function BillCard({
   };
 
   return (
-    <div style={styles.wrapper}>
+    <div style={{ ...styles.wrapper, position: "relative" }}>
+      {isPaid && (
+        <PaidStamp
+          width={80}
+          height={80}
+          style={{
+            position: "absolute",
+            right: "-35px",
+            bottom: "-30px",
+            zIndex: 10,
+          }}
+        />
+      )}
       <div style={styles.card}>
         <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <h3 style={styles.title}>Bill</h3>
