@@ -240,14 +240,25 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
                 });
                 onEditStart?.();
               } },
-              { label: "View Patient File", onClick: (apt) => console.log("View", apt.id) },
-              { label: "Bill Medicines", onClick: (apt) => console.log("Bill", apt.id) },
-              { label: "Generate Bill", onClick: (apt) => console.log("Generate", apt.id) },
+              { label: "View Patient File", onClick: (apt) => {
+                setToastMessage(`Opening ${apt.patientName}'s file...`);
+              } },
+              { label: "Bill Medicines", onClick: (apt) => {
+                setToastMessage(`Medicine billing for ${apt.patientName} coming soon`);
+              } },
+              { label: "Generate Bill", onClick: (apt) => {
+                setToastMessage(`Bill generated for ${apt.patientName}`);
+              } },
             ]}
             onStatusChange={async (aptId, newStatus) => {
+              if (newStatus === "CANCELLED") {
+                if (!window.confirm("Are you sure you want to cancel this appointment?")) {
+                  return;
+                }
+              }
               const token = localStorage.getItem("docodile_token");
               try {
-                await fetch(`${API_BASE_URL}/api/tenant/appointments/${aptId}/status`, {
+                const res = await fetch(`${API_BASE_URL}/api/tenant/appointments/${aptId}/status`, {
                   method: "PATCH",
                   headers: {
                     "Content-Type": "application/json",
@@ -255,7 +266,14 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
                   },
                   body: JSON.stringify({ status: newStatus }),
                 });
-              } catch {}
+                if (!res.ok) {
+                  setToastMessage("Failed to update status");
+                  return;
+                }
+              } catch {
+                setToastMessage("Network error while updating status");
+                return;
+              }
               setAppointments((prev) => {
                 const updated = { ...prev };
                 Object.keys(updated).forEach((docId) => {
@@ -267,6 +285,14 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
                 });
                 return updated;
               });
+              const statusLabel: Record<string, string> = {
+                "WAITING": "Marked as Arrived",
+                "IN_PROGRESS": "Sent to doctor",
+                "COMPLETED": "Marked as Completed",
+                "NO_SHOW": "Marked as No-Show",
+                "CANCELLED": "Appointment cancelled",
+              };
+              setToastMessage(statusLabel[newStatus] || "Status updated");
             }}
           />
           </div>

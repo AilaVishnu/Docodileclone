@@ -305,14 +305,20 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
         <div style={styles.titleContainer}>
           <h2 style={styles.title}>
-            Book an appointment for{" "}
-            <UnderlineSelect
-              options={doctors.map(d => ({ label: d.name, value: d.id }))}
-              value={selectedDoctorId}
-              onChange={(val) => setSelectedDoctorId(val)}
-              placeholder="Select Doctor"
-              fontSize="24px"
-            />
+            {editingAppointment ? (
+              "Edit Appointment"
+            ) : (
+              <>
+                Book an appointment for{" "}
+                <UnderlineSelect
+                  options={doctors.map(d => ({ label: d.name, value: d.id }))}
+                  value={selectedDoctorId}
+                  onChange={(val) => setSelectedDoctorId(val)}
+                  placeholder="Select Doctor"
+                  fontSize="24px"
+                />
+              </>
+            )}
           </h2>
         </div>
       </header>

@@ -107,9 +107,9 @@ export const styles: Record<string, CSSProperties> = {
 
   totalRow: {
     display: "flex",
-    alignItems: "center",
+    alignItems: "baseline",
     justifyContent: "space-between",
-    padding: "4px",
+    padding: "8px 12px",
     backgroundColor: colors.primary100,
   },
 
@@ -118,7 +118,7 @@ export const styles: Record<string, CSSProperties> = {
     fontWeight: 600,
     fontFamily: fonts.family.primary,
     color: colors.neutral900,
-    lineHeight: "22px",
+    lineHeight: 1,
   },
 
   totalValue: {
@@ -126,7 +126,7 @@ export const styles: Record<string, CSSProperties> = {
     fontWeight: 400,
     fontFamily: fonts.family.secondary,
     color: colors.neutral900,
-    lineHeight: "44px",
+    lineHeight: 1,
   },
 
   methodRow: {
