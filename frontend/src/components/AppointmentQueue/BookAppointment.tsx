@@ -207,7 +207,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         patientEmail: form.email || null,
         patientPhone: form.phone || null,
         patientGender: form.gender || null,
-        patientDob: dobDigits.length === 8 ? `${dobDigits.slice(4,8)}-${dobDigits.slice(2,4)}-${dobDigits.slice(0,2)}` : null,
+        patientDob: dobDigits.length === 8 ? `${dobDigits.slice(4, 8)}-${dobDigits.slice(2, 4)}-${dobDigits.slice(0, 2)}` : null,
         patientAge: form.age ? (() => {
           const yPart = parseInt(form.age.split("/")[0]?.trim() || "0", 10) || 0;
           const mPart = parseInt(form.age.split("/")[1]?.trim() || "0", 10) || 0;
@@ -337,7 +337,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 onBlur={() => setForm((prev) => ({ ...prev, email: prev.email.trim().toLowerCase() }))}
               />
             </div>
-            <div style={{ ...styles.iconField, width: "180px" }}>
+            <div style={{ ...styles.iconField, width: "200px" }}>
               <PhoneIcon style={styles.iconFieldIcon} />
               <input
                 style={styles.iconFieldInput}
@@ -367,7 +367,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
           </div>
 
           <div style={styles.row}>
-            <div style={{ ...styles.iconField, position: "relative" }}>
+            <div style={{ ...styles.iconField, position: "relative", width: "240px" }}>
               <span onClick={() => setShowDobPicker(true)} style={{ cursor: "pointer", display: "flex" }}>
                 <CalendarIcon style={styles.iconFieldIcon} />
               </span>
@@ -411,7 +411,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               )}
             </div>
             <div style={{ fontSize: "16px", color: colors.neutral900 }}>or</div>
-            <div style={{ ...styles.iconField, width: "200px", gap: "4px" }}>
+            <div style={{ ...styles.iconField, width: "200px", gap: "4px", marginLeft: "auto" }}>
               <HashtagIcon style={styles.iconFieldIcon} />
               <input
                 className="text-input-field"
@@ -434,7 +434,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
                 input[type=number] { -moz-appearance: textfield; }
               `}</style>
-              <span style={{ fontSize: "12px", color: "#747474" }}>yr</span>
+              <span style={{ fontSize: "12px", color: "#747474" }}>Y</span>
               <span style={{ fontSize: "16px", color: "#747474" }}>/</span>
               <input
                 className="text-input-field"
@@ -452,7 +452,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   setForm({ ...form, age: `${y} / ${m}`, dob: "" });
                 }}
               />
-              <span style={{ fontSize: "12px", color: "#747474" }}>mo</span>
+              <span style={{ fontSize: "12px", color: "#747474", marginRight: "16px" }}>M</span>
             </div>
           </div>
 

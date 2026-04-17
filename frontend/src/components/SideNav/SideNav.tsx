@@ -124,7 +124,7 @@ export function SideNav({ activeTab, onTabChange, isExpanded, onToggleExpand }: 
         ))}
       </div>
 
-      <div style={{ position: 'relative', marginTop: 'auto', marginBottom: '24px' }}>
+      <div style={{ position: 'relative', marginTop: 'auto', marginBottom: '60px' }}>
         <div 
           style={styles.toggleButton} 
           onClick={onToggleExpand}

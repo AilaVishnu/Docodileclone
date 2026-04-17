@@ -301,13 +301,15 @@ export function QueueTable({
                             {apt.patientGender && apt.patientAge && (
                               <span style={styles.nameMetaDot}>|</span>
                             )}
-                            {apt.patientAge != null && apt.patientAge > 0 && (
-                              <span>
-                                {Math.floor(apt.patientAge / 12) > 0
-                                  ? `${Math.floor(apt.patientAge / 12)}Y`
-                                  : `${apt.patientAge % 12}M`}
-                              </span>
-                            )}
+                            {apt.patientAge != null && apt.patientAge > 0 && (() => {
+                              const years = Math.floor(apt.patientAge / 12);
+                              const months = apt.patientAge % 12;
+                              let label = "";
+                              if (years > 0 && months > 0) label = `${years}y ${months}m`;
+                              else if (years > 0) label = `${years}y`;
+                              else label = `${months}m`;
+                              return <span>{label}</span>;
+                            })()}
                           </span>
                         )}
                       </div>
