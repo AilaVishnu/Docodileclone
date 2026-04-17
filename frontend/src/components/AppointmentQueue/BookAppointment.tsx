@@ -53,9 +53,10 @@ type BookAppointmentProps = {
   initialDoctorId?: string;
   onBack: (successMessage?: string) => void;
   editingAppointment?: EditAppointmentData;
+  bookingKey?: number;
 };
 
-export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppointment }: BookAppointmentProps) {
+export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppointment, bookingKey }: BookAppointmentProps) {
   const parseScheduledTime = (time?: string) => {
     if (!time) return { date: new Date(), timeStr: "10:00 AM" };
     // Parse as local time (not UTC)
@@ -86,10 +87,20 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const [selectedDoctorId, setSelectedDoctorId] = useState(
     editingAppointment?.doctorId || initialDoctorId || (doctors.length > 0 ? doctors[0].id : "")
   );
-  const patientCounterRef = React.useRef(
-    parseInt(localStorage.getItem("docodile_patient_counter") || "0", 10)
-  );
-  const patientId = "T" + String(patientCounterRef.current + 1).padStart(3, "0");
+  const [claimedPatientNumber] = useState<number>(() => {
+    if (editingAppointment) return 0;
+    const claimKey = `docodile_booking_claim_${bookingKey ?? "x"}`;
+    const existing = sessionStorage.getItem(claimKey);
+    if (existing) return parseInt(existing, 10);
+    const prev = parseInt(localStorage.getItem("docodile_patient_counter") || "0", 10);
+    const next = prev + 1;
+    localStorage.setItem("docodile_patient_counter", String(next));
+    sessionStorage.setItem(claimKey, String(next));
+    return next;
+  });
+  const patientId = editingAppointment
+    ? "T---"
+    : "T" + String(claimedPatientNumber).padStart(3, "0");
   const [form, setForm] = useState({
     name: editingAppointment?.patientName || "",
     email: editingAppointment?.patientEmail || "",
@@ -252,10 +263,6 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       });
 
       if (res.ok) {
-        if (!editingAppointment) {
-          const next = patientCounterRef.current + 1;
-          localStorage.setItem("docodile_patient_counter", String(next));
-        }
         onBack(successMessage || (editingAppointment ? "Appointment updated successfully" : "Appointment booked successfully"));
       } else {
         try {

@@ -129,8 +129,8 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
     "BOOKED": 2,
     "SCHEDULED": 2,
     "COMPLETED": 3,
-    "CANCELLED": 4,
-    "NO_SHOW": 5,
+    "NO_SHOW": 4,
+    "CANCELLED": 5,
   };
 
   const activeQueue = (activeDoctorId ? appointments[activeDoctorId] || [] : [])
@@ -204,6 +204,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
             onBack?.();
           }}
           editingAppointment={editingAppointment}
+          bookingKey={bookingKey}
         />
       )}
 

@@ -24,9 +24,9 @@ const STATUS_CONFIG: Record<
   string,
   { bg: string; color: string; label: string }
 > = {
-  BOOKED: { bg: "#F3F4F6", color: "#4B4B4B", label: "Booked" },
+  BOOKED: { bg: "#F3F3DC", color: "#202020", label: "Booked" },
   WAITING: { bg: "#FFDB43", color: "#122525", label: "Waiting" },
-  SCHEDULED: { bg: "#F3F4F6", color: "#4B4B4B", label: "Booked" },
+  SCHEDULED: { bg: "#F3F3DC", color: "#202020", label: "Booked" },
   ARRIVED: { bg: "#f3f3dcff", color: "#122525", label: "Arrived" },
   IN_PROGRESS: { bg: "#ffffffff", color: "#122525", label: "In Progress" },
   COMPLETED: { bg: "#84EBB4", color: "#0D5C30", label: "Completed" },
