@@ -22,6 +22,7 @@ import { Toast } from "../Toast";
 import { API_BASE_URL } from "../../apiConfig";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
 import { ReactComponent as EditPencilIcon } from "../../assets/icons/edit-pencil.svg";
+import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check.svg";
 import { ReactComponent as ArrowIcon } from "../../assets/Arrow Right.svg";
 
 type Doctor = {
@@ -117,6 +118,16 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const [toastMessage, setToastMessage] = useState("");
   const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
   const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
+  const [isDirty, setIsDirty] = useState(false);
+  const initialRenderRef = React.useRef(true);
+  useEffect(() => {
+    const t = setTimeout(() => { initialRenderRef.current = false; }, 100);
+    return () => clearTimeout(t);
+  }, []);
+  useEffect(() => {
+    if (initialRenderRef.current) return;
+    setIsDirty(true);
+  }, [form, selectedDoctorId, dobDigits]);
 
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const hasDob = dobDigits.length > 0;
@@ -185,7 +196,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     return cleaned.length === 10;
   };
 
-  const handleBook = async (payStatus: string) => {
+  const handleBook = async (payStatus: string, successMessage?: string) => {
     if (!form.name.trim()) { setToastMessage("Please enter patient name"); return; }
     if (form.email.trim() && !isValidEmail(form.email)) { setToastMessage("Please enter a valid email address"); return; }
     if (!form.phone.trim() || form.phone.trim() === "+91") { setToastMessage("Please enter phone number"); return; }
@@ -245,7 +256,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
           const next = patientCounterRef.current + 1;
           localStorage.setItem("docodile_patient_counter", String(next));
         }
-        onBack(editingAppointment ? "Appointment updated successfully" : "Appointment booked successfully");
+        onBack(successMessage || (editingAppointment ? "Appointment updated successfully" : "Appointment booked successfully"));
       } else {
         try {
           const err = await res.json();
@@ -661,10 +672,20 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         {/* Footer Buttons */}
         <div style={styles.footerButtonGroup}>
           {editingAppointment ? (
-            <button style={styles.pillButtonPrimary} onClick={() => handleBook(editingAppointment.payStatus || "Unpaid")} disabled={submitting}>
-              <EditPencilIcon width={18} height={18} style={{ color: "white" }} />
-              {submitting ? "Saving..." : "Save Edits"}
-            </button>
+            <>
+              {isDirty && (
+                <button style={styles.pillButtonPrimary} onClick={() => handleBook(editingAppointment.payStatus || "Unpaid")} disabled={submitting}>
+                  <EditPencilIcon width={18} height={18} style={{ color: "white" }} />
+                  {submitting ? "Saving..." : "Save Edits"}
+                </button>
+              )}
+              {editingAppointment.payStatus?.toUpperCase() !== "PAID" && (
+                <button style={styles.pillButtonPayDue} onClick={() => handleBook("Paid", "Payment is done")} disabled={submitting}>
+                  <BillCheckIcon width={20} height={20} style={{ color: "white" }} />
+                  {submitting ? "Saving..." : "Pay Due"}
+                </button>
+              )}
+            </>
           ) : (
             <>
               <button style={styles.pillButtonSecondary} onClick={() => handleBook("Unpaid")} disabled={submitting}>

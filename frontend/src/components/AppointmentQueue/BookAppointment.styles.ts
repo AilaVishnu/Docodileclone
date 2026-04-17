@@ -344,5 +344,22 @@ export const styles: Record<string, CSSProperties> = {
     minWidth: "200px",
     boxSizing: "border-box",
   },
+  pillButtonPayDue: {
+    backgroundColor: colors.secondary500,
+    color: "white",
+    borderRadius: "999px",
+    padding: "10px 28px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    cursor: "pointer",
+    border: "none",
+    fontSize: "15px",
+    fontWeight: 400,
+    fontFamily: fonts.family.primary,
+    minWidth: "200px",
+    boxSizing: "border-box",
+  },
 };
 
