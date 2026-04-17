@@ -4,6 +4,7 @@ import { StatusBadge, PayBadge } from "./StatusBadge";
 import { ReactComponent as StarOutlineIcon } from "../../assets/icons/star.svg";
 import { ReactComponent as ReorderDotsIcon } from "../../assets/icons/reorder.svg";
 import { ReactComponent as RestartArrowIcon } from "../../assets/icons/restart.svg";
+import { ZeroQueue } from "./ZeroQueue";
 
 export type AppointmentStatus =
   | "WAITING"
@@ -208,6 +209,9 @@ export function QueueTable({
   menuItems,
   onStatusChange,
 }: QueueTableProps) {
+  if (appointments.length === 0) {
+    return <ZeroQueue />;
+  }
   return (
     <div style={styles.tableContainer}>
       <table style={styles.table}>
