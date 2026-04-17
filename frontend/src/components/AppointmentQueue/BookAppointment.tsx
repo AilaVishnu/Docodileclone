@@ -540,6 +540,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   }}
                   onClose={() => setShowDatePicker(false)}
                   style={{ top: "auto", bottom: "8px" }}
+                  disablePast
                 />
               </div>
             )}

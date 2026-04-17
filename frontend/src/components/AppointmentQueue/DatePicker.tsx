@@ -7,11 +7,12 @@ type DatePickerProps = {
   onSelect: (date: Date) => void;
   onClose: () => void;
   style?: React.CSSProperties;
+  disablePast?: boolean;
 };
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export function DatePicker({ selectedDate, onSelect, onClose, style }: DatePickerProps) {
+export function DatePicker({ selectedDate, onSelect, onClose, style, disablePast }: DatePickerProps) {
   const [viewDate, setViewDate] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
   const [viewMode, setViewMode] = useState<"days" | "months" | "years">("days");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -59,7 +60,13 @@ export function DatePicker({ selectedDate, onSelect, onClose, style }: DatePicke
       cells.push(<div key={`empty-${i}`} style={styles.emptyCell} />);
     }
 
+    const todayAtMidnight = new Date();
+    todayAtMidnight.setHours(0, 0, 0, 0);
+
     for (let day = 1; day <= totalDays; day++) {
+      const currentDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
+      const isPast = disablePast && currentDay < todayAtMidnight;
+
       const isSelected =
         selectedDate.getDate() === day &&
         selectedDate.getMonth() === viewDate.getMonth() &&
@@ -74,6 +81,7 @@ export function DatePicker({ selectedDate, onSelect, onClose, style }: DatePicke
         <div
           key={day}
           onClick={(e) => {
+            if (isPast) return;
             e.stopPropagation();
             onSelect(new Date(viewDate.getFullYear(), viewDate.getMonth(), day));
           }}
@@ -81,6 +89,7 @@ export function DatePicker({ selectedDate, onSelect, onClose, style }: DatePicke
             ...styles.dayCell,
             ...(isSelected ? styles.selectedDay : {}),
             ...(isToday && !isSelected ? styles.today : {}),
+            ...(isPast ? { opacity: 0.3, cursor: "not-allowed" } : {}),
           }}
         >
           {day}
