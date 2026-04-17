@@ -331,15 +331,24 @@ export function QueueTable({
                     <td style={{ ...styles.td, textAlign: "left", paddingLeft: "0px" }}>{apt.patientPhone}</td>
 
                     {/* Service */}
-                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
-                      {apt.service
-                        ? apt.service
-                          .replace(/Consultation/gi, "C")
-                          .replace(/Hydrafacial/gi, "HF")
-                          .replace(/Laser Hair Removal/gi, "LHR")
-                          .replace(/Skin Tag Removal/gi, "SKR")
-                          .replace(/Acne Scar Treatment/gi, "AST")
-                        : "—"}
+                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px", maxWidth: 0 }}>
+                      <div
+                        title={apt.service || ""}
+                        style={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {apt.service
+                          ? apt.service
+                            .replace(/Consultation/gi, "C")
+                            .replace(/Hydrafacial/gi, "HF")
+                            .replace(/Laser Hair Removal/gi, "LHR")
+                            .replace(/Skin Tag Removal/gi, "SKR")
+                            .replace(/Acne Scar Treatment/gi, "AST")
+                          : "—"}
+                      </div>
                     </td>
 
                     {/* Type */}
