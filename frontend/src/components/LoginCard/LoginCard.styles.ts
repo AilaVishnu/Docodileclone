@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { fonts, radii, spacing } from "../../styles/theme";
+import { fonts, radii, spacing, colors } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   card: {
@@ -16,7 +16,7 @@ export const styles: Record<string, CSSProperties> = {
   title: {
     fontFamily: fonts.family.secondary,
     fontSize: fonts.size.h4,
-    color: "#122525",
+    color: colors.blindBlack,
     fontWeight: fonts.weight.regular,
     margin: 0,
   },
@@ -31,7 +31,7 @@ export const styles: Record<string, CSSProperties> = {
     background: "none",
     border: "none",
     cursor: "pointer",
-    fontSize: 20,
+    fontSize: fonts.size.l,
     marginLeft: 8,
     opacity: 0.7,
   },
@@ -45,7 +45,7 @@ export const styles: Record<string, CSSProperties> = {
   footerText: {
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.xs,
-    color: "#122525",
+    color: colors.blindBlack,
     margin: 0,
     cursor: "pointer",
   },

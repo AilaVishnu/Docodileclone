@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { styles } from "./BillCard.styles";
+import { colors } from "../../styles/theme";
 import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
 import { ReactComponent as ScaleIcon } from "../../assets/icons/scale.svg";
 import { ReactComponent as PaidStamp } from "../../assets/icons/paid-stamp.svg";
@@ -91,38 +92,13 @@ export function BillCard({
           <div style={styles.fieldRow}>
             <label style={styles.label}>Subtotal</label>
             <div style={styles.fieldValue}>
-              <span>₹&nbsp;</span>
+              <span style={{ flexShrink: 0 }}>₹&nbsp;</span>
               <input
-                style={styles.input}
+                style={{ ...styles.input, minWidth: 0 }}
                 type="number"
                 value={subtotal || ""}
                 onChange={(e) => onSubtotalChange(Number(e.target.value))}
               />
-            </div>
-          </div>
-
-          <div style={styles.fieldRow}>
-            <label style={styles.label}>Tax</label>
-            <div style={styles.fieldValue}>
-              <input
-                style={{ ...styles.input, width: "40px", flex: "none" }}
-                type="number"
-                placeholder="0"
-                value={tax}
-                onChange={(e) => onTaxChange(e.target.value)}
-              />
-              <div style={{ marginLeft: "auto" }}>
-                <div style={styles.toggleGroup}>
-                  <button
-                    style={taxMode === "%" ? styles.toggleActive : styles.toggleInactive}
-                    onClick={() => handleTaxMode("%")}
-                  >%</button>
-                  <button
-                    style={taxMode === "₹" ? styles.toggleActive : styles.toggleInactive}
-                    onClick={() => handleTaxMode("₹")}
-                  >₹</button>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -161,7 +137,7 @@ export function BillCard({
           {["Cash", "Card", "UPI", "No Bill"].map((m) => (
             <label key={m} style={{
               ...styles.radioLabel,
-              color: m === "No Bill" ? "#6c8145" : styles.radioLabel.color,
+              color: m === "No Bill" ? colors.secondary600 : styles.radioLabel.color,
             }}>
               <input
                 type="radio"

@@ -4,14 +4,17 @@ import { colors, fonts, spacing } from "../../styles/theme";
 export const styles: Record<string, CSSProperties> = {
   page: {
     width: "100%",
-    height: "100vh",
-    padding: "12px 24px",
+    minHeight: "100vh",
+    // Vertical padding scales with viewport — creates equal breathing room
+    // above the heading and below the CTAs at larger screens.
+    // Horizontal stays static.
+    padding: "clamp(12px, 1.56vw, 48px) 24px",
     backgroundColor: colors.yellowTeeth,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
+    justifyContent: "center", // centers everything vertically — top space = bottom space
     boxSizing: "border-box",
-    overflow: "hidden",
   },
 
   title: {
@@ -71,8 +74,8 @@ export const styles: Record<string, CSSProperties> = {
   houseBody: {
     backgroundColor: colors.primary400,
     width: "100%",
-    padding: `${spacing.xs} ${spacing.s} ${spacing.s} ${spacing.l}`,
-    paddingBottom: spacing.s,
+    // top stays tight (roof sits flush just above). L/R/B bumped for breathing.
+    padding: `${spacing.xs} ${spacing.xl} ${spacing.xl} ${spacing.xl}`,
     boxSizing: "border-box" as const,
     display: "flex",
     flexDirection: "column" as const,
@@ -94,7 +97,10 @@ export const styles: Record<string, CSSProperties> = {
     flexDirection: "column" as const,
     alignItems: "flex-start",
     width: 105,
-    gap: 2,
+    // Window-to-name gap. Previously bumped from 2 → 8, felt slightly loose.
+    // 4 (spacing.2xs) is tighter, keeps label visually tethered to the
+    // window while the name/role stack stays readable.
+    gap: spacing["2xs"],
   },
 
   staffCard: {
@@ -121,7 +127,10 @@ export const styles: Record<string, CSSProperties> = {
 
   staffRole: {
     fontFamily: fonts.family.primary,
-    fontSize: "10px",
+    // Was caption (10) — too small and created a big gap between name & role
+    // in the hierarchy. xs (12) matches name size; hierarchy held by weight
+    // (name medium, role regular) and colour (blindBlack vs neutral700).
+    fontSize: fonts.size.xs,
     color: colors.neutral700,
     textAlign: "left" as const,
     width: "100%",

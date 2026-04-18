@@ -84,10 +84,10 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
     },
     title: {
       fontFamily: fonts.family.secondary,
-      fontSize: "24px",
+      fontSize: fonts.size.h5,
       fontWeight: 400,
       lineHeight: "34px",
-      color: "#202020",
+      color: colors.neutral900,
       margin: 0,
     }
   } as const;
@@ -147,7 +147,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>
         <div style={confirmStyles.dialog}>
           <h4 style={confirmStyles.title}>Are you sure?</h4>
-          <p style={{ margin: 0, fontSize: "13px", color: "#747474", textAlign: "center" }}>Current booking data will be discarded.</p>
+          <p style={{ margin: 0, fontSize: fonts.size.s, color: colors.neutral600, textAlign: "center" }}>Current booking data will be discarded.</p>
           <div style={confirmStyles.actions}>
             <Button variant="dangerLight" size="sm" onClick={() => setShowConfirm(false)}>
               Nope

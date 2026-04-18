@@ -68,7 +68,7 @@ export function UnderlineSelect({
             top: "calc(100% + 8px)",
             left: "50%",
             transform: "translateX(-50%)",
-            backgroundColor: "#fff",
+            backgroundColor: colors.neutral100,
             border: `1px solid ${colors.neutral300}`,
             borderRadius: "12px",
             boxShadow: "0 4px 20px rgba(0,0,0,0.1)",

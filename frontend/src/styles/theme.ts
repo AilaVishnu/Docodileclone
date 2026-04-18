@@ -1,7 +1,43 @@
+// ══════════════════════════════════════════════════════════════════════════════
+// DESIGN SYSTEM — Docodile
+// Source of truth: Figma "Docodile-Design-System" (file key stqYl0ZIBFzHgQXVidg8ne)
+//
+// RESPONSIVE RULES (applied across the app):
+//
+// Baseline viewport = 1440 × 1024. Designs should pixel-match at this size.
+// Supported range = 1280 (laptops) → 2560 (wide desktops). Below 1280 is
+// best-effort only.
+//
+// ┌────────────────────────────┬────────────────────────────────────────────┐
+// │ Surface                    │ Behavior as viewport grows                 │
+// ├────────────────────────────┼────────────────────────────────────────────┤
+// │ Sidebar                    │ Static width (68 collapsed / ~220 expanded)│
+// │ Top nav                    │ Static height; stretches horizontally      │
+// │ Page overlay (outer shell) │ FLUID padding — breathes on large screens  │
+// │ Content max-width          │ Caps at ~1440; extra space → outer gutter  │
+// │ Cards with aesthetic ID    │ Static width (e.g. Bill ticket = 312)      │
+// │ Form/input surfaces        │ minmax() — grow modestly for comfort       │
+// │ Buttons / chips            │ Static padding — density stays consistent  │
+// │ Form field heights         │ Static (40px) — grow horizontally only     │
+// │ Icon sizes                 │ Static (24px)                              │
+// │ Radii / strokes            │ Static (shape identity)                    │
+// │ Typography                 │ FLUID via clamp (see fonts.size below)     │
+// │ Illustrations              │ Expressive hex literals — NOT tokens       │
+// └────────────────────────────┴────────────────────────────────────────────┘
+//
+// When to use each spacing export:
+//   • `spacing.*`       — static inner padding/gap inside controls & cards
+//   • `fluidSpacing.*`  — outer page shell, section gutters, fluid containers
+//   • `layout.*`        — content max-widths, supported viewport floor
+//
+// Token naming: follows Figma exactly (2xs, xs, s, m, l, xl, 2xl, 3xl...).
+// Legacy aliases (xxl, primary, pill) are kept for backward compatibility.
+// ══════════════════════════════════════════════════════════════════════════════
+
 export const colors = {
   yellowTeeth: "#F9F9ED",
   skinColor: "#FFD0BF",
-  paleBlue: "ECF1FE",
+  paleBlue: "#ECF1FE",
   whiteTeeth: "#FCFCFC",
   blindBlack: "#122525",
   primary100: "#F9F9ED",
@@ -21,8 +57,10 @@ export const colors = {
   secondary600: "#6C8145",
   secondary700: "#556536",
   secondary800: "#3D4927",
-  neutralAlphaBlack: "rgba(0, 0, 0, 0.04)",
+  neutralAlphaBlack: "rgba(0, 0, 0, 0.04)",  // = Figma alpha-black-0
+  alphaBlack0: "rgba(0, 0, 0, 0.04)",
   neutral100: "#FFFFFF",
+  neutral150: "#F5F5F5",
   neutral200: "#E3E3E3",
   neutral300: "#C7C7C7",
   neutral400: "#ABABAB",
@@ -41,6 +79,10 @@ export const colors = {
   redAlpha10: "rgba(251, 55, 72, 0.1)",
   red200: "#D00416",
   red100: "#FB3748",
+  alphaWhite1: "rgba(255, 255, 255, 0.1)",
+  alphaBlack1: "rgba(0, 0, 0, 0.1)",
+  alphaBlack2: "rgba(0, 0, 0, 0.2)",
+  alphaBlack3: "rgba(0, 0, 0, 0.3)",
 
   // Global Active Theme Colors
   active: {
@@ -100,6 +142,9 @@ export const fonts = {
     secondary: "'Libertinus Serif', 'source-serif', serif",
   },
   size: {
+    // Ceilings reduced from the earlier (more aggressive) scale — at 1920
+    // the old ceilings were already mostly hit, making text feel heavy.
+    // New ceilings cap roughly one step lower so 1920 reads comfortably.
     h1: "clamp(60px, 4.17vw, 80px)",
     h2: "clamp(48px, 3.33vw, 64px)",
     h3: "clamp(40px, 2.78vw, 52px)",
@@ -107,9 +152,9 @@ export const fonts = {
     h5: "clamp(24px, 1.67vw, 32px)",
     h6: "clamp(20px, 1.39vw, 26px)",
     l: "clamp(20px, 1.39vw, 24px)",
-    m: "16px",
-    s: "14px",
-    xs: "12px",
+    m: "clamp(16px, 1.11vw, 18px)",
+    s: "clamp(14px, 0.97vw, 16px)",
+    xs: "12px", // static — xs is dense UI text, no growth needed
     caption: "10px",
   },
   lineHeight: {
@@ -120,8 +165,8 @@ export const fonts = {
     h5: "clamp(34px, 2.36vw, 42px)",
     h6: "clamp(28px, 1.94vw, 34px)",
     l: "clamp(28px, 1.94vw, 32px)",
-    m: "24px",
-    s: "20px",
+    m: "clamp(22px, 1.53vw, 26px)",
+    s: "clamp(20px, 1.39vw, 22px)",
     xs: "16px",
     caption: "14px",
   },
@@ -129,17 +174,46 @@ export const fonts = {
     regular: 400,
     medium: 500,
     semibold: 600,
+    bold: 700,
+  },
+  style: {
+    italic: "italic",
+    semiBoldItalic: "italic",
+  },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // CONTROL text — STATIC (non-fluid) font-sizes for UI chrome.
+  //
+  // RULE: Use `fonts.control.*` (not `fonts.size.*`) for anything where text
+  // sits inside a fixed-height container with fixed padding — buttons, inputs,
+  // form labels, menu items, tooltips, badges, tabs.
+  //
+  // WHY: Fluid body text scales nicely for reading. But when content scales
+  // inside a control whose padding doesn't, the proportions break — at 2560
+  // the text starts crowding the edges of a 40px-tall button and vertical
+  // centering looks off. Industry standard (Material, Apple HIG, Carbon):
+  // control text is static; only long-form content is fluid.
+  // ──────────────────────────────────────────────────────────────────────────
+  control: {
+    lg: "18px",
+    md: "16px",   // default button / input text
+    sm: "14px",   // secondary label / small button
+    xs: "12px",   // helper text / micro label
   },
 };
 
 export const radii = {
   none: 0,
+  "2xs": 2,
   xs: 4,
+  s: 6,
   m: 8,
+  l: 10,
   xl: 12,
-  xxl: 16,
-  primary: 20,
-  pill: 999,
+  "2xl": 16,
+  xxl: 16,     // legacy alias for 2xl (do not remove — in use)
+  primary: 20, // legacy (off-system, only used in LoginCard/ClinicCard)
+  pill: 999,   // legacy alias for full
   full: 999,
 };
 
@@ -151,9 +225,69 @@ export const spacing = {
   m: "16px",
   l: "20px",
   xl: "24px",
-  xxl: "32px",
+  "2xl": "32px",
+  xxl: "32px",     // legacy alias for 2xl (do not remove — in use)
+  "3xl": "40px",
+  "4xl": "48px",
+  "5xl": "56px",
+  // Off-Figma: extending the scale — ask design to formalize these.
+  "6xl": "64px",
+  "7xl": "80px",
 };
 
 export const strokes = {
-  xs: "1px"
+  xs: "1px",
+  s: "1.5px",
+  m: "2px",
+  l: "4px",
 }
+
+export const paragraphSpacing = {
+  h2: "48px",
+  h4: "44px",
+  h5: "34px",
+  l: "24px",
+  m: "22px",
+  xs: "16px",
+  caption: "14px",
+};
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Fluid spacing for responsive shells.
+// RULE: Use these ONLY for outer page padding, section gutters, or content
+// max-widths — never inside controls (buttons, inputs, chips) where static
+// spacing preserves visual density.
+// Baseline viewport = 1440px. Each clamp hits the baseline value at 1440
+// and reaches the ceiling around 2560px.
+// ──────────────────────────────────────────────────────────────────────────────
+export const fluidSpacing = {
+  // Outer page gutters (main content area padding)
+  outerY: "clamp(24px, 1.25vw, 32px)",   // vertical: 24 → 32
+  outerX: "clamp(40px, 2.19vw, 56px)",   // horizontal: 40 → 56
+
+  // Section / card-to-card gutters (when stacking or grid-gapping)
+  sectionGap: "clamp(16px, 1.11vw, 24px)",
+
+  // Card outer horizontal padding (cards inside a viewport-scaled container)
+  cardX: "clamp(16px, 1.11vw, 24px)",
+};
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Layout rules — max-widths and breakpoints.
+// RULE: Apps are designed at 1440. Cap content at ~1440 and center.
+// ──────────────────────────────────────────────────────────────────────────────
+export const layout = {
+  // Content max-width. Above this viewport, extra space becomes outer gutter.
+  contentMaxWidth: "1440px",
+
+  // Minimum supported viewport. Below this, layout may degrade.
+  minViewport: "1280px",
+
+  // Common breakpoints (for future media queries)
+  breakpoints: {
+    laptop: "1280px",
+    desktop: "1440px",
+    wide: "1920px",
+    ultraWide: "2560px",
+  },
+};

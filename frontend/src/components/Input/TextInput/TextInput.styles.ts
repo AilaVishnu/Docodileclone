@@ -12,7 +12,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   icon: {
-    fontSize: 18,
+    fontSize: fonts.size.m,
     lineHeight: 1,
     color: colors.blindBlack,
     opacity: 0.8,

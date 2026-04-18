@@ -5,9 +5,9 @@ export const styles: Record<string, CSSProperties> = {
   card: {
     display: "flex",
     flexDirection: "column",
-    gap: spacing.xs,
+    gap: spacing.s,     // was spacing.xs — more breath between inputs
     borderRadius: radii.m,
-    padding: spacing.s,
+    padding: spacing.l, // was spacing.s — more generous interior
     backgroundColor: colors.primary100,
     minWidth: "25vw",
     flex: 1,

@@ -12,7 +12,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   container: {
-    backgroundColor: "white",
+    backgroundColor: colors.neutral100,
     width: "240px",
     padding: "16px",
     borderRadius: "20px",
@@ -28,7 +28,7 @@ export const styles: Record<string, CSSProperties> = {
 
   title: {
     margin: 0,
-    fontSize: "16px",
+    fontSize: fonts.size.m,
     fontWeight: 600,
     color: colors.neutral900,
   },
@@ -48,7 +48,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   unitHeader: {
-    fontSize: "12px",
+    fontSize: fonts.size.xs,
     color: colors.neutral500,
     fontWeight: 500,
   },
@@ -72,17 +72,17 @@ export const styles: Record<string, CSSProperties> = {
     textAlign: "center",
     cursor: "pointer",
     borderRadius: "6px",
-    fontSize: "14px",
+    fontSize: fonts.size.s,
     color: colors.neutral700,
   },
 
   selectedItem: {
     backgroundColor: colors.active.shade600,
-    color: "white",
+    color: colors.neutral100,
   },
 
   separator: {
-    fontSize: "20px",
+    fontSize: fonts.size.l,
     fontWeight: 600,
     paddingTop: "20px",
   },
@@ -98,7 +98,7 @@ export const styles: Record<string, CSSProperties> = {
   toggleBtn: {
     flex: 1,
     padding: "6px 12px",
-    fontSize: "14px",
+    fontSize: fonts.size.s,
     fontWeight: 600,
     border: "none",
     borderRadius: "6px",
@@ -108,18 +108,18 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   activeToggleBtn: {
-    backgroundColor: "white",
+    backgroundColor: colors.neutral100,
     color: colors.neutral900,
     boxShadow: "0px 1px 3px rgba(0,0,0,0.1)",
   },
 
   doneButton: {
     backgroundColor: colors.neutral900,
-    color: "white",
+    color: colors.neutral100,
     border: "none",
     borderRadius: "999px",
     padding: "10px",
-    fontSize: "15px",
+    fontSize: fonts.size.m,
     fontWeight: 500,
     cursor: "pointer",
     width: "100%",

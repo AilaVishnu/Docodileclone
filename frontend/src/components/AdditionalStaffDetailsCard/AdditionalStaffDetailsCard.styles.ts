@@ -5,9 +5,9 @@ export const styles: Record<string, CSSProperties> = {
   card: {
     display: "flex",
     flexDirection: "column",
-    gap: spacing.s,
+    gap: spacing.m,     // was spacing.s — breathing between sections
     borderRadius: radii.m,
-    padding: spacing.s,
+    padding: spacing.l, // was spacing.s — more generous interior
     backgroundColor: colors.primary100,
     minWidth: "25vw",
   },
@@ -15,7 +15,7 @@ export const styles: Record<string, CSSProperties> = {
   section: {
     display: "flex",
     flexDirection: "column",
-    gap: spacing.s,
+    gap: spacing.m, // was spacing.s — label-to-input breathing
   },
 
   sectionTitle: {
@@ -81,6 +81,26 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.xs,
     color: colors.blindBlack,
     opacity: 0.5,
-    marginTop: 4,
+    // Sits immediately under the Reg. No. input. The parent section uses
+    // gap: spacing.m which spreads the field and the hint too far apart —
+    // pull the hint up so it reads as a caption of the field.
+    marginTop: -8,
     },
+
+  // "Other" role custom text input — shown beneath the radio group when
+  // user picks the "Other" option in the role card.
+  otherRoleInput: {
+    marginLeft: 28, // align with radio labels (icon-column offset)
+    marginTop: spacing.xs,
+    padding: `${spacing.xs} ${spacing.s}`,
+    borderRadius: radii.m,
+    border: `1px solid ${colors.neutral300}`,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.md,
+    color: colors.blindBlack,
+    backgroundColor: colors.neutral100,
+    outline: "none",
+    width: "60%",
+    maxWidth: 280,
+  },
 };

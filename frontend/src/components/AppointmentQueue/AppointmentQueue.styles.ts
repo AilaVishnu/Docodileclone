@@ -17,7 +17,7 @@ export const styles: Record<string, CSSProperties> = {
 
   title: {
     fontFamily: fonts.family.secondary,
-    fontSize: "24px",
+    fontSize: fonts.size.h5,
     fontWeight: 400,
     lineHeight: "34px",
     color: colors.neutral900,
@@ -43,9 +43,9 @@ export const styles: Record<string, CSSProperties> = {
   th: {
     padding: "12px 28px",
     borderBottom: `1px solid ${colors.primary300}`,
-    color: "rgba(0, 0, 0, 0.3)",
+    color: colors.alphaBlack3,
     fontWeight: 400,
-    fontSize: "14px",
+    fontSize: fonts.size.s,
     lineHeight: "20px",
     letterSpacing: 0,
   },
@@ -57,7 +57,7 @@ export const styles: Record<string, CSSProperties> = {
 
   td: {
     padding: "14px 28px",
-    fontSize: "14px",
+    fontSize: fonts.size.s,
     color: colors.blindBlack,
     verticalAlign: "middle",
     fontWeight: 400,
@@ -67,7 +67,7 @@ export const styles: Record<string, CSSProperties> = {
   // Serial number cell
   serialCell: {
     padding: "14px 8px",
-    fontSize: "14px",
+    fontSize: fonts.size.s,
     color: colors.neutral900,
     verticalAlign: "middle",
     fontWeight: 400,
@@ -87,7 +87,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   namePrimary: {
-    fontSize: "14px",
+    fontSize: fonts.size.s,
     fontWeight: 400,
     color: colors.blindBlack,
     lineHeight: "1.3",
@@ -95,7 +95,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   nameMeta: {
-    fontSize: "12px",
+    fontSize: fonts.size.xs,
     color: colors.neutral500,
     fontWeight: 400,
     display: "inline-flex",
@@ -105,14 +105,14 @@ export const styles: Record<string, CSSProperties> = {
 
   nameMetaDot: {
     color: colors.neutral300,
-    fontSize: "12px",
+    fontSize: fonts.size.xs,
   },
 
   // Status badge - filled pill
   statusBadge: {
     padding: "5px 14px",
     borderRadius: "999px",
-    fontSize: "12px",
+    fontSize: fonts.size.xs,
     fontWeight: 600,
     display: "inline-block",
     letterSpacing: "0.01em",
@@ -128,7 +128,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     gap: "5px",
-    fontSize: "14px",
+    fontSize: fonts.size.s,
     fontWeight: 600,
   },
 
@@ -139,7 +139,7 @@ export const styles: Record<string, CSSProperties> = {
     justifyContent: "flex-start",
     gap: "4px",
     width: "70px",
-    fontSize: "12px",
+    fontSize: fonts.size.xs,
     lineHeight: "16px",
     fontWeight: 400,
     color: colors.neutral900,
@@ -148,12 +148,12 @@ export const styles: Record<string, CSSProperties> = {
   // Time
   time: {
     fontWeight: 400,
-    fontSize: "14px",
+    fontSize: fonts.size.s,
     color: colors.neutral800,
   },
 
   walkinBadge: {
-    fontSize: "10px",
+    fontSize: fonts.size.caption,
     padding: "2px 6px",
     borderRadius: "4px",
     backgroundColor: colors.secondary100,
@@ -184,7 +184,7 @@ export const styles: Record<string, CSSProperties> = {
     position: "absolute" as const,
     left: "100%",
     top: 0,
-    backgroundColor: "#fff",
+    backgroundColor: colors.neutral100,
     borderRadius: "12px",
     boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
     zIndex: 100,
@@ -205,21 +205,23 @@ export const styles: Record<string, CSSProperties> = {
 };
 
 // ── Status badge colours ────────────────────────────────────────────────────
+// Figma design system has no blue/rose/slate — mapping to nearest theme tokens
+// to keep one brand palette. Mirrors StatusBadge.tsx STATUS_CONFIG.
 export const getStatusStyle = (status: string): CSSProperties => {
   switch (status?.toUpperCase()) {
     case "WAITING":
-      // Figma: amber/yellow filled pill
-      return { backgroundColor: "#FFDB43", color: "#7A5800" };
+      return { backgroundColor: colors.yellow100, color: colors.blindBlack };
     case "IN_PROGRESS":
-      return { backgroundColor: "#DBEAFE", color: "#1D4ED8" };
+      // no blue in design system — use primary (warm) like BOOKED in StatusBadge
+      return { backgroundColor: colors.primary200, color: colors.neutral900 };
     case "COMPLETED":
-      return { backgroundColor: "#DCFCE7", color: "#166534" };
+      return { backgroundColor: colors.green100, color: colors.secondary800 };
     case "NO_SHOW":
-      return { backgroundColor: "#F3F4F6", color: "#6B7280" };
+      return { backgroundColor: colors.neutral150, color: colors.neutral600 };
     case "CANCELLED":
-      return { backgroundColor: "#FFE4E6", color: "#9F1239" };
+      return { backgroundColor: colors.redAlpha10, color: colors.red200 };
     default:
-      return { backgroundColor: "#F3F4F6", color: "#6B7280" };
+      return { backgroundColor: colors.neutral150, color: colors.neutral600 };
   }
 };
 
@@ -238,9 +240,9 @@ export const getStatusLabel = (status: string): string => {
 // ── Pay status colours ──────────────────────────────────────────────────────
 export const getPayStyle = (status: string): CSSProperties => {
   switch (status?.toUpperCase()) {
-    case "PAID":    return { color: "#16A34A" };  // green
-    case "DUE":     return { color: "#D97706" };  // amber – matches ⚠ warning
-    case "NO PAY":  return { color: "#9CA3AF" };  // muted
-    default:        return { color: "#9CA3AF" };
+    case "PAID":    return { color: colors.green200 };   // brand green
+    case "DUE":     return { color: colors.primary700 }; // warm warning — no amber in system
+    case "NO PAY":  return { color: colors.neutral400 };
+    default:        return { color: colors.neutral400 };
   }
 };

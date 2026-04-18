@@ -6,7 +6,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.s,
+    marginBottom: spacing.m, // was spacing.s
   },
 
   title: {
@@ -20,20 +20,20 @@ export const styles: Record<string, CSSProperties> = {
   closeButton: {
     background: "none",
     border: "none",
-    fontSize: 18,
+    fontSize: fonts.size.m,
     cursor: "pointer",
     color: colors.blindBlack,
   },
 
   topSection: {
     display: "flex",
-    gap: spacing.s,
-    marginBottom: spacing.s,
+    gap: spacing.m,         // was spacing.s — between illustration and details
+    marginBottom: spacing.m, // was spacing.s — before Doctor fields card
     alignItems: "stretch",
   },
 
   footer: {
-    marginTop: spacing.s,
+    marginTop: spacing.m, // was spacing.s — between last card and footer
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",

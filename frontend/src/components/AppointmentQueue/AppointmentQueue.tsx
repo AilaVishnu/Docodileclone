@@ -307,7 +307,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
           </div>
         </>
       ) : (
-        <div style={{ padding: "48px", textAlign: "center", backgroundColor: "white", borderRadius: "24px" }}>
+        <div style={{ padding: "48px", textAlign: "center", backgroundColor: colors.neutral100, borderRadius: "24px" }}>
           No doctors found for this clinic. Please add staff in Clinic Setup.
         </div>
       )}

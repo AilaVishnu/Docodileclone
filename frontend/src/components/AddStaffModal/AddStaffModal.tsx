@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "../Modal";
+import { Card } from "../Card";
 import { StaffDetailsCard } from "../StaffDetailsCard";
 import { Button } from "../Button";
 import { styles, confirmStyles } from "./AddStaffModal.styles";
 import { AdditionalStaffDetailsCard } from "../AdditionalStaffDetailsCard";
+import { styles as roleStyles } from "../AdditionalStaffDetailsCard/AdditionalStaffDetailsCard.styles";
 import { StaffIllustration } from "./StaffIllustration";
+import { ReactComponent as RoleIcon } from "../../assets/Mask Happly.svg";
+
+// Standard role options that appear as radios. "Other" is a separate entry
+// that reveals a free-text input for custom roles.
+const STANDARD_ROLES = ["Front Desk", "Doctor", "Nurse", "Pharmacy", "Lab"];
 
 
 export type StaffData = {
@@ -41,6 +48,9 @@ export function AddStaffModal({
   const [gender, setGender] = useState<"male" | "female" | "other" | "">("");
 
   const [role, setRole] = useState<string>("Doctor");
+  // "Other" radio is selected → free text input shown. Role value holds the
+  // custom text the user types (or "" while input is empty).
+  const [isOtherRole, setIsOtherRole] = useState(false);
   const [speciality, setSpeciality] = useState("");
   const [registrationNo, setRegistrationNo] = useState("");
 
@@ -58,6 +68,10 @@ export function AddStaffModal({
         setPhone(initialData.phone);
         setGender(initialData.gender);
         setRole(initialData.role);
+        // Detect custom (Other) role — if the saved role isn't a standard one
+        // and isn't empty, the "Other" radio should be pre-selected with the
+        // custom text already in the input.
+        setIsOtherRole(!!initialData.role && !STANDARD_ROLES.includes(initialData.role));
         setSpeciality(initialData.speciality);
         setRegistrationNo(initialData.registrationNo);
       } else {
@@ -67,6 +81,7 @@ export function AddStaffModal({
         setPhone("");
         setGender("");
         setRole("Doctor");
+        setIsOtherRole(false);
         setSpeciality("");
         setRegistrationNo("");
       }
@@ -94,12 +109,17 @@ export function AddStaffModal({
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const isEmailValid = emailRegex.test(email.trim());
 
+    // Role is valid if either a standard role is picked, or (Other is picked
+    // AND a custom role name has been typed). An "Other" radio selection
+    // with empty text is invalid.
+    const roleInvalid = isOtherRole ? !role.trim() : !role;
+
     const newErrors: Record<string, boolean> = {
       name: !name.trim() || name.trim().toLowerCase() === "dr.",
       email: !email.trim() || !isEmailValid,
       phone: !phone.trim() || phone.length < 10,
       gender: !gender,
-      role: !role,
+      role: roleInvalid,
     };
 
     if (role === "Doctor") {
@@ -146,6 +166,63 @@ export function AddStaffModal({
         </button>
       </div>
 
+      {/* Role section — first after the heading. Drives everything else. */}
+      <Card style={{ ...roleStyles.card, marginBottom: 16 }}>
+        <div style={roleStyles.section}>
+          <div style={roleStyles.sectionTitle}>
+            <RoleIcon />
+            <span>Role</span>
+          </div>
+
+          <div
+            style={{
+              ...roleStyles.radioGroup,
+              ...(errors.role ? { border: "1px solid red", borderRadius: "8px", padding: "8px" } : {}),
+            }}
+          >
+            {STANDARD_ROLES.map((r) => (
+              <label key={r} style={roleStyles.radioLabel}>
+                <input
+                  type="radio"
+                  name="role"
+                  checked={!isOtherRole && role === r}
+                  onChange={() => {
+                    setIsOtherRole(false);
+                    setRole(r);
+                  }}
+                  style={roleStyles.radioInput}
+                />
+                {r}
+              </label>
+            ))}
+            <label style={roleStyles.radioLabel}>
+              <input
+                type="radio"
+                name="role"
+                checked={isOtherRole}
+                onChange={() => {
+                  setIsOtherRole(true);
+                  setRole(""); // clear so the user can type their custom role
+                }}
+                style={roleStyles.radioInput}
+              />
+              Other
+            </label>
+          </div>
+
+          {isOtherRole && (
+            <input
+              type="text"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              placeholder="Enter role"
+              style={roleStyles.otherRoleInput}
+              autoFocus
+            />
+          )}
+        </div>
+      </Card>
+
       {/* Top section: Illustration + Staff details */}
       <div style={styles.topSection}>
         <StaffIllustration role={role} gender={gender} />
@@ -163,16 +240,16 @@ export function AddStaffModal({
         />
       </div>
 
-      {/* Bottom section */}
-      <AdditionalStaffDetailsCard
-        role={role}
-        setRole={setRole}
-        speciality={speciality}
-        setSpeciality={setSpeciality}
-        registrationNo={registrationNo}
-        setRegistrationNo={setRegistrationNo}
-        errors={errors}
-      />
+      {/* Doctor-specific fields — only shown when role is Doctor. */}
+      {role === "Doctor" && (
+        <AdditionalStaffDetailsCard
+          speciality={speciality}
+          setSpeciality={setSpeciality}
+          registrationNo={registrationNo}
+          setRegistrationNo={setRegistrationNo}
+          errors={errors}
+        />
+      )}
 
       {/* Footer */}
       <div style={styles.footer}>

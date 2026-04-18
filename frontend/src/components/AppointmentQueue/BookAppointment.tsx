@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { styles } from "./BookAppointment.styles";
-import { colors } from "../../styles/theme";
+import { colors, fonts, spacing } from "../../styles/theme";
 import { DatePicker } from "./DatePicker";
 import { TimePicker } from "./TimePicker";
 import {
@@ -322,7 +322,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   value={selectedDoctorId}
                   onChange={(val) => setSelectedDoctorId(val)}
                   placeholder="Select Doctor"
-                  fontSize="24px"
+                  fontSize={fonts.size.h5}
                 />
               </>
             )}
@@ -333,7 +333,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       <div style={styles.grid}>
         {/* Patient ID Card */}
         <Card style={{ ...styles.card, ...styles.patientIdCard }}>
-          <span style={{ fontSize: "14px", color: colors.neutral500 }}>Patient ID</span>
+          <span style={{ fontSize: fonts.size.s, color: colors.neutral500 }}>Patient ID</span>
           <h1 style={styles.patientIdText}>{patientId}</h1>
         </Card>
 
@@ -350,7 +350,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
           </div>
 
           <div style={styles.row}>
-            <div style={styles.iconField}>
+            <div style={{ ...styles.iconField, flex: 1, minWidth: 0 }}>
               <LetterIcon style={styles.iconFieldIcon} />
               <input
                 style={styles.iconFieldInput}
@@ -361,7 +361,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 onBlur={() => setForm((prev) => ({ ...prev, email: prev.email.trim().toLowerCase() }))}
               />
             </div>
-            <div style={{ ...styles.iconField, width: "200px" }}>
+            <div style={{ ...styles.iconField, flex: 1, minWidth: 0 }}>
               <PhoneIcon style={styles.iconFieldIcon} />
               <input
                 style={styles.iconFieldInput}
@@ -391,10 +391,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
           </div>
 
           <div style={styles.row}>
-            <div style={{ ...styles.iconField, position: "relative", width: "240px" }}>
+            <div style={{ ...styles.iconField, position: "relative", flex: 1, minWidth: 0 }}>
               <span onClick={() => setShowDobPicker(true)} style={{ cursor: "pointer", display: "flex" }}>
                 <CalendarIcon style={styles.iconFieldIcon} />
               </span>
+              <span style={{ ...styles.inlineFieldLabel, opacity: hasManualAge ? 0.4 : 1 }}>DOB</span>
               <input
                 style={{ ...styles.iconFieldInput, opacity: hasManualAge ? 0.4 : 1 }}
                 type="text"
@@ -434,12 +435,27 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 </div>
               )}
             </div>
-            <div style={{ fontSize: "16px", color: colors.neutral900 }}>or</div>
-            <div style={{ ...styles.iconField, width: "200px", gap: "4px", marginLeft: "auto" }}>
-              <HashtagIcon style={styles.iconFieldIcon} />
+            <div style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>or</div>
+            <div
+              style={{
+                ...styles.iconField,
+                flex: 1,
+                minWidth: 0,
+                gap: spacing.xs,
+                justifyContent: "flex-start",
+              }}
+            >
+              {/*
+                Age input — single field for years. The two-input "__ years
+                __ months" layout was confusing; if the clinic needs precise
+                age (e.g. for a 6-month-old), they enter the DOB and we
+                compute Y/M from it automatically. Most adult-age entry is
+                just a whole number.
+              */}
+              <span style={{ ...styles.inlineFieldLabel, opacity: hasDob ? 0.4 : 1 }}>Age</span>
               <input
                 className="text-input-field"
-                style={{ ...styles.iconFieldInput, width: "28px", textAlign: "center", MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
+                style={{ ...styles.iconFieldInput, flex: 1, minWidth: 0, MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
                 placeholder="0"
                 type="number"
                 min="0"
@@ -448,9 +464,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 value={form.age.split("/")[0]?.trim() || ""}
                 onChange={(e) => {
                   const y = e.target.value;
-                  const m = form.age.split("/")[1]?.trim() || "";
                   setDobDigits("");
-                  setForm({ ...form, age: `${y} / ${m}`, dob: "" });
+                  // Keep the "Y / M" storage shape for backward compatibility
+                  // with anywhere else that reads form.age; months defaults to 0
+                  // when entered manually.
+                  setForm({ ...form, age: y ? `${y} / 0` : "", dob: "" });
                 }}
               />
               <style>{`
@@ -458,25 +476,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
                 input[type=number] { -moz-appearance: textfield; }
               `}</style>
-              <span style={{ fontSize: "12px", color: "#747474" }}>Y</span>
-              <span style={{ fontSize: "16px", color: "#747474" }}>/</span>
-              <input
-                className="text-input-field"
-                style={{ ...styles.iconFieldInput, width: "28px", textAlign: "center", MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
-                placeholder="0"
-                type="number"
-                min="0"
-                max="11"
-                disabled={hasDob}
-                value={form.age.split("/")[1]?.trim() || ""}
-                onChange={(e) => {
-                  const m = e.target.value;
-                  const y = form.age.split("/")[0]?.trim() || "";
-                  setDobDigits("");
-                  setForm({ ...form, age: `${y} / ${m}`, dob: "" });
-                }}
-              />
-              <span style={{ fontSize: "12px", color: "#747474", marginRight: "16px" }}>M</span>
+              <span style={{ ...styles.inlineUnitLabel, opacity: hasDob ? 0.4 : 1 }}>years</span>
             </div>
           </div>
 
@@ -551,7 +551,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               onClick={() => setShowDatePicker(true)}
             >
               <CalendarIcon style={styles.iconFieldIcon} />
-              <span style={{ fontSize: "16px", color: form.date ? colors.neutral900 : colors.neutral500 }}>
+              <span style={{ fontSize: fonts.size.m, color: form.date ? colors.neutral900 : colors.neutral500 }}>
                 {formatDate(form.date) || "Select Date"}
               </span>
             </div>
@@ -577,7 +577,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               onClick={() => setShowTimePicker(true)}
             >
               <ClockIcon style={styles.iconFieldIcon} />
-              <span style={{ fontSize: "16px", color: form.time ? colors.neutral900 : colors.neutral500 }}>
+              <span style={{ fontSize: fonts.size.m, color: form.time ? colors.neutral900 : colors.neutral500 }}>
                 {form.time || "Select Time"}
               </span>
             </div>
@@ -699,13 +699,13 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             <>
               {isDirty && (
                 <button style={styles.pillButtonPrimary} onClick={() => handleBook(editingAppointment.payStatus || "Unpaid")} disabled={submitting}>
-                  <EditPencilIcon width={18} height={18} style={{ color: "white" }} />
+                  <EditPencilIcon width={18} height={18} style={{ color: colors.neutral100 }} />
                   {submitting ? "Saving..." : "Save Edits"}
                 </button>
               )}
               {editingAppointment.payStatus?.toUpperCase() !== "PAID" && (
                 <button style={styles.pillButtonPayDue} onClick={() => handleBook("Paid", "Payment is done")} disabled={submitting}>
-                  <BillCheckIcon width={20} height={20} style={{ color: "white" }} />
+                  <BillCheckIcon width={20} height={20} style={{ color: colors.neutral100 }} />
                   {submitting ? "Saving..." : "Pay Due"}
                 </button>
               )}
@@ -717,7 +717,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 {submitting ? "Booking..." : "Book Now Pay Later"}
               </button>
               <button style={styles.pillButtonPrimary} onClick={() => handleBook("Paid")} disabled={submitting}>
-                <CalendarIcon style={{ width: "20px", height: "20px", color: "white" }} />
+                <CalendarIcon style={{ width: "20px", height: "20px", color: colors.neutral100 }} />
                 {submitting ? "Booking..." : "Pay & Book"}
               </button>
             </>

@@ -35,7 +35,7 @@ export const styles: Record<string, CSSProperties> = {
     background: "none",
     border: "none",
     cursor: "pointer",
-    fontSize: 16,
+    fontSize: fonts.size.m,
     color: colors.neutral500,
     padding: 0,
     marginLeft: spacing.xs,

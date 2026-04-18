@@ -38,6 +38,29 @@
   box-sizing: border-box;
 }
 
+/* Tint all radios and checkboxes black app-wide (was browser-default blue). */
+input[type="radio"],
+input[type="checkbox"] {
+  accent-color: #202020;
+}
+
+/* Single grey for all placeholders across the app — matches icon + label
+   grey used in the input-field styles (neutral500). Browser defaults vary,
+   so we hit every vendor prefix. */
+input::placeholder,
+textarea::placeholder,
+input::-webkit-input-placeholder,
+input::-moz-placeholder,
+input:-ms-input-placeholder,
+input::-ms-input-placeholder,
+textarea::-webkit-input-placeholder,
+textarea::-moz-placeholder,
+textarea:-ms-input-placeholder,
+textarea::-ms-input-placeholder {
+  color: #8F8F8F !important; /* colors.neutral500 */
+  opacity: 1;
+}
+
 body {
   margin: 0;
   font-family: 'Inter', system-ui, sans-serif;

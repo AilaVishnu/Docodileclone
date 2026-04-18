@@ -16,27 +16,34 @@ export const styles: Record<string, CSSProperties> = {
     cursor: "pointer",
     outline: "none",
     transition: "background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease",
+    // Pill buttons should never wrap their label — if content is too long for
+    // the container, button will overflow visibly (fix container) rather than
+    // silently break onto two lines.
+    whiteSpace: "nowrap",
+    flexShrink: 0,
   },
 
+  // Button text uses STATIC control sizes (fonts.control.*) so proportions
+  // don't drift at larger viewports. See theme.ts `fonts.control` comment.
   smIcon: {
-    fontSize: fonts.size.m,
+    fontSize: fonts.control.md,
     height: 40,
     padding: spacing.xs
   },
 
   mdIcon: {
-    fontSize: fonts.size.m,
+    fontSize: fonts.control.md,
     height: 42,
     padding: spacing.xs
   },
 
   sm: {
-    fontSize: fonts.size.m,
+    fontSize: fonts.control.md,
     height: 40
   },
 
   md: {
-    fontSize: fonts.size.m,
+    fontSize: fonts.control.md,
     height: 42,
   },
 };

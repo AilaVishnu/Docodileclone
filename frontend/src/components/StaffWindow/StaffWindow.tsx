@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { styles, windowColors } from "./StaffWindow.styles";
 
 type StaffWindowProps = {
@@ -14,14 +14,20 @@ export function StaffWindow({
   onClick,
   dashed = false,
 }: StaffWindowProps) {
+  const [hovered, setHovered] = useState(false);
   const color = windowColors[colorIndex % windowColors.length];
 
   const windowStyle: React.CSSProperties = dashed
-    ? { ...styles.window, ...styles.dashedWindow }
-    : { ...styles.window, backgroundColor: color };
+    ? { ...styles.window, ...styles.dashedWindow, ...(hovered ? styles.dashedWindowHover : {}) }
+    : { ...styles.window, backgroundColor: color, ...(hovered ? styles.windowHover : {}) };
 
   return (
-    <div style={windowStyle} onClick={onClick}>
+    <div
+      style={windowStyle}
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       {children}
     </div>
   );

@@ -58,7 +58,7 @@ export function SideNav({ activeTab, onTabChange, isExpanded, onToggleExpand }: 
       position: 'relative' as const,
     },
     logoText: {
-      fontSize: '24px',
+      fontSize: fonts.size.h5,
       fontWeight: 500,
       color: '#202020',
       fontFamily: fonts.family.secondary,
