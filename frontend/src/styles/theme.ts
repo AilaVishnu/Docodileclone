@@ -141,32 +141,36 @@ export const fonts = {
     primary: "'Inter', sans-serif",
     secondary: "'Libertinus Serif', 'source-serif', serif",
   },
+  // ─── "Universal" fluid scale ─────────────────────────────────────────
+  // Rates chosen so min is held across the full 1280–1920 CSS viewport
+  // range. Formula: rate_vw = min_px / 19.2. At viewport ≤ 1920 the clamp
+  // returns MIN (design baseline). Between 1920 and ~2300–2400 it grows to
+  // the ceiling. Effect: 1280/1440/1536/1920 all render identical to the
+  // Figma design; 2560 users get a mild scale-up, nothing dramatic.
   size: {
-    // Ceilings reduced from the earlier (more aggressive) scale — at 1920
-    // the old ceilings were already mostly hit, making text feel heavy.
-    // New ceilings cap roughly one step lower so 1920 reads comfortably.
-    h1: "clamp(60px, 4.17vw, 80px)",
-    h2: "clamp(48px, 3.33vw, 64px)",
-    h3: "clamp(40px, 2.78vw, 52px)",
-    h4: "clamp(32px, 2.22vw, 42px)",
-    h5: "clamp(24px, 1.67vw, 32px)",
-    h6: "clamp(20px, 1.39vw, 26px)",
-    l: "clamp(20px, 1.39vw, 24px)",
-    m: "clamp(16px, 1.11vw, 18px)",
-    s: "clamp(14px, 0.97vw, 16px)",
-    xs: "12px", // static — xs is dense UI text, no growth needed
+    h1: "clamp(60px, 3.125vw, 80px)",  // 60 up to 1920, 80 at 2560
+    h2: "clamp(48px, 2.5vw, 64px)",    // 48 up to 1920, 64 at 2560
+    h3: "clamp(40px, 2.08vw, 52px)",   // 40 up to 1920, 52 at 2500
+    h4: "clamp(32px, 1.67vw, 42px)",   // 32 up to 1920, 42 at 2515
+    h5: "clamp(24px, 1.25vw, 30px)",   // 24 up to 1920, 30 at 2400
+    h6: "clamp(20px, 1.04vw, 24px)",   // 20 up to 1920, 24 at 2308
+    l:  "clamp(20px, 1.04vw, 24px)",
+    m:  "clamp(16px, 0.83vw, 18px)",   // 16 up to 1920, 18 at 2170
+    s:  "clamp(14px, 0.73vw, 16px)",   // 14 up to 1920, 16 at 2192
+    xs: "12px",
     caption: "10px",
   },
   lineHeight: {
-    h1: "clamp(72px, 5vw, 96px)",
-    h2: "clamp(56px, 3.89vw, 76px)",
-    h3: "clamp(48px, 3.33vw, 64px)",
-    h4: "clamp(44px, 3.06vw, 56px)",
-    h5: "clamp(34px, 2.36vw, 42px)",
-    h6: "clamp(28px, 1.94vw, 34px)",
-    l: "clamp(28px, 1.94vw, 32px)",
-    m: "clamp(22px, 1.53vw, 26px)",
-    s: "clamp(20px, 1.39vw, 22px)",
+    // Same pattern — min held to 1920, modest ceiling above.
+    h1: "clamp(72px, 3.75vw, 96px)",
+    h2: "clamp(56px, 2.92vw, 76px)",
+    h3: "clamp(48px, 2.5vw, 64px)",
+    h4: "clamp(44px, 2.29vw, 56px)",
+    h5: "clamp(34px, 1.77vw, 42px)",
+    h6: "clamp(28px, 1.46vw, 34px)",
+    l:  "clamp(28px, 1.46vw, 32px)",
+    m:  "clamp(22px, 1.15vw, 26px)",
+    s:  "clamp(20px, 1.04vw, 22px)",
     xs: "16px",
     caption: "14px",
   },
