@@ -87,20 +87,16 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const [selectedDoctorId, setSelectedDoctorId] = useState(
     editingAppointment?.doctorId || initialDoctorId || (doctors.length > 0 ? doctors[0].id : "")
   );
-  const [claimedPatientNumber] = useState<number>(() => {
-    if (editingAppointment) return 0;
-    const claimKey = `docodile_booking_claim_${bookingKey ?? "x"}`;
-    const existing = sessionStorage.getItem(claimKey);
-    if (existing) return parseInt(existing, 10);
-    const prev = parseInt(localStorage.getItem("docodile_patient_counter") || "0", 10);
-    const next = prev + 1;
-    localStorage.setItem("docodile_patient_counter", String(next));
-    sessionStorage.setItem(claimKey, String(next));
-    return next;
-  });
+  const currentCounter = parseInt(localStorage.getItem("docodile_patient_counter") || "0", 10);
+  const patientMap: Record<string, number> = JSON.parse(
+    localStorage.getItem("docodile_patient_map") || "{}"
+  );
+  const editingPatientNumber = editingAppointment ? patientMap[editingAppointment.id] : undefined;
   const patientId = editingAppointment
-    ? "T---"
-    : "T" + String(claimedPatientNumber).padStart(3, "0");
+    ? editingPatientNumber
+      ? "T" + String(editingPatientNumber).padStart(3, "0")
+      : "T---"
+    : "T" + String(currentCounter + 1).padStart(3, "0");
   const [form, setForm] = useState({
     name: editingAppointment?.patientName || "",
     email: editingAppointment?.patientEmail || "",
@@ -263,6 +259,19 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       });
 
       if (res.ok) {
+        if (!editingAppointment) {
+          const prev = parseInt(localStorage.getItem("docodile_patient_counter") || "0", 10);
+          const assigned = prev + 1;
+          localStorage.setItem("docodile_patient_counter", String(assigned));
+          try {
+            const savedApt = await res.clone().json();
+            if (savedApt?.id) {
+              const map = JSON.parse(localStorage.getItem("docodile_patient_map") || "{}");
+              map[savedApt.id] = assigned;
+              localStorage.setItem("docodile_patient_map", JSON.stringify(map));
+            }
+          } catch {}
+        }
         onBack(successMessage || (editingAppointment ? "Appointment updated successfully" : "Appointment booked successfully"));
       } else {
         try {
