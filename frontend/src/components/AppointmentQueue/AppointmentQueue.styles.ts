@@ -58,7 +58,7 @@ export const styles: Record<string, CSSProperties> = {
   td: {
     padding: "14px 28px",
     fontSize: fonts.size.s,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     verticalAlign: "middle",
     fontWeight: 400,
     whiteSpace: "nowrap" as const,
@@ -89,7 +89,7 @@ export const styles: Record<string, CSSProperties> = {
   namePrimary: {
     fontSize: fonts.size.s,
     fontWeight: 400,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     lineHeight: "1.3",
     whiteSpace: "nowrap" as const,
   },
@@ -139,7 +139,7 @@ export const styles: Record<string, CSSProperties> = {
     justifyContent: "flex-start",
     gap: "4px",
     width: "70px",
-    fontSize: fonts.size.xs,
+    fontSize: fonts.size.s,
     lineHeight: "16px",
     fontWeight: 400,
     color: colors.neutral900,
@@ -199,7 +199,7 @@ export const styles: Record<string, CSSProperties> = {
     borderRadius: "8px",
     fontSize: fonts.size.m,
     fontFamily: fonts.family.primary,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     transition: "background-color 0.15s",
   },
 };
@@ -210,7 +210,7 @@ export const styles: Record<string, CSSProperties> = {
 export const getStatusStyle = (status: string): CSSProperties => {
   switch (status?.toUpperCase()) {
     case "WAITING":
-      return { backgroundColor: colors.yellow100, color: colors.blindBlack };
+      return { backgroundColor: colors.yellow100, color: colors.neutral900 };
     case "IN_PROGRESS":
       // no blue in design system — use primary (warm) like BOOKED in StatusBadge
       return { backgroundColor: colors.primary200, color: colors.neutral900 };

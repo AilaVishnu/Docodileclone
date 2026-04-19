@@ -21,7 +21,7 @@ export const styles: Record<string, CSSProperties> = {
     fontFamily: fonts.family.secondary,
     fontSize: fonts.size.h4,
     fontWeight: fonts.weight.regular,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     marginBottom: spacing.s,
   },
 
@@ -117,7 +117,7 @@ export const styles: Record<string, CSSProperties> = {
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.xs,
     fontWeight: fonts.weight.medium,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     textAlign: "left" as const,
     width: "100%",
     whiteSpace: "nowrap" as const,

@@ -174,7 +174,7 @@ const cardStyles: Record<string, React.CSSProperties> = {
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.m,
     fontWeight: 600,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     textAlign: "center",
     margin: "0 0 8px",
   },

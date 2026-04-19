@@ -14,7 +14,7 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.h5,
     fontWeight: fonts.weight.regular,
     margin: 0,
-    color: colors.blindBlack,
+    color: colors.neutral900,
   },
 
   closeButton: {
@@ -22,7 +22,7 @@ export const styles: Record<string, CSSProperties> = {
     border: "none",
     fontSize: fonts.size.m,
     cursor: "pointer",
-    color: colors.blindBlack,
+    color: colors.neutral900,
   },
 
   topSection: {
@@ -86,7 +86,7 @@ export const confirmStyles: Record<string, CSSProperties> = {
     fontFamily: fonts.family.secondary,
     fontSize: fonts.size.h6,
     fontWeight: fonts.weight.medium,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     margin: 0,
   },
 

@@ -14,7 +14,7 @@ export const styles: Record<string, CSSProperties> = {
   icon: {
     fontSize: fonts.size.m,
     lineHeight: 1,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     opacity: 0.8,
   },
 

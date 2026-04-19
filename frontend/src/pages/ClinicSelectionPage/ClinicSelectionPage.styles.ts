@@ -26,7 +26,7 @@ export const styles: Record<string, CSSProperties> = {
     marginTop: spacing.xxl,
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.s,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     textDecoration: "underline",
     cursor: "pointer",
     background: "none",

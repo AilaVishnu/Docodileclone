@@ -24,7 +24,7 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing.s,
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.s,
-    color: colors.blindBlack,
+    color: colors.neutral900,
   },
 
   radioGroup: {
@@ -41,13 +41,13 @@ export const styles: Record<string, CSSProperties> = {
     gap: "6px",
     cursor: "pointer",
     fontSize: fonts.size.s,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     lineHeight: 1,
   },
   
   radioInput: {
     margin: 0,
-    accentColor: colors.blindBlack,
+    accentColor: colors.neutral900,
     cursor: "pointer",
   },
 
@@ -65,21 +65,21 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: "transparent",
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.s,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     cursor: "pointer",
   },
 
   label: {
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.s,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     opacity: 0.8,
     },
 
     hint: {
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.xs,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     opacity: 0.5,
     // Sits immediately under the Reg. No. input. The parent section uses
     // gap: spacing.m which spreads the field and the hint too far apart —
@@ -97,7 +97,7 @@ export const styles: Record<string, CSSProperties> = {
     border: `1px solid ${colors.neutral300}`,
     fontFamily: fonts.family.primary,
     fontSize: fonts.control.md,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     backgroundColor: colors.neutral100,
     outline: "none",
     width: "60%",

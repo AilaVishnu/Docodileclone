@@ -104,7 +104,7 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
                 borderRadius: "8px",
                 fontSize: fonts.size.s,
                 fontWeight: 500,
-                color: colors.blindBlack,
+                color: colors.neutral900,
               }}
             >
               {opt.label}
@@ -231,12 +231,12 @@ export function QueueTable({
           <tr>
             <th style={{ ...styles.th, paddingLeft: "8px", paddingRight: "8px" }}>#</th>
             <th style={{ ...styles.th, paddingLeft: "8px" }}>Name</th>
-            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "15px" }}>Phone</th>
-            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "12px" }}>Service</th>
+            <th style={{ ...styles.th, textAlign: "center" }}>Phone</th>
+            <th style={{ ...styles.th, textAlign: "center" }}>Service</th>
             <th style={{ ...styles.th, textAlign: "center" }}>Type</th>
-            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "40px" }}>Time</th>
-            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "50px" }}>Status</th>
-            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "50px" }}>Pay</th>
+            <th style={{ ...styles.th, textAlign: "center" }}>Time</th>
+            <th style={{ ...styles.th, textAlign: "center" }}>Status</th>
+            <th style={{ ...styles.th, textAlign: "center" }}>Pay</th>
             <th style={styles.th}></th>
           </tr>
         </thead>
@@ -329,7 +329,7 @@ export function QueueTable({
                     </td>
 
                     {/* Phone */}
-                    <td style={{ ...styles.td, textAlign: "left", paddingLeft: "0px" }}>{apt.patientPhone}</td>
+                    <td style={{ ...styles.td, textAlign: "center" }}>{apt.patientPhone}</td>
 
                     {/* Service */}
                     <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px", maxWidth: 0 }}>
@@ -379,7 +379,7 @@ export function QueueTable({
                     </td>
 
                     {/* Pay status */}
-                    <td style={{ ...styles.payCell, textAlign: "left", paddingLeft: "40px" }}>
+                    <td style={{ ...styles.payCell, textAlign: "center" }}>
                       <PayBadge status={apt.payStatus} />
                     </td>
 

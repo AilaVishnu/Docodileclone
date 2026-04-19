@@ -27,7 +27,7 @@ export const styles: Record<string, CSSProperties> = {
   message: {
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.s,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     margin: 0,
   },
 

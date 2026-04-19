@@ -94,13 +94,13 @@ export const styles: Record<string, CSSProperties> = {
     WebkitAppearance: "none" as const,
     background: "none",
     border: "none",
-    borderBottom: `${strokes.m} solid ${colors.blindBlack}`,
+    borderBottom: `${strokes.m} solid ${colors.neutral900}`,
     fontFamily: fonts.family.secondary,
     // Was h4 (32) — inconsistent with title (h5 24). They sit on the same
     // visual line, so matching to h5.
     fontSize: fonts.size.h5,
     fontWeight: fonts.weight.regular,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     cursor: "pointer",
     outline: "none",
     padding: `0 ${spacing["2xs"]}`,

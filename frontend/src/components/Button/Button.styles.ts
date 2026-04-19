@@ -121,17 +121,18 @@ export const variants = {
 
   secondary: {
     default: {
-      backgroundColor: colors.secondary700,
-      borderColor: colors.secondary700,
-      color: colors.neutral100,
-    },
-    hover: {
       backgroundColor: colors.secondary800,
       borderColor: colors.secondary800,
       color: colors.neutral100,
     },
+    hover: {
+      backgroundColor: colors.secondary700,
+      borderColor: colors.secondary700,
+      color: colors.neutral100,
+    },
     disabled: {
       backgroundColor: colors.secondary300,
+      borderColor: colors.secondary300,
       color: colors.neutral100,
     },
   },

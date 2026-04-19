@@ -50,7 +50,7 @@ export function UnderlineSelect({
           fontFamily: fonts.family.secondary,
           fontSize,
           fontWeight: 400,
-          color: colors.blindBlack,
+          color: colors.neutral900,
           textDecoration: "underline",
           textUnderlineOffset: "4px",
           cursor: "pointer",
@@ -92,7 +92,7 @@ export function UnderlineSelect({
                 borderRadius: "8px",
                 fontFamily: fonts.family.primary,
                 fontSize: fonts.size.m,
-                color: colors.blindBlack,
+                color: colors.neutral900,
                 backgroundColor: "transparent",
                 transition: "background-color 0.15s",
               }}

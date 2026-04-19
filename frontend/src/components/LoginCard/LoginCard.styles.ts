@@ -16,7 +16,7 @@ export const styles: Record<string, CSSProperties> = {
   title: {
     fontFamily: fonts.family.secondary,
     fontSize: fonts.size.h4,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     fontWeight: fonts.weight.regular,
     margin: 0,
   },
@@ -45,7 +45,7 @@ export const styles: Record<string, CSSProperties> = {
   footerText: {
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.xs,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     margin: 0,
     cursor: "pointer",
   },

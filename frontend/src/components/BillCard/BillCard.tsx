@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { styles } from "./BillCard.styles";
-import { colors } from "../../styles/theme";
+import { colors, spacing } from "../../styles/theme";
 import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
 import { ReactComponent as ScaleIcon } from "../../assets/icons/scale.svg";
 import { ReactComponent as PaidStamp } from "../../assets/icons/paid-stamp.svg";
@@ -70,7 +70,7 @@ export function BillCard({
       <div style={styles.card}>
         <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <h3 style={styles.title}>Bill</h3>
-          <div style={{ position: "absolute", right: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ position: "absolute", right: 0, display: "flex", alignItems: "center", gap: spacing.s }}>
             <PrinterIcon width={15} height={15} style={{ cursor: "pointer" }} />
             <ScaleIcon width={15} height={15} style={{ cursor: "pointer" }} />
           </div>

@@ -24,12 +24,12 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     gap: "2px",
     padding: "2px",
-    color: colors.blindBlack,
+    color: colors.neutral900,
     cursor: "pointer",
   },
 
   radioInput: {
     cursor: "pointer",
-    accentColor: colors.blindBlack
+    accentColor: colors.neutral900
   },
 };

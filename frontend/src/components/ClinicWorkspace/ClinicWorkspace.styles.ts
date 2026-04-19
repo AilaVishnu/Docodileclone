@@ -8,7 +8,7 @@ export const styles: Record<string, CSSProperties> = {
     // even with multiple specialties + long address. Switching tabs doesn't
     // resize the workspace.
     height: 700,
-    border: `0px solid ${colors.blindBlack}`,
+    border: `0px solid ${colors.neutral900}`,
     borderRadius: `0 ${radii.primary}px ${radii.primary}px ${radii.primary}px`,
     display: "flex",
     // Vertical: 80 (7xl, off-Figma scale). Horizontal: 48 (4xl). Gap: 80 (7xl).

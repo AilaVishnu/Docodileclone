@@ -39,7 +39,6 @@ export const colors = {
   skinColor: "#FFD0BF",
   paleBlue: "#ECF1FE",
   whiteTeeth: "#FCFCFC",
-  blindBlack: "#122525",
   primary100: "#F9F9ED",
   primary200: "#F3F3DC",
   primary300: "#EDDFBA",
