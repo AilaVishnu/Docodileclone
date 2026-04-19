@@ -44,9 +44,9 @@ input[type="checkbox"] {
   accent-color: #202020;
 }
 
-/* Single grey for all placeholders across the app — matches icon + label
-   grey used in the input-field styles (neutral500). Browser defaults vary,
-   so we hit every vendor prefix. */
+/* Single grey for all placeholders across the app — matches Figma's
+   input-field idle state (border + icon + placeholder share neutral300).
+   Browser defaults vary, so we hit every vendor prefix. */
 input::placeholder,
 textarea::placeholder,
 input::-webkit-input-placeholder,
@@ -57,7 +57,7 @@ textarea::-webkit-input-placeholder,
 textarea::-moz-placeholder,
 textarea:-ms-input-placeholder,
 textarea::-ms-input-placeholder {
-  color: #8F8F8F !important; /* colors.neutral500 */
+  color: #E3E3E3 !important; /* colors.neutral200 */
   opacity: 1;
 }
 

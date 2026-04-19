@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { styles } from "./BookAppointment.styles";
-import { colors, fonts, spacing } from "../../styles/theme";
+import { colors, fonts, spacing, strokes } from "../../styles/theme";
 import { DatePicker } from "./DatePicker";
 import { TimePicker } from "./TimePicker";
 import {
@@ -149,16 +149,8 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     const mm = digits.slice(2, 4);
     const yyyy = digits.slice(4, 8);
     if (digits.length <= 2) return dd;
-    if (digits.length <= 4) {
-      if (mm.length === 2) {
-        const mIdx = Number(mm) - 1;
-        return (mIdx >= 0 && mIdx <= 11) ? `${dd} ${MONTHS[mIdx]}` : `${dd} ${mm}`;
-      }
-      return `${dd} ${mm}`;
-    }
-    const mIdx = Number(mm) - 1;
-    const monName = (mIdx >= 0 && mIdx <= 11) ? MONTHS[mIdx] : mm;
-    return `${dd} ${monName} ${yyyy}`;
+    if (digits.length <= 4) return `${dd} ${mm}`;
+    return `${dd} ${mm} ${yyyy}`;
   };
 
   const calcAge = (digits: string): string => {
@@ -392,14 +384,17 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
           <div style={styles.row}>
             <div style={{ ...styles.iconField, position: "relative", flex: 1, minWidth: 0 }}>
-              <span onClick={() => setShowDobPicker(true)} style={{ cursor: "pointer", display: "flex" }}>
+              <span
+                onClick={() => setShowDobPicker(true)}
+                style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: spacing.xs, opacity: hasManualAge ? 0.4 : 1 }}
+              >
                 <CalendarIcon style={styles.iconFieldIcon} />
+                <span style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>DOB</span>
               </span>
-              <span style={{ ...styles.inlineFieldLabel, opacity: hasManualAge ? 0.4 : 1 }}>DOB</span>
               <input
                 style={{ ...styles.iconFieldInput, opacity: hasManualAge ? 0.4 : 1 }}
                 type="text"
-                placeholder="DD MM YYYY"
+                placeholder="dd mm yyyy"
                 disabled={hasManualAge}
                 value={formatDob(dobDigits)}
                 onKeyDown={(e) => {
@@ -445,18 +440,10 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 justifyContent: "flex-start",
               }}
             >
-              {/*
-                Age input — single field for years. The two-input "__ years
-                __ months" layout was confusing; if the clinic needs precise
-                age (e.g. for a 6-month-old), they enter the DOB and we
-                compute Y/M from it automatically. Most adult-age entry is
-                just a whole number.
-              */}
-              <span style={{ ...styles.inlineFieldLabel, opacity: hasDob ? 0.4 : 1 }}>Age</span>
+              <span style={{ fontSize: fonts.size.m, color: colors.neutral900, opacity: hasDob ? 0.4 : 1 }}>Age</span>
               <input
                 className="text-input-field"
-                style={{ ...styles.iconFieldInput, flex: 1, minWidth: 0, MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
-                placeholder="0"
+                style={{ ...styles.iconFieldInput, width: 32, flex: "0 0 auto", borderBottom: `${strokes.xs} solid ${colors.neutral300}`, textAlign: "center", MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
                 type="number"
                 min="0"
                 max="150"
@@ -464,11 +451,9 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 value={form.age.split("/")[0]?.trim() || ""}
                 onChange={(e) => {
                   const y = e.target.value;
+                  const m = form.age.split("/")[1]?.trim() || "";
                   setDobDigits("");
-                  // Keep the "Y / M" storage shape for backward compatibility
-                  // with anywhere else that reads form.age; months defaults to 0
-                  // when entered manually.
-                  setForm({ ...form, age: y ? `${y} / 0` : "", dob: "" });
+                  setForm({ ...form, age: (y || m) ? `${y || "0"} / ${m || "0"}` : "", dob: "" });
                 }}
               />
               <style>{`
@@ -476,7 +461,23 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
                 input[type=number] { -moz-appearance: textfield; }
               `}</style>
-              <span style={{ ...styles.inlineUnitLabel, opacity: hasDob ? 0.4 : 1 }}>years</span>
+              <span style={{ fontSize: fonts.size.m, color: colors.neutral200, opacity: hasDob ? 0.4 : 1 }}>years</span>
+              <input
+                className="text-input-field"
+                style={{ ...styles.iconFieldInput, width: 32, flex: "0 0 auto", borderBottom: `${strokes.xs} solid ${colors.neutral300}`, textAlign: "center", MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
+                type="number"
+                min="0"
+                max="11"
+                disabled={hasDob}
+                value={form.age.split("/")[1]?.trim() || ""}
+                onChange={(e) => {
+                  const m = e.target.value;
+                  const y = form.age.split("/")[0]?.trim() || "";
+                  setDobDigits("");
+                  setForm({ ...form, age: (y || m) ? `${y || "0"} / ${m || "0"}` : "", dob: "" });
+                }}
+              />
+              <span style={{ fontSize: fonts.size.m, color: colors.neutral200, opacity: hasDob ? 0.4 : 1 }}>months</span>
             </div>
           </div>
 
@@ -551,7 +552,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               onClick={() => setShowDatePicker(true)}
             >
               <CalendarIcon style={styles.iconFieldIcon} />
-              <span style={{ fontSize: fonts.size.m, color: form.date ? colors.neutral900 : colors.neutral500 }}>
+              <span style={{ fontSize: fonts.size.m, color: form.date ? colors.neutral900 : colors.neutral200 }}>
                 {formatDate(form.date) || "Select Date"}
               </span>
             </div>
@@ -577,7 +578,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               onClick={() => setShowTimePicker(true)}
             >
               <ClockIcon style={styles.iconFieldIcon} />
-              <span style={{ fontSize: fonts.size.m, color: form.time ? colors.neutral900 : colors.neutral500 }}>
+              <span style={{ fontSize: fonts.size.m, color: form.time ? colors.neutral900 : colors.neutral200 }}>
                 {form.time || "Select Time"}
               </span>
             </div>

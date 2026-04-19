@@ -204,7 +204,7 @@ export const styles: Record<string, CSSProperties> = {
     flexShrink: 0,
   },
   appointmentIcon: {
-    color: colors.neutral500, // was neutral700 — aligns with form icons
+    color: colors.neutral900,
     width: "24px",
     height: "24px",
   },
@@ -270,23 +270,20 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing["2xs"],
   },
   fieldLabel: {
-    fontSize: fonts.size.s,
-    fontWeight: fonts.weight.medium,
-    // UI chrome grey — one consistent value across the form.
-    color: colors.neutral500,
+    fontSize: fonts.size.m,
+    fontWeight: fonts.weight.regular,
+    color: colors.neutral900,
   },
   iconField: {
     display: "flex",
     alignItems: "center",
     gap: spacing.xs,
-    padding: `${spacing.xs} 0`,
+    padding: spacing.xs,
     borderBottom: `${strokes.xs} solid ${colors.neutral300}`,
     width: "100%",
   },
   iconFieldIcon: {
-    // Was neutral700 — standardising all input-field UI elements to neutral500
-    // so icons, labels and placeholders all feel like one muted layer.
-    color: colors.neutral500,
+    color: colors.neutral900,
     width: "24px",
     height: "24px",
     flexShrink: 0,

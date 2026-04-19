@@ -56,7 +56,7 @@ const CROP_SETTINGS: Record<Crop, { size: string; position: string }> = {
   // stays visible with a small band of background above it. Previous 140%
   // was cropping the top of the head.
   bust: { size: "cover",     position: "50% 100%" },
-  face: { size: "200% auto", position: "50% 22%"  },  // head/face, centered
+  face: { size: "120% auto", position: "50% 22%"  },  // head/face, centered
 };
 
 function pickUrl(role: Role, gender: Gender): string {
