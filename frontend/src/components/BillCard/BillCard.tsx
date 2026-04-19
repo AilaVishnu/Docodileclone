@@ -134,10 +134,10 @@ export function BillCard({
         </div>
 
         <div style={styles.methodRow}>
-          {["Cash", "Card", "UPI", "No Bill"].map((m) => (
+          {["Cash", "Card", "UPI", "Waive"].map((m) => (
             <label key={m} style={{
               ...styles.radioLabel,
-              color: m === "No Bill" ? colors.secondary600 : styles.radioLabel.color,
+              color: m === "Waive" ? colors.red200 : styles.radioLabel.color,
             }}>
               <input
                 type="radio"

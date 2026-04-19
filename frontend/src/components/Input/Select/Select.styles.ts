@@ -73,11 +73,11 @@ export const styles: Record<string, CSSProperties> = {
     cursor: "inherit",
   },
 
-  // Placeholder text (shown when no value selected) stays neutral500
+  // Placeholder text (shown when no value selected) stays neutral400
   // regardless of hover/open — per Figma every state keeps the placeholder
   // at the muted grey. Only the border/arrow react.
   placeholder: {
-    color: colors.neutral500,
+    color: colors.neutral400,
   },
 
   // iconLeft wrapper — inherits `color` from the container so it follows

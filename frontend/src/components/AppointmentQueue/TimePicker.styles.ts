@@ -89,28 +89,25 @@ export const styles: Record<string, CSSProperties> = {
 
   amPmToggle: {
     display: "flex",
-    backgroundColor: colors.neutral100,
-    borderRadius: "8px",
-    padding: "2px",
+    gap: "4px",
     marginTop: "4px",
   },
 
   toggleBtn: {
     flex: 1,
-    padding: "6px 12px",
-    fontSize: fonts.size.s,
-    fontWeight: 600,
-    border: "none",
-    borderRadius: "6px",
+    padding: "8px",
+    textAlign: "center",
     cursor: "pointer",
+    borderRadius: "6px",
+    fontSize: fonts.size.s,
+    color: colors.neutral700,
+    border: "none",
     backgroundColor: "transparent",
-    color: colors.neutral500,
   },
 
   activeToggleBtn: {
-    backgroundColor: colors.neutral100,
-    color: colors.neutral900,
-    boxShadow: "0px 1px 3px rgba(0,0,0,0.1)",
+    backgroundColor: colors.active.shade600,
+    color: colors.neutral100,
   },
 
   doneButton: {
