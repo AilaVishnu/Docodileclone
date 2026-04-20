@@ -230,12 +230,12 @@ export function QueueTable({
         <thead>
           <tr>
             <th style={{ ...styles.th, paddingLeft: "8px", paddingRight: "8px" }}>#</th>
-            <th style={{ ...styles.th, paddingLeft: "8px" }}>Name</th>
+            <th style={{ ...styles.th, paddingLeft: "8px", paddingRight: "8px" }}>Name</th>
             <th style={{ ...styles.th, textAlign: "center" }}>Phone</th>
             <th style={{ ...styles.th, textAlign: "center" }}>Service</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Type</th>
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "8px", paddingRight: "8px" }}>Type</th>
             <th style={{ ...styles.th, textAlign: "center" }}>Time</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Status</th>
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Status</th>
             <th style={{ ...styles.th, textAlign: "center" }}>Pay</th>
             <th style={styles.th}></th>
           </tr>
@@ -353,7 +353,7 @@ export function QueueTable({
                     </td>
 
                     {/* Type */}
-                    <td style={{ ...styles.td, textAlign: "center" }}>
+                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "8px", paddingRight: "8px" }}>
                       <TypeBadge type={apt.type} />
                     </td>
 
@@ -366,7 +366,7 @@ export function QueueTable({
                     </td>
 
                     {/* Status badge */}
-                    <td style={{ ...styles.td, textAlign: "center" }}>
+                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
                       {onStatusChange ? (
                         <StatusDropdown
                           appointment={apt}

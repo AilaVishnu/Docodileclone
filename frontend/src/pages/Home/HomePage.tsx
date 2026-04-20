@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { SideNav, NavTab } from "../../components/SideNav";
 import { TopNav } from "../../components/TopNav";
 import { PrescriptionView, PatientFilesView, AppointmentsView } from "./Views";
+import { DesignSystemPage } from "../DesignSystem";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
 import { confirmStyles } from "../../components/AddStaffModal/AddStaffModal.styles";
 import { Button } from "../../components/Button";
@@ -108,6 +109,8 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         return <PrescriptionView />;
       case "Patient Files":
         return <PatientFilesView />;
+      case "Design System":
+        return <DesignSystemPage />;
       default:
         return (
           <div>

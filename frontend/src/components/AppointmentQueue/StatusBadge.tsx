@@ -119,7 +119,7 @@ export function PayBadge({ status }: PayBadgeProps) {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        justifyContent: "flex-start",
+        justifyContent: "center",
         gap: "4px",
         width: "80px",
         fontSize: fonts.size.s,

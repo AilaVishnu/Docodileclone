@@ -136,9 +136,8 @@ export const styles: Record<string, CSSProperties> = {
   typeBadge: {
     display: "inline-flex",
     alignItems: "center",
-    justifyContent: "flex-start",
+    justifyContent: "center",
     gap: "4px",
-    width: "70px",
     fontSize: fonts.size.s,
     lineHeight: "16px",
     fontWeight: 400,
