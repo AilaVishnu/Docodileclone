@@ -6,7 +6,7 @@
 // SideNav.tsx `NavTab` + menuItems. The page and route keep working.
 // ══════════════════════════════════════════════════════════════════════════════
 import React, { useState } from "react";
-import { colors, fonts, spacing, radii, strokes, gradients, fluidSpacing } from "../../styles/theme";
+import { colors, fonts, spacing, radii, strokes, fluidSpacing } from "../../styles/theme";
 import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
 import { HintCard } from "../../components/HintCard";
@@ -88,11 +88,6 @@ function ColorsSection() {
     {
       name: "Active theme (themable via CSS vars)",
       tokens: (Object.entries(colors.active) as [string, string][]).map(([k, v]) => [`active.${k}`, v]),
-    },
-    {
-      name: "Brand",
-      tokens: (["yellowTeeth","skinColor","paleBlue","whiteTeeth"] as const)
-        .map(k => [k, colors[k]]),
     },
   ];
 
@@ -247,14 +242,12 @@ function SpacingSection() {
         ))}
       </Row>
 
-      <SubTitle>Gradients — <code>gradients.*</code></SubTitle>
+      <SubTitle>Gradients</SubTitle>
       <Row>
-        {(Object.keys(gradients) as (keyof typeof gradients)[]).map(k => (
-          <div key={k} style={{ display: "flex", flexDirection: "column", gap: spacing["2xs"] }}>
-            <div style={{ width: 160, height: 72, background: gradients[k], borderRadius: radii.m, border: `${strokes.xs} solid ${colors.neutral200}` }} />
-            <Label>{k}</Label>
-          </div>
-        ))}
+        <div style={{ display: "flex", flexDirection: "column", gap: spacing["2xs"] }}>
+          <div style={{ width: 160, height: 72, background: "var(--sunset)", borderRadius: radii.m, border: `${strokes.xs} solid ${colors.neutral200}` }} />
+          <Label>--sunset (body bg)</Label>
+        </div>
       </Row>
     </div>
   );

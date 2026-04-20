@@ -9,7 +9,7 @@ export const styles: Record<string, CSSProperties> = {
     // above the heading and below the CTAs at larger screens.
     // Horizontal stays static.
     padding: "clamp(12px, 1.56vw, 48px) 24px",
-    backgroundColor: colors.yellowTeeth,
+    backgroundColor: colors.primary100,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",

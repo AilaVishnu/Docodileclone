@@ -1,10 +1,5 @@
 :root {
-  --yellowTeeth: #F9F9ED;
-  --skinColor: #FFD0BF;
-  --paleBlue: #ECF1FE;
-  --whiteTeeth: #FCFCFC;
-  --sunset : linear-gradient(180deg, #F9F9ED 0%, #FFD0BF 100%);
-  --sunrise: linear-gradient(135deg, #F9F9ED 0%, #ECF1FE 100%);
+  --sunset: linear-gradient(180deg, #F9F9ED 0%, #FFD0BF 100%);
 
   /* Default Active Theme (Primary/Yellow) */
   --active-shade-50: #FCFCF5;
@@ -14,7 +9,7 @@
   --active-shade-400: #EDCA99;
   --active-shade-500: #ECA66D;
   --active-shade-600: #E48647;
-  --active-shade-700: #D26D2A;
+  --active-shade-700: #CF6F2F;
   --active-shade-800: #AE561A;
 }
 

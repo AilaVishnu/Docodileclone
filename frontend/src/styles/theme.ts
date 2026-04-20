@@ -35,10 +35,6 @@
 // ══════════════════════════════════════════════════════════════════════════════
 
 export const colors = {
-  yellowTeeth: "#F9F9ED",
-  skinColor: "#FFD0BF",
-  paleBlue: "#ECF1FE",
-  whiteTeeth: "#FCFCFC",
   primary100: "#F9F9ED",
   primary200: "#F3F3DC",
   primary300: "#EDDFBA",
@@ -125,14 +121,6 @@ export const getThemePalette = (mode: ThemeMode) => {
       shade800: colors.secondary800,
     };
   }
-};
-
-export const gradients = {
-  primary: "linear-gradient(135deg, #142726 0%, #1F3D3B 100%)",
-  secondary: "linear-gradient(135deg, #4F46E5 0%, #6366F1 100%)",
-  danger: "linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%)",
-  sunset: "linear-gradient(135deg, #F9F9ED 0%, #FFD0BF 100%)",
-  sunrise: "linear-gradient(135deg, #F9F9ED 0%, #ECF1FE 100%)",
 };
 
 export const fonts = {
