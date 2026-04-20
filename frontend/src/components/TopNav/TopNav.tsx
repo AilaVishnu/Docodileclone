@@ -3,8 +3,8 @@ import { colors, fonts, radii, spacing } from '../../styles/theme';
 import { Button } from '../Button';
 import { MessageIcon, BellIcon } from '../../iconsUtil';
 import { StaffIllustration } from '../AddStaffModal/StaffIllustration';
-import { ReactComponent as SearchIcon } from '../../assets/search.svg'; 
-import { ReactComponent as PlusIcon } from '../../assets/Plus.svg'; 
+import { ReactComponent as SearchIcon } from '../../assets/search.svg';
+import { ReactComponent as PlusIcon } from '../../assets/Plus.svg';
 
 type TopNavProps = {
   onBuildClinic?: () => void;
@@ -33,13 +33,15 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: `0 ${spacing.xl}`,
-      height: '80px',
+      padding: `0 ${spacing.xl} 0 0`,
+      height: '70px',
       backgroundColor: colors.active.shade300,
       width: '100%',
       zIndex: 3000,
       position: 'relative' as const,
+      flexShrink: 0,
     },
+
     actions: {
       display: 'flex',
       alignItems: 'center',
@@ -55,10 +57,10 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      width: '40px',
-      height: '40px',
+      width: '48px',
+      height: '48px',
       borderRadius: '50%',
-      backgroundColor: 'transparent', // removed background according to image
+      backgroundColor: 'transparent',
       cursor: 'pointer',
       transition: 'all 0.2s ease',
     },
@@ -68,8 +70,9 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       backgroundColor: colors.active.shade100,
       borderRadius: '55px',
       padding: '0 16px',
-      width: '416px',
+      width: '364px',
       height: '40px',
+      boxSizing: 'border-box',
       gap: '12px',
     },
     searchInput: {
@@ -86,11 +89,11 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       position: 'relative' as const,
     },
     profileAvatar: {
-      width: '40px',
-      height: '40px',
+      width: '48px',
+      height: '48px',
       borderRadius: '50%',
       overflow: 'hidden',
-      backgroundColor: '#C4581C', // Deep orange solid background based on image
+      backgroundColor: '#C4581C',
       display: 'flex',
       alignItems: 'flex-end',
       justifyContent: 'center',
@@ -160,21 +163,28 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
     <div style={styles.container}>
       {/* Search Bar */}
       <div style={styles.searchBarContainer}>
-        <SearchIcon style={{ width: 20, height: 20 }} />
-        <input 
-          type="text" 
-          placeholder="Search for anything..." 
+        <SearchIcon style={{ width: 20, height: 20, color: '#ABABAB' }} />
+        <input
+          type="text"
+          placeholder="Search for anything..."
+          className="topnav-search-input"
           style={styles.searchInput}
         />
+        <style>{`
+          .topnav-search-input::placeholder {
+            color: #ABABAB;
+            opacity: 1;
+          }
+        `}</style>
       </div>
 
       <div style={styles.actions}>
         {!isBooking && (
-          <Button 
-            variant="primary" 
-            size="sm" 
-            iconLeft={<PlusIcon style={{width: 14, height: 14, fill: '#fff'}}/>}
-            style={{ height: '32px', fontSize: '14px', padding: '0 12px' }}
+          <Button
+            variant="primary"
+            size="sm"
+            iconLeft={<PlusIcon style={{ width: 16, height: 16, fill: '#fff' }} />}
+            style={{ height: '40px', fontSize: '14px', padding: '0 16px' }}
             onClick={onNewAppointment}
           >
             New Appointment
@@ -192,29 +202,37 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
 
         <div style={styles.profileWrapper} ref={dropdownRef}>
           <div style={styles.profileAvatar} onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
-            <StaffIllustration 
-              role="Doctor" 
-              gender="male" 
-              width="36px" 
-              height="36px" 
+            <StaffIllustration
+              role="Doctor"
+              gender="male"
+              width="44px"
+              height="44px"
               borderRadius="0"
             />
           </div>
 
           {isDropdownOpen && (
             <div style={styles.dropdown}>
-              <DropdownItem 
-                label="Build Your Clinic" 
-                onClick={() => onBuildClinic && onBuildClinic()} 
+              <DropdownItem
+                label="My Profile"
+                onClick={() => { }}
               />
-              <DropdownItem 
-                label="View All Clinics" 
-                onClick={() => onViewAllClinics && onViewAllClinics()} 
+              <DropdownItem
+                label="Settings"
+                onClick={() => { }}
               />
-              <DropdownItem 
-                label="Logout" 
-                onClick={() => onLogout && onLogout()} 
-                destructive 
+              <DropdownItem
+                label="Build Your Clinic"
+                onClick={() => onBuildClinic && onBuildClinic()}
+              />
+              <DropdownItem
+                label="View All Clinics"
+                onClick={() => onViewAllClinics && onViewAllClinics()}
+              />
+              <DropdownItem
+                label="Logout"
+                onClick={() => onLogout && onLogout()}
+                destructive
               />
             </div>
           )}

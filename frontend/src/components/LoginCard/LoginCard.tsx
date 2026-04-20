@@ -10,6 +10,7 @@ import { ReactComponent as EyeIcon } from "../../assets/Eye.svg";
 import { ReactComponent as EyeClosedIcon } from "../../assets/Eye Closed.svg";
 import { colors } from "../../styles/theme";
 import { API_BASE_URL } from "../../apiConfig";
+import { Toast } from "../Toast";
 
 
 type LoginMode = "admin" | "staff";
@@ -31,9 +32,9 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -54,16 +55,15 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      setError("Please enter email and password.");
+      setToastMessage("Please enter email and password.");
       return;
     }
 
     if (isStaff && !domain.trim()) {
-      setError("Please enter clinic domain.");
+      setToastMessage("Please enter clinic domain.");
       return;
     }
 
-    setError(null);
     setIsSubmitting(true);
 
     try {
@@ -79,7 +79,10 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
       });
 
       if (!response.ok) {
-        throw new Error("Invalid credentials");
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("Invalid email or password");
+        }
+        throw new Error(`Login failed (${response.status})`);
       }
 
       const data = (await response.json()) as LoginResponse;
@@ -94,9 +97,15 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
         localStorage.setItem("docodile_clinic_name", data.clinicName);
       }
 
+      setToastMessage("Login successful");
       onLoginSuccess?.();
     } catch (err) {
-      setError("Login failed. Please check your credentials.");
+      const msg = err instanceof TypeError
+        ? "Network error. Please check your connection."
+        : err instanceof Error
+          ? err.message
+          : "Login failed. Please check your credentials.";
+      setToastMessage(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -164,11 +173,11 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
         {isSubmitting ? "Signing in..." : "Sign in"}
       </Button>
 
-      {error && (
-        <p style={{ marginTop: 12, color: colors.red200 }}>
-          {error}
-        </p>
-      )}
+      <Toast
+        message={toastMessage}
+        isVisible={!!toastMessage}
+        onClose={() => setToastMessage("")}
+      />
 
       {/* Footer */}
       <div style={styles.footer}>

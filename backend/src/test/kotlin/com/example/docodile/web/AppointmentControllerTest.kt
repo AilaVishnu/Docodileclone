@@ -40,12 +40,19 @@ class AppointmentControllerTest @Autowired constructor(
                 doctorId = UUID.randomUUID(),
                 scheduledTime = null,
                 isWalkin = true,
-                status = "Scheduled",
-                type = "Regular",
+                status = "BOOKED",
+                type = "New",
                 payStatus = "Unpaid",
+                paymentMethod = "Cash",
                 notes = "Sample note",
                 patientId = UUID.randomUUID(),
-                patientPhone = "1234567890"
+                patientPhone = "1234567890",
+                patientEmail = null,
+                patientGender = null,
+                patientDob = null,
+                patientAge = null,
+                service = "Consultation",
+                fee = null
             )
         )
 

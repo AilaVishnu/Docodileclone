@@ -10,7 +10,7 @@ export const colors = {
   primary400: "#EDCA99",
   primary500: "#ECA66D",
   primary600: "#E48647",
-  primary700: "#D26D2A",
+  primary700: "#CF6F2F",
   primary800: "#AE561A",
   secondary50: "#F1F6E7",
   secondary100: "#E3EAD7",
@@ -96,8 +96,8 @@ export const gradients = {
 
 export const fonts = {
   family: {
-    primary: "'inter', sans-serif",
-    secondary: "'source-serif', serif",
+    primary: "'Inter', sans-serif",
+    secondary: "'Libertinus Serif', 'source-serif', serif",
   },
   size: {
     h1: "60px",
@@ -106,10 +106,18 @@ export const fonts = {
     h4: "32px",
     h5: "24px",
     h6: "20px",
+    caption: "10px",
     xs: "12px",
     s: "14px",
     m: "16px",
     l: "20px",
+  },
+  lineHeight: {
+    caption: "14px",
+    xs: "16px",
+    s: "20px",
+    m: "22px",
+    h5: "34px",
   },
   weight: {
     regular: 400,
@@ -119,16 +127,22 @@ export const fonts = {
 };
 
 export const radii = {
-  pill: 999,
+  none: 0,
+  xs: 4,
   m: 8,
+  xl: 12,
+  xxl: 16,
   primary: 20,
-  xxl: "16px"
+  pill: 999,
+  full: 999,
 };
 
 export const spacing = {
+  "3xs": "2px",
+  "2xs": "4px",
   xs: "8px",
   s: "12px",
-  m: "18px",
+  m: "16px",
   l: "20px",
   xl: "24px",
   xxl: "32px",

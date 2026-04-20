@@ -47,6 +47,7 @@ function AutoGrowTextarea({ value, onChange, placeholder, maxLength }: {
       placeholder={placeholder}
       maxLength={maxLength}
       rows={1}
+      className="text-input-field"
       style={{ ...styles.input, resize: "none" as const, overflow: "hidden", lineHeight: 1.6 }}
     />
   );
@@ -74,6 +75,10 @@ export function TextInput({
 
   return (
     <div style={{ width: "100%" }}>
+      <style>{`
+        .text-input-field::placeholder,
+        .text-input-field::-webkit-input-placeholder { color: #C7C7C7; opacity: 1; }
+      `}</style>
       <div style={containerStyle}>
         {iconLeft && <span style={{ ...styles.icon, ...(multiline ? { marginTop: 4 } : {}) }}>{iconLeft}</span>}
 
@@ -93,6 +98,7 @@ export function TextInput({
             onBlur={onBlur}
             placeholder={placeholder}
             maxLength={maxLength}
+            className="text-input-field"
             style={styles.input}
           />
         )}

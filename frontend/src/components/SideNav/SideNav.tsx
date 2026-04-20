@@ -10,8 +10,10 @@ import {
   PharmacyIcon 
 } from '../../iconsUtil';
 import { SideNavItem } from './SideNavItem';
-import { ReactComponent as LogoIcon } from "../../assets/logo.svg";
-import { ReactComponent as ArrowIcon } from "../../assets/Arrow Right.svg";
+import { ReactComponent as LogoSmall } from "../../assets/logo-small.svg";
+import { ReactComponent as LogoFull } from "../../assets/logo-full.svg";
+import { ReactComponent as ChevronLeftIcon } from "../../assets/chevron_left.svg";
+import { ReactComponent as ChevronRightIcon } from "../../assets/chevron_right.svg";
 import { fonts, colors, ThemeMode } from "../../styles/theme";
 
 export type NavTab = 
@@ -40,7 +42,7 @@ export function SideNav({ activeTab, onTabChange, isExpanded, onToggleExpand }: 
       backgroundColor: colors.active.shade300,
       display: 'flex',
       flexDirection: 'column',
-      paddingTop: '40px',
+      paddingTop: '19px',
       position: 'fixed' as const,
       left: 0,
       top: 0,
@@ -48,7 +50,7 @@ export function SideNav({ activeTab, onTabChange, isExpanded, onToggleExpand }: 
       zIndex: 3000,
     },
     logoSection: {
-      padding: isExpanded ? '0 24px 48px 24px' : '0 0 48px 0',
+      padding: isExpanded ? '0 24px 32px 24px' : '0 0 32px 0',
       display: 'flex',
       alignItems: 'center',
       justifyContent: isExpanded ? 'flex-start' : 'center',
@@ -102,8 +104,11 @@ export function SideNav({ activeTab, onTabChange, isExpanded, onToggleExpand }: 
   return (
     <div style={styles.container}>
       <div style={styles.logoSection}>
-        <LogoIcon style={{ width: 29, height: 24 }} />
-        {isExpanded && <span style={styles.logoText}>Docodile</span>}
+        {isExpanded ? (
+          <LogoFull style={{ width: 140, height: 42 }} />
+        ) : (
+          <LogoSmall style={{ width: 32, height: 32 }} />
+        )}
       </div>
 
       <div style={styles.navList}>
@@ -119,20 +124,17 @@ export function SideNav({ activeTab, onTabChange, isExpanded, onToggleExpand }: 
         ))}
       </div>
 
-      <div style={{ position: 'relative', marginTop: '16px' }}>
+      <div style={{ position: 'relative', marginTop: 'auto', marginBottom: '60px' }}>
         <div 
           style={styles.toggleButton} 
           onClick={onToggleExpand}
           title={isExpanded ? "Collapse" : "Expand"}
         >
-          <ArrowIcon 
-            style={{ 
-              width: 16, 
-              height: 16, 
-              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.3s ease'
-            }} 
-          />
+          {isExpanded ? (
+            <ChevronLeftIcon style={{ width: 16, height: 16 }} />
+          ) : (
+            <ChevronRightIcon style={{ width: 16, height: 16 }} />
+          )}
         </div>
       </div>
     </div>

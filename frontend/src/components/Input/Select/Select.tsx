@@ -56,12 +56,12 @@ export function Select({
     >
       {iconLeft && <span style={{ display: "flex", alignItems: "center", opacity: 0.8 }}>{iconLeft}</span>}
       
-      <div 
+      <div
         ref={containerRef}
         style={{
           ...styles.container,
           flex: 1,
-          border: `1px solid ${colors.neutral300}`,
+          border: selectedOption ? `1.5px solid ${colors.neutral900}` : `1px solid ${colors.neutral300}`,
           ...(error ? styles.errorContainer : {})
         }}
         onClick={() => setIsOpen(!isOpen)}
@@ -81,7 +81,7 @@ export function Select({
         </div>
 
         {isOpen && (
-          <div style={{
+          <div className="select-dropdown-scroll" style={{
             position: "absolute",
             top: "calc(100% + 4px)",
             left: 0,
@@ -91,10 +91,15 @@ export function Select({
             borderRadius: "8px",
             boxShadow: "2px 2px 12px rgba(0,0,0,0.08)",
             zIndex: 100,
-            maxHeight: "200px",
+            maxHeight: "178px",
             overflowY: "auto",
             padding: "4px",
+            scrollbarWidth: "none" as const,
+            msOverflowStyle: "none" as const,
           }}>
+            <style>{`
+              .select-dropdown-scroll::-webkit-scrollbar { display: none; }
+            `}</style>
             {normalizedOptions.map((option) => (
               <div
                 key={option.value}

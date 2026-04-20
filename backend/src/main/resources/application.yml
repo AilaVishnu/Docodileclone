@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/docodile}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/docodile?TimeZone=Asia/Kolkata}
     driver-class-name: org.postgresql.Driver
     username: ${SPRING_DATASOURCE_USERNAME:docodile}
     password: ${SPRING_DATASOURCE_PASSWORD:docodile}

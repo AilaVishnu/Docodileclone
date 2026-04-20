@@ -215,13 +215,20 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
             s.id === editingStaff.id ? mappedStaff : s
           );
           handleUpdateClinic({ staff: updatedStaff });
+          setToastMessage(`${mappedStaff.name} updated`);
         } else {
           handleUpdateClinic({ staff: [...activeClinic.staff, mappedStaff] });
+          setToastMessage(`${mappedStaff.name} added to staff`);
         }
         setIsAddStaffOpen(false);
       } else {
         const errorData = await response.json();
-        setToastMessage(errorData.error || "Failed to save staff member");
+        const msg = errorData.error || "";
+        if (msg.toLowerCase().includes("email") && msg.toLowerCase().includes("exist")) {
+          setToastMessage("A staff member with this email already exists");
+        } else {
+          setToastMessage(msg || "Failed to save staff member");
+        }
       }
     } catch (error) {
       console.error("Failed to save staff", error);
