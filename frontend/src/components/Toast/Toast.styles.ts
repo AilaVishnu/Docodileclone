@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, spacing, fonts, radii } from "../../styles/theme";
+import { colors, spacing, fonts, radii, rem } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   container: {
@@ -19,8 +19,8 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   icon: {
-    width: 24,
-    height: 24,
+    width: rem(24),
+    height: rem(24),
     flexShrink: 0,
   },
 

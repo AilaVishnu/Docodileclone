@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, radii, spacing } from "../../styles/theme";
+import { colors, radii, spacing, rem } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   container: {
@@ -7,7 +7,7 @@ export const styles: Record<string, CSSProperties> = {
     // Fixed height sized so the full form fits comfortably without scrolling,
     // even with multiple specialties + long address. Switching tabs doesn't
     // resize the workspace.
-    height: 700,
+    height: rem(700),
     border: `0px solid ${colors.neutral900}`,
     borderRadius: `0 ${radii.primary}px ${radii.primary}px ${radii.primary}px`,
     display: "flex",

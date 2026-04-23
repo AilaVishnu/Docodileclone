@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
+import { colors, fonts, spacing, radii, strokes, rem } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   card: {
@@ -11,7 +11,7 @@ export const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     // gap handles inter-field spacing so individual rows don't need marginTop
     gap: spacing.s,
-    width: 384, // was 320 — +20% for more comfortable field widths
+    width: rem(384), // was 320 — +20% for more comfortable field widths
     boxSizing: "border-box",
   },
 
@@ -33,7 +33,7 @@ export const styles: Record<string, CSSProperties> = {
     border: `${strokes.xs} solid ${colors.neutral500}`,
     borderRadius: radii.m,
     overflow: "hidden",
-    height: 42,
+    height: rem(42),
     backgroundColor: "transparent",
   },
 
@@ -71,7 +71,7 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: colors.alphaBlack0,
     borderRadius: radii.m,
     padding: `${spacing.xs} ${spacing.s}`,
-    minHeight: 36,
+    minHeight: rem(36),
   },
 
   fieldRowMultiline: {
@@ -81,7 +81,7 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: colors.alphaBlack0,
     borderRadius: radii.m,
     padding: `${spacing.xs} ${spacing.s}`,
-    minHeight: 36,
+    minHeight: rem(36),
   },
 
   fieldIcon: {
@@ -89,8 +89,8 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
-    width: 24,
-    height: 24,
+    width: rem(24),
+    height: rem(24),
     // Figma: icons are the SAME neutral500 as field text. No dimming.
     color: colors.neutral500,
   },
@@ -101,7 +101,7 @@ export const styles: Record<string, CSSProperties> = {
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.s,
     color: colors.neutral500,
-    lineHeight: "24px",
+    lineHeight: rem(24),
     overflowWrap: "anywhere", // break long unbroken strings (e.g. addresses without spaces)
     wordBreak: "break-word",
   },
@@ -113,24 +113,24 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: colors.alphaBlack0,
     borderRadius: radii.m,
     padding: `${spacing.xs} ${spacing.s}`,
-    minHeight: 36,
+    minHeight: rem(36),
   },
 
   tagRow: {
     display: "flex",
     flexWrap: "wrap",
-    gap: 6,
+    gap: rem(6),
     flex: 1,
   },
 
   tag: {
     display: "inline-flex",
     alignItems: "center",
-    gap: 4,
+    gap: rem(4),
     backgroundColor: colors.secondary300,
     color: colors.neutral100,
     borderRadius: radii.pill,
-    padding: "3px 10px",
+    padding: `${rem(3)} ${rem(10)}`,
     fontSize: fonts.size.xs,
     fontFamily: fonts.family.primary,
     fontWeight: fonts.weight.medium,

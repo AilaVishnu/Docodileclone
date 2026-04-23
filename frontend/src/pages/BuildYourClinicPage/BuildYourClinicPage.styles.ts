@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts, spacing } from "../../styles/theme";
+import { colors, fonts, spacing, rem } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   page: {
@@ -8,7 +8,7 @@ export const styles: Record<string, CSSProperties> = {
     // Vertical padding scales with viewport — creates equal breathing room
     // above the heading and below the CTAs at larger screens.
     // Horizontal stays static.
-    padding: "clamp(12px, 1.56vw, 48px) 24px",
+    padding: `clamp(12px, 1.56vw, 48px) ${rem(24)}`,
     backgroundColor: colors.primary100,
     display: "flex",
     flexDirection: "column",
@@ -27,7 +27,7 @@ export const styles: Record<string, CSSProperties> = {
 
   workspaceContainer: {
     width: "100%",
-    maxWidth: "1220px",
+    maxWidth: rem(1220),
     transition: "max-width 0.3s ease",
     display: "flex",
     flexDirection: "column",
@@ -57,9 +57,9 @@ export const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     alignItems: "center",
     width: "105%",
-    maxWidth: 680,
+    maxWidth: rem(680),
     position: "relative" as const,
-    marginLeft: -60,
+    marginLeft: rem(-60),
   },
 
   roofImage: {
@@ -86,8 +86,8 @@ export const styles: Record<string, CSSProperties> = {
 
   staffList: {
     display: "grid",
-    gridTemplateColumns: "repeat(5, 105px)",
-    gap: "10px 16px",
+    gridTemplateColumns: `repeat(5, ${rem(105)})`,
+    gap: `${rem(10)} ${rem(16)}`,
     width: "100%",
     justifyContent: "start",
   },
@@ -96,7 +96,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column" as const,
     alignItems: "flex-start",
-    width: 105,
+    width: rem(105),
     // Window-to-name gap. Previously bumped from 2 → 8, felt slightly loose.
     // 4 (spacing.2xs) is tighter, keeps label visually tethered to the
     // window while the name/role stack stays readable.
@@ -104,9 +104,9 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   staffCard: {
-    width: 80,
-    height: 68,
-    borderRadius: "40px 40px 0 0",
+    width: rem(80),
+    height: rem(68),
+    borderRadius: `${rem(40)} ${rem(40)} 0 0`,
     overflow: "hidden",
     cursor: "pointer",
     flexShrink: 0,
@@ -140,9 +140,9 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   addStaffCard: {
-    width: 80,
-    height: 68,
-    borderRadius: "40px 40px 0 0",
+    width: rem(80),
+    height: rem(68),
+    borderRadius: `${rem(40)} ${rem(40)} 0 0`,
     border: `2px dashed rgba(255,255,255,0.5)`,
     backgroundColor: "rgba(255,255,255,0.15)",
     display: "flex",
@@ -156,10 +156,10 @@ export const styles: Record<string, CSSProperties> = {
 
   bushRight: {
     position: "absolute" as const,
-    bottom: -5,
-    right: -40,
-    width: 65,
-    height: 55,
+    bottom: rem(-5),
+    right: rem(-40),
+    width: rem(65),
+    height: rem(55),
     zIndex: 3,
     transform: "scaleX(-1)",
   },

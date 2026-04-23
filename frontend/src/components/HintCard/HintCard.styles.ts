@@ -1,13 +1,13 @@
 import { CSSProperties } from "react";
-import { colors, radii, fonts } from "../../styles/theme";
+import { colors, radii, fonts, rem } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   card: {
     border: `1px dashed ${colors.neutral900}`,
     borderRadius: radii.primary,
-    padding: 24,
+    padding: rem(24),
     backgroundColor: "transparent",
-    maxWidth: 280,
+    maxWidth: rem(280),
     textAlign: "center",
   },
 
@@ -16,7 +16,7 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.h3,
     fontWeight: fonts.weight.medium,
     color: colors.neutral900,
-    margin: "0 0 8px 0",
+    margin: `0 0 ${rem(8)} 0`,
   },
 
   description: {

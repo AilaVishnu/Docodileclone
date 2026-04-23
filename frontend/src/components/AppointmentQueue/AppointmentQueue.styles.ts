@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts } from "../../styles/theme";
+import { colors, fonts, rem } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   container: {
@@ -12,14 +12,14 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: "16px",
+    marginTop: rem(16),
   },
 
   title: {
     fontFamily: fonts.family.secondary,
     fontSize: fonts.size.h5,
     fontWeight: 400,
-    lineHeight: "34px",
+    lineHeight: rem(34),
     color: colors.neutral900,
     margin: 0,
     fontStyle: "normal",
@@ -27,8 +27,8 @@ export const styles: Record<string, CSSProperties> = {
 
   tableContainer: {
     backgroundColor: colors.primary100,
-    borderRadius: "0 24px 24px 24px",
-    padding: "24px",
+    borderRadius: `0 ${rem(24)} ${rem(24)} ${rem(24)}`,
+    padding: rem(24),
     overflow: "visible",
   },
 
@@ -41,12 +41,12 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   th: {
-    padding: "12px 28px",
+    padding: `${rem(12)} ${rem(28)}`,
     borderBottom: `1px solid ${colors.primary300}`,
     color: colors.alphaBlack3,
     fontWeight: 400,
     fontSize: fonts.size.s,
-    lineHeight: "20px",
+    lineHeight: rem(20),
     letterSpacing: 0,
   },
 
@@ -56,7 +56,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   td: {
-    padding: "14px 28px",
+    padding: `${rem(14)} ${rem(28)}`,
     fontSize: fonts.size.s,
     color: colors.neutral900,
     verticalAlign: "middle",
@@ -66,7 +66,7 @@ export const styles: Record<string, CSSProperties> = {
 
   // Serial number cell
   serialCell: {
-    padding: "14px 8px",
+    padding: `${rem(14)} ${rem(8)}`,
     fontSize: fonts.size.s,
     color: colors.neutral900,
     verticalAlign: "middle",
@@ -75,14 +75,14 @@ export const styles: Record<string, CSSProperties> = {
 
   // Name cell with gender/age sub-detail
   nameCell: {
-    padding: "14px 8px",
+    padding: `${rem(14)} ${rem(8)}`,
     verticalAlign: "middle",
   },
 
   nameInner: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
+    gap: rem(8),
     whiteSpace: "nowrap" as const,
   },
 
@@ -100,7 +100,7 @@ export const styles: Record<string, CSSProperties> = {
     fontWeight: 400,
     display: "inline-flex",
     alignItems: "center",
-    gap: "4px",
+    gap: rem(4),
   },
 
   nameMetaDot: {
@@ -110,7 +110,7 @@ export const styles: Record<string, CSSProperties> = {
 
   // Status badge - filled pill
   statusBadge: {
-    padding: "5px 14px",
+    padding: `${rem(5)} ${rem(14)}`,
     borderRadius: "999px",
     fontSize: fonts.size.xs,
     fontWeight: 600,
@@ -120,14 +120,14 @@ export const styles: Record<string, CSSProperties> = {
 
   // Pay status cell (icon + text inline)
   payCell: {
-    padding: "14px 12px",
+    padding: `${rem(14)} ${rem(12)}`,
     verticalAlign: "middle",
   },
 
   payInner: {
     display: "inline-flex",
     alignItems: "center",
-    gap: "5px",
+    gap: rem(5),
     fontSize: fonts.size.s,
     fontWeight: 600,
   },
@@ -137,9 +137,9 @@ export const styles: Record<string, CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: "4px",
+    gap: rem(4),
     fontSize: fonts.size.s,
-    lineHeight: "16px",
+    lineHeight: rem(16),
     fontWeight: 400,
     color: colors.neutral900,
   },
@@ -153,11 +153,11 @@ export const styles: Record<string, CSSProperties> = {
 
   walkinBadge: {
     fontSize: fonts.size.caption,
-    padding: "2px 6px",
-    borderRadius: "4px",
+    padding: `${rem(2)} ${rem(6)}`,
+    borderRadius: rem(4),
     backgroundColor: colors.secondary100,
     color: colors.primary400,
-    marginLeft: "8px",
+    marginLeft: rem(8),
     fontWeight: 700,
     textTransform: "uppercase" as const,
   },
@@ -170,9 +170,9 @@ export const styles: Record<string, CSSProperties> = {
     background: "none",
     border: "none",
     cursor: "pointer",
-    padding: "6px 8px",
+    padding: `${rem(6)} ${rem(8)}`,
     color: colors.neutral400,
-    borderRadius: "6px",
+    borderRadius: rem(6),
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -184,18 +184,18 @@ export const styles: Record<string, CSSProperties> = {
     left: "100%",
     top: 0,
     backgroundColor: colors.neutral100,
-    borderRadius: "12px",
+    borderRadius: rem(12),
     boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
     zIndex: 100,
-    minWidth: "200px",
-    padding: "8px",
+    minWidth: rem(200),
+    padding: rem(8),
     border: `1px solid ${colors.neutral200}`,
   },
 
   actionMenuItem: {
-    padding: "12px 16px",
+    padding: `${rem(12)} ${rem(16)}`,
     cursor: "pointer",
-    borderRadius: "8px",
+    borderRadius: rem(8),
     fontSize: fonts.size.m,
     fontFamily: fonts.family.primary,
     color: colors.neutral900,

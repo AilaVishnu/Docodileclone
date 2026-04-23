@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts, radii, spacing, strokes, fluidSpacing, layout } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes, fluidSpacing, layout, rem } from "../../styles/theme";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BOOK APPOINTMENT — styles
@@ -57,8 +57,8 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: "32px",
-    height: "32px",
+    width: rem(32),
+    height: rem(32),
     borderRadius: radii.full,
     border: `${strokes.xs} solid ${colors.neutral300}`,
     backgroundColor: "transparent",
@@ -106,14 +106,14 @@ export const styles: Record<string, CSSProperties> = {
     padding: `0 ${spacing["2xs"]}`,
     marginLeft: spacing.xs,
     textDecoration: "underline",
-    textUnderlineOffset: "4px",
+    textUnderlineOffset: rem(4),
   },
 
   // ─── Main 3-column grid ──────────────────────────────────────────────────
   grid: {
     display: "grid",
     // patient | form (grows 524 → 700) | bill
-    gridTemplateColumns: "200px minmax(524px, 700px) 312px",
+    gridTemplateColumns: `${rem(200)} minmax(${rem(524)}, ${rem(700)}) ${rem(312)}`,
     gridTemplateRows: "auto auto auto",
     gap: spacing.m,
     justifyContent: "center",
@@ -159,7 +159,7 @@ export const styles: Record<string, CSSProperties> = {
   scheduleMiniCard: {
     padding: `${spacing.xs} ${spacing.m}`,
     height: "unset",
-    minHeight: "40px",
+    minHeight: rem(40),
     justifyContent: "center",
   },
   patientIdText: {
@@ -187,7 +187,7 @@ export const styles: Record<string, CSSProperties> = {
     padding: `${spacing.xl} ${spacing.xl} ${spacing.xl} ${spacing.m}`,
     justifyContent: "center",
     alignSelf: "start",
-    minHeight: "144px",
+    minHeight: rem(144),
     boxSizing: "border-box",
   },
   appointmentRow: {
@@ -200,13 +200,13 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: spacing.s,
-    width: "140px",
+    width: rem(140),
     flexShrink: 0,
   },
   appointmentIcon: {
     color: colors.neutral900,
-    width: "24px",
-    height: "24px",
+    width: rem(24),
+    height: rem(24),
   },
 
   // ─── Right column: Bill card (spans 2 rows) ──────────────────────────────
@@ -237,7 +237,7 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.s,
     fontWeight: fonts.weight.medium,
     color: colors.neutral500, // was neutral700 — same UI-grey rule
-    width: "80px",
+    width: rem(80),
     flexShrink: 0,
   },
   billingValueArea: {
@@ -284,8 +284,8 @@ export const styles: Record<string, CSSProperties> = {
   },
   iconFieldIcon: {
     color: colors.neutral900,
-    width: "24px",
-    height: "24px",
+    width: rem(24),
+    height: rem(24),
     flexShrink: 0,
   },
   // Inline label for a FIELD NAME (e.g. "DOB", "Age") — slightly heavier so
@@ -408,7 +408,7 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.m,
     fontWeight: fonts.weight.regular,
     fontFamily: fonts.family.primary,
-    minWidth: "200px",
+    minWidth: rem(200),
     boxSizing: "border-box",
   },
   pillButtonSecondary: {
@@ -425,7 +425,7 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.m,
     fontWeight: fonts.weight.regular,
     fontFamily: fonts.family.primary,
-    minWidth: "200px",
+    minWidth: rem(200),
     boxSizing: "border-box",
   },
   pillButtonPayDue: {
@@ -442,7 +442,7 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.m,
     fontWeight: fonts.weight.regular,
     fontFamily: fonts.family.primary,
-    minWidth: "200px",
+    minWidth: rem(200),
     boxSizing: "border-box",
   },
 };

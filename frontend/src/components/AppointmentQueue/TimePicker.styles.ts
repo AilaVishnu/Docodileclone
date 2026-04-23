@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, radii, fonts, spacing } from "../../styles/theme";
+import { colors, radii, fonts, spacing, rem } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   overlay: {
@@ -8,18 +8,18 @@ export const styles: Record<string, CSSProperties> = {
     left: "50%",
     transform: "translateX(-50%)",
     zIndex: 1000,
-    marginTop: "8px",
+    marginTop: rem(8),
   },
 
   container: {
     backgroundColor: colors.neutral100,
-    width: "240px",
-    padding: "16px",
-    borderRadius: "20px",
+    width: rem(240),
+    padding: rem(16),
+    borderRadius: rem(20),
     boxShadow: "2px 2px 16px 0px rgba(0,0,0,0.12)",
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: rem(16),
   },
 
   header: {
@@ -37,13 +37,13 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: "8px",
+    gap: rem(8),
   },
 
   column: {
     display: "flex",
     flexDirection: "column",
-    gap: "4px",
+    gap: rem(4),
     alignItems: "center",
   },
 
@@ -54,12 +54,12 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   scrollBox: {
-    height: "120px",
+    height: rem(120),
     overflowY: "auto",
-    width: "50px",
+    width: rem(50),
     border: `1px solid ${colors.neutral200}`,
-    borderRadius: "8px",
-    padding: "4px",
+    borderRadius: rem(8),
+    padding: rem(4),
     msOverflowStyle: "none", // IE and Edge
     scrollbarWidth: "none", // Firefox
   },
@@ -68,10 +68,10 @@ export const styles: Record<string, CSSProperties> = {
   hideScrollbar: {},
 
   item: {
-    padding: "8px",
+    padding: rem(8),
     textAlign: "center",
     cursor: "pointer",
-    borderRadius: "6px",
+    borderRadius: rem(6),
     fontSize: fonts.size.s,
     color: colors.neutral700,
   },
@@ -84,21 +84,21 @@ export const styles: Record<string, CSSProperties> = {
   separator: {
     fontSize: fonts.size.l,
     fontWeight: 600,
-    paddingTop: "20px",
+    paddingTop: rem(20),
   },
 
   amPmToggle: {
     display: "flex",
-    gap: "4px",
-    marginTop: "4px",
+    gap: rem(4),
+    marginTop: rem(4),
   },
 
   toggleBtn: {
     flex: 1,
-    padding: "8px",
+    padding: rem(8),
     textAlign: "center",
     cursor: "pointer",
-    borderRadius: "6px",
+    borderRadius: rem(6),
     fontSize: fonts.size.s,
     color: colors.neutral700,
     border: "none",
@@ -115,11 +115,11 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral100,
     border: "none",
     borderRadius: "999px",
-    padding: "10px",
+    padding: rem(10),
     fontSize: fonts.size.m,
     fontWeight: 500,
     cursor: "pointer",
     width: "100%",
-    marginTop: "4px",
+    marginTop: rem(4),
   },
 };

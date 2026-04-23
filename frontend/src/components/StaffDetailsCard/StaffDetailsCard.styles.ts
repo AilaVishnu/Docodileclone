@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, radii, spacing } from "../../styles/theme";
+import { colors, radii, spacing, rem } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   card: {
@@ -14,16 +14,16 @@ export const styles: Record<string, CSSProperties> = {
   },
   genderGroup: {
     display: "flex",
-    gap: 24,
-    marginTop: 4,
+    gap: rem(24),
+    marginTop: rem(4),
     alignItems: "center",
   },
 
   radioLabel: {
     display: "flex",
     alignItems: "center",
-    gap: "2px",
-    padding: "2px",
+    gap: rem(2),
+    padding: rem(2),
     color: colors.neutral900,
     cursor: "pointer",
   },

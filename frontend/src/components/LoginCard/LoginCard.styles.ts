@@ -1,12 +1,12 @@
 import { CSSProperties } from "react";
-import { fonts, radii, spacing, colors } from "../../styles/theme";
+import { fonts, radii, spacing, colors, rem } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   card: {
     borderRadius: radii.primary,
-    padding: 48,
+    padding: rem(48),
     width: "100%",
-    maxWidth: 560,
+    maxWidth: rem(560),
     display: "flex",
     flexDirection: "column",
     gap: spacing.xl,
@@ -32,14 +32,14 @@ export const styles: Record<string, CSSProperties> = {
     border: "none",
     cursor: "pointer",
     fontSize: fonts.size.l,
-    marginLeft: 8,
+    marginLeft: rem(8),
     opacity: 0.7,
   },
 
   footer: {
     display: "flex",
     justifyContent: "space-between",
-    marginTop: 8,
+    marginTop: rem(8),
   },
 
   footerText: {
@@ -52,10 +52,10 @@ export const styles: Record<string, CSSProperties> = {
 
   supportPopup: {
     position: "absolute",
-    bottom: -50,
+    bottom: rem(-50),
     left: "50%",
     transform: "translateX(-50%)",
-    padding: "10px 20px",
+    padding: `${rem(10)} ${rem(20)}`,
     borderRadius: radii.m,
     fontSize: fonts.size.s,
     fontFamily: fonts.family.primary,

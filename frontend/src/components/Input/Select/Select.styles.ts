@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, radii, fonts, spacing, strokes } from "../../../styles/theme";
+import { colors, radii, fonts, spacing, strokes, rem } from "../../../styles/theme";
 
 // Matches Figma dropdown-m (node 312:1441).
 //
@@ -22,7 +22,7 @@ export const styles: Record<string, CSSProperties> = {
     border: `${strokes.xs} solid ${colors.neutral300}`,
     borderRadius: radii.m,
     backgroundColor: colors.neutral100,
-    height: 40,
+    height: rem(40),
     width: "100%",
     position: "relative",
     cursor: "pointer",
@@ -98,21 +98,21 @@ export const styles: Record<string, CSSProperties> = {
     transition: "transform 0.2s ease",
     pointerEvents: "none",
     flexShrink: 0,
-    width: 24,
-    height: 24,
+    width: rem(24),
+    height: rem(24),
   },
 
   // ─── Menu (dropdown panel) ───────────────────────────────────────────
   menu: {
     position: "absolute" as const,
-    top: "calc(100% + 4px)",
+    top: `calc(100% + ${rem(4)})`,
     left: 0,
     right: 0,
     backgroundColor: colors.neutral100,
     borderRadius: radii.m,
     boxShadow: "2px 2px 12px rgba(0,0,0,0.08)",
     zIndex: 100,
-    maxHeight: "220px",
+    maxHeight: rem(220),
     overflowY: "auto" as const,
     padding: spacing["2xs"], // 4px
     scrollbarWidth: "none" as const,
@@ -121,7 +121,7 @@ export const styles: Record<string, CSSProperties> = {
 
   menuItem: {
     padding: `${spacing["2xs"]} ${spacing.xs}`, // 4/8
-    minHeight: 28,
+    minHeight: rem(28),
     display: "flex",
     alignItems: "center",
     gap: spacing.xs,
