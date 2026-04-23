@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { styles } from "./AppointmentQueue.styles";
+import { fonts, colors } from "../../styles/theme";
 import { StatusBadge, PayBadge } from "./StatusBadge";
 import { ReactComponent as StarOutlineIcon } from "../../assets/icons/star.svg";
 import { ReactComponent as ReorderDotsIcon } from "../../assets/icons/reorder.svg";
@@ -80,7 +81,7 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
           top: "calc(100% + 4px)",
           left: "50%",
           transform: "translateX(-50%)",
-          backgroundColor: "#fff",
+          backgroundColor: colors.neutral100,
           borderRadius: "12px",
           boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
           zIndex: 100,
@@ -95,15 +96,15 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
                 onStatusChange(appointment.id, opt.value);
                 setIsOpen(false);
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f5f5f5"; }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.neutral150; }}
               onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
               style={{
                 padding: "10px 14px",
                 cursor: "pointer",
                 borderRadius: "8px",
-                fontSize: "14px",
+                fontSize: fonts.size.s,
                 fontWeight: 500,
-                color: "#1f2937",
+                color: colors.neutral900,
               }}
             >
               {opt.label}
@@ -163,7 +164,7 @@ function ActionMenu({
         style={styles.actionButton}
         onClick={() => setIsOpen(!isOpen)}
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.backgroundColor = "#f3f4f6";
+          (e.currentTarget as HTMLElement).style.backgroundColor = colors.neutral150;
         }}
         onMouseLeave={(e) => {
           (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
@@ -187,7 +188,7 @@ function ActionMenu({
                 setIsOpen(false);
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#f5f5f5";
+                e.currentTarget.style.backgroundColor = colors.neutral150;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = "transparent";
@@ -229,13 +230,13 @@ export function QueueTable({
         <thead>
           <tr>
             <th style={{ ...styles.th, paddingLeft: "8px", paddingRight: "8px" }}>#</th>
-            <th style={{ ...styles.th, paddingLeft: "8px" }}>Name</th>
-            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "15px" }}>Phone</th>
-            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "12px" }}>Service</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Type</th>
-            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "40px" }}>Time</th>
-            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "50px" }}>Status</th>
-            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "50px" }}>Pay</th>
+            <th style={{ ...styles.th, paddingLeft: "8px", paddingRight: "8px" }}>Name</th>
+            <th style={{ ...styles.th, textAlign: "center" }}>Phone</th>
+            <th style={{ ...styles.th, textAlign: "center" }}>Service</th>
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "8px", paddingRight: "8px" }}>Type</th>
+            <th style={{ ...styles.th, textAlign: "center" }}>Time</th>
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Status</th>
+            <th style={{ ...styles.th, textAlign: "center" }}>Pay</th>
             <th style={styles.th}></th>
           </tr>
         </thead>
@@ -248,7 +249,7 @@ export function QueueTable({
                   ...styles.td,
                   textAlign: "center",
                   padding: "48px",
-                  color: "#9CA3AF",
+                  color: colors.neutral400,
                 }}
               >
                 No appointments for {doctorName || "this doctor"} today
@@ -260,7 +261,7 @@ export function QueueTable({
               const isNoShow = apt.status === "NO_SHOW";
               const isInProgress = apt.status === "IN_PROGRESS";
               const isCancelled = apt.status === "CANCELLED";
-              const baseBg = isInProgress ? "#F3F3DC" : isCompleted ? "#F1F6E7" : (isNoShow || isCancelled) ? "rgba(0,0,0,0.04)" : "transparent";
+              const baseBg = isInProgress ? colors.primary200 : isCompleted ? colors.secondary50 : (isNoShow || isCancelled) ? colors.neutralAlphaBlack : "transparent";
               const prevStatus = index > 0 ? appointments[index - 1].status : apt.status;
               const groupKey = (s: string) => (s === "CANCELLED" || s === "NO_SHOW") ? "INACTIVE" : s;
               const isNewGroup = index > 0 && groupKey(apt.status) !== groupKey(prevStatus);
@@ -277,7 +278,7 @@ export function QueueTable({
                         <div style={{
                           width: "1.5px",
                           height: "20px",
-                          backgroundColor: "#EDDFBA",
+                          backgroundColor: colors.primary300,
                         }} />
                       </div>
                     </td></tr>
@@ -328,7 +329,7 @@ export function QueueTable({
                     </td>
 
                     {/* Phone */}
-                    <td style={{ ...styles.td, textAlign: "left", paddingLeft: "0px" }}>{apt.patientPhone}</td>
+                    <td style={{ ...styles.td, textAlign: "center" }}>{apt.patientPhone}</td>
 
                     {/* Service */}
                     <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px", maxWidth: 0 }}>
@@ -352,7 +353,7 @@ export function QueueTable({
                     </td>
 
                     {/* Type */}
-                    <td style={{ ...styles.td, textAlign: "center" }}>
+                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "8px", paddingRight: "8px" }}>
                       <TypeBadge type={apt.type} />
                     </td>
 
@@ -365,7 +366,7 @@ export function QueueTable({
                     </td>
 
                     {/* Status badge */}
-                    <td style={{ ...styles.td, textAlign: "center" }}>
+                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
                       {onStatusChange ? (
                         <StatusDropdown
                           appointment={apt}
@@ -378,7 +379,7 @@ export function QueueTable({
                     </td>
 
                     {/* Pay status */}
-                    <td style={{ ...styles.payCell, textAlign: "left", paddingLeft: "40px" }}>
+                    <td style={{ ...styles.payCell, textAlign: "center" }}>
                       <PayBadge status={apt.payStatus} />
                     </td>
 
@@ -393,9 +394,9 @@ export function QueueTable({
                       ) : (
                         <button style={styles.actionButton}>
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="12" cy="5" r="1.5" fill="#8F8F8F" />
-                            <circle cx="12" cy="12" r="1.5" fill="#8F8F8F" />
-                            <circle cx="12" cy="19" r="1.5" fill="#8F8F8F" />
+                            <circle cx="12" cy="5" r="1.5" fill={colors.neutral500} />
+                            <circle cx="12" cy="12" r="1.5" fill={colors.neutral500} />
+                            <circle cx="12" cy="19" r="1.5" fill={colors.neutral500} />
                           </svg>
                         </button>
                       )}

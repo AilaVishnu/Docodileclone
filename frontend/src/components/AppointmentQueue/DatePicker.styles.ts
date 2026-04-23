@@ -22,7 +22,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   container: {
-    backgroundColor: "white",
+    backgroundColor: colors.neutral100,
     width: "300px",
     padding: "20px",
     borderRadius: "16px",
@@ -41,7 +41,7 @@ export const styles: Record<string, CSSProperties> = {
 
   monthTitle: {
     fontWeight: 600,
-    fontSize: "16px",
+    fontSize: fonts.size.m,
     color: "black",
     margin: 0,
   },
@@ -63,7 +63,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   weekDay: {
-    fontSize: "12px",
+    fontSize: fonts.size.xs,
     color: colors.neutral500,
   },
 
@@ -79,7 +79,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "12px",
+    fontSize: fonts.size.xs,
     cursor: "pointer",
     borderRadius: "8px",
     transition: "background-color 0.2s",
@@ -92,7 +92,7 @@ export const styles: Record<string, CSSProperties> = {
 
   selectedDay: {
     backgroundColor: colors.active.shade600,
-    color: "white",
+    color: colors.neutral100,
     borderRadius: "999px",
   },
 
@@ -107,11 +107,11 @@ export const styles: Record<string, CSSProperties> = {
 
   doneButton: {
     backgroundColor: colors.neutral900,
-    color: "white",
+    color: colors.neutral100,
     border: "none",
     borderRadius: "999px",
     padding: "8px 24px",
-    fontSize: "16px",
+    fontSize: fonts.size.m,
     cursor: "pointer",
     width: "100%",
     marginTop: "8px",

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { styles } from "./BillCard.styles";
+import { colors, spacing } from "../../styles/theme";
 import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
 import { ReactComponent as ScaleIcon } from "../../assets/icons/scale.svg";
 import { ReactComponent as PaidStamp } from "../../assets/icons/paid-stamp.svg";
@@ -69,7 +70,7 @@ export function BillCard({
       <div style={styles.card}>
         <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <h3 style={styles.title}>Bill</h3>
-          <div style={{ position: "absolute", right: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ position: "absolute", right: 0, display: "flex", alignItems: "center", gap: spacing.s }}>
             <PrinterIcon width={15} height={15} style={{ cursor: "pointer" }} />
             <ScaleIcon width={15} height={15} style={{ cursor: "pointer" }} />
           </div>
@@ -91,38 +92,13 @@ export function BillCard({
           <div style={styles.fieldRow}>
             <label style={styles.label}>Subtotal</label>
             <div style={styles.fieldValue}>
-              <span>₹&nbsp;</span>
+              <span style={{ flexShrink: 0 }}>₹&nbsp;</span>
               <input
-                style={styles.input}
+                style={{ ...styles.input, minWidth: 0 }}
                 type="number"
                 value={subtotal || ""}
                 onChange={(e) => onSubtotalChange(Number(e.target.value))}
               />
-            </div>
-          </div>
-
-          <div style={styles.fieldRow}>
-            <label style={styles.label}>Tax</label>
-            <div style={styles.fieldValue}>
-              <input
-                style={{ ...styles.input, width: "40px", flex: "none" }}
-                type="number"
-                placeholder="0"
-                value={tax}
-                onChange={(e) => onTaxChange(e.target.value)}
-              />
-              <div style={{ marginLeft: "auto" }}>
-                <div style={styles.toggleGroup}>
-                  <button
-                    style={taxMode === "%" ? styles.toggleActive : styles.toggleInactive}
-                    onClick={() => handleTaxMode("%")}
-                  >%</button>
-                  <button
-                    style={taxMode === "₹" ? styles.toggleActive : styles.toggleInactive}
-                    onClick={() => handleTaxMode("₹")}
-                  >₹</button>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -158,10 +134,10 @@ export function BillCard({
         </div>
 
         <div style={styles.methodRow}>
-          {["Cash", "Card", "UPI", "No Bill"].map((m) => (
+          {["Cash", "Card", "UPI", "Waive"].map((m) => (
             <label key={m} style={{
               ...styles.radioLabel,
-              color: m === "No Bill" ? "#6c8145" : styles.radioLabel.color,
+              color: m === "Waive" ? colors.red200 : styles.radioLabel.color,
             }}>
               <input
                 type="radio"

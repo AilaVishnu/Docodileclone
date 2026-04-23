@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts, spacing } from "../../styles/theme";
+import { colors, fonts, spacing, strokes, radii } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   page: {
@@ -26,7 +26,7 @@ export const styles: Record<string, CSSProperties> = {
     marginTop: spacing.xxl,
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.s,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     textDecoration: "underline",
     cursor: "pointer",
     background: "none",
@@ -36,15 +36,16 @@ export const styles: Record<string, CSSProperties> = {
 
   logoutButton: {
     position: "fixed" as const,
-    bottom: 20,
-    right: 20,
+    bottom: spacing.l,
+    right: spacing.l,
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.xs,
-    color: colors.neutral700,
+    // Page rule: all grey text/stroke = neutral500.
+    color: colors.neutral500,
     background: "none",
-    border: `1px solid ${colors.neutral400}`,
-    borderRadius: 8,
-    padding: "6px 16px",
+    border: `${strokes.xs} solid ${colors.neutral500}`,
+    borderRadius: radii.m,
+    padding: `${spacing.xs} ${spacing.m}`, // was 6/16 — 6 snapped to 8
     cursor: "pointer",
   },
 };

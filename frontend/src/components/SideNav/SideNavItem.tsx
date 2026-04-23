@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { colors } from '../../styles/theme';
+import { colors, fonts } from '../../styles/theme';
 
 type SideNavItemProps = {
   label: string;
@@ -38,7 +38,7 @@ export function SideNavItem({ label, icon, active, onClick, isExpanded }: SideNa
     },
     label: {
       textAlign: isExpanded ? 'left' : 'center' as const,
-      fontSize: isExpanded ? '14px' : '10px',
+      fontSize: isExpanded ? fonts.size.s : fonts.size.caption,
       fontWeight: active ? 600 : 400,
       color: colors.neutral900,
       fontFamily: 'Inter, sans-serif',

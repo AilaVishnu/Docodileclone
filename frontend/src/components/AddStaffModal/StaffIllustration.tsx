@@ -1,115 +1,102 @@
 import React from "react";
-import { colors } from "../../styles/theme";
-import { ReactComponent as FaceIcon } from "../../assets/staff/face.svg";
-import { ReactComponent as BodyIcon } from "../../assets/staff/body.svg";
-import { ReactComponent as FemaleHairIcon } from "../../assets/staff/hair_female.svg";
-import { ReactComponent as MaleHairIcon } from "../../assets/staff/hair_male.svg";
-import { ReactComponent as DoctorAccessory } from "../../assets/staff/accessory_doctor.svg";
-import { ReactComponent as PharmacyAccessory } from "../../assets/staff/accessory_pharmacy.svg";
-import { ReactComponent as NurseAccessory } from "../../assets/staff/accessory_nurse.svg";
+
+// We need the SVG *URL* (not the React component) so we can use it as a
+// `background-image`. This avoids all the flex-sizing quirks the inline-SVG
+// approach had (figure getting clipped / sunk depending on sibling height).
+import pharmacyMaleUrl    from "../../assets/staff/pharmacy_male.svg";
+import pharmacyFemaleUrl  from "../../assets/staff/pharmacy_female.svg";
+import doctorMaleUrl      from "../../assets/staff/doctor_male.svg";
+import doctorFemaleUrl    from "../../assets/staff/doctor_female.svg";
+import nurseMaleUrl       from "../../assets/staff/nurse_male.svg";
+import nurseFemaleUrl     from "../../assets/staff/nurse_female.svg";
+import frontdeskMaleUrl   from "../../assets/staff/frontdesk_male.svg";
+import frontdeskFemaleUrl from "../../assets/staff/frontdesk_female.svg";
+import labMaleUrl         from "../../assets/staff/lab_male.svg";
+import labFemaleUrl       from "../../assets/staff/lab_female.svg";
+
+type Role = "Doctor" | "Nurse" | "Pharmacy" | "Front Desk" | "Lab" | string;
+type Gender = "male" | "female" | "other" | "";
+type Crop = "full" | "bust" | "face";
 
 type IllustrationProps = {
-  role: string;
-  gender: "male" | "female" | "other" | "";
+  role: Role;
+  gender: Gender;
   width?: number | string;
   height?: number | string;
   borderRadius?: number | string;
+  // "full" – shows the whole figure anchored to bottom (modal, full cards)
+  // "bust" – shows head + shoulders, zoomed in (house tile)
+  // "face" – shows just the face, circular avatars in top nav / status cards
+  crop?: Crop;
 };
+
+const AVATARS: Record<string, { male: string; female: string }> = {
+  "Doctor":     { male: doctorMaleUrl,     female: doctorFemaleUrl     },
+  "Nurse":      { male: nurseMaleUrl,      female: nurseFemaleUrl      },
+  "Pharmacy":   { male: pharmacyMaleUrl,   female: pharmacyFemaleUrl   },
+  "Front Desk": { male: frontdeskMaleUrl,  female: frontdeskFemaleUrl  },
+  "Lab":        { male: labMaleUrl,        female: labFemaleUrl        },
+};
+
+// Container background = the same color baked into the SVG's rect fill, so
+// the SVG can sit anywhere inside and the color reads as continuous.
+const ROLE_BG: Record<string, string> = {
+  "Doctor":     "#AE561A",
+  "Pharmacy":   "#556536",
+  "Nurse":      "#D00416",
+  "Front Desk": "#196A7F",
+  "Lab":        "#5A4D84",
+};
+
+// Tuned for the 217×217 SVG viewBox (figure body y≈38..217, x≈50..185).
+const CROP_SETTINGS: Record<Crop, { size: string; position: string }> = {
+  full: { size: "contain",   position: "50% 100%" },  // full figure, bottom, letterboxed sides
+  // `cover` fills the container (no side letterboxing), crops at most ~15
+  // SVG units from the top. Since the figure's hair sits at y=38, the hair
+  // stays visible with a small band of background above it. Previous 140%
+  // was cropping the top of the head.
+  bust: { size: "cover",     position: "50% 100%" },
+  face: { size: "120% auto", position: "50% 22%"  },  // head/face, centered
+};
+
+function pickUrl(role: Role, gender: Gender): string {
+  const g = gender === "male" ? "male" : "female";
+  return (AVATARS[role]?.[g]) ?? AVATARS["Front Desk"][g];
+}
+
+function pickBg(role: Role): string {
+  return ROLE_BG[role] ?? ROLE_BG["Front Desk"];
+}
 
 export function StaffIllustration({
   role,
   gender,
   width = 180,
-  height = "100%",
+  height,
   borderRadius = 8,
+  crop = "full",
 }: IllustrationProps) {
-  const isFemale = gender === "female" || gender === "other" || gender === "";
-
-  // Background colors based on role
-  const getBgColor = () => {
-    switch (role) {
-      case "Doctor":
-        return colors.primary800;
-      case "Pharmacy":
-        return "#556536";
-      case "Nurse":
-        return "#5a4d84";
-      case "Front Desk":
-        return "#196a7f";
-      default:
-        return colors.primary800;
-    }
-  };
-
-  const getBodyColor = () => {
-    switch (role) {
-      case "Doctor":
-        return "#F9F9ED";
-      case "Pharmacy":
-        return "#ACBF88";
-      case "Nurse":
-        return "#CF6F2F";
-      default:
-        return "#C7C7C7";
-    }
-  };
+  const url = pickUrl(role, gender);
+  const bg = pickBg(role);
+  const settings = CROP_SETTINGS[crop];
 
   return (
     <div
       style={{
         width,
         height,
-        backgroundColor: getBgColor(),
+        // Stretch to match the tallest sibling in flex parents; harmless
+        // when an explicit height is supplied.
+        alignSelf: "stretch",
         borderRadius,
-        position: "relative",
-        overflow: "hidden",
+        backgroundColor: bg,
+        backgroundImage: `url(${url})`,
+        backgroundSize: settings.size,
+        backgroundPosition: settings.position,
+        backgroundRepeat: "no-repeat",
         flexShrink: 0,
-        display: "flex",
-        alignItems: "flex-end",
-        justifyContent: "center",
+        overflow: "hidden",
       }}
-    >
-      <svg
-        width="100%"
-        height="100%"
-        viewBox="0 0 217 217"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        preserveAspectRatio="xMidYMax meet"
-        style={{ display: "block" }}
-      >
-        {/* Body Fragment */}
-        <g transform="translate(50.02, 109.89)" style={{ color: getBodyColor() }}>
-          <BodyIcon />
-        </g>
-
-        {/* Face Fragment */}
-        <g transform="translate(61.53, 49.91)">
-          <FaceIcon />
-        </g>
-
-        {/* Hair Fragment */}
-        <g transform={isFemale ? "translate(54.33, 38.91)" : "translate(60.98, 38.91)"}>
-          {isFemale ? <FemaleHairIcon /> : <MaleHairIcon />}
-        </g>
-
-        {/* Accessories */}
-        {role === "Doctor" && (
-          <g transform="translate(68.52, 133.97)">
-            <DoctorAccessory />
-          </g>
-        )}
-        {role === "Pharmacy" && (
-          <g transform="translate(114.84, 168.26)">
-            <PharmacyAccessory />
-          </g>
-        )}
-        {role === "Nurse" && (
-          <g transform="translate(103.82, 81.28)">
-            <NurseAccessory />
-          </g>
-        )}
-      </svg>
-    </div>
+    />
   );
 }

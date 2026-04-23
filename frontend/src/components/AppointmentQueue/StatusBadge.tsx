@@ -1,5 +1,5 @@
 import React from "react";
-import { fonts } from "../../styles/theme";
+import { fonts, colors } from "../../styles/theme";
 import { ReactComponent as DangerTriangleIcon } from "../../assets/icons/danger-triangle.svg";
 import { ReactComponent as CheckCircleIcon } from "../../assets/icons/check-circle.svg";
 
@@ -24,14 +24,14 @@ const STATUS_CONFIG: Record<
   string,
   { bg: string; color: string; label: string }
 > = {
-  BOOKED: { bg: "#F3F3DC", color: "#202020", label: "Booked" },
-  WAITING: { bg: "#FFDB43", color: "#122525", label: "Waiting" },
-  SCHEDULED: { bg: "#F3F3DC", color: "#202020", label: "Booked" },
-  ARRIVED: { bg: "#f3f3dcff", color: "#122525", label: "Arrived" },
-  IN_PROGRESS: { bg: "#ffffffff", color: "#122525", label: "In Progress" },
-  COMPLETED: { bg: "#84EBB4", color: "#0D5C30", label: "Completed" },
-  NO_SHOW: { bg: "#B0B0B0", color: "#FFFFFF", label: "No Show" },
-  CANCELLED: { bg: "#FB3748", color: "#FFFFFF", label: "Cancelled" },
+  BOOKED: { bg: colors.primary200, color: colors.neutral900, label: "Booked" },
+  WAITING: { bg: colors.yellow100, color: colors.neutral900, label: "Waiting" },
+  SCHEDULED: { bg: colors.primary200, color: colors.neutral900, label: "Booked" },
+  ARRIVED: { bg: colors.primary200, color: colors.neutral900, label: "Arrived" },
+  IN_PROGRESS: { bg: colors.neutral100, color: colors.neutral900, label: "In Progress" },
+  COMPLETED: { bg: colors.green100, color: colors.secondary800, label: "Completed" },
+  NO_SHOW: { bg: colors.neutral400, color: colors.neutral100, label: "No Show" },
+  CANCELLED: { bg: colors.red100, color: colors.neutral100, label: "Cancelled" },
 };
 
 const PAY_CONFIG: Record<
@@ -39,22 +39,22 @@ const PAY_CONFIG: Record<
   { color: string; label: string; icon: React.ReactNode }
 > = {
   PAID: {
-    color: "#202020",
+    color: colors.neutral900,
     label: "Paid",
     icon: <CheckCircleIcon width={20} height={20} />,
   },
   DUE: {
-    color: "#202020",
+    color: colors.neutral900,
     label: "Due",
     icon: <DangerTriangleIcon width={20} height={20} />,
   },
   UNPAID: {
-    color: "#202020",
+    color: colors.neutral900,
     label: "Due",
     icon: <DangerTriangleIcon width={20} height={20} />,
   },
   "NO PAY": {
-    color: "#202020",
+    color: colors.neutral900,
     label: "Due",
     icon: <DangerTriangleIcon width={20} height={20} />,
   },
@@ -73,7 +73,7 @@ type StatusBadgeProps = {
 
 export function StatusBadge({ status, onClick }: StatusBadgeProps) {
   const key = status?.toUpperCase();
-  const cfg = STATUS_CONFIG[key] ?? { bg: "#E9E9E9", color: "#4B4B4B", label: status };
+  const cfg = STATUS_CONFIG[key] ?? { bg: colors.neutral200, color: colors.neutral700, label: status };
 
   return (
     <span
@@ -86,10 +86,10 @@ export function StatusBadge({ status, onClick }: StatusBadgeProps) {
         color: cfg.color,
         borderRadius: "4px",
         padding: "4px 8px",
-        fontSize: "13px",
+        fontSize: fonts.size.xs,
         fontFamily: fonts.family.primary,
-        fontWeight: 500,
-        lineHeight: "18px",
+        fontWeight: fonts.weight.regular,
+        lineHeight: "16px",
         letterSpacing: 0,
         cursor: onClick ? "pointer" : "default",
         userSelect: "none",
@@ -119,10 +119,10 @@ export function PayBadge({ status }: PayBadgeProps) {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        justifyContent: "flex-start",
+        justifyContent: "center",
         gap: "4px",
         width: "80px",
-        fontSize: "12px",
+        fontSize: fonts.size.s,
         fontFamily: fonts.family.primary,
         fontWeight: 400,
         lineHeight: "16px",
@@ -153,7 +153,7 @@ export const getStatusLabel = (status: string): string =>
   STATUS_CONFIG[status?.toUpperCase()]?.label ?? status;
 
 export const getStatusBg = (status: string): string =>
-  STATUS_CONFIG[status?.toUpperCase()]?.bg ?? "#E9E9E9";
+  STATUS_CONFIG[status?.toUpperCase()]?.bg ?? colors.neutral200;
 
 export const getStatusColor = (status: string): string =>
-  STATUS_CONFIG[status?.toUpperCase()]?.color ?? "#4B4B4B";
+  STATUS_CONFIG[status?.toUpperCase()]?.color ?? colors.neutral700;

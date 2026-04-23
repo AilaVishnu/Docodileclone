@@ -12,7 +12,8 @@ type ClinicCardProps = {
   phone: string;
   address: string;
   specialties: string[];
-  onGoToDashboard: () => void;
+  onGoToDashboard?: () => void;
+  onEditDetails?: () => void;
 };
 
 export function ClinicCard({
@@ -22,6 +23,7 @@ export function ClinicCard({
   address,
   specialties,
   onGoToDashboard,
+  onEditDetails,
 }: ClinicCardProps) {
   return (
     <div style={styles.card}>
@@ -65,9 +67,16 @@ export function ClinicCard({
       )}
 
       <div style={styles.buttonWrapper}>
-        <Button size="sm" variant="dark" onClick={onGoToDashboard}>
-          Go to Dashboard
-        </Button>
+        {onEditDetails && (
+          <Button size="sm" variant="light" onClick={onEditDetails}>
+            Edit Details
+          </Button>
+        )}
+        {onGoToDashboard && (
+          <Button size="sm" variant="dark" onClick={onGoToDashboard}>
+            Go to Dashboard
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -30,7 +30,7 @@ export const styles: Record<string, CSSProperties> = {
 
   activeTab: {
     backgroundColor: colors.active.shade100,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     fontWeight: fonts.weight.medium,
     zIndex: 2,
   },
@@ -47,7 +47,7 @@ export const styles: Record<string, CSSProperties> = {
     border: "none",
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.m,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     opacity: 0.5,
     cursor: "pointer",
     display: "flex",
