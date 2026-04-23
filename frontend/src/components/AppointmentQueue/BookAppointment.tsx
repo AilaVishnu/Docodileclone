@@ -571,7 +571,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               </span>
             </div>
             {showDatePicker && (
-              <div style={{ position: "absolute", bottom: "100%", left: "50%", zIndex: 1100 }}>
+              <div style={{ position: "absolute", bottom: "100%", left: 0, zIndex: 1100 }}>
                 <DatePicker
                   selectedDate={form.date}
                   onSelect={(date: Date) => {
@@ -579,7 +579,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                     setShowDatePicker(false);
                   }}
                   onClose={() => setShowDatePicker(false)}
-                  style={{ top: "auto", bottom: "8px" }}
+                  style={{ top: "auto", bottom: "8px", left: 0, transform: "none" }}
                   disablePast
                 />
               </div>
@@ -607,7 +607,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   }}
                   onClick={() => setShowTimePicker(false)}
                 />
-                <div style={{ position: "absolute", bottom: "100%", left: "50%", zIndex: 1100 }}>
+                <div style={{ position: "absolute", bottom: "100%", left: 0, zIndex: 1100 }}>
                   <TimePicker
                     initialTime={form.time}
                     onSelect={(time: string) => {
@@ -615,7 +615,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                       setShowTimePicker(false);
                     }}
                     onClose={() => setShowTimePicker(false)}
-                    style={{ top: "auto", bottom: "8px" }}
+                    style={{ top: "auto", bottom: "8px", left: 0, transform: "none" }}
                   />
                 </div>
               </>
