@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, radii, spacing, fonts, rem } from "../../styles/theme";
+import { colors, radii, spacing, fonts } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   card: {
@@ -32,13 +32,13 @@ export const styles: Record<string, CSSProperties> = {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.m,
-    marginLeft: rem(28), // aligns under icon
+    marginLeft: 28, // aligns under icon
   },
 
   radioLabel: {
     display: "flex",
     alignItems: "center",
-    gap: rem(6),
+    gap: "6px",
     cursor: "pointer",
     fontSize: fonts.size.s,
     color: colors.neutral900,
@@ -84,13 +84,13 @@ export const styles: Record<string, CSSProperties> = {
     // Sits immediately under the Reg. No. input. The parent section uses
     // gap: spacing.m which spreads the field and the hint too far apart —
     // pull the hint up so it reads as a caption of the field.
-    marginTop: `-${rem(8)}`,
+    marginTop: -8,
     },
 
   // "Other" role custom text input — shown beneath the radio group when
   // user picks the "Other" option in the role card.
   otherRoleInput: {
-    marginLeft: rem(28), // align with radio labels (icon-column offset)
+    marginLeft: 28, // align with radio labels (icon-column offset)
     marginTop: spacing.xs,
     padding: `${spacing.xs} ${spacing.s}`,
     borderRadius: radii.m,
@@ -101,6 +101,6 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: colors.neutral100,
     outline: "none",
     width: "60%",
-    maxWidth: rem(280),
+    maxWidth: 280,
   },
 };

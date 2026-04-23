@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts, rem } from "../../styles/theme";
+import { colors, fonts } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   wrapper: {
@@ -11,10 +11,10 @@ export const styles: Record<string, CSSProperties> = {
   card: {
     display: "flex",
     flexDirection: "column",
-    gap: rem(12),
-    padding: rem(24),
+    gap: "12px",
+    padding: "24px",
     backgroundColor: colors.neutral100,
-    borderRadius: `${rem(16)} ${rem(16)} 0 0`,
+    borderRadius: "16px 16px 0 0",
     flex: 1,
   },
 
@@ -23,12 +23,12 @@ export const styles: Record<string, CSSProperties> = {
     // Deeper, sharper V-notches — 50% gradient stops push the white
     // triangles all the way to the top so the cut-outs are full Vs (no
     // flat bottom). Larger height + width makes each notch more evident.
-    height: rem(20),
+    height: "20px",
     backgroundImage: `
       linear-gradient(135deg, ${colors.neutral100} 50%, transparent 50%),
       linear-gradient(225deg, ${colors.neutral100} 50%, transparent 50%)
     `,
-    backgroundSize: `${rem(20)} ${rem(20)}`,
+    backgroundSize: "20px 20px",
     backgroundRepeat: "repeat-x",
   },
 
@@ -45,34 +45,34 @@ export const styles: Record<string, CSSProperties> = {
   servicesContainer: {
     display: "flex",
     flexDirection: "column",
-    gap: rem(4),
+    gap: "4px",
   },
 
   serviceItem: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: `${rem(8)} ${rem(12)}`,
+    padding: "8px 12px",
     backgroundColor: colors.neutral150,
-    borderRadius: rem(4),
+    borderRadius: "4px",
     fontSize: fonts.size.m,
     fontFamily: fonts.family.primary,
     fontWeight: 400,
     color: colors.neutral900,
-    lineHeight: rem(22),
+    lineHeight: "22px",
   },
 
   fieldsContainer: {
     display: "flex",
     flexDirection: "column",
-    gap: rem(2),
+    gap: "2px",
   },
 
   fieldRow: {
     display: "flex",
     alignItems: "center",
-    gap: rem(8),
-    height: rem(40),
+    gap: "8px",
+    height: "40px",
   },
 
   label: {
@@ -80,9 +80,9 @@ export const styles: Record<string, CSSProperties> = {
     fontWeight: 400,
     fontFamily: fonts.family.primary,
     color: colors.neutral900,
-    width: rem(65),
+    width: "65px",
     flexShrink: 0,
-    lineHeight: rem(22),
+    lineHeight: "22px",
   },
 
   fieldValue: {
@@ -92,11 +92,11 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     gap: "0",
     borderBottom: `1px solid ${colors.neutral300}`,
-    padding: rem(8),
+    padding: "8px",
     fontSize: fonts.size.m,
     fontFamily: fonts.family.primary,
     color: colors.neutral900,
-    lineHeight: rem(22),
+    lineHeight: "22px",
     overflow: "hidden", // clip any residual overflow cleanly
   },
 
@@ -109,14 +109,14 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral900,
     backgroundColor: "transparent",
     padding: 0,
-    lineHeight: rem(22),
+    lineHeight: "22px",
   },
 
   totalRow: {
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
-    padding: `${rem(8)} ${rem(12)}`,
+    padding: "8px 12px",
     backgroundColor: colors.primary100,
   },
 
@@ -140,14 +140,14 @@ export const styles: Record<string, CSSProperties> = {
 
   methodRow: {
     display: "flex",
-    gap: rem(16),
+    gap: "16px",
     justifyContent: "center",
   },
 
   radioLabel: {
     display: "flex",
     alignItems: "center",
-    gap: rem(6),
+    gap: "6px",
     fontSize: fonts.size.m,
     fontFamily: fonts.family.primary,
     cursor: "pointer",
@@ -174,13 +174,13 @@ export const styles: Record<string, CSSProperties> = {
   toggleGroup: {
     display: "flex",
     border: `1px solid ${colors.neutral300}`,
-    borderRadius: rem(6),
+    borderRadius: "6px",
     overflow: "hidden",
     flexShrink: 0,
   },
 
   toggleActive: {
-    padding: `${rem(4)} ${rem(10)}`,
+    padding: "4px 10px",
     border: "none",
     backgroundColor: colors.active.shade100,
     color: colors.neutral900,
@@ -191,7 +191,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   toggleInactive: {
-    padding: `${rem(4)} ${rem(10)}`,
+    padding: "4px 10px",
     border: "none",
     backgroundColor: "transparent",
     color: colors.neutral700,

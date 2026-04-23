@@ -1,11 +1,11 @@
-import { colors, fonts, radii, spacing, strokes, rem } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 
 export const styles = {
   card: {
     backgroundColor: colors.secondary50,
     borderRadius: radii.xxl,
     padding: spacing.xxl,
-    width: rem(373),
+    width: "373px",
     display: "flex",
     flexDirection: "column" as const,
     gap: spacing.xl,
@@ -29,7 +29,7 @@ export const styles = {
   domainSection: {
     display: "flex",
     width: "100%",
-    height: rem(40),
+    height: "40px",
     borderRadius: radii.m,
     overflow: "hidden",
     border: `${strokes.xs} solid ${colors.neutral300}`,
@@ -44,7 +44,7 @@ export const styles = {
     color: colors.neutral500,
   },
   domainSuffix: {
-    width: rem(125),
+    width: "125px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -64,32 +64,32 @@ export const styles = {
     gap: spacing.xs,
     padding: spacing.xs,
     backgroundColor: colors.neutralAlphaBlack,
-    borderRadius: rem(4),
+    borderRadius: "4px",
   },
   iconWrapper: {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: rem(24),
-    height: rem(24),
+    width: "24px",
+    height: "24px",
     flexShrink: 0,
   },
   infoText: {
     fontSize: fonts.size.m,
     color: colors.neutral500,
     margin: 0,
-    lineHeight: rem(22),
+    lineHeight: "22px",
   },
   addressText: {
     fontSize: fonts.size.s,
     color: colors.neutral500,
     margin: 0,
-    lineHeight: rem(20),
+    lineHeight: "20px",
   },
   tagList: {
     display: "flex",
     flexWrap: "wrap" as const,
-    gap: rem(4),
+    gap: "4px",
   },
   tag: {
     display: "flex",
@@ -97,7 +97,7 @@ export const styles = {
     justifyContent: "center",
     backgroundColor: colors.secondary300,
     color: colors.neutral100,
-    padding: `${rem(4)} ${rem(12)}`,
+    padding: "4px 12px",
     borderRadius: radii.pill,
     fontSize: fonts.size.xs,
     whiteSpace: "nowrap" as const,

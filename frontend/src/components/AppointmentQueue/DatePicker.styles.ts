@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, radii, fonts, spacing, rem } from "../../styles/theme";
+import { colors, radii, fonts, spacing } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   backdrop: {
@@ -18,18 +18,18 @@ export const styles: Record<string, CSSProperties> = {
     left: "50%",
     transform: "translateX(-50%)",
     zIndex: 1000,
-    marginTop: rem(16),
+    marginTop: "16px",
   },
 
   container: {
     backgroundColor: colors.neutral100,
-    width: rem(300),
-    padding: rem(20),
-    borderRadius: rem(16),
+    width: "300px",
+    padding: "20px",
+    borderRadius: "16px",
     boxShadow: "2px 2px 12px 0px rgba(0,0,0,0.08)",
     display: "flex",
     flexDirection: "column",
-    gap: rem(16),
+    gap: "16px",
   },
 
   header: {
@@ -50,7 +50,7 @@ export const styles: Record<string, CSSProperties> = {
     background: "none",
     border: "none",
     cursor: "pointer",
-    padding: rem(4),
+    padding: "4px",
     display: "flex",
     alignItems: "center",
   },
@@ -58,7 +58,7 @@ export const styles: Record<string, CSSProperties> = {
   weekDays: {
     display: "grid",
     gridTemplateColumns: "repeat(7, 1fr)",
-    gap: rem(8),
+    gap: "8px",
     textAlign: "center",
   },
 
@@ -70,24 +70,24 @@ export const styles: Record<string, CSSProperties> = {
   daysGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(7, 1fr)",
-    gap: rem(4),
+    gap: "4px",
   },
 
   dayCell: {
-    width: rem(32),
-    height: rem(32),
+    width: "32px",
+    height: "32px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontSize: fonts.size.xs,
     cursor: "pointer",
-    borderRadius: rem(8),
+    borderRadius: "8px",
     transition: "background-color 0.2s",
   },
 
   emptyCell: {
-    width: rem(32),
-    height: rem(32),
+    width: "32px",
+    height: "32px",
   },
 
   selectedDay: {
@@ -110,10 +110,10 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral100,
     border: "none",
     borderRadius: "999px",
-    padding: `${rem(8)} ${rem(24)}`,
+    padding: "8px 24px",
     fontSize: fonts.size.m,
     cursor: "pointer",
     width: "100%",
-    marginTop: rem(8),
+    marginTop: "8px",
   }
 };

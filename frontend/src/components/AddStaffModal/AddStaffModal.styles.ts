@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, spacing, fonts, radii, rem } from "../../styles/theme";
+import { colors, spacing, fonts, radii } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   header: {
@@ -51,7 +51,7 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.m,
     fontFamily: fonts.family.primary,
     cursor: "pointer",
-    padding: rem(10),
+    padding: "10px",
     textDecoration: "underline",
   },
 };
@@ -79,7 +79,7 @@ export const confirmStyles: Record<string, CSSProperties> = {
     alignItems: "center",
     gap: spacing.m,
     boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
-    minWidth: rem(200),
+    minWidth: "200px",
   },
 
   title: {

@@ -1,16 +1,16 @@
 import { CSSProperties } from "react";
-import { colors, fonts, radii, spacing, rem } from "../../styles/theme";
+import { colors, fonts, radii, spacing } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   base: {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: rem(4),
+    gap: 4,
     borderRadius: radii.pill,
     borderWidth: 1.5,
     borderStyle: "solid",
-    padding: `${rem(8)} ${rem(16)}`,
+    padding: "8px 16px",
     fontWeight: fonts.weight.regular,
     fontFamily: fonts.family.primary,
     cursor: "pointer",
@@ -27,24 +27,24 @@ export const styles: Record<string, CSSProperties> = {
   // don't drift at larger viewports. See theme.ts `fonts.control` comment.
   smIcon: {
     fontSize: fonts.control.md,
-    height: rem(40),
+    height: 40,
     padding: spacing.xs
   },
 
   mdIcon: {
     fontSize: fonts.control.md,
-    height: rem(42),
+    height: 42,
     padding: spacing.xs
   },
 
   sm: {
     fontSize: fonts.control.md,
-    height: rem(40)
+    height: 40
   },
 
   md: {
     fontSize: fonts.control.md,
-    height: rem(42),
+    height: 42,
   },
 };
 

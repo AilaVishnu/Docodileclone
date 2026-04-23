@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, radii, fonts, spacing, rem } from "../../../styles/theme";
+import { colors, radii, fonts, spacing } from "../../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   container: {
@@ -10,7 +10,7 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing.xs,
     overflow: "hidden",
     backgroundColor: colors.neutralAlphaBlack,
-    height: rem(54),
+    height: 54,
     width: "100%",
   },
 
@@ -30,7 +30,7 @@ export const styles: Record<string, CSSProperties> = {
     height: "100%",
     display: "flex",
     alignItems: "center",
-    padding: `0 ${rem(24)}`,
+    padding: "0 24px",
     borderLeft: `1px solid ${colors.neutral300}`,
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.m,

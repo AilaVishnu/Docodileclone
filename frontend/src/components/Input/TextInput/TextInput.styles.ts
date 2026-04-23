@@ -1,12 +1,12 @@
 import { CSSProperties } from "react";
-import { colors, fonts, spacing, rem } from "../../../styles/theme";
+import { colors, fonts, spacing } from "../../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   container: {
     display: "flex",
     alignItems: "center",
     gap: spacing.xs,
-    padding: `${rem(6)} ${rem(8)}`,
+    padding: "6px 8px",
     borderBottom: `1px solid ${colors.neutral300}`,
     width: "100%",
   },

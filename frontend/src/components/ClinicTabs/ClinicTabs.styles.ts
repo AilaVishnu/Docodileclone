@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, radii, fonts, rem } from "../../styles/theme";
+import { colors, radii, fonts } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   container: {
@@ -10,8 +10,8 @@ export const styles: Record<string, CSSProperties> = {
   tab: {
     // Fixed width so tabs don't resize with different clinic names — each
     // tab is the same size regardless of content. Ellipsis on overflow.
-    width: rem(180),
-    padding: `${rem(12)} ${rem(16)}`,
+    width: 180,
+    padding: "12px 16px",
     borderRadius: `${radii.primary}px ${radii.primary}px 0 0`,
     border: `0px solid ${colors.neutral900}`,
     borderBottom: "none",
@@ -30,12 +30,12 @@ export const styles: Record<string, CSSProperties> = {
   activeTab: {
     backgroundColor: colors.active.shade200,
     borderBottom: "none",
-    top: rem(1),
+    top: 1,
     zIndex: 2,
   },
 
   addClinic: {
-    padding: `${rem(12)} ${rem(24)}`,
+    padding: "12px 24px",
     background: "none",
     border: "none",
     fontFamily: fonts.family.primary,

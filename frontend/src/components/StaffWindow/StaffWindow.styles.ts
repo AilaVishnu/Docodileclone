@@ -1,5 +1,4 @@
 import { CSSProperties } from "react";
-import { rem } from "../../styles/theme";
 
 export const windowColors = [
   "#3D2B1F",  // dark brown
@@ -11,9 +10,9 @@ export const windowColors = [
 
 export const styles: Record<string, CSSProperties> = {
   window: {
-    width: rem(105),
-    height: rem(90),
-    borderRadius: `${rem(35)} ${rem(35)} 0 0`,
+    width: 105,
+    height: 90,
+    borderRadius: "35px 35px 0 0",
     border: "none",
     overflow: "hidden",
     cursor: "pointer",
