@@ -126,6 +126,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
   const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
   const [errors, setErrors] = useState<Record<string, boolean>>({});
+  const monthInputRef = React.useRef<HTMLInputElement>(null);
   const [isDirty, setIsDirty] = useState(false);
   const initialRenderRef = React.useRef(true);
   useEffect(() => {
@@ -520,6 +521,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   const m = form.age.split("/")[1]?.trim() || "";
                   setDobDigits("");
                   setForm({ ...form, age: (y || m) ? `${y || "0"} / ${m || "0"}` : "", dob: "" });
+                  if (y.length >= 2) monthInputRef.current?.focus();
                 }}
               />
               <style>{`
@@ -529,6 +531,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               `}</style>
               <span style={{ fontSize: fonts.size.m, color: colors.neutral400, opacity: hasDob ? 0.4 : 1 }}>yrs</span>
               <input
+                ref={monthInputRef}
                 className="text-input-field"
                 style={{ ...styles.iconFieldInput, width: 32, flex: "0 0 auto", borderBottom: "none", textAlign: "center", MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
                 type="number"
