@@ -153,7 +153,10 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   }, [form, selectedDoctorId, dobDigits]);
 
   // Auto-select Waive whenever discount+mode drives the total to zero (or below).
+  // Skipped on initial render so a saved paymentMethod (e.g. "Waive") isn't
+  // wiped before the user has had a chance to interact with the bill.
   useEffect(() => {
+    if (initialRenderRef.current) return;
     const sub = form.services.reduce((s, svc) => s + (SERVICE_PRICES[svc] || 0), 0);
     const d = Number(form.discount) || 0;
     const isFullWaive =
@@ -650,7 +653,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               </span>
             </div>
             {showDatePicker && (
-              <div style={{ position: "absolute", bottom: "100%", left: 0, zIndex: 1100 }}>
+              <div style={{ position: "absolute", bottom: "100%", left: "50%", zIndex: 1100 }}>
                 <DatePicker
                   selectedDate={form.date}
                   onSelect={(date: Date) => {
@@ -658,7 +661,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                     setShowDatePicker(false);
                   }}
                   onClose={() => setShowDatePicker(false)}
-                  style={{ top: "auto", bottom: "8px", left: 0, transform: "none" }}
+                  style={{ top: "auto", bottom: "8px" }}
                   disablePast
                 />
               </div>
@@ -686,7 +689,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   }}
                   onClick={() => setShowTimePicker(false)}
                 />
-                <div style={{ position: "absolute", bottom: "100%", left: 0, zIndex: 1100 }}>
+                <div style={{ position: "absolute", bottom: "100%", left: "50%", zIndex: 1100 }}>
                   <TimePicker
                     initialTime={form.time}
                     onSelect={(time: string) => {
@@ -694,7 +697,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                       setShowTimePicker(false);
                     }}
                     onClose={() => setShowTimePicker(false)}
-                    style={{ top: "auto", bottom: "8px", left: 0, transform: "none" }}
+                    style={{ top: "auto", bottom: "8px" }}
                   />
                 </div>
               </>
