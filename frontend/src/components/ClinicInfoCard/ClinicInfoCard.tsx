@@ -1,6 +1,7 @@
-import React, { useState, useEffect, KeyboardEvent } from "react";
+import React, { useState, useEffect, useRef, KeyboardEvent } from "react";
 import { Button } from "../Button";
 import { styles } from "./ClinicInfoCard.styles";
+import { colors, fonts } from "../../styles/theme";
 import { ReactComponent as BuildingIcon } from "../../assets/Buildings.svg";
 import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
 import { ReactComponent as SpecialtyIcon } from "../../assets/Stethoscope.svg";
@@ -30,6 +31,44 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
   }, [clinic.id]);
 
   const { domain, name: clinicName, phone, specialties, address } = clinic;
+
+  const [domainAvailability, setDomainAvailability] = useState<
+    "idle" | "checking" | "available" | "taken"
+  >("idle");
+  const domainCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const locked = isSaved;
+    if (!domain || domain.trim().length < 2 || locked) {
+      setDomainAvailability("idle");
+      return;
+    }
+    setDomainAvailability("checking");
+    if (domainCheckTimer.current) clearTimeout(domainCheckTimer.current);
+    domainCheckTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/api/tenant/domain/check?domain=${encodeURIComponent(domain.trim())}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
+            },
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setDomainAvailability(data.available ? "available" : "taken");
+        } else {
+          setDomainAvailability("idle");
+        }
+      } catch {
+        setDomainAvailability("idle");
+      }
+    }, 500);
+    return () => {
+      if (domainCheckTimer.current) clearTimeout(domainCheckTimer.current);
+    };
+  }, [domain, isSaved]);
 
   const addSpecialty = () => {
     const trimmed = specialtyInput.trim();
@@ -232,7 +271,16 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
           initial setup; locked permanently once the clinic is saved. */}
       <div style={{ ...styles.domainSection, ...(domainLocked ? styles.locked : {}) }}>
         <label style={styles.domainLabel}>give a nick name to your clinic</label>
-        <div style={styles.domainBox}>
+        <div
+          style={{
+            ...styles.domainBox,
+            ...(domainAvailability === "taken"
+              ? { borderColor: colors.red200 }
+              : domainAvailability === "available"
+                ? { borderColor: colors.secondary700 }
+                : {}),
+          }}
+        >
           <input
             style={styles.domainInput}
             value={domain}
@@ -249,6 +297,28 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
             .docodile.app
           </span>
         </div>
+        {!domainLocked && domainAvailability !== "idle" && (
+          <div
+            style={{
+              fontSize: fonts.size.xs,
+              fontFamily: fonts.family.primary,
+              color:
+                domainAvailability === "available"
+                  ? colors.secondary700
+                  : domainAvailability === "taken"
+                    ? colors.red200
+                    : colors.neutral700,
+              marginTop: 4,
+              marginLeft: 4,
+            }}
+          >
+            {domainAvailability === "checking"
+              ? "Checking..."
+              : domainAvailability === "available"
+                ? "Available"
+                : "Already taken"}
+          </div>
+        )}
       </div>
 
       {/* Save / Edit toggle */}

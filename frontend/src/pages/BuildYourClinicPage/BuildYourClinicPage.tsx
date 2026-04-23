@@ -49,7 +49,9 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                   staffList = staffData.map((s: any) => ({
                     id: s.id,
                     name: s.name || "",
-                    role: s.role.split("_").map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "),
+                    role: s.role === "OTHER" && s.customRole
+                      ? s.customRole
+                      : s.role.split("_").map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "),
                     gender: s.gender || "",
                     email: s.email || "",
                     phone: s.phone || "",
@@ -202,7 +204,9 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
         const mappedStaff: Staff = {
           id: savedStaffData.id,
           name: savedStaffData.name || "",
-          role: savedStaffData.role.split("_").map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "),
+          role: savedStaffData.role === "OTHER" && savedStaffData.customRole
+            ? savedStaffData.customRole
+            : savedStaffData.role.split("_").map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "),
           gender: savedStaffData.gender || "",
           email: savedStaffData.email || "",
           phone: savedStaffData.phone || "",

@@ -143,7 +143,11 @@ class ClinicStatusService(
             email = request.email.trim().lowercase()
             phone = request.phone
             gender = request.gender
-            role = Role.valueOf(request.role.uppercase().replace(" ", "_"))
+            val resolved = runCatching {
+                Role.valueOf(request.role.uppercase().replace(" ", "_"))
+            }.getOrNull()
+            role = resolved ?: Role.OTHER
+            customRole = if (resolved == null) request.role.trim() else null
             speciality = request.speciality
             registrationNo = request.registrationNo
             passwordHash = null // As requested
