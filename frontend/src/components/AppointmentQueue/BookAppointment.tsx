@@ -125,6 +125,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const [toastMessage, setToastMessage] = useState("");
   const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
   const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [isDirty, setIsDirty] = useState(false);
   const initialRenderRef = React.useRef(true);
   useEffect(() => {
@@ -134,6 +135,20 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   useEffect(() => {
     if (initialRenderRef.current) return;
     setIsDirty(true);
+    setErrors((prev) => {
+      if (Object.values(prev).every((v) => !v)) return prev;
+      return {
+        ...prev,
+        name: prev.name && !form.name.trim(),
+        email: prev.email && !!form.email.trim() && !isValidEmail(form.email),
+        phone: prev.phone && (!form.phone.trim() || form.phone.trim() === "+91" || !isValidPhone(form.phone)),
+        dob: prev.dob && !form.dob && !form.age,
+        doctor: prev.doctor && !selectedDoctorId,
+        services: prev.services && form.services.length === 0,
+        time: prev.time && !form.time,
+        paymentMethod: prev.paymentMethod && !form.paymentMethod,
+      };
+    });
   }, [form, selectedDoctorId, dobDigits]);
 
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -196,15 +211,31 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   };
 
   const handleBook = async (payStatus: string, successMessage?: string) => {
-    if (!form.name.trim()) { setToastMessage("Please enter patient name"); return; }
-    if (form.email.trim() && !isValidEmail(form.email)) { setToastMessage("Please enter a valid email address"); return; }
-    if (!form.phone.trim() || form.phone.trim() === "+91") { setToastMessage("Please enter phone number"); return; }
-    if (!isValidPhone(form.phone)) { setToastMessage("Please enter a valid 10-digit phone number"); return; }
-    if (!form.dob && !form.age) { setToastMessage("Please enter date of birth or age"); return; }
-    if (!activeDoctor) { setToastMessage("Please select a doctor"); return; }
-    if (form.services.length === 0) { setToastMessage("Please select at least one service"); return; }
-    if (!form.time) { setToastMessage("Please select a time"); return; }
-    if (!form.paymentMethod) { setToastMessage("Please select a payment method"); return; }
+    const newErrors: Record<string, boolean> = {
+      name: !form.name.trim(),
+      email: !!form.email.trim() && !isValidEmail(form.email),
+      phone: !form.phone.trim() || form.phone.trim() === "+91" || !isValidPhone(form.phone),
+      dob: !form.dob && !form.age,
+      doctor: !activeDoctor,
+      services: form.services.length === 0,
+      time: !form.time,
+      paymentMethod: !form.paymentMethod,
+    };
+    setErrors(newErrors);
+    const firstError =
+      newErrors.name ? "Please enter patient name" :
+      newErrors.email ? "Please enter a valid email address" :
+      newErrors.phone ? "Please enter a valid phone number" :
+      newErrors.dob ? "Please enter date of birth or age" :
+      newErrors.doctor ? "Please select a doctor" :
+      newErrors.services ? "Please select at least one service" :
+      newErrors.time ? "Please select a time" :
+      newErrors.paymentMethod ? "Please select a payment method" :
+      null;
+    if (firstError) {
+      setToastMessage(firstError);
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -340,29 +371,44 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
         {/* Patient Details Card */}
         <Card style={{ ...styles.card, ...styles.formCard }}>
-          <div style={styles.iconField}>
-            <UserHandsIcon style={styles.iconFieldIcon} />
-            <input
-              style={styles.iconFieldInput}
-              placeholder="Name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
+          <div>
+            <div style={{ ...styles.iconField, ...(errors.name ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
+              <UserHandsIcon style={styles.iconFieldIcon} />
+              <input
+                style={styles.iconFieldInput}
+                placeholder="Name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+            </div>
+            {errors.name && (
+              <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
+                Please enter patient name
+              </div>
+            )}
           </div>
 
           <div style={styles.row}>
-            <div style={{ ...styles.iconField, flex: 1, minWidth: 0 }}>
-              <LetterIcon style={styles.iconFieldIcon} />
-              <input
-                style={styles.iconFieldInput}
-                type="text"
-                placeholder="hello@example.com"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                onBlur={() => setForm((prev) => ({ ...prev, email: prev.email.trim().toLowerCase() }))}
-              />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ ...styles.iconField, ...(errors.email ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
+                <LetterIcon style={styles.iconFieldIcon} />
+                <input
+                  style={styles.iconFieldInput}
+                  type="text"
+                  placeholder="hello@example.com"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  onBlur={() => setForm((prev) => ({ ...prev, email: prev.email.trim().toLowerCase() }))}
+                />
+              </div>
+              {errors.email && (
+                <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
+                  Please enter a valid email
+                </div>
+              )}
             </div>
-            <div style={{ ...styles.iconField, flex: 1, minWidth: 0 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ ...styles.iconField, ...(errors.phone ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
               <PhoneIcon style={styles.iconFieldIcon} />
               <input
                 style={styles.iconFieldInput}
@@ -389,10 +435,16 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 }}
               />
             </div>
+              {errors.phone && (
+                <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
+                  Please enter a valid phone number
+                </div>
+              )}
+            </div>
           </div>
 
           <div style={styles.row}>
-            <div style={{ ...styles.iconField, position: "relative", flex: 1, minWidth: 0 }}>
+            <div style={{ ...styles.iconField, position: "relative", flex: 1, minWidth: 0, ...(errors.dob ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
               <span
                 onClick={() => {
                   if (hasManualAge) setForm((prev) => ({ ...prev, age: "", dob: "" }));
@@ -450,6 +502,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 minWidth: 0,
                 gap: spacing.xs,
                 justifyContent: "flex-start",
+                ...(errors.dob ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}),
               }}
             >
               <span style={{ fontSize: fonts.size.m, color: colors.neutral900, opacity: hasDob ? 0.4 : 1 }}>Age</span>
@@ -494,6 +547,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               <span style={{ fontSize: fonts.size.m, color: colors.neutral400, opacity: hasDob ? 0.4 : 1 }}>mos</span>
             </div>
           </div>
+          {errors.dob && (
+            <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
+              Please enter date of birth or age
+            </div>
+          )}
 
           <div style={{ ...styles.radioGroup, marginTop: "8px" }}>
             {["Male", "Female", "Other"].map((g) => (
@@ -586,7 +644,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             )}
           </Card>
 
-          <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative" }}>
+          <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative", ...(errors.time ? { borderColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
             <div
               style={{ ...styles.iconField, borderBottom: "none", cursor: "pointer", padding: 0 }}
               onClick={() => setShowTimePicker(true)}
@@ -621,6 +679,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               </>
             )}
           </Card>
+          {errors.time && (
+            <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginLeft: 4 }}>
+              Please select a time
+            </div>
+          )}
         </div>
 
         {/* Appointment Details Card */}
@@ -639,6 +702,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                     value={selectedDoctorId}
                     onChange={(val: string) => setSelectedDoctorId(val)}
                     placeholder="Select Doctor"
+                    error={errors.doctor}
                   />
                 </div>
               </div>
@@ -698,6 +762,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                         value=""
                         onChange={(val: string) => setForm({ ...form, services: [...form.services, val] })}
                         placeholder="+ Add Service"
+                        error={errors.services}
                       />
                     </div>
                     <div style={{ width: "28px", flexShrink: 0 }} />
