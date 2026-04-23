@@ -541,7 +541,9 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
                 value={form.age.split("/")[1]?.trim() || ""}
                 onChange={(e) => {
-                  const m = e.target.value;
+                  let m = e.target.value;
+                  const n = parseInt(m, 10);
+                  if (m !== "" && (isNaN(n) || n < 0 || n > 11)) return;
                   const y = form.age.split("/")[0]?.trim() || "";
                   setDobDigits("");
                   setForm({ ...form, age: (y || m) ? `${y || "0"} / ${m || "0"}` : "", dob: "" });
