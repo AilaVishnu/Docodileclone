@@ -152,6 +152,22 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     });
   }, [form, selectedDoctorId, dobDigits]);
 
+  // Auto-select Waive whenever discount+mode drives the total to zero (or below).
+  useEffect(() => {
+    const sub = form.services.reduce((s, svc) => s + (SERVICE_PRICES[svc] || 0), 0);
+    const d = Number(form.discount) || 0;
+    const isFullWaive =
+      sub > 0 &&
+      ((discountMode === "%" && d >= 100) ||
+        (discountMode === "₹" && d >= sub));
+    if (isFullWaive && form.paymentMethod !== "Waive") {
+      setForm((prev) => ({ ...prev, paymentMethod: "Waive" }));
+    } else if (!isFullWaive && form.paymentMethod === "Waive") {
+      setForm((prev) => ({ ...prev, paymentMethod: "" }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.discount, discountMode, form.services]);
+
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const hasDob = dobDigits.length > 0;
   const hasManualAge = !hasDob && form.age.replace(/[^0-9]/g, "").length > 0;

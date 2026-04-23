@@ -98,6 +98,8 @@ export function BillCard({
                 type="number"
                 value={subtotal || ""}
                 onChange={(e) => onSubtotalChange(Number(e.target.value))}
+                disabled={isPaid}
+                readOnly={isPaid}
               />
             </div>
           </div>
@@ -111,16 +113,20 @@ export function BillCard({
                 placeholder="0"
                 value={discount || ""}
                 onChange={(e) => onDiscountChange(Number(e.target.value))}
+                disabled={isPaid}
+                readOnly={isPaid}
               />
               <div style={{ marginLeft: "auto" }}>
                 <div style={styles.toggleGroup}>
                   <button
                     style={discountMode === "%" ? styles.toggleActive : styles.toggleInactive}
                     onClick={() => handleDiscountMode("%")}
+                    disabled={isPaid}
                   >%</button>
                   <button
                     style={discountMode === "₹" ? styles.toggleActive : styles.toggleInactive}
                     onClick={() => handleDiscountMode("₹")}
+                    disabled={isPaid}
                   >₹</button>
                 </div>
               </div>
@@ -138,6 +144,8 @@ export function BillCard({
             <label key={m} style={{
               ...styles.radioLabel,
               color: m === "Waive" ? colors.red200 : styles.radioLabel.color,
+              cursor: isPaid ? "not-allowed" : styles.radioLabel.cursor,
+              opacity: isPaid ? 0.7 : 1,
             }}>
               <input
                 type="radio"
@@ -145,6 +153,7 @@ export function BillCard({
                 checked={paymentMethod === m}
                 onChange={() => onPaymentMethodChange(m)}
                 style={styles.radioInput}
+                disabled={isPaid}
               />
               {m}
             </label>
