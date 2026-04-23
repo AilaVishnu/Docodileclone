@@ -34,14 +34,6 @@
 // Legacy aliases (xxl, primary, pill) are kept for backward compatibility.
 // ══════════════════════════════════════════════════════════════════════════════
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Convert a pixel value at the 1440 design baseline to rem, so it scales with
-// the viewport-linked `html { font-size }` defined in globals.css.
-//   rem(16)  → "1rem"      (16px @ baseline, ~17.07px at 1536, 18px ≥1620)
-//   rem(1.5) → "0.09375rem"
-// ──────────────────────────────────────────────────────────────────────────────
-export const rem = (px: number): string => `${px / 16}rem`;
-
 export const colors = {
   primary100: "#F9F9ED",
   primary200: "#F3F3DC",
@@ -152,8 +144,8 @@ export const fonts = {
     l:  "clamp(20px, 1.04vw, 24px)",
     m:  "clamp(16px, 0.83vw, 18px)",   // 16 up to 1920, 18 at 2170
     s:  "clamp(14px, 0.73vw, 16px)",   // 14 up to 1920, 16 at 2192
-    xs: rem(12),
-    caption: rem(10),
+    xs: "12px",
+    caption: "10px",
   },
   lineHeight: {
     // Same pattern — min held to 1920, modest ceiling above.
@@ -166,8 +158,8 @@ export const fonts = {
     l:  "clamp(28px, 1.46vw, 32px)",
     m:  "clamp(22px, 1.15vw, 26px)",
     s:  "clamp(20px, 1.04vw, 22px)",
-    xs: rem(16),
-    caption: rem(14),
+    xs: "16px",
+    caption: "14px",
   },
   weight: {
     regular: 400,
@@ -194,61 +186,61 @@ export const fonts = {
   // control text is static; only long-form content is fluid.
   // ──────────────────────────────────────────────────────────────────────────
   control: {
-    lg: rem(18),
-    md: rem(16),   // default button / input text
-    sm: rem(14),   // secondary label / small button
-    xs: rem(12),   // helper text / micro label
+    lg: "18px",
+    md: "16px",   // default button / input text
+    sm: "14px",   // secondary label / small button
+    xs: "12px",   // helper text / micro label
   },
 };
 
 export const radii = {
   none: 0,
-  "2xs": rem(2),
-  xs: rem(4),
-  s: rem(6),
-  m: rem(8),
-  l: rem(10),
-  xl: rem(12),
-  "2xl": rem(16),
-  xxl: rem(16),     // legacy alias for 2xl (do not remove — in use)
-  primary: rem(20), // legacy (off-system, only used in LoginCard/ClinicCard)
-  pill: 999,        // pill/full stay px — semantic "fully rounded", not a real radius
+  "2xs": 2,
+  xs: 4,
+  s: 6,
+  m: 8,
+  l: 10,
+  xl: 12,
+  "2xl": 16,
+  xxl: 16,     // legacy alias for 2xl (do not remove — in use)
+  primary: 20, // legacy (off-system, only used in LoginCard/ClinicCard)
+  pill: 999,   // legacy alias for full
   full: 999,
 };
 
 export const spacing = {
-  "3xs": rem(2),
-  "2xs": rem(4),
-  xs: rem(8),
-  s: rem(12),
-  m: rem(16),
-  l: rem(20),
-  xl: rem(24),
-  "2xl": rem(32),
-  xxl: rem(32),     // legacy alias for 2xl (do not remove — in use)
-  "3xl": rem(40),
-  "4xl": rem(48),
-  "5xl": rem(56),
+  "3xs": "2px",
+  "2xs": "4px",
+  xs: "8px",
+  s: "12px",
+  m: "16px",
+  l: "20px",
+  xl: "24px",
+  "2xl": "32px",
+  xxl: "32px",     // legacy alias for 2xl (do not remove — in use)
+  "3xl": "40px",
+  "4xl": "48px",
+  "5xl": "56px",
   // Off-Figma: extending the scale — ask design to formalize these.
-  "6xl": rem(64),
-  "7xl": rem(80),
+  "6xl": "64px",
+  "7xl": "80px",
 };
 
 export const strokes = {
-  xs: "1px",       // 1px borders stay device-pixel-crisp
-  s: rem(1.5),
-  m: rem(2),
-  l: rem(4),
+  xs: "1px",
+  s: "1.5px",
+  m: "2px",
+  l: "4px",
 }
 
 export const paragraphSpacing = {
-  h2: rem(48),
-  h4: rem(44),
-  h5: rem(34),
-  l: rem(24),
-  m: rem(22),
-  xs: rem(16),
-  caption: rem(14),
+  h2: "48px",
+  h4: "44px",
+  h5: "34px",
+  l: "24px",
+  m: "22px",
+  xs: "16px",
+  caption: "14px",
 };
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -261,14 +253,14 @@ export const paragraphSpacing = {
 // ──────────────────────────────────────────────────────────────────────────────
 export const fluidSpacing = {
   // Outer page gutters (main content area padding)
-  outerY: `clamp(${rem(24)}, 1.25vw, ${rem(32)})`,
-  outerX: `clamp(${rem(40)}, 2.19vw, ${rem(56)})`,
+  outerY: "clamp(24px, 1.25vw, 32px)",   // vertical: 24 → 32
+  outerX: "clamp(40px, 2.19vw, 56px)",   // horizontal: 40 → 56
 
   // Section / card-to-card gutters (when stacking or grid-gapping)
-  sectionGap: `clamp(${rem(16)}, 1.11vw, ${rem(24)})`,
+  sectionGap: "clamp(16px, 1.11vw, 24px)",
 
   // Card outer horizontal padding (cards inside a viewport-scaled container)
-  cardX: `clamp(${rem(16)}, 1.11vw, ${rem(24)})`,
+  cardX: "clamp(16px, 1.11vw, 24px)",
 };
 
 // ──────────────────────────────────────────────────────────────────────────────

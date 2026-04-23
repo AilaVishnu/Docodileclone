@@ -28,22 +28,6 @@
 
 
 
-/* ──────────────────────────────────────────────────────────────────────────
-   FLUID ROOT — ties 1rem to CSS viewport width so the whole UI (all rem-based
-   spacing, radii, strokes, control text) scales together regardless of the
-   user's OS display scale or device pixel ratio.
-     • 1rem = 16px at the 1440 design baseline
-     • 1rem ≈ 17.07px at 1536 (Windows 125% on a 1920 monitor)
-     • 1rem = 18px from 1620 up
-     • 1rem = 14px below 1260 (floor for very small laptops)
-   ────────────────────────────────────────────────────────────────────────── */
-html {
-  font-size: clamp(14px, 1.1111vw, 18px);
-}
-body {
-  font-size: 1rem;
-}
-
 * {
   box-sizing: border-box;
 }
