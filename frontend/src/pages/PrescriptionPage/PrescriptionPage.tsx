@@ -25,6 +25,7 @@ import { ReactComponent as MicIcon } from "../../assets/icons/microphone.svg";
 import { ReactComponent as RewindIcon } from "../../assets/icons/rewind-back-circle.svg";
 import { ReactComponent as ArrowLeftIcon } from "../../assets/icons/arrow-left.svg";
 import { ReactComponent as CalendarIcon } from "../../assets/icons/calendar.svg";
+import { ReactComponent as ReorderIcon } from "../../assets/icons/reorder.svg";
 import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -287,6 +288,7 @@ export function PrescriptionPage() {
                   <MicIcon width={20} height={20} />
                 </span>
               </div>
+              <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
             </div>
             <div style={styles.noteRow}>
               <div style={styles.noteLabel}>
@@ -300,6 +302,7 @@ export function PrescriptionPage() {
                   <MicIcon width={20} height={20} />
                 </span>
               </div>
+              <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
             </div>
           </div>
 
@@ -368,6 +371,7 @@ export function PrescriptionPage() {
                   <MicIcon width={20} height={20} />
                 </span>
               </div>
+              <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
             </div>
             {/* Advice — dictatable with mic/rewind */}
             <div style={styles.noteRow}>
@@ -382,6 +386,7 @@ export function PrescriptionPage() {
                   <MicIcon width={20} height={20} />
                 </span>
               </div>
+              <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
             </div>
             {/* Refer to — dropdown (select doctor) */}
             <div style={styles.noteRow}>

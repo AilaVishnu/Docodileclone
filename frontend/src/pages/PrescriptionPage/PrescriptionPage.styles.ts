@@ -498,6 +498,13 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral700,
     flexShrink: 0,
   },
+  // Figma node 2071:2962 — Linear/Essentional,UI/Reorder. Drag handle that
+  // sits to the RIGHT of the dictate field (outside the cream wrapper).
+  reorderHandle: {
+    flexShrink: 0,
+    color: colors.neutral900,
+    cursor: "grab",
+  },
 
   // Refer to — split dropdown with neutral300 border, 120px text + chevron tail.
   referDropdown: {
