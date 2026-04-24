@@ -298,6 +298,17 @@ export const styles: Record<string, CSSProperties> = {
     fontWeight: fonts.weight.semibold,
     color: colors.neutral900,
   },
+  // Chevron toggle — transparent button, rotates 180° when collapsed.
+  sectionToggle: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    padding: 0,
+    color: colors.neutral900,
+  },
 
   // Vitals — 6 columns × up to 2 rows. Each cell stacks label above a split
   // field (cream value 80×28 + bordered-white unit pill at right). Single-
@@ -361,7 +372,7 @@ export const styles: Record<string, CSSProperties> = {
     boxSizing: "border-box" as const,
   },
 
-  // 2x2 text-field grid (Chief Complaints)
+  // 2x2 text-field grid (Chief Complaints — legacy)
   complaintsGrid: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
@@ -370,11 +381,13 @@ export const styles: Record<string, CSSProperties> = {
   fieldGroup: {
     display: "flex",
     flexDirection: "column",
-    gap: spacing["2xs"],
+    gap: spacing.xs,
   },
   fieldLabel: {
     fontSize: fonts.size.xs,
+    lineHeight: fonts.lineHeight.xs,
     color: colors.neutral500,
+    fontFamily: fonts.family.primary,
   },
   textField: {
     border: `${strokes.xs} solid ${colors.neutral200}`,
@@ -388,7 +401,38 @@ export const styles: Record<string, CSSProperties> = {
     fontFamily: fonts.family.primary,
   },
 
-  // Single-row labeled field (Complaints note / Examination / Notes / Advise)
+  // Figma node 2073:3030 — History 2×2 grid. Cream-filled fields (primary100),
+  // radii.m, height 36, no border. Column gap 20 (spacing.l), row gap 12 (s).
+  historyGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    columnGap: spacing.l,
+    rowGap: spacing.s,
+    width: "100%",
+  },
+  historyField: {
+    height: 36,
+    border: "none",
+    outline: "none",
+    padding: spacing.xs,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    fontFamily: fonts.family.primary,
+    color: colors.neutral900,
+    backgroundColor: colors.primary100,
+    borderRadius: radii.m,
+    width: "100%",
+    boxSizing: "border-box" as const,
+  },
+
+  // Single-row labeled field (Complaints note / Examination / Tests / Advice /
+  // Refer to / Review). Label column 120px, label text uses serif semibold.
+  bottomRows: {
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.m,
+    paddingLeft: spacing.l,
+  },
   noteRow: {
     display: "flex",
     alignItems: "center",
@@ -403,6 +447,13 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral900,
     fontSize: fonts.size.m,
   },
+  noteLabelText: {
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.m,
+    lineHeight: fonts.lineHeight.m,
+    fontWeight: fonts.weight.semibold,
+    color: colors.neutral900,
+  },
   noteField: {
     flex: 1,
     minWidth: 0,
@@ -416,24 +467,26 @@ export const styles: Record<string, CSSProperties> = {
     outline: "none",
     fontFamily: fonts.family.primary,
   },
-  // Field wrapper for dictatable rows: input + inline mic/rewind icons
+  // Field wrapper for dictatable rows (Tests / Advice / Complaints / Examination).
+  // Figma: cream primary100 fill, radii.m, 36 height, inline mic + rewind icons.
   noteFieldWrap: {
     flex: 1,
     minWidth: 0,
     display: "flex",
     alignItems: "center",
-    border: `${strokes.xs} solid ${colors.neutral200}`,
+    backgroundColor: colors.primary100,
     borderRadius: radii.m,
-    paddingRight: spacing.s,
-    minHeight: 36,
+    paddingRight: spacing.xs,
+    height: 36,
   },
   noteFieldInner: {
     flex: 1,
     minWidth: 0,
     border: "none",
     outline: "none",
-    padding: `${spacing.xs} ${spacing.s}`,
-    fontSize: fonts.control.sm,
+    padding: spacing.xs,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
     color: colors.neutral900,
     backgroundColor: "transparent",
     fontFamily: fonts.family.primary,
@@ -446,7 +499,38 @@ export const styles: Record<string, CSSProperties> = {
     flexShrink: 0,
   },
 
-  // Prescription table
+  // Refer to — split dropdown with neutral300 border, 120px text + chevron tail.
+  referDropdown: {
+    display: "inline-flex",
+    alignItems: "stretch",
+    height: 32,
+    border: `${strokes.xs} solid ${colors.neutral300}`,
+    borderRadius: radii.m,
+    overflow: "hidden",
+    cursor: "pointer",
+  },
+  referText: {
+    display: "flex",
+    alignItems: "center",
+    width: 120,
+    padding: spacing.xs,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    fontFamily: fonts.family.primary,
+    color: colors.alphaBlack2,
+    borderRight: `${strokes.xs} solid ${colors.neutral300}`,
+  },
+  referChevron: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: `${spacing.xs} ${spacing["2xs"]}`,
+    color: colors.neutral700,
+  },
+
+  // Figma node 2057:6381 — Rx table. Each data row is cream-filled (primary100)
+  // with radii.xs corners. Columns: # (24) | Medicine (flex) | Dosage |
+  // When | Frequency | Duration (all 120) | Notes (auto).
   rxTable: {
     display: "flex",
     flexDirection: "column",
@@ -454,37 +538,80 @@ export const styles: Record<string, CSSProperties> = {
   },
   rxHeaderRow: {
     display: "grid",
-    gridTemplateColumns: "24px minmax(160px, 1.4fr) repeat(5, minmax(0, 1fr)) 100px",
-    gap: spacing.xs,
+    gridTemplateColumns: "24px minmax(160px, 1fr) 120px 120px 120px 120px minmax(104px, auto)",
+    gap: spacing.s,
     fontSize: fonts.size.xs,
+    lineHeight: fonts.lineHeight.xs,
     color: colors.neutral500,
-    paddingBottom: spacing["2xs"],
-    borderBottom: `${strokes.xs} solid ${colors.neutral200}`,
+    fontFamily: fonts.family.primary,
+    padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
   },
   rxRow: {
     display: "grid",
-    gridTemplateColumns: "24px minmax(160px, 1.4fr) repeat(5, minmax(0, 1fr)) 100px",
-    gap: spacing.xs,
+    gridTemplateColumns: "24px minmax(160px, 1fr) 120px 120px 120px 120px minmax(104px, auto)",
+    gap: spacing.s,
     alignItems: "center",
+    backgroundColor: colors.primary100,
+    borderRadius: radii.xs,
+    padding: spacing["2xs"],
   },
   rxCell: {
-    border: `${strokes.xs} solid ${colors.neutral200}`,
-    borderRadius: radii.m,
-    padding: `${spacing["2xs"]} ${spacing.xs}`,
-    fontSize: fonts.control.sm,
+    border: "none",
+    borderRadius: radii.xs,
+    padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
     color: colors.neutral900,
     backgroundColor: "transparent",
     outline: "none",
-    minHeight: 36,
     fontFamily: fonts.family.primary,
+    minWidth: 0,
   },
   rxSerial: {
     fontSize: fonts.size.s,
-    color: colors.neutral500,
-    textAlign: "center",
+    lineHeight: fonts.lineHeight.s,
+    color: colors.neutral900,
+    textAlign: "center" as const,
+    padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
+  },
+  // Medicine cell stacks name + pen-icon note below it.
+  rxMedicineCell: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 0,
+    minWidth: 0,
+  },
+  rxMedicineInput: {
+    border: "none",
+    outline: "none",
+    padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    fontFamily: fonts.family.primary,
+    color: colors.neutral900,
+    backgroundColor: "transparent",
+    minWidth: 0,
+  },
+  rxMedicineNote: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing["2xs"],
+    padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
+    color: colors.alphaBlack3,
+  },
+  rxMedicineNoteInput: {
+    flex: 1,
+    minWidth: 0,
+    border: "none",
+    outline: "none",
+    fontSize: fonts.size.xs,
+    lineHeight: fonts.lineHeight.xs,
+    fontFamily: fonts.family.primary,
+    color: colors.alphaBlack3,
+    backgroundColor: "transparent",
   },
 
-  // Review row — short + long field together
+  // Review row — date picker (primary300 bordered) + long cream text field.
   reviewRow: {
     display: "flex",
     alignItems: "center",
@@ -492,13 +619,38 @@ export const styles: Record<string, CSSProperties> = {
     flex: 1,
     minWidth: 0,
   },
-  reviewShort: {
-    width: 140,
+  // Figma node 2057:6522 — date chip: calendar icon 24px + "Select Date"
+  // placeholder. primary300 border, radii.m, padding xs, gap xs.
+  reviewDate: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.xs,
     flexShrink: 0,
-    border: `${strokes.xs} solid ${colors.neutral200}`,
+    height: 40,
+    border: `${strokes.xs} solid ${colors.primary300}`,
     borderRadius: radii.m,
-    padding: `${spacing.xs} ${spacing.s}`,
-    fontSize: fonts.control.sm,
+    padding: spacing.xs,
+    backgroundColor: colors.neutral100,
+    color: colors.neutral900,
+    cursor: "pointer",
+  },
+  reviewDateText: {
+    fontSize: fonts.size.m,
+    lineHeight: fonts.lineHeight.m,
+    fontFamily: fonts.family.primary,
+    color: colors.neutral300,
+    whiteSpace: "nowrap" as const,
+  },
+  reviewLong: {
+    flex: 1,
+    minWidth: 0,
+    height: 40,
+    border: "none",
+    backgroundColor: colors.primary100,
+    borderRadius: radii.m,
+    padding: spacing.xs,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
     color: colors.neutral900,
     outline: "none",
     fontFamily: fonts.family.primary,

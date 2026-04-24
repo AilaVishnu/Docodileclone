@@ -24,6 +24,8 @@ import { ReactComponent as ChevronIcon } from "../../assets/icons/chevron-up.svg
 import { ReactComponent as MicIcon } from "../../assets/icons/microphone.svg";
 import { ReactComponent as RewindIcon } from "../../assets/icons/rewind-back-circle.svg";
 import { ReactComponent as ArrowLeftIcon } from "../../assets/icons/arrow-left.svg";
+import { ReactComponent as CalendarIcon } from "../../assets/icons/calendar.svg";
+import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
@@ -59,14 +61,16 @@ const VITAL_COLUMNS: VitalCell[][] = [
   ],
 ];
 
-const COMPLAINT_FIELDS = [
-  { label: "Primary complaint", placeholder: "e.g. Headache since 3 days" },
-  { label: "Duration", placeholder: "e.g. 3 days" },
-  { label: "Severity", placeholder: "Mild / Moderate / Severe" },
-  { label: "Associated symptoms", placeholder: "Nausea, dizziness, …" },
+// Figma node 2073:3030 — History section. 2×2 grid of cream-filled fields.
+const HISTORY_FIELDS = [
+  { label: "Family History",      placeholder: "Compliants..." },
+  { label: "Allergies",           placeholder: "Compliants..." },
+  { label: "Personal History",    placeholder: "Compliants..." },
+  { label: "Past Medical History", placeholder: "Compliants..." },
 ];
 
-const RX_COLUMNS = ["#", "Medicine", "Morning", "Afternoon", "Evening", "Night", "Days", "Qty"];
+// Figma node 2057:6381 — Rx table columns. Medicine flex-grows, Notes fills remainder.
+const RX_COLUMNS = ["#", "Medicine", "Dosage", "When", "Frequency", "Duration", "Notes"];
 const RX_ROWS = [1, 2, 3, 4, 5];
 
 // Figma node 2059:6764 — patient-context action list.
@@ -91,6 +95,20 @@ const CONTACT_ACTIONS: { icon: React.ReactNode; label: string }[] = [
 export function PrescriptionPage() {
   const [activeTab, setActiveTab] = React.useState(0);
   const [activeAction, setActiveAction] = React.useState(0);
+  const [reviewDate, setReviewDate] = React.useState<Date | null>(null);
+  const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
+
+  // Each collapsible section starts expanded; clicking the header chevron toggles.
+  const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({
+    vitals: true,
+    history: true,
+    rx: true,
+  });
+  const toggleSection = (key: string) =>
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  const formatReviewDate = (d: Date): string =>
+    d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
   return (
     <div style={styles.page}>
@@ -187,8 +205,22 @@ export function PrescriptionPage() {
                 <HeartPulseIcon style={styles.sectionIcon} />
                 <h3 style={styles.sectionTitle}>Vitals</h3>
               </div>
-              <ChevronIcon style={styles.sectionIcon} />
+              <button
+                type="button"
+                style={styles.sectionToggle}
+                onClick={() => toggleSection("vitals")}
+                aria-label={openSections.vitals ? "Collapse Vitals" : "Expand Vitals"}
+              >
+                <ChevronIcon
+                  style={{
+                    ...styles.sectionIcon,
+                    transform: openSections.vitals ? "rotate(0deg)" : "rotate(180deg)",
+                    transition: "transform 0.15s ease",
+                  }}
+                />
+              </button>
             </div>
+            {openSections.vitals && (
             <div style={styles.vitalsGrid}>
               {VITAL_COLUMNS.map((col, ci) => (
                 <div key={ci} style={styles.vitalColumn}>
@@ -204,25 +236,41 @@ export function PrescriptionPage() {
                 </div>
               ))}
             </div>
+            )}
           </div>
 
-          {/* Chief Complaints */}
+          {/* History — Figma node 2073:3030 (2×2 grid, cream-filled fields) */}
           <div style={styles.sectionCard}>
             <div style={styles.sectionHeader}>
               <div style={styles.sectionTitleWrap}>
                 <HeartPulseIcon style={styles.sectionIcon} />
-                <h3 style={styles.sectionTitle}>Chief Complaints</h3>
+                <h3 style={styles.sectionTitle}>History</h3>
               </div>
-              <ChevronIcon style={styles.sectionIcon} />
+              <button
+                type="button"
+                style={styles.sectionToggle}
+                onClick={() => toggleSection("history")}
+                aria-label={openSections.history ? "Collapse History" : "Expand History"}
+              >
+                <ChevronIcon
+                  style={{
+                    ...styles.sectionIcon,
+                    transform: openSections.history ? "rotate(0deg)" : "rotate(180deg)",
+                    transition: "transform 0.15s ease",
+                  }}
+                />
+              </button>
             </div>
-            <div style={styles.complaintsGrid}>
-              {COMPLAINT_FIELDS.map((f) => (
+            {openSections.history && (
+            <div style={styles.historyGrid}>
+              {HISTORY_FIELDS.map((f) => (
                 <label key={f.label} style={styles.fieldGroup}>
                   <span style={styles.fieldLabel}>{f.label}</span>
-                  <input style={styles.textField} placeholder={f.placeholder} />
+                  <input style={styles.historyField} placeholder={f.placeholder} />
                 </label>
               ))}
             </div>
+            )}
           </div>
 
           {/* Notes + Examination single-line rows */}
@@ -262,8 +310,22 @@ export function PrescriptionPage() {
                 <PillsIcon style={styles.sectionIcon} />
                 <h3 style={styles.sectionTitle}>Rx</h3>
               </div>
-              <ChevronIcon style={styles.sectionIcon} />
+              <button
+                type="button"
+                style={styles.sectionToggle}
+                onClick={() => toggleSection("rx")}
+                aria-label={openSections.rx ? "Collapse Rx" : "Expand Rx"}
+              >
+                <ChevronIcon
+                  style={{
+                    ...styles.sectionIcon,
+                    transform: openSections.rx ? "rotate(0deg)" : "rotate(180deg)",
+                    transition: "transform 0.15s ease",
+                  }}
+                />
+              </button>
             </div>
+            {openSections.rx && (
             <div style={styles.rxTable}>
               <div style={styles.rxHeaderRow}>
                 {RX_COLUMNS.map((c) => (
@@ -273,55 +335,105 @@ export function PrescriptionPage() {
               {RX_ROWS.map((n) => (
                 <div key={n} style={styles.rxRow}>
                   <span style={styles.rxSerial}>{n}</span>
-                  <input style={styles.rxCell} placeholder="Medicine name" />
-                  <input style={styles.rxCell} placeholder="0" />
-                  <input style={styles.rxCell} placeholder="0" />
-                  <input style={styles.rxCell} placeholder="0" />
-                  <input style={styles.rxCell} placeholder="0" />
-                  <input style={styles.rxCell} placeholder="—" />
-                  <input style={styles.rxCell} placeholder="—" />
+                  <div style={styles.rxMedicineCell}>
+                    <input style={styles.rxMedicineInput} placeholder="Medicine" />
+                    <div style={styles.rxMedicineNote}>
+                      <PenIcon width={12} height={12} />
+                      <input style={styles.rxMedicineNoteInput} placeholder="Medicine" />
+                    </div>
+                  </div>
+                  <input style={styles.rxCell} placeholder="Dosage" />
+                  <input style={styles.rxCell} placeholder="When" />
+                  <input style={styles.rxCell} placeholder="Frequency" />
+                  <input style={styles.rxCell} placeholder="Duration" />
+                  <input style={styles.rxCell} placeholder="Notes" />
                 </div>
               ))}
             </div>
+            )}
           </div>
 
-          {/* Bottom rows */}
-          <div style={styles.sectionCard}>
+          {/* Bottom rows — Figma node 2057:6494 */}
+          <div style={styles.bottomRows}>
+            {/* Tests — dictatable with mic/rewind */}
             <div style={styles.noteRow}>
               <div style={styles.noteLabel}>
                 <DocumentIcon style={styles.sectionIcon} />
-                <span>Notes</span>
-              </div>
-              <input style={styles.noteField} placeholder="Private notes…" />
-            </div>
-            <div style={styles.noteRow}>
-              <div style={styles.noteLabel}>
-                <ChatDotsIcon style={styles.sectionIcon} />
-                <span>Advise</span>
+                <span style={styles.noteLabelText}>Tests</span>
               </div>
               <div style={styles.noteFieldWrap}>
-                <input style={styles.noteFieldInner} placeholder="Instructions for the patient…" />
+                <input style={styles.noteFieldInner} placeholder="Add tests..." />
                 <span style={styles.dictateIcons}>
                   <RewindIcon width={20} height={20} />
                   <MicIcon width={20} height={20} />
                 </span>
               </div>
             </div>
+            {/* Advice — dictatable with mic/rewind */}
+            <div style={styles.noteRow}>
+              <div style={styles.noteLabel}>
+                <ChatDotsIcon style={styles.sectionIcon} />
+                <span style={styles.noteLabelText}>Advice</span>
+              </div>
+              <div style={styles.noteFieldWrap}>
+                <input style={styles.noteFieldInner} placeholder="Add advice..." />
+                <span style={styles.dictateIcons}>
+                  <RewindIcon width={20} height={20} />
+                  <MicIcon width={20} height={20} />
+                </span>
+              </div>
+            </div>
+            {/* Refer to — dropdown (select doctor) */}
             <div style={styles.noteRow}>
               <div style={styles.noteLabel}>
                 <UsersIcon style={styles.sectionIcon} />
-                <span>Follow-up</span>
+                <span style={styles.noteLabelText}>Refer to</span>
               </div>
-              <input style={styles.noteField} placeholder="Who is responsible?" />
+              <div style={styles.referDropdown}>
+                <span style={styles.referText}>select doctor</span>
+                <span style={styles.referChevron}>
+                  <ChevronIcon width={16} height={16} style={{ transform: "rotate(180deg)" }} />
+                </span>
+              </div>
             </div>
+            {/* Review — date picker + notes field */}
             <div style={styles.noteRow}>
               <div style={styles.noteLabel}>
                 <RestartIcon style={styles.sectionIcon} />
-                <span>Review</span>
+                <span style={styles.noteLabelText}>Review</span>
               </div>
               <div style={styles.reviewRow}>
-                <input style={styles.reviewShort} placeholder="e.g. 7 days" />
-                <input style={styles.noteField} placeholder="Notes for review visit…" />
+                <div style={{ position: "relative", flexShrink: 0 }}>
+                  <div
+                    style={styles.reviewDate}
+                    onClick={() => setShowReviewDatePicker((v) => !v)}
+                  >
+                    <CalendarIcon width={24} height={24} style={{ color: "currentColor" }} />
+                    <span
+                      style={{
+                        ...styles.reviewDateText,
+                        color: reviewDate ? "inherit" : styles.reviewDateText.color,
+                      }}
+                    >
+                      {reviewDate ? formatReviewDate(reviewDate) : "Select Date"}
+                    </span>
+                  </div>
+                  {showReviewDatePicker && (
+                    <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, zIndex: 1100 }}>
+                      <DatePicker
+                        selectedDate={reviewDate ?? new Date()}
+                        onSelect={(d: Date) => {
+                          setReviewDate(d);
+                          setShowReviewDatePicker(false);
+                        }}
+                        onClose={() => setShowReviewDatePicker(false)}
+                        style={{ top: "auto", bottom: "8px" }}
+                        disablePast
+                      />
+                    </div>
+                  )}
+                </div>
+                <input style={styles.reviewLong} placeholder="Notes..." />
               </div>
             </div>
           </div>
