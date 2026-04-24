@@ -7,6 +7,8 @@ import { colors } from "../../styles/theme";
 import { BookAppointment, EditAppointmentData } from "./BookAppointment";
 import { DoctorStatusCard } from "./DoctorStatusCard";
 import { Toast } from "../Toast";
+import { Button } from "../Button";
+import { confirmStyles } from "../AddStaffModal/AddStaffModal.styles";
 import { API_BASE_URL } from "../../apiConfig";
 
 type Doctor = {
@@ -31,6 +33,47 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [toastMessage, setToastMessage] = useState("");
+  const [pendingCancelId, setPendingCancelId] = useState<string | null>(null);
+
+  const doStatusChange = async (aptId: string, newStatus: string) => {
+    const token = localStorage.getItem("docodile_token");
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/tenant/appointments/${aptId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) {
+        setToastMessage("Failed to update status");
+        return;
+      }
+    } catch {
+      setToastMessage("Network error while updating status");
+      return;
+    }
+    setAppointments((prev) => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach((docId) => {
+        const idx = updated[docId].findIndex((a) => a.id === aptId);
+        if (idx === -1) return;
+        const others = updated[docId].filter((a) => a.id !== aptId);
+        const moved = { ...updated[docId][idx], status: newStatus as any };
+        updated[docId] = [...others, moved];
+      });
+      return updated;
+    });
+    const statusLabel: Record<string, string> = {
+      "WAITING": "Marked as Arrived",
+      "IN_PROGRESS": "Sent to doctor",
+      "COMPLETED": "Marked as Completed",
+      "NO_SHOW": "Marked as No-Show",
+      "CANCELLED": "Appointment cancelled",
+    };
+    setToastMessage(statusLabel[newStatus] || "Status updated");
+  };
 
   // Clear editing state when New Appointment is clicked
   useEffect(() => {
@@ -253,47 +296,10 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
             ]}
             onStatusChange={async (aptId, newStatus) => {
               if (newStatus === "CANCELLED") {
-                if (!window.confirm("Are you sure you want to cancel this appointment?")) {
-                  return;
-                }
-              }
-              const token = localStorage.getItem("docodile_token");
-              try {
-                const res = await fetch(`${API_BASE_URL}/api/tenant/appointments/${aptId}/status`, {
-                  method: "PATCH",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                  },
-                  body: JSON.stringify({ status: newStatus }),
-                });
-                if (!res.ok) {
-                  setToastMessage("Failed to update status");
-                  return;
-                }
-              } catch {
-                setToastMessage("Network error while updating status");
+                setPendingCancelId(aptId);
                 return;
               }
-              setAppointments((prev) => {
-                const updated = { ...prev };
-                Object.keys(updated).forEach((docId) => {
-                  const idx = updated[docId].findIndex((a) => a.id === aptId);
-                  if (idx === -1) return;
-                  const others = updated[docId].filter((a) => a.id !== aptId);
-                  const moved = { ...updated[docId][idx], status: newStatus as any };
-                  updated[docId] = [...others, moved];
-                });
-                return updated;
-              });
-              const statusLabel: Record<string, string> = {
-                "WAITING": "Marked as Arrived",
-                "IN_PROGRESS": "Sent to doctor",
-                "COMPLETED": "Marked as Completed",
-                "NO_SHOW": "Marked as No-Show",
-                "CANCELLED": "Appointment cancelled",
-              };
-              setToastMessage(statusLabel[newStatus] || "Status updated");
+              await doStatusChange(aptId, newStatus);
             }}
           />
           </div>
@@ -317,6 +323,26 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
         isVisible={!!toastMessage}
         onClose={() => setToastMessage("")}
       />
+
+      {pendingCancelId && (
+        <div style={confirmStyles.overlay}>
+          <div style={confirmStyles.dialog}>
+            <h4 style={confirmStyles.title}>Are you sure?</h4>
+            <div style={confirmStyles.actions}>
+              <Button variant="dangerLight" size="sm" onClick={() => setPendingCancelId(null)}>
+                Nope
+              </Button>
+              <Button variant="dark" size="sm" onClick={() => {
+                const id = pendingCancelId;
+                setPendingCancelId(null);
+                if (id) doStatusChange(id, "CANCELLED");
+              }}>
+                Yes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
