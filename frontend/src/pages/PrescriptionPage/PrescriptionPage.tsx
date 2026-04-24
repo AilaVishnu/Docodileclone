@@ -273,12 +273,12 @@ export function PrescriptionPage() {
             )}
           </div>
 
-          {/* Notes + Examination single-line rows */}
-          <div style={styles.sectionCard}>
+          {/* Complaints + Examination single-line rows (no card outline) */}
+          <div style={styles.bottomRows}>
             <div style={styles.noteRow}>
               <div style={styles.noteLabel}>
                 <ChatDotsIcon style={styles.sectionIcon} />
-                <span>Complaints</span>
+                <span style={styles.noteLabelText}>Complaints</span>
               </div>
               <div style={styles.noteFieldWrap}>
                 <input style={styles.noteFieldInner} placeholder="Type or dictate…" />
@@ -291,7 +291,7 @@ export function PrescriptionPage() {
             <div style={styles.noteRow}>
               <div style={styles.noteLabel}>
                 <StethoscopeIcon style={styles.sectionIcon} />
-                <span>Examination</span>
+                <span style={styles.noteLabelText}>Examination</span>
               </div>
               <div style={styles.noteFieldWrap}>
                 <input style={styles.noteFieldInner} placeholder="Type or dictate…" />
