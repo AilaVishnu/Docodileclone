@@ -199,11 +199,24 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   // ── Right column ─────────────────────────────────────────────────────────
-  rightColumn: {
+  // Right area = visit tabs ABOVE the cream sheet (transparent wrapper).
+  rightArea: {
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,
     minWidth: 0,
+  },
+  // Figma node 2057:6283 — main visit content sits on a white sheet (radius
+  // xl, padding xl, gap xl). Each section card on top is transparent-filled
+  // and separated only by its primary300 1px border.
+  rightColumn: {
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.xl,
+    minWidth: 0,
+    backgroundColor: colors.neutral100,
+    padding: spacing.xl,
+    borderRadius: radii.xl,
   },
 
   // Figma nodes 2133:9887 (inactive) + 2133:9894 (active) — visit tabs.
@@ -250,15 +263,16 @@ export const styles: Record<string, CSSProperties> = {
     color: "inherit",
   },
 
-  // Shared section card (Vitals / Chief Complaints / Prescription / …)
+  // Figma node 2057:6284 — section card. Solid primary300 border (no shadow),
+  // radii.m, padding l/m. Title is Libertinus Serif Semi-Bold.
   sectionCard: {
     backgroundColor: colors.neutral100,
-    borderRadius: radii.xl,
+    border: `${strokes.xs} solid ${colors.primary300}`,
+    borderRadius: radii.m,
     padding: `${spacing.m} ${spacing.l}`,
     display: "flex",
     flexDirection: "column",
-    gap: spacing.m,
-    boxShadow: `0 1px 2px ${colors.alphaBlack0}`,
+    gap: spacing.l,
   },
   sectionHeader: {
     display: "flex",
@@ -268,7 +282,7 @@ export const styles: Record<string, CSSProperties> = {
   sectionTitleWrap: {
     display: "flex",
     alignItems: "center",
-    gap: spacing.s,
+    gap: spacing.xs,
     color: colors.neutral900,
   },
   sectionIcon: {
@@ -278,51 +292,73 @@ export const styles: Record<string, CSSProperties> = {
   },
   sectionTitle: {
     margin: 0,
+    fontFamily: fonts.family.secondary,
     fontSize: fonts.size.m,
-    fontWeight: fonts.weight.medium,
+    lineHeight: fonts.lineHeight.m,
+    fontWeight: fonts.weight.semibold,
     color: colors.neutral900,
   },
 
-  // Vitals grid — 6 pairs of label + dual inputs
+  // Vitals — 6 columns × up to 2 rows. Each cell stacks label above a split
+  // field (cream value 80×28 + bordered-white unit pill at right). Single-
+  // cell columns push their content to the bottom so the second (isolated)
+  // Hip aligns with BMI / Weight / Pulse on the lower row.
   vitalsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
-    gap: spacing.m,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "stretch",
+    gap: spacing.l,
+  },
+  vitalColumn: {
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "flex-end",
+    gap: spacing.xs,
   },
   vitalCell: {
     display: "flex",
     flexDirection: "column",
-    gap: spacing["2xs"],
+    gap: spacing.xs,
   },
   vitalLabel: {
     fontSize: fonts.size.xs,
+    lineHeight: fonts.lineHeight.xs,
     color: colors.neutral500,
   },
   vitalInputRow: {
     display: "flex",
-    border: `${strokes.xs} solid ${colors.neutral200}`,
-    borderRadius: radii.m,
-    overflow: "hidden",
+    alignItems: "center",
+    height: 28,
   },
-  vitalInput: {
-    flex: 1,
-    minWidth: 0,
+  vitalInputValue: {
+    width: 80,
+    height: "100%",
     border: "none",
     outline: "none",
-    padding: `${spacing["2xs"]} ${spacing.xs}`,
-    fontSize: fonts.control.sm,
+    padding: spacing.xs,
+    fontSize: fonts.size.s,
     fontFamily: fonts.family.primary,
     color: colors.neutral900,
-    backgroundColor: "transparent",
+    backgroundColor: colors.primary100,
+    borderTopLeftRadius: radii.m,
+    borderBottomLeftRadius: radii.m,
+    textAlign: "center" as const,
   },
   vitalUnit: {
-    padding: `${spacing["2xs"]} ${spacing.xs}`,
-    fontSize: fonts.control.xs,
+    height: "100%",
+    padding: spacing.xs,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
     color: colors.neutral500,
-    backgroundColor: colors.alphaBlack0,
+    backgroundColor: colors.neutral100,
+    border: `${strokes.xs} solid ${colors.primary300}`,
+    borderTopRightRadius: radii.m,
+    borderBottomRightRadius: radii.m,
     display: "flex",
     alignItems: "center",
+    justifyContent: "center",
     whiteSpace: "nowrap" as const,
+    boxSizing: "border-box" as const,
   },
 
   // 2x2 text-field grid (Chief Complaints)

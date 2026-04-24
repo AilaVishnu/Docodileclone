@@ -30,13 +30,33 @@ import { ReactComponent as ArrowLeftIcon } from "../../assets/icons/arrow-left.s
 // Renders static placeholder structure; wire up real data/inputs as follow-up.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const VITALS: { label: string; leftValue: string; leftUnit: string; rightValue?: string; rightUnit?: string }[] = [
-  { label: "BP", leftValue: "", leftUnit: "sys", rightValue: "", rightUnit: "dia" },
-  { label: "Pulse", leftValue: "", leftUnit: "bpm" },
-  { label: "Temperature", leftValue: "", leftUnit: "°F" },
-  { label: "SpO2", leftValue: "", leftUnit: "%" },
-  { label: "Weight", leftValue: "", leftUnit: "kg" },
-  { label: "Height", leftValue: "", leftUnit: "cm" },
+// Figma node 2057:6284 — Vitals laid out as 6 columns × 2 rows.
+// Each cell has a value (cream) + unit pill (white/border).
+// BP is special: placeholder shows `/` acting as sys / dia divider.
+type VitalCell = { label: string; unit: string; unitWidth?: number; placeholder?: string };
+const VITAL_COLUMNS: VitalCell[][] = [
+  [
+    { label: "BP",    unit: "mmHg", unitWidth: 64, placeholder: "  /  " },
+    { label: "BMI",   unit: "kg/m²", unitWidth: 64 },
+  ],
+  [
+    { label: "Height", unit: "cm", unitWidth: 44 },
+    { label: "Weight", unit: "kg", unitWidth: 44 },
+  ],
+  [
+    { label: "Temperature", unit: "°C", unitWidth: 44 },
+    { label: "Pulse",       unit: "bpm", unitWidth: 44 },
+  ],
+  [
+    { label: "Waist", unit: "cm", unitWidth: 44 },
+    { label: "Hip",   unit: "cm", unitWidth: 44 },
+  ],
+  [
+    { label: "SPO2", unit: "%", unitWidth: 44 },
+  ],
+  [
+    { label: "Hip", unit: "cm", unitWidth: 44 },
+  ],
 ];
 
 const COMPLAINT_FIELDS = [
@@ -139,13 +159,13 @@ export function PrescriptionPage() {
           </div>
         </aside>
 
-        {/* ─── Right column ─────────────────────────────────────────── */}
-        <section style={styles.rightColumn}>
-          {/* Visit tabs */}
+        {/* ─── Right area (tabs above the cream sheet) ──────────────── */}
+        <div style={styles.rightArea}>
+          {/* Visit tabs — sit OUTSIDE the cream sheet, above it */}
           <div style={styles.tabsBar}>
             {[{ id: 0, caption: "visit 1", label: "22 May" },
               { id: 1, caption: "visit 2", label: "Clinic 2" },
-              { id: 2, caption: "visit 3", label: "Clinic 2" }].map((t) => (
+              { id: 2, caption: "visit 3", label: "Today" }].map((t) => (
               <div
                 key={t.id}
                 style={{ ...styles.tab, ...(activeTab === t.id ? styles.tabActive : styles.tabInactive) }}
@@ -157,6 +177,9 @@ export function PrescriptionPage() {
             ))}
           </div>
 
+          {/* Cream sheet wrapping all visit-content sections */}
+          <section style={styles.rightColumn}>
+
           {/* Vitals */}
           <div style={styles.sectionCard}>
             <div style={styles.sectionHeader}>
@@ -167,19 +190,17 @@ export function PrescriptionPage() {
               <ChevronIcon style={styles.sectionIcon} />
             </div>
             <div style={styles.vitalsGrid}>
-              {VITALS.map((v) => (
-                <div key={v.label} style={styles.vitalCell}>
-                  <span style={styles.vitalLabel}>{v.label}</span>
-                  <div style={styles.vitalInputRow}>
-                    <input style={styles.vitalInput} placeholder="—" />
-                    <span style={styles.vitalUnit}>{v.leftUnit}</span>
-                    {v.rightUnit && (
-                      <>
-                        <input style={styles.vitalInput} placeholder="—" />
-                        <span style={styles.vitalUnit}>{v.rightUnit}</span>
-                      </>
-                    )}
-                  </div>
+              {VITAL_COLUMNS.map((col, ci) => (
+                <div key={ci} style={styles.vitalColumn}>
+                  {col.map((v) => (
+                    <div key={v.label} style={styles.vitalCell}>
+                      <span style={styles.vitalLabel}>{v.label}</span>
+                      <div style={styles.vitalInputRow}>
+                        <input style={styles.vitalInputValue} placeholder={v.placeholder ?? ""} />
+                        <span style={{ ...styles.vitalUnit, width: v.unitWidth ?? 44 }}>{v.unit}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
@@ -304,7 +325,8 @@ export function PrescriptionPage() {
               </div>
             </div>
           </div>
-        </section>
+          </section>
+        </div>
       </div>
     </div>
   );
