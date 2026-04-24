@@ -23,6 +23,7 @@ import { ReactComponent as RestartIcon } from "../../assets/icons/restart-24.svg
 import { ReactComponent as ChevronIcon } from "../../assets/icons/chevron-up.svg";
 import { ReactComponent as MicIcon } from "../../assets/icons/microphone.svg";
 import { ReactComponent as RewindIcon } from "../../assets/icons/rewind-back-circle.svg";
+import { ReactComponent as ArrowLeftIcon } from "../../assets/icons/arrow-left.svg";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
@@ -75,7 +76,10 @@ export function PrescriptionPage() {
     <div style={styles.page}>
       {/* Header */}
       <header style={styles.header}>
-        <div>
+        <button type="button" style={styles.backButton} aria-label="Back">
+          <ArrowLeftIcon width={24} height={24} />
+        </button>
+        <div style={styles.headerTitleGroup}>
           <h2 style={styles.title}>Visits</h2>
           <p style={styles.subtitle}>Patient visit history and prescription</p>
         </div>

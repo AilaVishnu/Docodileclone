@@ -19,8 +19,27 @@ export const styles: Record<string, CSSProperties> = {
   header: {
     display: "flex",
     alignItems: "flex-start",
-    justifyContent: "space-between",
     gap: spacing.m,
+  },
+  headerTitleGroup: {
+    flex: 1,
+    textAlign: "center",
+  },
+  // Figma node 2057:6739 — Linear/Arrows/Arrow Left back button.
+  // No circle border per the design — just the icon, neutral900.
+  backButton: {
+    width: 32,
+    height: 32,
+    border: "none",
+    backgroundColor: "transparent",
+    color: colors.neutral900,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 0,
+    flexShrink: 0,
+    marginTop: spacing["2xs"],
   },
   title: {
     margin: 0,
@@ -187,37 +206,46 @@ export const styles: Record<string, CSSProperties> = {
     minWidth: 0,
   },
 
+  // Figma nodes 2133:9887 (inactive) + 2133:9894 (active) — visit tabs.
+  // Each tab is a 136x40 pill with a caption (paragraph-xs) and label
+  // (paragraph-m) rendered inline, gap xs.
+  //   Inactive: alpha-black-0 bg, label in alpha-black-3
+  //   Active:   white bg, label in neutral-900
+  //   Caption is always alpha-black-3 regardless of state
   tabsBar: {
     display: "flex",
     alignItems: "center",
     gap: spacing.xs,
-    padding: `${spacing["2xs"]} ${spacing.xs}`,
-    backgroundColor: colors.neutral100,
-    borderRadius: radii.xl,
-    boxShadow: `0 1px 2px ${colors.alphaBlack0}`,
   },
   tab: {
-    padding: `${spacing.xs} ${spacing.m}`,
-    borderRadius: radii.m,
-    cursor: "pointer",
     display: "flex",
-    flexDirection: "column",
-    lineHeight: 1.15,
-    minWidth: 120,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    padding: `${spacing.xs} ${spacing.m}`,
+    borderRadius: radii.xl,
+    cursor: "pointer",
+    backgroundColor: colors.alphaBlack0,
+    minWidth: 136,
+    height: 40,
+    fontFamily: fonts.family.primary,
   },
   tabActive: {
-    backgroundColor: colors.active.shade100,
+    backgroundColor: colors.neutral100,
     color: colors.neutral900,
   },
   tabInactive: {
-    color: colors.neutral600,
+    color: colors.alphaBlack3,
   },
   tabCaption: {
     fontSize: fonts.size.xs,
-    color: colors.neutral500,
+    lineHeight: fonts.lineHeight.xs,
+    fontWeight: fonts.weight.regular,
+    color: colors.alphaBlack3,
   },
   tabLabel: {
     fontSize: fonts.size.m,
+    lineHeight: fonts.lineHeight.m,
     fontWeight: fonts.weight.regular,
     color: "inherit",
   },
