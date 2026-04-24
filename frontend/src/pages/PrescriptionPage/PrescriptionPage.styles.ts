@@ -54,31 +54,61 @@ export const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     gap: spacing.m,
   },
-  patientCard: {
-    backgroundColor: colors.neutral100,
-    borderRadius: radii.xl,
-    padding: `${spacing.xl} ${spacing.m}`,
+  // Patient identity block — avatar overlaps the top of the text tile so the
+  // circle sits half-in, half-out of the card. Wrapper has no bg; the tile
+  // below it carries the primary100 cream.
+  patientWrapper: {
+    position: "relative" as const,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: spacing.s,
-    boxShadow: `0 1px 2px ${colors.alphaBlack0}`,
+    paddingTop: 36,
   },
   avatar: {
-    width: 80,
-    height: 80,
+    position: "absolute" as const,
+    top: 0,
+    width: 72,
+    height: 72,
     borderRadius: radii.full,
-    backgroundColor: colors.active.shade100,
+    overflow: "hidden",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: colors.neutral500,
+    zIndex: 2,
   },
-  patientLine: {
+  // Figma node 2057:6696 — text tile. primary100 bg, radii.xl, vertical-m
+  // padding, serif type. Top padding is boosted so the overlapping avatar
+  // fits without crowding the primary line.
+  patientCard: {
+    backgroundColor: colors.primary100,
+    borderRadius: radii.xl,
+    padding: `${spacing["3xl"]} ${spacing.m} ${spacing.m}`,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: spacing["2xs"],
+    width: "100%",
+  },
+  patientPrimary: {
     margin: 0,
-    fontSize: fonts.size.s,
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h5,
+    lineHeight: fonts.lineHeight.h5,
+    fontWeight: fonts.weight.regular,
     color: colors.neutral900,
     textAlign: "center",
+    whiteSpace: "nowrap" as const,
+  },
+  patientSecondary: {
+    margin: 0,
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.l,
+    lineHeight: fonts.lineHeight.l,
+    fontWeight: fonts.weight.regular,
+    color: colors.neutral900,
+    textAlign: "center",
+    whiteSpace: "nowrap" as const,
   },
 
   // Figma node 2059:6764 — left-rail action list ("Visits / Reports / Files /
@@ -138,14 +168,15 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.xs,
   },
 
+  // Figma node 2073:3264 — contact card. Same container treatment as the
+  // action list above; just no badges on the rows.
   shareCard: {
-    backgroundColor: colors.neutral100,
-    borderRadius: radii.xl,
-    padding: spacing.m,
+    backgroundColor: colors.primary100,
+    borderRadius: radii.m,
+    padding: `${spacing.m} ${spacing.l}`,
     display: "flex",
     flexDirection: "column",
     gap: spacing.xs,
-    boxShadow: `0 1px 2px ${colors.alphaBlack0}`,
   },
 
   // ── Right column ─────────────────────────────────────────────────────────
@@ -320,6 +351,35 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: "transparent",
     outline: "none",
     fontFamily: fonts.family.primary,
+  },
+  // Field wrapper for dictatable rows: input + inline mic/rewind icons
+  noteFieldWrap: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    alignItems: "center",
+    border: `${strokes.xs} solid ${colors.neutral200}`,
+    borderRadius: radii.m,
+    paddingRight: spacing.s,
+    minHeight: 36,
+  },
+  noteFieldInner: {
+    flex: 1,
+    minWidth: 0,
+    border: "none",
+    outline: "none",
+    padding: `${spacing.xs} ${spacing.s}`,
+    fontSize: fonts.control.sm,
+    color: colors.neutral900,
+    backgroundColor: "transparent",
+    fontFamily: fonts.family.primary,
+  },
+  dictateIcons: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: spacing.xs,
+    color: colors.neutral700,
+    flexShrink: 0,
   },
 
   // Prescription table

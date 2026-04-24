@@ -1,16 +1,28 @@
 import React from "react";
 import { styles } from "./PrescriptionPage.styles";
 import { Button } from "../../components/Button";
-import { ReactComponent as DocumentIcon } from "../../assets/icons/document-outline.svg";
-import { ReactComponent as HourglassIcon } from "../../assets/icons/hourglass.svg";
-import { ReactComponent as StopwatchIcon } from "../../assets/icons/stopwatch.svg";
-import { ReactComponent as StethoscopeIcon } from "../../assets/icons/stethoscope-cup.svg";
-import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check.svg";
-import { ReactComponent as RestartIcon } from "../../assets/icons/restart.svg";
-import { ReactComponent as UsersIcon } from "../../assets/icons/users-group.svg";
-import { ReactComponent as EditPencilIcon } from "../../assets/icons/edit-pencil.svg";
-import { ReactComponent as ChevronIcon } from "../../assets/icons/chevron-down-dark.svg";
-import { ReactComponent as UserIcon } from "../../assets/icons/user.svg";
+import { ReactComponent as PatientAvatar } from "../../assets/staff/patient.svg";
+// Action-list icons exported from Figma node 2059:6764 (currentColor-normalized)
+import { ReactComponent as VisitsIcon } from "../../assets/icons/visits.svg";
+import { ReactComponent as PulseIcon } from "../../assets/icons/pulse.svg";
+import { ReactComponent as FileIcon } from "../../assets/icons/file.svg";
+import { ReactComponent as HistoryIcon } from "../../assets/icons/history.svg";
+import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check-small.svg";
+// Contact-card icons exported from Figma node 2073:3264 (currentColor-normalized)
+import { ReactComponent as LetterIcon } from "../../assets/icons/letter.svg";
+import { ReactComponent as VideocameraIcon } from "../../assets/icons/videocamera.svg";
+import { ReactComponent as PenIcon } from "../../assets/icons/pen.svg";
+// Main content section icons exported from Figma node 2057:6283
+import { ReactComponent as HeartPulseIcon } from "../../assets/icons/heart-pulse.svg";
+import { ReactComponent as ChatDotsIcon } from "../../assets/icons/chat-dots.svg";
+import { ReactComponent as StethoscopeIcon } from "../../assets/icons/stethoscope-24.svg";
+import { ReactComponent as PillsIcon } from "../../assets/icons/pills.svg";
+import { ReactComponent as DocumentIcon } from "../../assets/icons/document-school.svg";
+import { ReactComponent as UsersIcon } from "../../assets/icons/users-group-rounded.svg";
+import { ReactComponent as RestartIcon } from "../../assets/icons/restart-24.svg";
+import { ReactComponent as ChevronIcon } from "../../assets/icons/chevron-up.svg";
+import { ReactComponent as MicIcon } from "../../assets/icons/microphone.svg";
+import { ReactComponent as RewindIcon } from "../../assets/icons/rewind-back-circle.svg";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
@@ -38,18 +50,21 @@ const RX_ROWS = [1, 2, 3, 4, 5];
 
 // Figma node 2059:6764 — patient-context action list.
 // "Visits" renders active by default; count badges are circular.
+// Icons are the exact Linear set from the Figma design, normalized to
+// currentColor so they flip between dark/white with the row's active state.
 const ACTIONS: { icon: React.ReactNode; label: string; count: number }[] = [
-  { icon: <DocumentIcon style={styles.actionIcon} />, label: "Visits", count: 3 },
-  { icon: <HourglassIcon style={styles.actionIcon} />, label: "Reports", count: 2 },
-  { icon: <DocumentIcon style={styles.actionIcon} />, label: "Files", count: 6 },
-  { icon: <StopwatchIcon style={styles.actionIcon} />, label: "Timeline", count: 23 },
+  { icon: <VisitsIcon style={styles.actionIcon} />, label: "Visits", count: 3 },
+  { icon: <PulseIcon style={styles.actionIcon} />, label: "Reports", count: 2 },
+  { icon: <FileIcon style={styles.actionIcon} />, label: "Files", count: 6 },
+  { icon: <HistoryIcon style={styles.actionIcon} />, label: "Timeline", count: 23 },
   { icon: <BillCheckIcon style={styles.actionIcon} />, label: "Bills", count: 4 },
 ];
 
-const CONTACT_ACTIONS = [
-  { icon: <DocumentIcon style={styles.actionIcon} />, label: "Email prescription" },
-  { icon: <StopwatchIcon style={styles.actionIcon} />, label: "Schedule follow-up" },
-  { icon: <EditPencilIcon style={styles.actionIcon} />, label: "Add note" },
+// Figma node 2073:3264 — contact/edit card. Three rows, no active state.
+const CONTACT_ACTIONS: { icon: React.ReactNode; label: string }[] = [
+  { icon: <LetterIcon style={styles.actionIcon} />, label: "Email Patient" },
+  { icon: <VideocameraIcon style={styles.actionIcon} />, label: "Video Call Patient" },
+  { icon: <PenIcon style={styles.actionIcon} />, label: "Edit Patient Info" },
 ];
 
 export function PrescriptionPage() {
@@ -73,12 +88,14 @@ export function PrescriptionPage() {
       <div style={styles.body}>
         {/* ─── Left column ──────────────────────────────────────────── */}
         <aside style={styles.leftColumn}>
-          <div style={styles.patientCard}>
+          <div style={styles.patientWrapper}>
             <div style={styles.avatar}>
-              <UserIcon width={40} height={40} />
+              <PatientAvatar width={72} height={72} />
             </div>
-            <p style={styles.patientLine}>T023: Vinay Pittampally</p>
-            <p style={{ ...styles.patientLine, color: "#8F8F8F", fontSize: 12 }}>M | 25 · 8885672664</p>
+            <div style={styles.patientCard}>
+              <p style={styles.patientPrimary}>T023: Vinay Pittampally</p>
+              <p style={styles.patientSecondary}>(M|25)  8885672664</p>
+            </div>
           </div>
 
           <div style={styles.actionList}>
@@ -140,7 +157,7 @@ export function PrescriptionPage() {
           <div style={styles.sectionCard}>
             <div style={styles.sectionHeader}>
               <div style={styles.sectionTitleWrap}>
-                <HourglassIcon style={styles.sectionIcon} />
+                <HeartPulseIcon style={styles.sectionIcon} />
                 <h3 style={styles.sectionTitle}>Vitals</h3>
               </div>
               <ChevronIcon style={styles.sectionIcon} />
@@ -168,7 +185,7 @@ export function PrescriptionPage() {
           <div style={styles.sectionCard}>
             <div style={styles.sectionHeader}>
               <div style={styles.sectionTitleWrap}>
-                <StethoscopeIcon style={styles.sectionIcon} />
+                <HeartPulseIcon style={styles.sectionIcon} />
                 <h3 style={styles.sectionTitle}>Chief Complaints</h3>
               </div>
               <ChevronIcon style={styles.sectionIcon} />
@@ -187,17 +204,29 @@ export function PrescriptionPage() {
           <div style={styles.sectionCard}>
             <div style={styles.noteRow}>
               <div style={styles.noteLabel}>
-                <EditPencilIcon style={styles.sectionIcon} />
+                <ChatDotsIcon style={styles.sectionIcon} />
                 <span>Complaints</span>
               </div>
-              <input style={styles.noteField} placeholder="Type or dictate…" />
+              <div style={styles.noteFieldWrap}>
+                <input style={styles.noteFieldInner} placeholder="Type or dictate…" />
+                <span style={styles.dictateIcons}>
+                  <RewindIcon width={20} height={20} />
+                  <MicIcon width={20} height={20} />
+                </span>
+              </div>
             </div>
             <div style={styles.noteRow}>
               <div style={styles.noteLabel}>
                 <StethoscopeIcon style={styles.sectionIcon} />
                 <span>Examination</span>
               </div>
-              <input style={styles.noteField} placeholder="Type or dictate…" />
+              <div style={styles.noteFieldWrap}>
+                <input style={styles.noteFieldInner} placeholder="Type or dictate…" />
+                <span style={styles.dictateIcons}>
+                  <RewindIcon width={20} height={20} />
+                  <MicIcon width={20} height={20} />
+                </span>
+              </div>
             </div>
           </div>
 
@@ -205,7 +234,7 @@ export function PrescriptionPage() {
           <div style={styles.sectionCard}>
             <div style={styles.sectionHeader}>
               <div style={styles.sectionTitleWrap}>
-                <BillCheckIcon style={styles.sectionIcon} />
+                <PillsIcon style={styles.sectionIcon} />
                 <h3 style={styles.sectionTitle}>Rx</h3>
               </div>
               <ChevronIcon style={styles.sectionIcon} />
@@ -242,10 +271,16 @@ export function PrescriptionPage() {
             </div>
             <div style={styles.noteRow}>
               <div style={styles.noteLabel}>
-                <EditPencilIcon style={styles.sectionIcon} />
+                <ChatDotsIcon style={styles.sectionIcon} />
                 <span>Advise</span>
               </div>
-              <input style={styles.noteField} placeholder="Instructions for the patient…" />
+              <div style={styles.noteFieldWrap}>
+                <input style={styles.noteFieldInner} placeholder="Instructions for the patient…" />
+                <span style={styles.dictateIcons}>
+                  <RewindIcon width={20} height={20} />
+                  <MicIcon width={20} height={20} />
+                </span>
+              </div>
             </div>
             <div style={styles.noteRow}>
               <div style={styles.noteLabel}>
