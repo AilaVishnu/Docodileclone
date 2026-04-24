@@ -618,6 +618,44 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: "transparent",
   },
 
+  // Figma node 2143:10552 — "Add Medicine" row. Sits below the cream data
+  // rows on the white sheet, so no fill. Plus-glyph + label on the left, the
+  // rewind+mic dictate icons before the drag handle on the right.
+  addMedicineRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.s,
+    padding: `${spacing["2xs"]} 0`,
+    borderRadius: radii.xs,
+    backgroundColor: "transparent",
+  },
+  addMedicinePlus: {
+    width: 24,
+    textAlign: "center" as const,
+    padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    color: colors.neutral900,
+    fontFamily: fonts.family.primary,
+    flexShrink: 0,
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+  },
+  addMedicineText: {
+    flex: 1,
+    minWidth: 0,
+    padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    color: colors.neutral900,
+    fontFamily: fonts.family.primary,
+    textAlign: "left" as const,
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+  },
+
   // Review row — date picker (primary300 bordered) + long cream text field.
   reviewRow: {
     display: "flex",

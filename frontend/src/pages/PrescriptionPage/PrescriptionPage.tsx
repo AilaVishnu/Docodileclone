@@ -72,7 +72,7 @@ const HISTORY_FIELDS = [
 
 // Figma node 2057:6381 — Rx table columns. Medicine flex-grows, Notes fills remainder.
 const RX_COLUMNS = ["#", "Medicine", "Dosage", "When", "Frequency", "Duration", "Notes"];
-const RX_ROWS = [1, 2, 3, 4, 5];
+const INITIAL_RX_ROW_COUNT = 5;
 
 // Figma node 2059:6764 — patient-context action list.
 // "Visits" renders active by default; count badges are circular.
@@ -98,6 +98,7 @@ export function PrescriptionPage() {
   const [activeAction, setActiveAction] = React.useState(0);
   const [reviewDate, setReviewDate] = React.useState<Date | null>(null);
   const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
+  const [rxRowCount, setRxRowCount] = React.useState<number>(INITIAL_RX_ROW_COUNT);
 
   // Each collapsible section starts expanded; clicking the header chevron toggles.
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({
@@ -335,7 +336,7 @@ export function PrescriptionPage() {
                   <span key={c} style={{ textAlign: c === "#" ? "center" : "left" }}>{c}</span>
                 ))}
               </div>
-              {RX_ROWS.map((n) => (
+              {Array.from({ length: rxRowCount }, (_, i) => i + 1).map((n) => (
                 <div key={n} style={styles.rxRow}>
                   <span style={styles.rxSerial}>{n}</span>
                   <div style={styles.rxMedicineCell}>
@@ -352,6 +353,31 @@ export function PrescriptionPage() {
                   <input style={styles.rxCell} placeholder="Notes" />
                 </div>
               ))}
+              {/* Figma node 2143:10552 — "Add Medicine" footer row (white, with
+                  dictate icons + drag handle). Clicking "+" or the label
+                  appends one more empty row to the Rx table. */}
+              <div style={styles.addMedicineRow}>
+                <button
+                  type="button"
+                  style={styles.addMedicinePlus}
+                  onClick={() => setRxRowCount((c) => c + 1)}
+                  aria-label="Add medicine row"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  style={styles.addMedicineText}
+                  onClick={() => setRxRowCount((c) => c + 1)}
+                >
+                  Add Medicine
+                </button>
+                <span style={styles.dictateIcons}>
+                  <RewindIcon width={20} height={20} />
+                  <MicIcon width={20} height={20} />
+                </span>
+                <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
+              </div>
             </div>
             )}
           </div>
