@@ -16,14 +16,26 @@ export const styles: Record<string, CSSProperties> = {
     width: "100%",
   },
 
+  // Header uses the same column grid as the body so the title (column 2)
+  // aligns with the right area's left edge — i.e. above the visit tabs.
   header: {
+    display: "grid",
+    gridTemplateColumns: "308px minmax(0, 1fr)",
+    gap: spacing.m,
+    alignItems: "start",
+  },
+  headerLeft: {
+    display: "flex",
+    alignItems: "flex-start",
+  },
+  headerRight: {
     display: "flex",
     alignItems: "flex-start",
     gap: spacing.m,
   },
   headerTitleGroup: {
     flex: 1,
-    textAlign: "center",
+    textAlign: "left" as const,
   },
   // Figma node 2057:6739 — Linear/Arrows/Arrow Left back button.
   // No circle border per the design — just the icon, neutral900.
@@ -517,6 +529,224 @@ export const styles: Record<string, CSSProperties> = {
     flexShrink: 0,
     color: colors.neutral900,
     cursor: "grab",
+  },
+
+  // Figma node 2143:11458 — sort/list-view toggles, far right of the
+  // Reports tabs row. Two transparent 32x32 icon buttons grouped via a
+  // marginLeft:auto wrapper.
+  reportViewToggle: {
+    marginLeft: "auto",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: spacing["3xs"],
+    flexShrink: 0,
+  },
+  reportViewToggleButton: {
+    width: 32,
+    height: 32,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    color: colors.alphaBlack3,
+    padding: 0,
+    borderRadius: radii.xs,
+  },
+  // The currently selected view-mode toggle gets the dark color so the
+  // pair reads as a segmented control (selected vs. unselected).
+  reportViewToggleButtonActive: {
+    color: colors.neutral900,
+  },
+
+  // Figma node 2143:11610 — grid layout. 4 columns, gap m. Each card is
+  // ~200×200, cream wrapper with a white inner thumbnail tile and a
+  // text footer (name + date + size).
+  reportsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+    gap: spacing.m,
+  },
+  reportCard: {
+    position: "relative" as const,
+    backgroundColor: colors.primary100,
+    borderRadius: radii.m,
+    padding: spacing.s,
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.s,
+    aspectRatio: "1 / 1",
+  },
+  reportCardThumb: {
+    position: "relative" as const,
+    flex: 1,
+    minHeight: 0,
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.m,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: colors.primary300,
+    overflow: "hidden",
+  },
+  reportCardThumbIcon: {
+    width: 32,
+    height: 32,
+    color: colors.primary300,
+  },
+  reportCardMic: {
+    position: "absolute" as const,
+    right: spacing.s,
+    bottom: spacing.s,
+    color: colors.neutral700,
+    display: "inline-flex",
+  },
+  reportCardKebab: {
+    position: "absolute" as const,
+    top: spacing.xs,
+    right: spacing.xs,
+    color: colors.neutral700,
+    display: "inline-flex",
+  },
+  reportCardFooter: {
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing["3xs"],
+  },
+  reportCardName: {
+    fontSize: fonts.size.m,
+    lineHeight: fonts.lineHeight.m,
+    fontFamily: fonts.family.primary,
+    color: colors.neutral900,
+  },
+  reportCardMeta: {
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: fonts.size.xs,
+    lineHeight: fonts.lineHeight.xs,
+    color: colors.neutral400 ?? colors.neutral500,
+    fontFamily: fonts.family.primary,
+  },
+
+  // Figma node 2143:11171 — "+ Add Report" pill on the page header. Dark
+  // neutral900 fill with primary100 text, full-radius pill.
+  addReportButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: spacing["2xs"],
+    height: 40,
+    padding: `${spacing["2xs"]} ${spacing.s}`,
+    borderRadius: radii.full,
+    backgroundColor: colors.neutral900,
+    color: colors.primary100,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.m,
+    border: "none",
+    cursor: "pointer",
+    flexShrink: 0,
+    marginTop: spacing["2xs"],
+  },
+  addReportPlus: {
+    fontSize: fonts.size.l,
+    lineHeight: 1,
+  },
+
+  // Figma node 2143:11160 — AI Summary card. Cream tile in the left rail
+  // with a serif title and a paragraph-s body.
+  aiSummaryCard: {
+    backgroundColor: colors.primary100,
+    borderRadius: radii.xl,
+    padding: spacing.l,
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.xs,
+    textAlign: "center" as const,
+  },
+  aiSummaryTitle: {
+    margin: 0,
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.l,
+    lineHeight: fonts.lineHeight.l,
+    fontWeight: fonts.weight.semibold,
+    color: colors.neutral900,
+  },
+  aiSummaryBody: {
+    margin: 0,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    color: colors.neutral900,
+  },
+
+  // Figma node 2143:10938 — Reports table. Header row of column captions
+  // (paragraph-xs, neutral500) followed by cream-filled data pills.
+  // Columns: # (24) | mic chip (40) | name (flex) | category (120) |
+  // date (120) | actions (120).
+  reportsTable: {
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.xs,
+  },
+  reportsHeaderRow: {
+    display: "grid",
+    gridTemplateColumns: "24px 40px minmax(120px, 1fr) 120px 120px 120px",
+    gap: spacing.s,
+    fontSize: fonts.size.xs,
+    lineHeight: fonts.lineHeight.xs,
+    color: colors.neutral500,
+    fontFamily: fonts.family.primary,
+    padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
+  },
+  reportRow: {
+    display: "grid",
+    gridTemplateColumns: "24px 40px minmax(120px, 1fr) 120px 120px 120px",
+    gap: spacing.s,
+    alignItems: "center",
+    backgroundColor: colors.primary100,
+    borderRadius: radii.xs,
+    padding: spacing["2xs"],
+    minHeight: 52,
+  },
+  reportSerial: {
+    textAlign: "center" as const,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    color: colors.neutral700,
+    fontFamily: fonts.family.primary,
+  },
+  // Cream chip wrapping the mic icon — primary200 fill, radii.m, padding 2xs.
+  reportMicChip: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primary200,
+    borderRadius: radii.m,
+    padding: spacing["2xs"],
+    width: 40,
+    height: 40,
+    color: colors.neutral900,
+    flexShrink: 0,
+  },
+  reportName: {
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    color: colors.neutral900,
+    fontFamily: fonts.family.primary,
+  },
+  reportCell: {
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    color: colors.neutral700,
+    fontFamily: fonts.family.primary,
+    textAlign: "center" as const,
+  },
+  reportActions: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: spacing.xs,
+    color: colors.neutral700,
   },
 
   // Figma node 2057:6283 — Complaints + Diagnosis (and Notes for Patient +

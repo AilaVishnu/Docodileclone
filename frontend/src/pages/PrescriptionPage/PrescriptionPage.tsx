@@ -27,6 +27,9 @@ import { ReactComponent as ArrowLeftIcon } from "../../assets/icons/arrow-left.s
 import { ReactComponent as CalendarIcon } from "../../assets/icons/calendar.svg";
 import { ReactComponent as ReorderIcon } from "../../assets/icons/reorder.svg";
 import { ReactComponent as TuningIcon } from "../../assets/icons/tuning.svg";
+import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg";
+import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
+import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -94,6 +97,53 @@ const CONTACT_ACTIONS: { icon: React.ReactNode; label: string }[] = [
   { icon: <PenIcon style={styles.actionIcon} />, label: "Edit Patient Info" },
 ];
 
+// Figma node 2143:10730 — Reports view, swapped in when "Reports" is active.
+const AI_SUMMARY_TEXT =
+  "Vinay presents with complaints of dandruff. Clinical evaluation performed " +
+  "(1 feb) and appropriate treatment and care advice provided (MedX). But no " +
+  "visible change in last visit (8 feb).";
+
+// List-view config — Reports (action 1) and Files (action 2) both render the
+// same table layout with their own header copy, tabs, and rows.
+type ListViewConfig = {
+  title: string;
+  subtitle: string;
+  addLabel: string;
+  nameColumn: string;
+  tabs: readonly string[];
+  rows: { name: string; category: string; date: string }[];
+};
+const LIST_VIEWS: Record<number, ListViewConfig> = {
+  1: {
+    title: "Reports",
+    subtitle: "5 reports on file",
+    addLabel: "Add Report",
+    nameColumn: "Report name",
+    tabs: ["All Reports", "Blood", "Pathology"],
+    rows: [
+      { name: "CBC Report", category: "Pathology", date: "20 May '26" },
+      { name: "CBC Report", category: "Pathology", date: "20 May '26" },
+      { name: "CBC Report", category: "Pathology", date: "20 May '26" },
+      { name: "CBC Report", category: "Pathology", date: "20 May '26" },
+    ],
+  },
+  2: {
+    title: "Files",
+    subtitle: "6 files on file",
+    addLabel: "Add File",
+    nameColumn: "File name",
+    tabs: ["All Files", "Documents", "Images"],
+    rows: [
+      { name: "Discharge Summary", category: "Documents", date: "12 Apr '26" },
+      { name: "X-Ray Chest",       category: "Images",    date: "08 Apr '26" },
+      { name: "Consent Form",      category: "Documents", date: "01 Apr '26" },
+      { name: "Lab Slip",          category: "Documents", date: "20 Mar '26" },
+      { name: "MRI Knee",          category: "Images",    date: "15 Mar '26" },
+      { name: "Insurance Letter",  category: "Documents", date: "10 Mar '26" },
+    ],
+  },
+};
+
 export function PrescriptionPage() {
   const [activeTab, setActiveTab] = React.useState(0);
   const [activeAction, setActiveAction] = React.useState(0);
@@ -101,6 +151,19 @@ export function PrescriptionPage() {
   const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
   const [rxRowCount, setRxRowCount] = React.useState<number>(INITIAL_RX_ROW_COUNT);
   const [reviewDays, setReviewDays] = React.useState<string>("");
+  // List-view tab state — shared across Reports / Files (defaults to the
+  // last tab to mirror the Pathology selection in the Figma reference).
+  const [activeListTab, setActiveListTab] = React.useState<number>(2);
+  // Toggle between the table layout (default) and the card grid layout
+  // (Figma node 2143:11610). Driven by the list/widget icons in the tabs row.
+  const [viewMode, setViewMode] = React.useState<"list" | "grid">("list");
+
+  // ── Header + right-area content driven by which left-rail action is active.
+  // If LIST_VIEWS has an entry, render the list-view layout; otherwise show
+  // the default Visits layout.
+  const listViewConfig = LIST_VIEWS[activeAction] ?? null;
+  const headerTitle = listViewConfig?.title ?? "Visits";
+  const headerSubtitle = listViewConfig?.subtitle ?? "Patient visit history and prescription";
 
   // Each collapsible section starts expanded; clicking the header chevron toggles.
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({
@@ -116,14 +179,26 @@ export function PrescriptionPage() {
 
   return (
     <div style={styles.page}>
-      {/* Header */}
+      {/* Header — title + subtitle swap based on which left-rail action is
+          active. Reports view also surfaces an "+ Add Report" pill on the
+          right (Figma node 2143:11171). */}
       <header style={styles.header}>
-        <button type="button" style={styles.backButton} aria-label="Back">
-          <ArrowLeftIcon width={24} height={24} />
-        </button>
-        <div style={styles.headerTitleGroup}>
-          <h2 style={styles.title}>Visits</h2>
-          <p style={styles.subtitle}>Patient visit history and prescription</p>
+        <div style={styles.headerLeft}>
+          <button type="button" style={styles.backButton} aria-label="Back">
+            <ArrowLeftIcon width={24} height={24} />
+          </button>
+        </div>
+        <div style={styles.headerRight}>
+          <div style={styles.headerTitleGroup}>
+            <h2 style={styles.title}>{headerTitle}</h2>
+            <p style={styles.subtitle}>{headerSubtitle}</p>
+          </div>
+          {listViewConfig && (
+            <button type="button" style={styles.addReportButton}>
+              <span style={styles.addReportPlus}>+</span>
+              <span>{listViewConfig.addLabel}</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -167,6 +242,13 @@ export function PrescriptionPage() {
             })}
           </div>
 
+          {/* AI Summary card — Figma node 2143:11160. Static cream tile with
+              a serif heading and a paragraph-s body summarizing the patient. */}
+          <div style={styles.aiSummaryCard}>
+            <h4 style={styles.aiSummaryTitle}>AI Summary</h4>
+            <p style={styles.aiSummaryBody}>{AI_SUMMARY_TEXT}</p>
+          </div>
+
           <div style={styles.shareCard}>
             {CONTACT_ACTIONS.map((a) => (
               <div key={a.label} style={styles.actionRow}>
@@ -177,8 +259,107 @@ export function PrescriptionPage() {
           </div>
         </aside>
 
-        {/* ─── Right area (tabs above the cream sheet) ──────────────── */}
+        {/* ─── Right area — content swapped via activeAction ─────────── */}
         <div style={styles.rightArea}>
+        {listViewConfig ? (
+          <>
+            {/* List-view tabs — same pill style as the visit tabs but with
+                the category filters from the active config. */}
+            <div style={styles.tabsBar}>
+              {listViewConfig.tabs.map((label, i) => (
+                <div
+                  key={label}
+                  style={{ ...styles.tab, ...(activeListTab === i ? styles.tabActive : styles.tabInactive) }}
+                  onClick={() => setActiveListTab(i)}
+                >
+                  <span style={styles.tabLabel}>{label}</span>
+                </div>
+              ))}
+              <div style={styles.reportViewToggle}>
+                <button
+                  type="button"
+                  style={{
+                    ...styles.reportViewToggleButton,
+                    ...(viewMode === "list" ? styles.reportViewToggleButtonActive : {}),
+                  }}
+                  onClick={() => setViewMode("list")}
+                  aria-label="List view"
+                  aria-pressed={viewMode === "list"}
+                >
+                  <ListSortIcon width={24} height={24} />
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    ...styles.reportViewToggleButton,
+                    ...(viewMode === "grid" ? styles.reportViewToggleButtonActive : {}),
+                  }}
+                  onClick={() => setViewMode("grid")}
+                  aria-label="Grid view"
+                  aria-pressed={viewMode === "grid"}
+                >
+                  <WidgetIcon width={24} height={24} />
+                </button>
+              </div>
+            </div>
+
+            {viewMode === "list" ? (
+              /* List table — header row of column captions + data rows. */
+              <div style={styles.reportsTable}>
+                <div style={styles.reportsHeaderRow}>
+                  <span style={{ textAlign: "center" }}>#</span>
+                  <span></span>
+                  <span>{listViewConfig.nameColumn}</span>
+                  <span style={{ textAlign: "center" }}>Category</span>
+                  <span style={{ textAlign: "center" }}>Date</span>
+                  <span style={{ textAlign: "center" }}>Actions</span>
+                </div>
+                {listViewConfig.rows.map((r, i) => (
+                  <div key={i} style={styles.reportRow}>
+                    <span style={styles.reportSerial}>{i + 1}</span>
+                    <div style={styles.reportMicChip}>
+                      <MicIcon width={24} height={24} />
+                    </div>
+                    <span style={styles.reportName}>{r.name}</span>
+                    <span style={styles.reportCell}>{r.category}</span>
+                    <span style={styles.reportCell}>{r.date}</span>
+                    <div style={styles.reportActions}>
+                      <DownloadIcon width={24} height={24} />
+                      <ReorderIcon width={20} height={20} style={styles.reorderHandle} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* Grid view — Figma node 2143:11610. Cream cards with a white
+                 inner tile (file thumbnail placeholder + mic chip) and
+                 name + date + size below. Kebab handle in top-right. */
+              <div style={styles.reportsGrid}>
+                {listViewConfig.rows.map((r, i) => (
+                  <div key={i} style={styles.reportCard}>
+                    <div style={styles.reportCardThumb}>
+                      <FileIcon style={styles.reportCardThumbIcon} />
+                      <span style={styles.reportCardMic}>
+                        <MicIcon width={20} height={20} />
+                      </span>
+                    </div>
+                    <div style={styles.reportCardKebab}>
+                      <ReorderIcon width={20} height={20} />
+                    </div>
+                    <div style={styles.reportCardFooter}>
+                      <span style={styles.reportCardName}>{r.name}</span>
+                      <div style={styles.reportCardMeta}>
+                        <span>{r.date}</span>
+                        <span>2.4MB</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+        <>
           {/* Visit tabs — sit OUTSIDE the cream sheet, above it. The tuning
               button (Figma node 2133:9927) is pushed to the far right of the
               row to filter / reconfigure the current visit's view. */}
@@ -509,6 +690,8 @@ export function PrescriptionPage() {
             </div>
           </div>
           </section>
+        </>
+        )}
         </div>
       </div>
     </div>
