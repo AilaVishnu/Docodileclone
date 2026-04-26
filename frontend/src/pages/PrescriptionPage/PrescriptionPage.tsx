@@ -257,6 +257,7 @@ export function PrescriptionPage() {
       if (!toggle) return prev;
       return { ...prev, [key]: { value: toggle.convert(cell.value), unit: toggle.altUnit } };
     });
+
   // List-view tab state — shared across Reports / Files (defaults to the
   // last tab to mirror the Pathology selection in the Figma reference).
   const [activeListTab, setActiveListTab] = React.useState<number>(2);
@@ -269,14 +270,46 @@ export function PrescriptionPage() {
   // - LIST_VIEWS entry (Reports / Files): table or grid list view
   // - Timeline / Bills: "coming soon" placeholder
   const listViewConfig = LIST_VIEWS[activeAction] ?? null;
+
+  // Client-side uploads for the Reports / Files list views, keyed by
+  // activeAction (1 = Reports, 2 = Files). Clicking the "+ Add" pill in the
+  // page header opens a native file picker; selected files are appended to
+  // this map so they show up immediately in the list/grid below.
+  // TODO(backend): on upload, also POST the file to /reports or /files.
+  type ListRow = { name: string; category: string; date: string };
+  const [uploadedItems, setUploadedItems] = React.useState<Record<number, ListRow[]>>({});
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const openFilePicker = () => fileInputRef.current?.click();
+  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    const today = new Date().toLocaleDateString("en-GB", {
+      day: "2-digit", month: "short", year: "2-digit",
+    });
+    const newRows: ListRow[] = files.map((f) => ({
+      name: f.name,
+      category: "Uploaded",
+      date: today,
+    }));
+    setUploadedItems((prev) => ({
+      ...prev,
+      [activeAction]: [...(prev[activeAction] ?? []), ...newRows],
+    }));
+    // Reset so selecting the same file twice still triggers onChange.
+    e.target.value = "";
+  };
+  // Display rows = backend rows (empty for now) + client-side uploads.
+  const displayRows: ListRow[] = listViewConfig
+    ? [...listViewConfig.rows, ...(uploadedItems[activeAction] ?? [])]
+    : [];
   const comingSoonLabel = activeAction === 3 ? "Timeline" : activeAction === 4 ? "Bills" : null;
   const headerTitle =
     listViewConfig?.title ?? comingSoonLabel ?? "Visits";
-  // Subtitle is derived from the row count for list views (so it tracks the
-  // backend data), defaults to a placeholder for Coming Soon, and stays
-  // static for the default Visits view.
+  // Subtitle is derived from the displayed row count for list views (backend
+  // data + client uploads), defaults to a placeholder for Coming Soon, and
+  // stays static for the default Visits view.
   const headerSubtitle = listViewConfig
-    ? `${listViewConfig.rows.length} ${listViewConfig.title.toLowerCase()} on file`
+    ? `${listViewConfig.rows.length + (uploadedItems[activeAction]?.length ?? 0)} ${listViewConfig.title.toLowerCase()} on file`
     : comingSoonLabel
       ? "Coming soon"
       : "Patient visit history and prescription";
@@ -310,10 +343,19 @@ export function PrescriptionPage() {
             <p style={styles.subtitle}>{headerSubtitle}</p>
           </div>
           {listViewConfig && (
-            <button type="button" style={styles.addReportButton}>
-              <span style={styles.addReportPlus}>+</span>
-              <span>{listViewConfig.addLabel}</span>
-            </button>
+            <>
+              <button type="button" style={styles.addReportButton} onClick={openFilePicker}>
+                <span style={styles.addReportPlus}>+</span>
+                <span>{listViewConfig.addLabel}</span>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFilesSelected}
+                style={{ display: "none" }}
+              />
+            </>
           )}
         </div>
       </header>
@@ -435,7 +477,7 @@ export function PrescriptionPage() {
                   <span style={{ textAlign: "center" }}>Date</span>
                   <span style={{ textAlign: "center" }}>Actions</span>
                 </div>
-                {listViewConfig.rows.map((r, i) => (
+                {displayRows.map((r, i) => (
                   <div key={i} style={styles.reportRow}>
                     <span style={styles.reportSerial}>{i + 1}</span>
                     <div style={styles.reportMicChip}>
@@ -456,7 +498,7 @@ export function PrescriptionPage() {
                  inner tile (file thumbnail placeholder + mic chip) and
                  name + date + size below. Kebab handle in top-right. */
               <div style={styles.reportsGrid}>
-                {listViewConfig.rows.map((r, i) => (
+                {displayRows.map((r, i) => (
                   <div key={i} style={styles.reportCard}>
                     <div style={styles.reportCardThumb}>
                       <FileIcon style={styles.reportCardThumbIcon} />
