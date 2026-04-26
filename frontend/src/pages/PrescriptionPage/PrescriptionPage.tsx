@@ -1,6 +1,5 @@
 import React from "react";
 import { styles } from "./PrescriptionPage.styles";
-import { Button } from "../../components/Button";
 import { ReactComponent as PatientAvatar } from "../../assets/staff/patient.svg";
 // Action-list icons exported from Figma node 2059:6764 (currentColor-normalized)
 import { ReactComponent as VisitsIcon } from "../../assets/icons/visits.svg";
@@ -27,6 +26,7 @@ import { ReactComponent as RewindIcon } from "../../assets/icons/rewind-back-cir
 import { ReactComponent as ArrowLeftIcon } from "../../assets/icons/arrow-left.svg";
 import { ReactComponent as CalendarIcon } from "../../assets/icons/calendar.svg";
 import { ReactComponent as ReorderIcon } from "../../assets/icons/reorder.svg";
+import { ReactComponent as TuningIcon } from "../../assets/icons/tuning.svg";
 import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -125,10 +125,6 @@ export function PrescriptionPage() {
           <h2 style={styles.title}>Visits</h2>
           <p style={styles.subtitle}>Patient visit history and prescription</p>
         </div>
-        <div style={styles.headerActions}>
-          <Button variant="light" size="md">Save Draft</Button>
-          <Button variant="dark" size="md">Finalize</Button>
-        </div>
       </header>
 
       <div style={styles.body}>
@@ -183,7 +179,9 @@ export function PrescriptionPage() {
 
         {/* ─── Right area (tabs above the cream sheet) ──────────────── */}
         <div style={styles.rightArea}>
-          {/* Visit tabs — sit OUTSIDE the cream sheet, above it */}
+          {/* Visit tabs — sit OUTSIDE the cream sheet, above it. The tuning
+              button (Figma node 2133:9927) is pushed to the far right of the
+              row to filter / reconfigure the current visit's view. */}
           <div style={styles.tabsBar}>
             {[{ id: 0, caption: "visit 1", label: "22 May" },
               { id: 1, caption: "visit 2", label: "Clinic 2" },
@@ -197,6 +195,9 @@ export function PrescriptionPage() {
                 <span style={styles.tabLabel}>{t.label}</span>
               </div>
             ))}
+            <button type="button" style={styles.tabsTuningButton} aria-label="Visit settings">
+              <TuningIcon width={24} height={24} />
+            </button>
           </div>
 
           {/* Cream sheet wrapping all visit-content sections */}

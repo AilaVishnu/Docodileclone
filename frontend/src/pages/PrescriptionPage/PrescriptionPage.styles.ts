@@ -54,12 +54,6 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.s,
     color: colors.neutral500,
   },
-  headerActions: {
-    display: "flex",
-    alignItems: "center",
-    gap: spacing.s,
-  },
-
   body: {
     display: "grid",
     gridTemplateColumns: "308px minmax(0, 1fr)",
@@ -229,6 +223,25 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: spacing.xs,
+    // Pushed down so the tabs sit on the same baseline as the patient
+    // identity card on the left (which is offset by the overlapping avatar).
+    marginTop: 36,
+  },
+  // Figma node 2133:9927 — Tuning settings button. Sits at the far right of
+  // the tabs row (pushed via auto-margin), 32×32 transparent icon button.
+  tabsTuningButton: {
+    marginLeft: "auto",
+    width: 32,
+    height: 32,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    color: colors.neutral900,
+    flexShrink: 0,
+    padding: 0,
   },
   tab: {
     display: "flex",
