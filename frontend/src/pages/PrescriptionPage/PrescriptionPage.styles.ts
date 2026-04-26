@@ -629,6 +629,33 @@ export const styles: Record<string, CSSProperties> = {
     fontFamily: fonts.family.primary,
   },
 
+  // Empty-state placeholder for sections that aren't built yet (Timeline,
+  // Bills). Centered title + muted subtitle, no card chrome.
+  comingSoon: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: `${spacing["3xl"]} ${spacing.l}`,
+    gap: spacing.xs,
+    minHeight: 200,
+  },
+  comingSoonTitle: {
+    margin: 0,
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h5,
+    lineHeight: fonts.lineHeight.h5,
+    fontWeight: fonts.weight.semibold,
+    color: colors.neutral900,
+  },
+  comingSoonBody: {
+    margin: 0,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.m,
+    lineHeight: fonts.lineHeight.m,
+    color: colors.alphaBlack3,
+  },
+
   // Figma node 2143:11171 — "+ Add Report" pill on the page header. Dark
   // neutral900 fill with primary100 text, full-radius pill.
   addReportButton: {

@@ -159,11 +159,15 @@ export function PrescriptionPage() {
   const [viewMode, setViewMode] = React.useState<"list" | "grid">("list");
 
   // ── Header + right-area content driven by which left-rail action is active.
-  // If LIST_VIEWS has an entry, render the list-view layout; otherwise show
-  // the default Visits layout.
+  // - activeAction 0 (Visits): default visits layout
+  // - LIST_VIEWS entry (Reports / Files): table or grid list view
+  // - Timeline / Bills: "coming soon" placeholder
   const listViewConfig = LIST_VIEWS[activeAction] ?? null;
-  const headerTitle = listViewConfig?.title ?? "Visits";
-  const headerSubtitle = listViewConfig?.subtitle ?? "Patient visit history and prescription";
+  const comingSoonLabel = activeAction === 3 ? "Timeline" : activeAction === 4 ? "Bills" : null;
+  const headerTitle =
+    listViewConfig?.title ?? comingSoonLabel ?? "Visits";
+  const headerSubtitle =
+    listViewConfig?.subtitle ?? (comingSoonLabel ? "Coming soon" : "Patient visit history and prescription");
 
   // Each collapsible section starts expanded; clicking the header chevron toggles.
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({
@@ -261,7 +265,12 @@ export function PrescriptionPage() {
 
         {/* ─── Right area — content swapped via activeAction ─────────── */}
         <div style={styles.rightArea}>
-        {listViewConfig ? (
+        {comingSoonLabel ? (
+          <div style={styles.comingSoon}>
+            <h3 style={styles.comingSoonTitle}>{comingSoonLabel}</h3>
+            <p style={styles.comingSoonBody}>Coming soon</p>
+          </div>
+        ) : listViewConfig ? (
           <>
             {/* List-view tabs — same pill style as the visit tabs but with
                 the category filters from the active config. */}
