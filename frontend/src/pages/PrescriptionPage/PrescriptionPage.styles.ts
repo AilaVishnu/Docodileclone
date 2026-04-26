@@ -506,6 +506,64 @@ export const styles: Record<string, CSSProperties> = {
     cursor: "grab",
   },
 
+  // Figma node 2057:6283 — Complaints + Diagnosis (and Notes for Patient +
+  // Private Notes) two-column textarea cards. Each card has a header row
+  // (icon + title + kebab handle) and a cream textarea field with the
+  // dictate icons docked at its bottom-right corner.
+  noteCardsRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    columnGap: spacing.m,
+  },
+  noteCard: {
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.s,
+  },
+  noteCardPrivate: {
+    // Private Notes uses a neutral grey instead of cream so it reads as
+    // "internal", visually separated from the patient-facing notes.
+  },
+  noteCardFieldPrivate: {
+    backgroundColor: colors.alphaBlack1,
+  },
+  noteCardHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: `0 ${spacing["2xs"]}`,
+  },
+  noteCardField: {
+    position: "relative" as const,
+    backgroundColor: colors.primary100,
+    borderRadius: radii.m,
+    padding: spacing.s,
+    minHeight: 96,
+    display: "flex",
+  },
+  noteCardTextarea: {
+    flex: 1,
+    minWidth: 0,
+    border: "none",
+    outline: "none",
+    resize: "none" as const,
+    backgroundColor: "transparent",
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    fontFamily: fonts.family.primary,
+    color: colors.neutral900,
+    minHeight: 80,
+  },
+  noteCardDictate: {
+    position: "absolute" as const,
+    right: spacing.s,
+    bottom: spacing.s,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: spacing.xs,
+    color: colors.neutral700,
+  },
+
   // Refer to — split dropdown with neutral300 border, 120px text + chevron tail.
   referDropdown: {
     display: "inline-flex",
@@ -698,6 +756,40 @@ export const styles: Record<string, CSSProperties> = {
     lineHeight: fonts.lineHeight.s,
     color: colors.neutral900,
     outline: "none",
+    fontFamily: fonts.family.primary,
+  },
+  // Next Review — "or ___ days" segment between the date chip and the notes
+  // input. The number input has a thin underline; "days" sits as a label.
+  reviewOr: {
+    flexShrink: 0,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    color: colors.neutral500,
+    fontFamily: fonts.family.primary,
+  },
+  reviewDaysWrap: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.xs,
+    flexShrink: 0,
+  },
+  reviewDaysInput: {
+    width: 56,
+    height: 32,
+    border: "none",
+    borderBottom: `${strokes.xs} solid ${colors.neutral300}`,
+    backgroundColor: "transparent",
+    outline: "none",
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    fontFamily: fonts.family.primary,
+    color: colors.neutral900,
+    textAlign: "center" as const,
+  },
+  reviewDaysLabel: {
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    color: colors.neutral500,
     fontFamily: fonts.family.primary,
   },
 };

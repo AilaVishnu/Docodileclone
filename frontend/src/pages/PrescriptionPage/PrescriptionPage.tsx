@@ -14,8 +14,9 @@ import { ReactComponent as VideocameraIcon } from "../../assets/icons/videocamer
 import { ReactComponent as PenIcon } from "../../assets/icons/pen.svg";
 // Main content section icons exported from Figma node 2057:6283
 import { ReactComponent as HeartPulseIcon } from "../../assets/icons/heart-pulse.svg";
+import { ReactComponent as HourglassIcon } from "../../assets/icons/hourglass-line.svg";
 import { ReactComponent as ChatDotsIcon } from "../../assets/icons/chat-dots.svg";
-import { ReactComponent as StethoscopeIcon } from "../../assets/icons/stethoscope-24.svg";
+import { ReactComponent as MagniferBugIcon } from "../../assets/icons/magnifer-bug.svg";
 import { ReactComponent as PillsIcon } from "../../assets/icons/pills.svg";
 import { ReactComponent as DocumentIcon } from "../../assets/icons/document-school.svg";
 import { ReactComponent as UsersIcon } from "../../assets/icons/users-group-rounded.svg";
@@ -64,10 +65,10 @@ const VITAL_COLUMNS: VitalCell[][] = [
 
 // Figma node 2073:3030 — History section. 2×2 grid of cream-filled fields.
 const HISTORY_FIELDS = [
-  { label: "Family History",      placeholder: "Compliants..." },
-  { label: "Allergies",           placeholder: "Compliants..." },
-  { label: "Personal History",    placeholder: "Compliants..." },
-  { label: "Past Medical History", placeholder: "Compliants..." },
+  { label: "Family History",      placeholder: "Type here..." },
+  { label: "Allergies",           placeholder: "Type here..." },
+  { label: "Personal History",    placeholder: "Type here..." },
+  { label: "Past Medical History", placeholder: "Type here..." },
 ];
 
 // Figma node 2057:6381 — Rx table columns. Medicine flex-grows, Notes fills remainder.
@@ -99,6 +100,7 @@ export function PrescriptionPage() {
   const [reviewDate, setReviewDate] = React.useState<Date | null>(null);
   const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
   const [rxRowCount, setRxRowCount] = React.useState<number>(INITIAL_RX_ROW_COUNT);
+  const [reviewDays, setReviewDays] = React.useState<string>("");
 
   // Each collapsible section starts expanded; clicking the header chevron toggles.
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({
@@ -245,7 +247,7 @@ export function PrescriptionPage() {
           <div style={styles.sectionCard}>
             <div style={styles.sectionHeader}>
               <div style={styles.sectionTitleWrap}>
-                <HeartPulseIcon style={styles.sectionIcon} />
+                <HourglassIcon style={styles.sectionIcon} />
                 <h3 style={styles.sectionTitle}>History</h3>
               </div>
               <button
@@ -275,35 +277,42 @@ export function PrescriptionPage() {
             )}
           </div>
 
-          {/* Complaints + Examination single-line rows (no card outline) */}
-          <div style={styles.bottomRows}>
-            <div style={styles.noteRow}>
-              <div style={styles.noteLabel}>
-                <ChatDotsIcon style={styles.sectionIcon} />
-                <span style={styles.noteLabelText}>Complaints</span>
+          {/* Figma node 2057:6283 — Complaints + Diagnosis cards laid out
+              side-by-side. Each card is a multi-line cream textarea with the
+              dictate icons docked at the bottom-right corner and a kebab
+              handle in the section header. */}
+          <div style={styles.noteCardsRow}>
+            <div style={styles.noteCard}>
+              <div style={styles.noteCardHeader}>
+                <div style={styles.sectionTitleWrap}>
+                  <ChatDotsIcon style={styles.sectionIcon} />
+                  <h3 style={styles.sectionTitle}>Complaints</h3>
+                </div>
+                <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
               </div>
-              <div style={styles.noteFieldWrap}>
-                <input style={styles.noteFieldInner} placeholder="Type or dictate…" />
-                <span style={styles.dictateIcons}>
+              <div style={styles.noteCardField}>
+                <textarea style={styles.noteCardTextarea} placeholder="Type here..." />
+                <span style={styles.noteCardDictate}>
                   <RewindIcon width={20} height={20} />
                   <MicIcon width={20} height={20} />
                 </span>
               </div>
-              <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
             </div>
-            <div style={styles.noteRow}>
-              <div style={styles.noteLabel}>
-                <StethoscopeIcon style={styles.sectionIcon} />
-                <span style={styles.noteLabelText}>Examination</span>
+            <div style={styles.noteCard}>
+              <div style={styles.noteCardHeader}>
+                <div style={styles.sectionTitleWrap}>
+                  <MagniferBugIcon style={styles.sectionIcon} />
+                  <h3 style={styles.sectionTitle}>Diagnosis</h3>
+                </div>
+                <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
               </div>
-              <div style={styles.noteFieldWrap}>
-                <input style={styles.noteFieldInner} placeholder="Type or dictate…" />
-                <span style={styles.dictateIcons}>
+              <div style={styles.noteCardField}>
+                <textarea style={styles.noteCardTextarea} placeholder="Type here..." />
+                <span style={styles.noteCardDictate}>
                   <RewindIcon width={20} height={20} />
                   <MicIcon width={20} height={20} />
                 </span>
               </div>
-              <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
             </div>
           </div>
 
@@ -382,6 +391,40 @@ export function PrescriptionPage() {
             )}
           </div>
 
+          {/* Notes for Patient + Private Notes — same card pattern as
+              Complaints/Diagnosis, but Private Notes uses a neutral grey fill
+              to visually separate "patient-facing" from "internal" notes. */}
+          <div style={styles.noteCardsRow}>
+            <div style={styles.noteCard}>
+              <div style={styles.noteCardHeader}>
+                <div style={styles.sectionTitleWrap}>
+                  <DocumentIcon style={styles.sectionIcon} />
+                  <h3 style={styles.sectionTitle}>Notes for Patient</h3>
+                </div>
+                <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
+              </div>
+              <div style={styles.noteCardField}>
+                <textarea style={styles.noteCardTextarea} placeholder="Type here..." />
+                <span style={styles.noteCardDictate}>
+                  <RewindIcon width={20} height={20} />
+                  <MicIcon width={20} height={20} />
+                </span>
+              </div>
+            </div>
+            <div style={{ ...styles.noteCard, ...styles.noteCardPrivate }}>
+              <div style={styles.noteCardHeader}>
+                <div style={styles.sectionTitleWrap}>
+                  <UsersIcon style={styles.sectionIcon} />
+                  <h3 style={styles.sectionTitle}>Private Notes</h3>
+                </div>
+                <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
+              </div>
+              <div style={{ ...styles.noteCardField, ...styles.noteCardFieldPrivate }}>
+                <textarea style={styles.noteCardTextarea} placeholder="Type here..." />
+              </div>
+            </div>
+          </div>
+
           {/* Bottom rows — Figma node 2057:6494 */}
           <div style={styles.bottomRows}>
             {/* Tests — dictatable with mic/rewind */}
@@ -392,21 +435,6 @@ export function PrescriptionPage() {
               </div>
               <div style={styles.noteFieldWrap}>
                 <input style={styles.noteFieldInner} placeholder="Add tests..." />
-                <span style={styles.dictateIcons}>
-                  <RewindIcon width={20} height={20} />
-                  <MicIcon width={20} height={20} />
-                </span>
-              </div>
-              <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
-            </div>
-            {/* Advice — dictatable with mic/rewind */}
-            <div style={styles.noteRow}>
-              <div style={styles.noteLabel}>
-                <ChatDotsIcon style={styles.sectionIcon} />
-                <span style={styles.noteLabelText}>Advice</span>
-              </div>
-              <div style={styles.noteFieldWrap}>
-                <input style={styles.noteFieldInner} placeholder="Add advice..." />
                 <span style={styles.dictateIcons}>
                   <RewindIcon width={20} height={20} />
                   <MicIcon width={20} height={20} />
@@ -427,11 +455,11 @@ export function PrescriptionPage() {
                 </span>
               </div>
             </div>
-            {/* Review — date picker + notes field */}
+            {/* Next Review — date picker + "or ___ days" + notes field */}
             <div style={styles.noteRow}>
               <div style={styles.noteLabel}>
                 <RestartIcon style={styles.sectionIcon} />
-                <span style={styles.noteLabelText}>Review</span>
+                <span style={styles.noteLabelText}>Next Review</span>
               </div>
               <div style={styles.reviewRow}>
                 <div style={{ position: "relative", flexShrink: 0 }}>
@@ -464,7 +492,18 @@ export function PrescriptionPage() {
                     </div>
                   )}
                 </div>
-                <input style={styles.reviewLong} placeholder="Notes..." />
+                <span style={styles.reviewOr}>or</span>
+                <div style={styles.reviewDaysWrap}>
+                  <input
+                    style={styles.reviewDaysInput}
+                    value={reviewDays}
+                    onChange={(e) => setReviewDays(e.target.value.replace(/\D/g, ""))}
+                    inputMode="numeric"
+                    placeholder=""
+                  />
+                  <span style={styles.reviewDaysLabel}>days</span>
+                </div>
+                <input style={styles.reviewLong} placeholder="Notes for Review..." />
               </div>
             </div>
           </div>
