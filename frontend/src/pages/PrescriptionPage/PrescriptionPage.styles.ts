@@ -239,21 +239,12 @@ export const styles: Record<string, CSSProperties> = {
     // identity card on the left (which is offset by the overlapping avatar).
     marginTop: 36,
   },
-  // Figma node 2133:9927 — Tuning settings button. Sits at the far right of
-  // the tabs row (pushed via auto-margin), 32×32 transparent icon button.
-  tabsTuningButton: {
+  // Figma node 2133:9927 — Tuning settings dropdown. Wrapper just pushes
+  // the PopoverMenu trigger to the far right of the tabs row.
+  tuningWrap: {
     marginLeft: "auto",
-    width: 32,
-    height: 32,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    color: colors.neutral900,
     flexShrink: 0,
-    padding: 0,
+    display: "inline-flex",
   },
   tab: {
     display: "flex",

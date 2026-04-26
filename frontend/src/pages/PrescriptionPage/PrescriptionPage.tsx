@@ -31,6 +31,7 @@ import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg"
 import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
+import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
@@ -264,6 +265,25 @@ export function PrescriptionPage() {
   // Toggle between the table layout (default) and the card grid layout
   // (Figma node 2143:11610). Driven by the list/widget icons in the tabs row.
   const [viewMode, setViewMode] = React.useState<"list" | "grid">("list");
+  // Tuning button dropdown items — open/close + outside-click handling lives
+  // inside <PopoverMenu>, so we just declare the actions here.
+  const tuningMenuItems = [
+    {
+      label: "Clear all",
+      onClick: () => {
+        setVitalState(buildVitalState(activeVisit));
+        setReviewDate(activeVisit.reviewDate);
+        setReviewDays(activeVisit.reviewDays);
+        setRxRowCount(activeVisit.rxRowCount);
+      },
+    },
+    {
+      label: "Saved templates",
+      onClick: () => {
+        // TODO: open Saved Templates picker once the backend exists.
+      },
+    },
+  ];
 
   // ── Header + right-area content driven by which left-rail action is active.
   // - activeAction 0 (Visits): default visits layout
@@ -538,9 +558,13 @@ export function PrescriptionPage() {
                 <span style={styles.tabLabel}>{t.label}</span>
               </div>
             ))}
-            <button type="button" style={styles.tabsTuningButton} aria-label="Visit settings">
-              <TuningIcon width={24} height={24} />
-            </button>
+            <div style={styles.tuningWrap}>
+              <PopoverMenu
+                trigger={<TuningIcon width={24} height={24} />}
+                items={tuningMenuItems}
+                ariaLabel="Visit settings"
+              />
+            </div>
           </div>
 
           {/* Cream sheet wrapping all visit-content sections. Keyed by the
