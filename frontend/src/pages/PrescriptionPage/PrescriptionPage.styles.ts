@@ -380,11 +380,14 @@ export const styles: Record<string, CSSProperties> = {
     borderBottomLeftRadius: radii.m,
     textAlign: "center" as const,
   },
+  // Now a clickable button that toggles to the alternative unit (cm↔in, kg↔lb,
+  // °C↔°F, mmHg↔kPa) and converts the input value in place.
   vitalUnit: {
     height: "100%",
     padding: spacing.xs,
     fontSize: fonts.size.s,
     lineHeight: fonts.lineHeight.s,
+    fontFamily: fonts.family.primary,
     color: colors.neutral500,
     backgroundColor: colors.neutral100,
     border: `${strokes.xs} solid ${colors.primary300}`,
@@ -395,6 +398,7 @@ export const styles: Record<string, CSSProperties> = {
     justifyContent: "center",
     whiteSpace: "nowrap" as const,
     boxSizing: "border-box" as const,
+    outline: "none",
   },
 
   // 2x2 text-field grid (Chief Complaints — legacy)

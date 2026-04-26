@@ -37,6 +37,51 @@ import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
 // Renders static placeholder structure; wire up real data/inputs as follow-up.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Per-visit data shape. Tab metadata (id/caption/label) is local UI state;
+// the actual visit content (vitals, complaints, diagnosis, Rx, etc.) should
+// come from the backend keyed by patientId+visitId. The seam below renders
+// blank fields until that fetch is wired in.
+//
+// TODO(backend): replace `EMPTY_VITALS` / blank fields with a fetch like
+//   const { data: visits } = useVisits(patientId);
+// where useVisits returns VisitData[] keyed by visit id.
+type VisitData = {
+  id: number;
+  caption: string;
+  label: string;
+  vitals: Record<string, string>;
+  complaints: string;
+  diagnosis: string;
+  notesForPatient: string;
+  privateNotes: string;
+  tests: string;
+  rxRowCount: number;
+  reviewDate: Date | null;
+  reviewDays: string;
+};
+const EMPTY_VITALS: Record<string, string> = {
+  BP: "", BMI: "", Height: "", Weight: "",
+  Temperature: "", Pulse: "", Waist: "", Hip: "", SPO2: "",
+};
+const blankVisit = (id: number, caption: string, label: string): VisitData => ({
+  id, caption, label,
+  vitals: { ...EMPTY_VITALS },
+  complaints: "",
+  diagnosis: "",
+  notesForPatient: "",
+  privateNotes: "",
+  tests: "",
+  rxRowCount: 5,
+  reviewDate: null,
+  reviewDays: "",
+});
+// Tab metadata only — no visit content baked in.
+const VISITS: VisitData[] = [
+  blankVisit(0, "visit 1", "22 May"),
+  blankVisit(1, "visit 2", "12 Jun"),
+  blankVisit(2, "visit 3", "Today"),
+];
+
 // Figma node 2057:6284 — Vitals laid out as 6 columns × 2 rows.
 // Each cell has a value (cream) + unit pill (white/border).
 // BP is special: placeholder shows `/` acting as sys / dia divider.
@@ -76,7 +121,51 @@ const HISTORY_FIELDS = [
 
 // Figma node 2057:6381 — Rx table columns. Medicine flex-grows, Notes fills remainder.
 const RX_COLUMNS = ["#", "Medicine", "Dosage", "When", "Frequency", "Duration", "Notes"];
-const INITIAL_RX_ROW_COUNT = 5;
+
+// Unit toggles for clickable vital pills. Clicking a unit swaps to the
+// alternative unit and converts the displayed value. Units without an entry
+// in this map (BMI/kg/m², Pulse/bpm, SPO2/%) are non-toggleable.
+const convertNum = (v: string, factor: number, decimals = 1): string => {
+  const n = parseFloat(v);
+  return Number.isNaN(n) ? v : (n * factor).toFixed(decimals);
+};
+const convertTemp = (v: string, to: "F" | "C"): string => {
+  const n = parseFloat(v);
+  if (Number.isNaN(n)) return v;
+  return (to === "F" ? n * 9 / 5 + 32 : (n - 32) * 5 / 9).toFixed(1);
+};
+const convertBp = (v: string, to: "mmHg" | "kPa"): string =>
+  v.split("/").map((p) => {
+    const n = parseFloat(p.trim());
+    if (Number.isNaN(n)) return p;
+    return to === "kPa" ? (n * 0.133322).toFixed(1) : Math.round(n / 0.133322).toString();
+  }).join("/");
+const UNIT_TOGGLES: Record<string, { altUnit: string; convert: (v: string) => string }> = {
+  mmHg: { altUnit: "kPa",  convert: (v) => convertBp(v, "kPa") },
+  kPa:  { altUnit: "mmHg", convert: (v) => convertBp(v, "mmHg") },
+  cm:   { altUnit: "in",   convert: (v) => convertNum(v, 0.393701) },
+  in:   { altUnit: "cm",   convert: (v) => convertNum(v, 2.54) },
+  kg:   { altUnit: "lb",   convert: (v) => convertNum(v, 2.20462) },
+  lb:   { altUnit: "kg",   convert: (v) => convertNum(v, 0.453592) },
+  "°C": { altUnit: "°F",   convert: (v) => convertTemp(v, "F") },
+  "°F": { altUnit: "°C",   convert: (v) => convertTemp(v, "C") },
+};
+
+// Build per-cell vital state from the active visit's seed values. Keyed by
+// `${columnIndex}-${rowIndex}` so the duplicate "Hip" cell gets its own slot.
+type VitalCellState = { value: string; unit: string };
+const buildVitalState = (visit: VisitData): Record<string, VitalCellState> => {
+  const state: Record<string, VitalCellState> = {};
+  VITAL_COLUMNS.forEach((col, ci) => {
+    col.forEach((v, ri) => {
+      state[`${ci}-${ri}`] = {
+        value: visit.vitals[v.label] ?? "",
+        unit: v.unit,
+      };
+    });
+  });
+  return state;
+};
 
 // Figma node 2059:6764 — patient-context action list.
 // "Visits" renders active by default; count badges are circular.
@@ -98,13 +187,16 @@ const CONTACT_ACTIONS: { icon: React.ReactNode; label: string }[] = [
 ];
 
 // Figma node 2143:10730 — Reports view, swapped in when "Reports" is active.
-const AI_SUMMARY_TEXT =
-  "Vinay presents with complaints of dandruff. Clinical evaluation performed " +
-  "(1 feb) and appropriate treatment and care advice provided (MedX). But no " +
-  "visible change in last visit (8 feb).";
+// AI Summary copy comes from the backend per-patient — left blank until wired.
+// TODO(backend): replace with `useAiSummary(patientId).text`.
+const AI_SUMMARY_TEXT = "";
 
-// List-view config — Reports (action 1) and Files (action 2) both render the
-// same table layout with their own header copy, tabs, and rows.
+// List-view config — Reports (action 1) and Files (action 2) render the same
+// table/grid layout with their own header copy, tabs, and rows. Tab metadata
+// stays static; `rows` comes from the backend per-patient.
+// TODO(backend): replace empty `rows` arrays with fetched data, e.g.
+//   const { data: reports } = useReports(patientId);
+//   const { data: files }   = useFiles(patientId);
 type ListViewConfig = {
   title: string;
   subtitle: string;
@@ -116,41 +208,55 @@ type ListViewConfig = {
 const LIST_VIEWS: Record<number, ListViewConfig> = {
   1: {
     title: "Reports",
-    subtitle: "5 reports on file",
+    subtitle: "",
     addLabel: "Add Report",
     nameColumn: "Report name",
     tabs: ["All Reports", "Blood", "Pathology"],
-    rows: [
-      { name: "CBC Report", category: "Pathology", date: "20 May '26" },
-      { name: "CBC Report", category: "Pathology", date: "20 May '26" },
-      { name: "CBC Report", category: "Pathology", date: "20 May '26" },
-      { name: "CBC Report", category: "Pathology", date: "20 May '26" },
-    ],
+    rows: [],
   },
   2: {
     title: "Files",
-    subtitle: "6 files on file",
+    subtitle: "",
     addLabel: "Add File",
     nameColumn: "File name",
     tabs: ["All Files", "Documents", "Images"],
-    rows: [
-      { name: "Discharge Summary", category: "Documents", date: "12 Apr '26" },
-      { name: "X-Ray Chest",       category: "Images",    date: "08 Apr '26" },
-      { name: "Consent Form",      category: "Documents", date: "01 Apr '26" },
-      { name: "Lab Slip",          category: "Documents", date: "20 Mar '26" },
-      { name: "MRI Knee",          category: "Images",    date: "15 Mar '26" },
-      { name: "Insurance Letter",  category: "Documents", date: "10 Mar '26" },
-    ],
+    rows: [],
   },
 };
 
 export function PrescriptionPage() {
   const [activeTab, setActiveTab] = React.useState(0);
   const [activeAction, setActiveAction] = React.useState(0);
-  const [reviewDate, setReviewDate] = React.useState<Date | null>(null);
+  const activeVisit = VISITS[activeTab];
+  const [reviewDate, setReviewDate] = React.useState<Date | null>(activeVisit.reviewDate);
   const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
-  const [rxRowCount, setRxRowCount] = React.useState<number>(INITIAL_RX_ROW_COUNT);
-  const [reviewDays, setReviewDays] = React.useState<string>("");
+  const [rxRowCount, setRxRowCount] = React.useState<number>(activeVisit.rxRowCount);
+  const [reviewDays, setReviewDays] = React.useState<string>(activeVisit.reviewDays);
+  // Vital values + units (units are clickable to toggle between alternates
+  // like cm↔in, kg↔lb, °C↔°F, mmHg↔kPa).
+  const [vitalState, setVitalState] =
+    React.useState<Record<string, VitalCellState>>(() => buildVitalState(activeVisit));
+
+  // Sync controlled state to the selected visit's seed when the tab changes.
+  // Uncontrolled inputs are remounted via the `key` on the visits wrapper
+  // below so they pick up new defaultValues automatically.
+  React.useEffect(() => {
+    setReviewDate(activeVisit.reviewDate);
+    setReviewDays(activeVisit.reviewDays);
+    setRxRowCount(activeVisit.rxRowCount);
+    setShowReviewDatePicker(false);
+    setVitalState(buildVitalState(activeVisit));
+  }, [activeTab, activeVisit]);
+
+  const setVitalValue = (key: string, value: string) =>
+    setVitalState((prev) => ({ ...prev, [key]: { ...prev[key], value } }));
+  const toggleVitalUnit = (key: string) =>
+    setVitalState((prev) => {
+      const cell = prev[key];
+      const toggle = UNIT_TOGGLES[cell.unit];
+      if (!toggle) return prev;
+      return { ...prev, [key]: { value: toggle.convert(cell.value), unit: toggle.altUnit } };
+    });
   // List-view tab state — shared across Reports / Files (defaults to the
   // last tab to mirror the Pathology selection in the Figma reference).
   const [activeListTab, setActiveListTab] = React.useState<number>(2);
@@ -166,8 +272,14 @@ export function PrescriptionPage() {
   const comingSoonLabel = activeAction === 3 ? "Timeline" : activeAction === 4 ? "Bills" : null;
   const headerTitle =
     listViewConfig?.title ?? comingSoonLabel ?? "Visits";
-  const headerSubtitle =
-    listViewConfig?.subtitle ?? (comingSoonLabel ? "Coming soon" : "Patient visit history and prescription");
+  // Subtitle is derived from the row count for list views (so it tracks the
+  // backend data), defaults to a placeholder for Coming Soon, and stays
+  // static for the default Visits view.
+  const headerSubtitle = listViewConfig
+    ? `${listViewConfig.rows.length} ${listViewConfig.title.toLowerCase()} on file`
+    : comingSoonLabel
+      ? "Coming soon"
+      : "Patient visit history and prescription";
 
   // Each collapsible section starts expanded; clicking the header chevron toggles.
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({
@@ -371,11 +483,10 @@ export function PrescriptionPage() {
         <>
           {/* Visit tabs — sit OUTSIDE the cream sheet, above it. The tuning
               button (Figma node 2133:9927) is pushed to the far right of the
-              row to filter / reconfigure the current visit's view. */}
+              row to filter / reconfigure the current visit's view. Each tab
+              loads that visit's prescription data into the form below. */}
           <div style={styles.tabsBar}>
-            {[{ id: 0, caption: "visit 1", label: "22 May" },
-              { id: 1, caption: "visit 2", label: "Clinic 2" },
-              { id: 2, caption: "visit 3", label: "Today" }].map((t) => (
+            {VISITS.map((t) => (
               <div
                 key={t.id}
                 style={{ ...styles.tab, ...(activeTab === t.id ? styles.tabActive : styles.tabInactive) }}
@@ -390,8 +501,10 @@ export function PrescriptionPage() {
             </button>
           </div>
 
-          {/* Cream sheet wrapping all visit-content sections */}
-          <section style={styles.rightColumn}>
+          {/* Cream sheet wrapping all visit-content sections. Keyed by the
+              active tab so React unmounts/remounts the subtree on switch,
+              giving uncontrolled inputs fresh defaultValues for that visit. */}
+          <section key={`visit-${activeTab}`} style={styles.rightColumn}>
 
           {/* Vitals */}
           <div style={styles.sectionCard}>
@@ -419,15 +532,36 @@ export function PrescriptionPage() {
             <div style={styles.vitalsGrid}>
               {VITAL_COLUMNS.map((col, ci) => (
                 <div key={ci} style={styles.vitalColumn}>
-                  {col.map((v) => (
-                    <div key={v.label} style={styles.vitalCell}>
-                      <span style={styles.vitalLabel}>{v.label}</span>
-                      <div style={styles.vitalInputRow}>
-                        <input style={styles.vitalInputValue} placeholder={v.placeholder ?? ""} />
-                        <span style={{ ...styles.vitalUnit, width: v.unitWidth ?? 44 }}>{v.unit}</span>
+                  {col.map((v, ri) => {
+                    const cellKey = `${ci}-${ri}`;
+                    const cell = vitalState[cellKey];
+                    const canToggle = !!UNIT_TOGGLES[cell.unit];
+                    return (
+                      <div key={ri} style={styles.vitalCell}>
+                        <span style={styles.vitalLabel}>{v.label}</span>
+                        <div style={styles.vitalInputRow}>
+                          <input
+                            style={styles.vitalInputValue}
+                            placeholder={v.placeholder ?? ""}
+                            value={cell.value}
+                            onChange={(e) => setVitalValue(cellKey, e.target.value)}
+                          />
+                          <button
+                            type="button"
+                            onClick={canToggle ? () => toggleVitalUnit(cellKey) : undefined}
+                            style={{
+                              ...styles.vitalUnit,
+                              width: v.unitWidth ?? 44,
+                              cursor: canToggle ? "pointer" : "default",
+                            }}
+                            title={canToggle ? `Switch to ${UNIT_TOGGLES[cell.unit].altUnit}` : undefined}
+                          >
+                            {cell.unit}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ))}
             </div>
@@ -482,7 +616,11 @@ export function PrescriptionPage() {
                 <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
               </div>
               <div style={styles.noteCardField}>
-                <textarea style={styles.noteCardTextarea} placeholder="Type here..." />
+                <textarea
+                  style={styles.noteCardTextarea}
+                  placeholder="Type here..."
+                  defaultValue={activeVisit.complaints}
+                />
                 <span style={styles.noteCardDictate}>
                   <RewindIcon width={20} height={20} />
                   <MicIcon width={20} height={20} />
@@ -498,7 +636,11 @@ export function PrescriptionPage() {
                 <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
               </div>
               <div style={styles.noteCardField}>
-                <textarea style={styles.noteCardTextarea} placeholder="Type here..." />
+                <textarea
+                  style={styles.noteCardTextarea}
+                  placeholder="Type here..."
+                  defaultValue={activeVisit.diagnosis}
+                />
                 <span style={styles.noteCardDictate}>
                   <RewindIcon width={20} height={20} />
                   <MicIcon width={20} height={20} />
@@ -595,7 +737,11 @@ export function PrescriptionPage() {
                 <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
               </div>
               <div style={styles.noteCardField}>
-                <textarea style={styles.noteCardTextarea} placeholder="Type here..." />
+                <textarea
+                  style={styles.noteCardTextarea}
+                  placeholder="Type here..."
+                  defaultValue={activeVisit.notesForPatient}
+                />
                 <span style={styles.noteCardDictate}>
                   <RewindIcon width={20} height={20} />
                   <MicIcon width={20} height={20} />
@@ -611,7 +757,11 @@ export function PrescriptionPage() {
                 <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
               </div>
               <div style={{ ...styles.noteCardField, ...styles.noteCardFieldPrivate }}>
-                <textarea style={styles.noteCardTextarea} placeholder="Type here..." />
+                <textarea
+                  style={styles.noteCardTextarea}
+                  placeholder="Type here..."
+                  defaultValue={activeVisit.privateNotes}
+                />
               </div>
             </div>
           </div>
@@ -625,7 +775,11 @@ export function PrescriptionPage() {
                 <span style={styles.noteLabelText}>Tests</span>
               </div>
               <div style={styles.noteFieldWrap}>
-                <input style={styles.noteFieldInner} placeholder="Add tests..." />
+                <input
+                  style={styles.noteFieldInner}
+                  placeholder="Add tests..."
+                  defaultValue={activeVisit.tests}
+                />
                 <span style={styles.dictateIcons}>
                   <RewindIcon width={20} height={20} />
                   <MicIcon width={20} height={20} />
