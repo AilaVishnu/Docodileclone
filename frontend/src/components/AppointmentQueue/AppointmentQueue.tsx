@@ -6,6 +6,7 @@ import { DatePicker } from "./DatePicker";
 import { colors } from "../../styles/theme";
 import { BookAppointment, EditAppointmentData } from "./BookAppointment";
 import { DoctorStatusCard } from "./DoctorStatusCard";
+import { HeatmapCard } from "./HeatmapCard";
 import { Toast } from "../Toast";
 import { Button } from "../Button";
 import { confirmStyles } from "../AddStaffModal/AddStaffModal.styles";
@@ -303,12 +304,13 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
             }}
           />
           </div>
-          <div style={{ marginTop: "-30px", flexShrink: 0 }}>
+          <div style={{ marginTop: "-30px", flexShrink: 0, display: "flex", flexDirection: "column" }}>
             <DoctorStatusCard
               doctorName={doctors.find(d => d.id === activeDoctorId)?.name || ""}
               doctorGender="male"
               appointments={activeQueue}
             />
+            <HeatmapCard appointments={activeQueue} />
           </div>
           </div>
         </>

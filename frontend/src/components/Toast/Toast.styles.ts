@@ -41,4 +41,17 @@ export const styles: Record<string, CSSProperties> = {
     marginLeft: spacing.xs,
     flexShrink: 0,
   },
+
+  actionButton: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    fontWeight: 600,
+    color: colors.primary700,
+    padding: `2px ${spacing.xs}`,
+    marginLeft: spacing.xs,
+    flexShrink: 0,
+  },
 };
