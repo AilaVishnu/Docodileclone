@@ -32,6 +32,7 @@ import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg
 import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
+import { Toast } from "../../components/Toast";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
@@ -89,7 +90,7 @@ const VISITS: VisitData[] = [
 type VitalCell = { label: string; unit: string; unitWidth?: number; placeholder?: string };
 const VITAL_COLUMNS: VitalCell[][] = [
   [
-    { label: "BP",    unit: "mmHg", unitWidth: 64, placeholder: "  /  " },
+    { label: "BP",    unit: "mmHg", unitWidth: 64 },
     { label: "BMI",   unit: "kg/m²", unitWidth: 64 },
   ],
   [
@@ -141,6 +142,32 @@ const convertBp = (v: string, to: "mmHg" | "kPa"): string =>
     if (Number.isNaN(n)) return p;
     return to === "kPa" ? (n * 0.133322).toFixed(1) : Math.round(n / 0.133322).toString();
   }).join("/");
+// Realistic human-range bounds per (vital, unit). Values outside these get a
+// visual warning state. BP sys/dia get separate keys ("BP_sys" / "BP_dia").
+type VitalRange = { min: number; max: number };
+const VITAL_RANGES: Record<string, Record<string, VitalRange>> = {
+  BP_sys:      { mmHg: { min: 60, max: 220 }, kPa:  { min: 8,  max: 30  } },
+  BP_dia:      { mmHg: { min: 30, max: 140 }, kPa:  { min: 4,  max: 19  } },
+  BMI:         { "kg/m²": { min: 10, max: 60 } },
+  Height:      { cm:   { min: 30, max: 250 }, in:   { min: 12, max: 100 } },
+  Weight:      { kg:   { min: 1,  max: 300 }, lb:   { min: 2,  max: 660 } },
+  Temperature: { "°C": { min: 30, max: 45  }, "°F": { min: 86, max: 113 } },
+  Pulse:       { bpm:  { min: 30, max: 220 } },
+  Waist:       { cm:   { min: 30, max: 200 }, in:   { min: 12, max: 80  } },
+  Hip:         { cm:   { min: 30, max: 200 }, in:   { min: 12, max: 80  } },
+  SPO2:        { "%":  { min: 50, max: 100 } },
+};
+
+const isVitalValid = (rangeKey: string, value: string, unit: string): boolean => {
+  if (value.trim() === "") return true; // empty is allowed
+  const ranges = VITAL_RANGES[rangeKey];
+  const r = ranges?.[unit];
+  if (!r) return true;
+  const n = parseFloat(value);
+  if (Number.isNaN(n)) return false;
+  return n >= r.min && n <= r.max;
+};
+
 const UNIT_TOGGLES: Record<string, { altUnit: string; convert: (v: string) => string }> = {
   mmHg: { altUnit: "kPa",  convert: (v) => convertBp(v, "kPa") },
   kPa:  { altUnit: "mmHg", convert: (v) => convertBp(v, "mmHg") },
@@ -225,6 +252,68 @@ const LIST_VIEWS: Record<number, ListViewConfig> = {
   },
 };
 
+// Two-input BP cell: systolic + fixed `/` + diastolic. Auto-advances focus
+// to the diastolic input once the systolic input has 3 digits, or when the
+// user explicitly types `/`. Validation styling is driven by parent state.
+function BpInput({
+  valid, sysValid, diaValid,
+  sys, dia,
+  onSysChange, onDiaChange, onEnter,
+}: {
+  valid: boolean;
+  sysValid: boolean;
+  diaValid: boolean;
+  sys: string;
+  dia: string;
+  onSysChange: (v: string) => void;
+  onDiaChange: (v: string) => void;
+  onEnter: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+}) {
+  const diaRef = React.useRef<HTMLInputElement>(null);
+  const handleSysChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const next = e.target.value;
+    onSysChange(next);
+    if (next.length >= 3) diaRef.current?.focus();
+  };
+  const handleSysKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "/") {
+      e.preventDefault();
+      diaRef.current?.focus();
+      return;
+    }
+    onEnter(e);
+  };
+  return (
+    <div
+      style={{
+        ...styles.bpSplitInput,
+        ...(!valid ? styles.vitalInputValueInvalid : {}),
+      }}
+    >
+      <input
+        style={{ ...styles.bpHalfInput, ...(!sysValid ? styles.vitalInputInvalidText : {}) }}
+        value={sys}
+        onChange={handleSysChange}
+        onKeyDown={handleSysKeyDown}
+        inputMode="numeric"
+        aria-label="Systolic"
+        aria-invalid={!sysValid}
+      />
+      <span style={styles.bpSeparator}>/</span>
+      <input
+        ref={diaRef}
+        style={{ ...styles.bpHalfInput, ...(!diaValid ? styles.vitalInputInvalidText : {}) }}
+        value={dia}
+        onChange={(e) => onDiaChange(e.target.value)}
+        onKeyDown={onEnter}
+        inputMode="numeric"
+        aria-label="Diastolic"
+        aria-invalid={!diaValid}
+      />
+    </div>
+  );
+}
+
 export function PrescriptionPage() {
   const [activeTab, setActiveTab] = React.useState(0);
   const [activeAction, setActiveAction] = React.useState(0);
@@ -249,8 +338,36 @@ export function PrescriptionPage() {
     setVitalState(buildVitalState(activeVisit));
   }, [activeTab, activeVisit]);
 
+  // Toast for validation feedback — fired only when the user presses Enter
+  // on an invalid input (or clicks a submit button — not yet wired). Blur
+  // alone does not show a toast; the in-cell red message is the silent cue.
+  const [toast, setToast] = React.useState<{ visible: boolean; message: string }>(
+    { visible: false, message: "" },
+  );
+  const showToast = (message: string) => setToast({ visible: true, message });
+  const closeToast = () => setToast({ visible: false, message: "" });
+
   const setVitalValue = (key: string, value: string) =>
     setVitalState((prev) => ({ ...prev, [key]: { ...prev[key], value } }));
+  const validateVitalOnEnter = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    label: string,
+    value: string,
+    unit: string,
+    isBp = false,
+  ) => {
+    if (e.key !== "Enter") return;
+    if (isBp) {
+      const [sys = "", dia = ""] = value.split("/");
+      const sysOk = isVitalValid("BP_sys", sys, unit);
+      const diaOk = isVitalValid("BP_dia", dia, unit);
+      if (!sysOk || !diaOk) showToast(`Please enter a valid blood pressure (${unit})`);
+    } else {
+      if (!isVitalValid(label, value, unit)) {
+        showToast(`Please enter a valid ${label.toLowerCase()} (${unit})`);
+      }
+    }
+  };
   const toggleVitalUnit = (key: string) =>
     setVitalState((prev) => {
       const cell = prev[key];
@@ -602,16 +719,50 @@ export function PrescriptionPage() {
                     const cellKey = `${ci}-${ri}`;
                     const cell = vitalState[cellKey];
                     const canToggle = !!UNIT_TOGGLES[cell.unit];
+                    // BP is rendered as two inputs separated by a fixed `/`.
+                    // The combined "sys/dia" string still lives in vitalState
+                    // so unit conversion (mmHg↔kPa) keeps working.
+                    const isBp = v.label === "BP";
+                    const [bpSys = "", bpDia = ""] = isBp ? cell.value.split("/") : [];
+                    const setBpPart = (sys: string, dia: string) =>
+                      setVitalValue(cellKey, `${sys}/${dia}`);
+                    // Range validation per (label, unit). Out-of-range values
+                    // get a soft red tint; empty values stay neutral.
+                    const sysValid = isBp ? isVitalValid("BP_sys", bpSys, cell.unit) : true;
+                    const diaValid = isBp ? isVitalValid("BP_dia", bpDia, cell.unit) : true;
+                    const valueValid = isBp ? sysValid && diaValid : isVitalValid(v.label, cell.value, cell.unit);
+                    const rangeForLabel = isBp ? VITAL_RANGES.BP_sys?.[cell.unit] : VITAL_RANGES[v.label]?.[cell.unit];
+                    const rangeHint = rangeForLabel
+                      ? `Valid: ${rangeForLabel.min}–${rangeForLabel.max} ${cell.unit}`
+                      : undefined;
                     return (
                       <div key={ri} style={styles.vitalCell}>
                         <span style={styles.vitalLabel}>{v.label}</span>
-                        <div style={styles.vitalInputRow}>
-                          <input
-                            style={styles.vitalInputValue}
-                            placeholder={v.placeholder ?? ""}
-                            value={cell.value}
-                            onChange={(e) => setVitalValue(cellKey, e.target.value)}
-                          />
+                        <div style={styles.vitalInputRow} title={!valueValid ? rangeHint : undefined}>
+                          {isBp ? (
+                            <BpInput
+                              valid={valueValid}
+                              sysValid={sysValid}
+                              diaValid={diaValid}
+                              sys={bpSys}
+                              dia={bpDia}
+                              onSysChange={(v2) => setBpPart(v2, bpDia)}
+                              onDiaChange={(v2) => setBpPart(bpSys, v2)}
+                              onEnter={(e) => validateVitalOnEnter(e, v.label, cell.value, cell.unit, true)}
+                            />
+                          ) : (
+                            <input
+                              style={{
+                                ...styles.vitalInputValue,
+                                ...(!valueValid ? styles.vitalInputValueInvalid : {}),
+                              }}
+                              placeholder={v.placeholder ?? ""}
+                              value={cell.value}
+                              onChange={(e) => setVitalValue(cellKey, e.target.value)}
+                              onKeyDown={(e) => validateVitalOnEnter(e, v.label, cell.value, cell.unit)}
+                              aria-invalid={!valueValid}
+                            />
+                          )}
                           <button
                             type="button"
                             onClick={canToggle ? () => toggleVitalUnit(cellKey) : undefined}
@@ -619,12 +770,20 @@ export function PrescriptionPage() {
                               ...styles.vitalUnit,
                               width: v.unitWidth ?? 44,
                               cursor: canToggle ? "pointer" : "default",
+                              ...(!valueValid ? styles.vitalUnitInvalid : {}),
                             }}
                             title={canToggle ? `Switch to ${UNIT_TOGGLES[cell.unit].altUnit}` : undefined}
                           >
                             {cell.unit}
                           </button>
                         </div>
+                        {!valueValid && (
+                          <span style={styles.vitalErrorMessage}>
+                            {rangeForLabel
+                              ? `Enter valid details (${rangeForLabel.min}–${rangeForLabel.max} ${cell.unit})`
+                              : "Enter valid details"}
+                          </span>
+                        )}
                       </div>
                     );
                   })}
@@ -923,6 +1082,7 @@ export function PrescriptionPage() {
         )}
         </div>
       </div>
+      <Toast message={toast.message} isVisible={toast.visible} onClose={closeToast} />
     </div>
   );
 }

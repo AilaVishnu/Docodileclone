@@ -335,14 +335,18 @@ export const styles: Record<string, CSSProperties> = {
     justifyContent: "space-between",
     alignItems: "stretch",
     gap: spacing.l,
+    // Reserve space below the bottom row so absolutely-positioned error
+    // helper text ("Enter valid details …") doesn't overlap the card edge.
+    paddingBottom: spacing.l,
   },
   vitalColumn: {
     display: "flex",
     flexDirection: "column",
     justifyContent: "flex-end",
-    gap: spacing.xs,
+    gap: spacing["3xl"],
   },
   vitalCell: {
+    position: "relative" as const,
     display: "flex",
     flexDirection: "column",
     gap: spacing.xs,
@@ -371,8 +375,74 @@ export const styles: Record<string, CSSProperties> = {
     borderBottomLeftRadius: radii.m,
     textAlign: "center" as const,
   },
-  // Now a clickable button that toggles to the alternative unit (cm↔in, kg↔lb,
-  // °C↔°F, mmHg↔kPa) and converts the input value in place.
+  // Out-of-range warning state — fills the input + unit pill with the
+  // theme's `redAlpha10` (rgba(251, 55, 72, 0.1)), a soft transparent
+  // pink-red wash over the cream. No underline, no border ring.
+  vitalInputValueInvalid: {
+    backgroundColor: colors.redAlpha10,
+    color: colors.red200,
+  },
+  vitalUnitInvalid: {
+    backgroundColor: colors.redAlpha10,
+    color: colors.red200,
+    // Add a red border in the invalid state so the warning reads clearly
+    // (the default `vitalUnit` is borderless when valid).
+    border: `${strokes.xs} solid ${colors.red200}`,
+  },
+  vitalInputInvalidText: {
+    color: colors.red200,
+    fontWeight: 500,
+  },
+  // Floats below the cell so it doesn't change the cell's height — keeps the
+  // vitals grid rows aligned even when one cell has an error message.
+  vitalErrorMessage: {
+    position: "absolute" as const,
+    top: "100%",
+    left: 0,
+    marginTop: spacing.xs,
+    fontSize: fonts.size.xs,
+    lineHeight: fonts.lineHeight.xs,
+    fontFamily: fonts.family.primary,
+    color: colors.red200,
+    whiteSpace: "nowrap" as const,
+    pointerEvents: "none" as const,
+  },
+  // BP split: two narrow inputs separated by a fixed "/" character. Same
+  // outer shape as `vitalInputValue` so it pairs cleanly with the unit pill.
+  bpSplitInput: {
+    width: 80,
+    height: "100%",
+    backgroundColor: colors.primary100,
+    borderTopLeftRadius: radii.m,
+    borderBottomLeftRadius: radii.m,
+    display: "flex",
+    alignItems: "center",
+    padding: `0 ${spacing["2xs"]}`,
+    boxSizing: "border-box" as const,
+  },
+  bpHalfInput: {
+    flex: 1,
+    minWidth: 0,
+    height: "100%",
+    border: "none",
+    outline: "none",
+    padding: 0,
+    fontSize: fonts.size.s,
+    fontFamily: fonts.family.primary,
+    color: colors.neutral900,
+    backgroundColor: "transparent",
+    textAlign: "center" as const,
+  },
+  bpSeparator: {
+    flexShrink: 0,
+    fontSize: fonts.size.s,
+    color: colors.neutral500,
+    padding: `0 ${spacing["3xs"]}`,
+    userSelect: "none" as const,
+  },
+  // Figma node 2057:6296 — unit pill: white bg, 1px primary300 cream border,
+  // right-rounded corners, neutral500 grey text. Clickable to toggle between
+  // alternate units (cm↔in, kg↔lb, °C↔°F, mmHg↔kPa).
   vitalUnit: {
     height: "100%",
     padding: spacing.xs,
