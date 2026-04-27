@@ -33,6 +33,7 @@ import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 import { Toast } from "../../components/Toast";
+import { Autocomplete } from "../../components/Autocomplete/Autocomplete";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
@@ -114,11 +115,14 @@ const VITAL_COLUMNS: VitalCell[][] = [
 ];
 
 // Figma node 2073:3030 — History section. 2×2 grid of cream-filled fields.
+// Each row carries the `field` key for the suggestion API
+// (GET /api/suggestions?field=&q=) so each input can autocomplete from a
+// per-clinic catalog stored in Postgres rather than hardcoded options.
 const HISTORY_FIELDS = [
-  { label: "Family History",      placeholder: "Type here..." },
-  { label: "Allergies",           placeholder: "Type here..." },
-  { label: "Personal History",    placeholder: "Type here..." },
-  { label: "Past Medical History", placeholder: "Type here..." },
+  { label: "Family History",       field: "family_history",      placeholder: "Type here..." },
+  { label: "Allergies",            field: "allergies",           placeholder: "Type here..." },
+  { label: "Personal History",     field: "personal_history",    placeholder: "Type here..." },
+  { label: "Past Medical History", field: "past_medical_history", placeholder: "Type here..." },
 ];
 
 // Figma node 2057:6381 — Rx table columns. Medicine flex-grows, Notes fills remainder.
@@ -326,6 +330,17 @@ export function PrescriptionPage() {
   // like cm↔in, kg↔lb, °C↔°F, mmHg↔kPa).
   const [vitalState, setVitalState] =
     React.useState<Record<string, VitalCellState>>(() => buildVitalState(activeVisit));
+  // History field values (Family History, Allergies, …). Controlled so the
+  // <Autocomplete> dropdown can drive them. Reset on visit-tab change.
+  const [historyValues, setHistoryValues] =
+    React.useState<Record<string, string>>(() =>
+      Object.fromEntries(HISTORY_FIELDS.map((f) => [f.field, ""]))
+    );
+  // Diagnosis + Complaints + Tests are also suggestion-driven
+  // (specialty-scoped via the same API).
+  const [diagnosisValue, setDiagnosisValue] = React.useState<string>(activeVisit.diagnosis);
+  const [complaintsValue, setComplaintsValue] = React.useState<string>(activeVisit.complaints);
+  const [testsValue, setTestsValue] = React.useState<string>(activeVisit.tests);
 
   // Sync controlled state to the selected visit's seed when the tab changes.
   // Uncontrolled inputs are remounted via the `key` on the visits wrapper
@@ -336,6 +351,10 @@ export function PrescriptionPage() {
     setRxRowCount(activeVisit.rxRowCount);
     setShowReviewDatePicker(false);
     setVitalState(buildVitalState(activeVisit));
+    setHistoryValues(Object.fromEntries(HISTORY_FIELDS.map((f) => [f.field, ""])));
+    setDiagnosisValue(activeVisit.diagnosis);
+    setComplaintsValue(activeVisit.complaints);
+    setTestsValue(activeVisit.tests);
   }, [activeTab, activeVisit]);
 
   // Toast for validation feedback — fired only when the user presses Enter
@@ -820,7 +839,16 @@ export function PrescriptionPage() {
               {HISTORY_FIELDS.map((f) => (
                 <label key={f.label} style={styles.fieldGroup}>
                   <span style={styles.fieldLabel}>{f.label}</span>
-                  <input style={styles.historyField} placeholder={f.placeholder} />
+                  <Autocomplete
+                    field={f.field}
+                    value={historyValues[f.field] ?? ""}
+                    onChange={(next) =>
+                      setHistoryValues((prev) => ({ ...prev, [f.field]: next }))
+                    }
+                    placeholder={f.placeholder}
+                    inputStyle={styles.historyField}
+                    ariaLabel={f.label}
+                  />
                 </label>
               ))}
             </div>
@@ -841,15 +869,21 @@ export function PrescriptionPage() {
                 <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
               </div>
               <div style={styles.noteCardField}>
-                <textarea
-                  style={styles.noteCardTextarea}
+                <Autocomplete
+                  field="complaints"
+                  value={complaintsValue}
+                  onChange={setComplaintsValue}
                   placeholder="Type here..."
-                  defaultValue={activeVisit.complaints}
+                  inputStyle={styles.noteCardTextarea}
+                  multiline
+                  ariaLabel="Complaints"
+                  trailingSlot={
+                    <span style={styles.noteCardDictate}>
+                      <RewindIcon width={20} height={20} />
+                      <MicIcon width={20} height={20} />
+                    </span>
+                  }
                 />
-                <span style={styles.noteCardDictate}>
-                  <RewindIcon width={20} height={20} />
-                  <MicIcon width={20} height={20} />
-                </span>
               </div>
             </div>
             <div style={styles.noteCard}>
@@ -861,15 +895,21 @@ export function PrescriptionPage() {
                 <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
               </div>
               <div style={styles.noteCardField}>
-                <textarea
-                  style={styles.noteCardTextarea}
+                <Autocomplete
+                  field="diagnosis"
+                  value={diagnosisValue}
+                  onChange={setDiagnosisValue}
                   placeholder="Type here..."
-                  defaultValue={activeVisit.diagnosis}
+                  inputStyle={styles.noteCardTextarea}
+                  multiline
+                  ariaLabel="Diagnosis"
+                  trailingSlot={
+                    <span style={styles.noteCardDictate}>
+                      <RewindIcon width={20} height={20} />
+                      <MicIcon width={20} height={20} />
+                    </span>
+                  }
                 />
-                <span style={styles.noteCardDictate}>
-                  <RewindIcon width={20} height={20} />
-                  <MicIcon width={20} height={20} />
-                </span>
               </div>
             </div>
           </div>
@@ -1000,15 +1040,20 @@ export function PrescriptionPage() {
                 <span style={styles.noteLabelText}>Tests</span>
               </div>
               <div style={styles.noteFieldWrap}>
-                <input
-                  style={styles.noteFieldInner}
+                <Autocomplete
+                  field="tests"
+                  value={testsValue}
+                  onChange={setTestsValue}
                   placeholder="Add tests..."
-                  defaultValue={activeVisit.tests}
+                  inputStyle={styles.noteFieldInner}
+                  ariaLabel="Tests"
+                  trailingSlot={
+                    <span style={styles.dictateIcons}>
+                      <RewindIcon width={20} height={20} />
+                      <MicIcon width={20} height={20} />
+                    </span>
+                  }
                 />
-                <span style={styles.dictateIcons}>
-                  <RewindIcon width={20} height={20} />
-                  <MicIcon width={20} height={20} />
-                </span>
               </div>
               <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
             </div>
