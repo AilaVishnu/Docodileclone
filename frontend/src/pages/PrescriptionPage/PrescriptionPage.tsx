@@ -34,6 +34,8 @@ import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 import { Toast } from "../../components/Toast";
 import { Autocomplete } from "../../components/Autocomplete/Autocomplete";
+import { useDoctors } from "../../hooks/useDoctors";
+import { colors } from "../../styles/theme";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
@@ -341,6 +343,52 @@ export function PrescriptionPage() {
   const [diagnosisValue, setDiagnosisValue] = React.useState<string>(activeVisit.diagnosis);
   const [complaintsValue, setComplaintsValue] = React.useState<string>(activeVisit.complaints);
   const [testsValue, setTestsValue] = React.useState<string>(activeVisit.tests);
+  // Refer-To doctor — clinic-scoped picker. `referDoctorId` holds the
+  // selected doctor's UUID; the visible label comes from the matching row
+  // in the `doctors` list fetched via useDoctors().
+  const [referDoctorId, setReferDoctorId] = React.useState<string | null>(null);
+  const [referOpen, setReferOpen] = React.useState(false);
+  const referWrapRef = React.useRef<HTMLDivElement>(null);
+  const { data: doctors } = useDoctors();
+  const referDoctorName = doctors.find((d) => d.id === referDoctorId)?.name ?? "";
+  React.useEffect(() => {
+    if (!referOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (referWrapRef.current && !referWrapRef.current.contains(e.target as Node)) {
+        setReferOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [referOpen]);
+
+  // Next-Review date <-> days are linked. Picking a date computes the
+  // whole-day delta from today; typing days computes today + days. Both
+  // setters update both slots so the two stay in sync without useEffect
+  // (avoiding loops).
+  const daysFromToday = (d: Date): number => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    const target = new Date(d);
+    target.setHours(0, 0, 0, 0);
+    return Math.round((target.getTime() - t.getTime()) / (1000 * 60 * 60 * 24));
+  };
+  const dateAfterDays = (days: number): Date => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    t.setDate(t.getDate() + days);
+    return t;
+  };
+  const pickReviewDate = (d: Date) => {
+    setReviewDate(d);
+    setReviewDays(String(Math.max(0, daysFromToday(d))));
+    setShowReviewDatePicker(false);
+  };
+  const changeReviewDays = (raw: string) => {
+    const cleaned = raw.replace(/\D/g, "");
+    setReviewDays(cleaned);
+    setReviewDate(cleaned === "" ? null : dateAfterDays(parseInt(cleaned, 10)));
+  };
 
   // Sync controlled state to the selected visit's seed when the tab changes.
   // Uncontrolled inputs are remounted via the `key` on the visits wrapper
@@ -355,6 +403,8 @@ export function PrescriptionPage() {
     setDiagnosisValue(activeVisit.diagnosis);
     setComplaintsValue(activeVisit.complaints);
     setTestsValue(activeVisit.tests);
+    setReferDoctorId(null);
+    setReferOpen(false);
   }, [activeTab, activeVisit]);
 
   // Toast for validation feedback — fired only when the user presses Enter
@@ -1057,17 +1107,64 @@ export function PrescriptionPage() {
               </div>
               <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
             </div>
-            {/* Refer to — dropdown (select doctor) */}
+            {/* Refer to — dropdown of doctors in the current clinic
+                (fetched from /api/doctors, which filters by the caller's
+                clinicId via the JWT). Click the pill to open; selecting a
+                doctor sets referDoctorId and closes the menu. */}
             <div style={styles.noteRow}>
               <div style={styles.noteLabel}>
                 <UsersIcon style={styles.sectionIcon} />
                 <span style={styles.noteLabelText}>Refer to</span>
               </div>
-              <div style={styles.referDropdown}>
-                <span style={styles.referText}>select doctor</span>
-                <span style={styles.referChevron}>
-                  <ChevronIcon width={16} height={16} style={{ transform: "rotate(180deg)" }} />
-                </span>
+              <div ref={referWrapRef} style={{ position: "relative" }}>
+                <div
+                  style={styles.referDropdown}
+                  onClick={() => setReferOpen((v) => !v)}
+                  role="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={referOpen}
+                >
+                  <span
+                    style={{
+                      ...styles.referText,
+                      ...(referDoctorName ? { color: colors.neutral900 } : {}),
+                    }}
+                  >
+                    {referDoctorName || "select doctor"}
+                  </span>
+                  <span style={styles.referChevron}>
+                    <ChevronIcon
+                      width={16}
+                      height={16}
+                      style={{ transform: referOpen ? "rotate(0deg)" : "rotate(180deg)" }}
+                    />
+                  </span>
+                </div>
+                {referOpen && (
+                  <div style={styles.referMenu}>
+                    {doctors.length === 0 ? (
+                      <div style={styles.referMenuEmpty}>No doctors in this clinic</div>
+                    ) : (
+                      doctors.map((d) => (
+                        <button
+                          key={d.id}
+                          type="button"
+                          style={styles.referMenuItem}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setReferDoctorId(d.id);
+                            setReferOpen(false);
+                          }}
+                        >
+                          <span style={styles.referMenuItemName}>{d.name}</span>
+                          {d.speciality && (
+                            <span style={styles.referMenuItemMeta}>{d.speciality}</span>
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             {/* Next Review — date picker + "or ___ days" + notes field */}
@@ -1096,10 +1193,7 @@ export function PrescriptionPage() {
                     <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, zIndex: 1100 }}>
                       <DatePicker
                         selectedDate={reviewDate ?? new Date()}
-                        onSelect={(d: Date) => {
-                          setReviewDate(d);
-                          setShowReviewDatePicker(false);
-                        }}
+                        onSelect={pickReviewDate}
                         onClose={() => setShowReviewDatePicker(false)}
                         style={{ top: "auto", bottom: "8px" }}
                         disablePast
@@ -1112,7 +1206,7 @@ export function PrescriptionPage() {
                   <input
                     style={styles.reviewDaysInput}
                     value={reviewDays}
-                    onChange={(e) => setReviewDays(e.target.value.replace(/\D/g, ""))}
+                    onChange={(e) => changeReviewDays(e.target.value)}
                     inputMode="numeric"
                     placeholder=""
                   />
