@@ -1,0 +1,1 @@
+export { MemoBoard } from "./MemoBoard";

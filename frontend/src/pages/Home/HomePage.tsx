@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { SideNav, NavTab } from "../../components/SideNav";
 import { TopNav } from "../../components/TopNav";
 import { PrescriptionView, PatientFilesView, AppointmentsView } from "./Views";
+import { HomeView } from "./HomeView";
 import { DesignSystemPage } from "../DesignSystem";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
 import { confirmStyles } from "../../components/AddStaffModal/AddStaffModal.styles";
@@ -27,8 +28,6 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   
   // Selected theme mode
   const [themeMode] = useState<ThemeMode>("primary");
-
-  const clinicName = localStorage.getItem("docodile_clinic_name") || "your clinic";
 
   const [bookingKey, setBookingKey] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
@@ -97,12 +96,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   const renderContent = () => {
     switch (activeTab) {
       case "Home":
-        return (
-          <div>
-            <h1 style={styles.title}>Welcome back to {clinicName}</h1>
-            <p style={{ marginTop: '12px', color: '#666' }}>Select a tab from the sidebar to manage your clinic operations.</p>
-          </div>
-        );
+        return <HomeView />;
       case "Appointments":
         return <AppointmentsView isBooking={isBooking} bookingKey={bookingKey} onBack={() => { setIsBooking(false); setIsEditing(false); }} onEditStart={() => setIsEditing(true)} />;
       case "Prescription":
