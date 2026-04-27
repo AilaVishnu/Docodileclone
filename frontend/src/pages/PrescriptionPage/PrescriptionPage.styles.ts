@@ -986,9 +986,13 @@ export const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     gap: spacing.xs,
   },
+  // Figma node 2057:6381 — grid columns uniform at 120px for all five
+  // right-side columns (Dosage / When / Frequency / Duration / Notes); the
+  // # column is 24px and Medicine flexes. Header captions and data cells
+  // are center-aligned to match the design (Medicine stays left).
   rxHeaderRow: {
     display: "grid",
-    gridTemplateColumns: "24px minmax(160px, 1fr) 120px 120px 120px 120px minmax(104px, auto)",
+    gridTemplateColumns: "24px minmax(160px, 1fr) 120px 120px 120px 120px 120px",
     gap: spacing.s,
     fontSize: fonts.size.xs,
     lineHeight: fonts.lineHeight.xs,
@@ -998,7 +1002,7 @@ export const styles: Record<string, CSSProperties> = {
   },
   rxRow: {
     display: "grid",
-    gridTemplateColumns: "24px minmax(160px, 1fr) 120px 120px 120px 120px minmax(104px, auto)",
+    gridTemplateColumns: "24px minmax(160px, 1fr) 120px 120px 120px 120px 120px",
     gap: spacing.s,
     alignItems: "center",
     backgroundColor: colors.primary100,
@@ -1016,6 +1020,7 @@ export const styles: Record<string, CSSProperties> = {
     outline: "none",
     fontFamily: fonts.family.primary,
     minWidth: 0,
+    textAlign: "center" as const,
   },
   rxSerial: {
     fontSize: fonts.size.s,

@@ -205,12 +205,15 @@ const buildVitalState = (visit: VisitData): Record<string, VitalCellState> => {
 // "Visits" renders active by default; count badges are circular.
 // Icons are the exact Linear set from the Figma design, normalized to
 // currentColor so they flip between dark/white with the row's active state.
-const ACTIONS: { icon: React.ReactNode; label: string; count: number }[] = [
-  { icon: <VisitsIcon style={styles.actionIcon} />, label: "Visits", count: 3 },
-  { icon: <PulseIcon style={styles.actionIcon} />, label: "Reports", count: 2 },
-  { icon: <FileIcon style={styles.actionIcon} />, label: "Files", count: 6 },
-  { icon: <HistoryIcon style={styles.actionIcon} />, label: "Timeline", count: 23 },
-  { icon: <BillCheckIcon style={styles.actionIcon} />, label: "Bills", count: 4 },
+// Static action metadata (icon + label). Counts are computed dynamically
+// inside the component from real data sources, not hardcoded here.
+type ActionMeta = { icon: React.ReactNode; label: string };
+const ACTION_META: ActionMeta[] = [
+  { icon: <VisitsIcon style={styles.actionIcon} />,    label: "Visits" },
+  { icon: <PulseIcon style={styles.actionIcon} />,     label: "Reports" },
+  { icon: <FileIcon style={styles.actionIcon} />,      label: "Files" },
+  { icon: <HistoryIcon style={styles.actionIcon} />,   label: "Timeline" },
+  { icon: <BillCheckIcon style={styles.actionIcon} />, label: "Bills" },
 ];
 
 // Figma node 2073:3264 — contact/edit card. Three rows, no active state.
@@ -508,6 +511,18 @@ export function PrescriptionPage() {
   const displayRows: ListRow[] = listViewConfig
     ? [...listViewConfig.rows, ...(uploadedItems[activeAction] ?? [])]
     : [];
+
+  // Action-list badge counts pulled from the same data sources the right
+  // pane reads from. Timeline + Bills have no data layer yet so they show 0
+  // until those features are built.
+  const countFor = (actionIndex: number): number => {
+    const config = LIST_VIEWS[actionIndex];
+    if (config) {
+      return config.rows.length + (uploadedItems[actionIndex]?.length ?? 0);
+    }
+    if (actionIndex === 0) return VISITS.length; // Visits
+    return 0; // Timeline (3), Bills (4) — placeholders
+  };
   const comingSoonLabel = activeAction === 3 ? "Timeline" : activeAction === 4 ? "Bills" : null;
   const headerTitle =
     listViewConfig?.title ?? comingSoonLabel ?? "Visits";
@@ -580,7 +595,7 @@ export function PrescriptionPage() {
           </div>
 
           <div style={styles.actionList}>
-            {ACTIONS.map((a, i) => {
+            {ACTION_META.map((a, i) => {
               const isActive = activeAction === i;
               return (
                 <div
@@ -599,7 +614,7 @@ export function PrescriptionPage() {
                       ...(isActive ? styles.actionBadgeActive : {}),
                     }}
                   >
-                    {a.count}
+                    {countFor(i)}
                   </span>
                 </div>
               );
@@ -990,7 +1005,12 @@ export function PrescriptionPage() {
             <div style={styles.rxTable}>
               <div style={styles.rxHeaderRow}>
                 {RX_COLUMNS.map((c) => (
-                  <span key={c} style={{ textAlign: c === "#" ? "center" : "left" }}>{c}</span>
+                  <span
+                    key={c}
+                    style={{ textAlign: c === "Medicine" ? "left" : "center" }}
+                  >
+                    {c}
+                  </span>
                 ))}
               </div>
               {Array.from({ length: rxRowCount }, (_, i) => i + 1).map((n) => (
