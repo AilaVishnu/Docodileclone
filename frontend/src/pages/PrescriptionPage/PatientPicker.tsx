@@ -9,7 +9,7 @@ import { Patient, usePatients } from "../../hooks/usePatients";
 // ─────────────────────────────────────────────────────────────────────────────
 
 type PatientPickerProps = {
-  onSelect: (patientId: string) => void;
+  onSelect: (patient: Patient) => void;
 };
 
 export function PatientPicker({ onSelect }: PatientPickerProps) {
@@ -65,9 +65,9 @@ export function PatientPicker({ onSelect }: PatientPickerProps) {
   );
 }
 
-function PatientRow({ patient, onSelect }: { patient: Patient; onSelect: (id: string) => void }) {
+function PatientRow({ patient, onSelect }: { patient: Patient; onSelect: (p: Patient) => void }) {
   return (
-    <button type="button" style={styles.row} onClick={() => onSelect(patient.id)}>
+    <button type="button" style={styles.row} onClick={() => onSelect(patient)}>
       <span style={styles.rowName}>{patient.name}</span>
       <span style={styles.rowMeta}>
         {patient.lastVisitDate ? `last visit ${formatDate(patient.lastVisitDate)}` : "no visits yet"}

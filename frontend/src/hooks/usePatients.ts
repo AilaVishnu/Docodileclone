@@ -11,7 +11,9 @@ export type Patient = {
   id: string;
   name: string;
   phone: string | null;
+  gender: string | null;
   dob: string | null;          // ISO yyyy-MM-dd
+  age: number | null;
   lastVisitDate: string | null;
 };
 

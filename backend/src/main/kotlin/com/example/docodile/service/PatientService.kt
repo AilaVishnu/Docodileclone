@@ -35,7 +35,9 @@ class PatientService(
                     id = p.id,
                     name = p.name,
                     phone = p.phone,
+                    gender = p.gender,
                     dob = p.dob,
+                    age = p.age,
                     lastVisitDate = lastVisitMap[p.id]
                 )
             }

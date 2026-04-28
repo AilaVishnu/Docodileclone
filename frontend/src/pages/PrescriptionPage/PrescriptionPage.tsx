@@ -37,6 +37,7 @@ import { Autocomplete } from "../../components/Autocomplete/Autocomplete";
 import { useDoctors } from "../../hooks/useDoctors";
 import { colors } from "../../styles/theme";
 import { PatientPicker } from "./PatientPicker";
+import { Patient } from "../../hooks/usePatients";
 import { useVisits } from "../../hooks/useVisits";
 import { createVisit, updateVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
 
@@ -253,6 +254,25 @@ const todayIso = (): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+// Format the secondary line of the patient identity card. Shape:
+// "(M|25)  9876543210" — gender shortened to M/F if needed; phone trailing.
+// Falls back gracefully when fields are missing.
+const formatPatientMeta = (
+  p: { gender: string | null; age: number | null; phone: string | null } | null
+): string => {
+  if (!p) return "";
+  const genderShort = (() => {
+    if (!p.gender) return "";
+    const g = p.gender.trim().toLowerCase();
+    if (g.startsWith("m")) return "M";
+    if (g.startsWith("f")) return "F";
+    return p.gender;
+  })();
+  const ageStr = p.age != null ? String(p.age) : "";
+  const head = genderShort || ageStr ? `(${[genderShort, ageStr].filter(Boolean).join("|")})` : "";
+  return [head, p.phone ?? ""].filter(Boolean).join("  ");
+};
+
 // Figma node 2059:6764 — patient-context action list.
 // "Visits" renders active by default; count badges are circular.
 // Icons are the exact Linear set from the Figma design, normalized to
@@ -378,10 +398,11 @@ function BpInput({
 export function PrescriptionPage() {
   // null → renders <PatientPicker>; otherwise renders the prescription form
   // scoped to that patient. Clicking "← back to patients" clears it.
-  const [selectedPatientId, setSelectedPatientId] = React.useState<string | null>(null);
+  const [selectedPatient, setSelectedPatient] = React.useState<Patient | null>(null);
+  const selectedPatientId = selectedPatient?.id ?? null;
   // Visits for this patient. `useVisits(null)` returns []; switching to a
   // patient triggers the fetch.
-  const { visits, loading: visitsLoading, refetch: refetchVisits } = useVisits(selectedPatientId);
+  const { visits, loading: visitsLoading, loadedFor: visitsLoadedFor, refetch: refetchVisits } = useVisits(selectedPatientId);
   const [activeTab, setActiveTab] = React.useState(0);
   const [activeAction, setActiveAction] = React.useState(0);
   const activeVisit: VisitDTO | undefined = visits[activeTab];
@@ -487,9 +508,23 @@ export function PrescriptionPage() {
   }, [activeTab, activeVisit]);
 
   // Auto-create today's draft when the patient has zero visits, so the
-  // form always has a row to write into.
+  // form always has a row to write into. The ref-guard keeps React
+  // StrictMode (which double-invokes effects in dev) from creating a
+  // duplicate today-visit.
+  const autoCreatedForPatientRef = React.useRef<string | null>(null);
   React.useEffect(() => {
-    if (selectedPatientId && !visitsLoading && visits.length === 0) {
+    if (
+      selectedPatientId &&
+      !visitsLoading &&
+      // Only fire after a successful fetch has confirmed visits are empty
+      // for THIS patient. Without this guard the initial render (visits=[],
+      // loading=false) tricks the effect into POSTing a duplicate "today"
+      // visit on every reopen.
+      visitsLoadedFor === selectedPatientId &&
+      visits.length === 0 &&
+      autoCreatedForPatientRef.current !== selectedPatientId
+    ) {
+      autoCreatedForPatientRef.current = selectedPatientId;
       const draft: SaveVisitRequest = {
         visitDate: todayIso(),
         bpSystolic: null, bpDiastolic: null, bpUnit: null,
@@ -505,7 +540,34 @@ export function PrescriptionPage() {
       };
       void createVisit(selectedPatientId, draft).then(() => refetchVisits());
     }
-  }, [selectedPatientId, visitsLoading, visits.length, refetchVisits]);
+  }, [selectedPatientId, visitsLoading, visitsLoadedFor, visits.length, refetchVisits]);
+  // Reset the auto-create guard whenever the user picks a different patient
+  // (or leaves and comes back to the same one).
+  React.useEffect(() => {
+    if (selectedPatientId === null) autoCreatedForPatientRef.current = null;
+  }, [selectedPatientId]);
+
+  // When the view swaps from picker → form (or back), reset the scroll
+  // position to the absolute top. The PrescriptionPage renders inside
+  // HomePage's scrollable container (not the window), so we walk up the
+  // DOM from the page root to find the nearest scrollable ancestor and
+  // pin its scrollTop to 0. Falls back to window.scrollTo if nothing
+  // scrollable is found.
+  const pageRootRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const start = pageRootRef.current;
+    if (!start) return;
+    let node: HTMLElement | null = start;
+    while (node) {
+      const overflow = window.getComputedStyle(node).overflowY;
+      if (overflow === "auto" || overflow === "scroll") {
+        node.scrollTop = 0;
+        return;
+      }
+      node = node.parentElement;
+    }
+    window.scrollTo(0, 0);
+  }, [selectedPatientId]);
 
   // Toast for validation feedback — fired only when the user presses Enter
   // on an invalid input (or clicks a submit button — not yet wired). Blur
@@ -765,11 +827,15 @@ export function PrescriptionPage() {
   };
 
   if (selectedPatientId === null) {
-    return <PatientPicker onSelect={setSelectedPatientId} />;
+    return (
+      <div ref={pageRootRef}>
+        <PatientPicker onSelect={setSelectedPatient} />
+      </div>
+    );
   }
 
   return (
-    <div style={styles.page}>
+    <div ref={pageRootRef} style={styles.page}>
       {/* Header — title + subtitle swap based on which left-rail action is
           active. Reports view also surfaces an "+ Add Report" pill on the
           right (Figma node 2143:11171). */}
@@ -779,7 +845,7 @@ export function PrescriptionPage() {
             type="button"
             style={styles.backButton}
             aria-label="Back to patients"
-            onClick={() => setSelectedPatientId(null)}
+            onClick={() => setSelectedPatient(null)}
           >
             <ArrowLeftIcon width={24} height={24} />
           </button>
@@ -825,8 +891,10 @@ export function PrescriptionPage() {
               <PatientAvatar width={72} height={72} />
             </div>
             <div style={styles.patientCard}>
-              <p style={styles.patientPrimary}>T023: Vinay Pittampally</p>
-              <p style={styles.patientSecondary}>(M|25)  8885672664</p>
+              <p style={styles.patientPrimary}>{selectedPatient?.name ?? ""}</p>
+              <p style={styles.patientSecondary}>
+                {formatPatientMeta(selectedPatient)}
+              </p>
             </div>
           </div>
 
