@@ -37,56 +37,34 @@ import { Autocomplete } from "../../components/Autocomplete/Autocomplete";
 import { useDoctors } from "../../hooks/useDoctors";
 import { colors } from "../../styles/theme";
 import { PatientPicker } from "./PatientPicker";
+import { useVisits } from "../../hooks/useVisits";
+import { createVisit, updateVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
 // Renders static placeholder structure; wire up real data/inputs as follow-up.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Per-visit data shape. Tab metadata (id/caption/label) is local UI state;
-// the actual visit content (vitals, complaints, diagnosis, Rx, etc.) should
-// come from the backend keyed by patientId+visitId. The seam below renders
-// blank fields until that fetch is wired in.
+// Visit content (vitals, complaints, diagnosis, Rx, etc.) is fetched from
+// the backend via useVisits(patientId). Tab metadata (caption, label) is
+// derived from the visit's visitDate at render time.
 //
-// TODO(backend): replace `EMPTY_VITALS` / blank fields with a fetch like
-//   const { data: visits } = useVisits(patientId);
-// where useVisits returns VisitData[] keyed by visit id.
-type VisitData = {
-  id: number;
-  caption: string;
-  label: string;
-  vitals: Record<string, string>;
-  complaints: string;
-  diagnosis: string;
-  notesForPatient: string;
-  privateNotes: string;
-  tests: string;
-  rxRowCount: number;
-  reviewDate: Date | null;
-  reviewDays: string;
+// Each VITAL_COLUMNS label maps to an explicit field on VisitDTO. BP is
+// special — it's stored as separate sys/dia columns + a shared unit; here
+// it round-trips via a single "sys/dia" string in the cell state.
+const VITAL_FIELD_MAP: Record<
+  string,
+  { valueKey: keyof VisitDTO; unitKey: keyof VisitDTO } | undefined
+> = {
+  BMI:         { valueKey: "bmi",         unitKey: "bmiUnit" },
+  Height:      { valueKey: "height",      unitKey: "heightUnit" },
+  Weight:      { valueKey: "weight",      unitKey: "weightUnit" },
+  Temperature: { valueKey: "temperature", unitKey: "temperatureUnit" },
+  Pulse:       { valueKey: "pulse",       unitKey: "pulseUnit" },
+  Waist:       { valueKey: "waist",       unitKey: "waistUnit" },
+  Hip:         { valueKey: "hip",         unitKey: "hipUnit" },
+  SPO2:        { valueKey: "spo2",        unitKey: "spo2Unit" },
 };
-const EMPTY_VITALS: Record<string, string> = {
-  BP: "", BMI: "", Height: "", Weight: "",
-  Temperature: "", Pulse: "", Waist: "", Hip: "", SPO2: "",
-};
-const blankVisit = (id: number, caption: string, label: string): VisitData => ({
-  id, caption, label,
-  vitals: { ...EMPTY_VITALS },
-  complaints: "",
-  diagnosis: "",
-  notesForPatient: "",
-  privateNotes: "",
-  tests: "",
-  rxRowCount: 5,
-  reviewDate: null,
-  reviewDays: "",
-});
-// Tab metadata only — no visit content baked in.
-const VISITS: VisitData[] = [
-  blankVisit(0, "visit 1", "22 May"),
-  blankVisit(1, "visit 2", "12 Jun"),
-  blankVisit(2, "visit 3", "Today"),
-];
 
 // Figma node 2057:6284 — Vitals laid out as 6 columns × 2 rows.
 // Each cell has a value (cream) + unit pill (white/border).
@@ -186,20 +164,93 @@ const UNIT_TOGGLES: Record<string, { altUnit: string; convert: (v: string) => st
   "°F": { altUnit: "°C",   convert: (v) => convertTemp(v, "C") },
 };
 
-// Build per-cell vital state from the active visit's seed values. Keyed by
+// Build per-cell vital state from the active visit's DTO. Keyed by
 // `${columnIndex}-${rowIndex}` so the duplicate "Hip" cell gets its own slot.
 type VitalCellState = { value: string; unit: string };
-const buildVitalState = (visit: VisitData): Record<string, VitalCellState> => {
+const buildVitalState = (visit: VisitDTO | undefined): Record<string, VitalCellState> => {
   const state: Record<string, VitalCellState> = {};
   VITAL_COLUMNS.forEach((col, ci) => {
     col.forEach((v, ri) => {
-      state[`${ci}-${ri}`] = {
-        value: visit.vitals[v.label] ?? "",
-        unit: v.unit,
-      };
+      const key = `${ci}-${ri}`;
+      if (v.label === "BP") {
+        const sys = visit?.bpSystolic ?? "";
+        const dia = visit?.bpDiastolic ?? "";
+        state[key] = {
+          value: sys || dia ? `${sys}/${dia}` : "",
+          unit: visit?.bpUnit ?? v.unit,
+        };
+      } else {
+        const map = VITAL_FIELD_MAP[v.label];
+        if (map) {
+          state[key] = {
+            value: ((visit?.[map.valueKey] as string | null | undefined) ?? "") as string,
+            unit: ((visit?.[map.unitKey] as string | null | undefined) ?? v.unit) as string,
+          };
+        } else {
+          state[key] = { value: "", unit: v.unit };
+        }
+      }
     });
   });
   return state;
+};
+
+// Draft Rx row in component state — `id` may be null for fresh rows that
+// haven't been saved yet; otherwise carries the server-assigned UUID.
+type RxRowDraft = {
+  id: string | null;
+  position: number;
+  medicine: string;
+  medicineNote: string;
+  dosage: string;
+  whenToTake: string;
+  frequency: string;
+  duration: string;
+  notes: string;
+};
+
+const blankRxRow = (position: number): RxRowDraft => ({
+  id: null,
+  position,
+  medicine: "",
+  medicineNote: "",
+  dosage: "",
+  whenToTake: "",
+  frequency: "",
+  duration: "",
+  notes: "",
+});
+
+const fromRxDTO = (dto: RxRowDTO): RxRowDraft => ({
+  id: dto.id ?? null,
+  position: dto.position,
+  medicine: dto.medicine ?? "",
+  medicineNote: dto.medicineNote ?? "",
+  dosage: dto.dosage ?? "",
+  whenToTake: dto.whenToTake ?? "",
+  frequency: dto.frequency ?? "",
+  duration: dto.duration ?? "",
+  notes: dto.notes ?? "",
+});
+
+// Format a yyyy-MM-dd date as "DD MMM" (or "Today" if it's today's date).
+const formatVisitLabel = (iso: string): string => {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  const today = new Date();
+  if (
+    d.getFullYear() === today.getFullYear() &&
+    d.getMonth() === today.getMonth() &&
+    d.getDate() === today.getDate()
+  ) {
+    return "Today";
+  }
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+};
+
+const todayIso = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
 // Figma node 2059:6764 — patient-context action list.
@@ -328,17 +379,20 @@ export function PrescriptionPage() {
   // null → renders <PatientPicker>; otherwise renders the prescription form
   // scoped to that patient. Clicking "← back to patients" clears it.
   const [selectedPatientId, setSelectedPatientId] = React.useState<string | null>(null);
+  // Visits for this patient. `useVisits(null)` returns []; switching to a
+  // patient triggers the fetch.
+  const { visits, loading: visitsLoading, refetch: refetchVisits } = useVisits(selectedPatientId);
   const [activeTab, setActiveTab] = React.useState(0);
   const [activeAction, setActiveAction] = React.useState(0);
-  const activeVisit = VISITS[activeTab];
-  const [reviewDate, setReviewDate] = React.useState<Date | null>(activeVisit.reviewDate);
+  const activeVisit: VisitDTO | undefined = visits[activeTab];
+  const [reviewDate, setReviewDate] = React.useState<Date | null>(null);
   const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
-  const [rxRowCount, setRxRowCount] = React.useState<number>(activeVisit.rxRowCount);
-  const [reviewDays, setReviewDays] = React.useState<string>(activeVisit.reviewDays);
+  const [rxRows, setRxRows] = React.useState<RxRowDraft[]>([]);
+  const [reviewDays, setReviewDays] = React.useState<string>("");
   // Vital values + units (units are clickable to toggle between alternates
   // like cm↔in, kg↔lb, °C↔°F, mmHg↔kPa).
   const [vitalState, setVitalState] =
-    React.useState<Record<string, VitalCellState>>(() => buildVitalState(activeVisit));
+    React.useState<Record<string, VitalCellState>>(() => buildVitalState(undefined));
   // History field values (Family History, Allergies, …). Controlled so the
   // <Autocomplete> dropdown can drive them. Reset on visit-tab change.
   const [historyValues, setHistoryValues] =
@@ -347,9 +401,15 @@ export function PrescriptionPage() {
     );
   // Diagnosis + Complaints + Tests are also suggestion-driven
   // (specialty-scoped via the same API).
-  const [diagnosisValue, setDiagnosisValue] = React.useState<string>(activeVisit.diagnosis);
-  const [complaintsValue, setComplaintsValue] = React.useState<string>(activeVisit.complaints);
-  const [testsValue, setTestsValue] = React.useState<string>(activeVisit.tests);
+  const [diagnosisValue, setDiagnosisValue] = React.useState<string>("");
+  const [complaintsValue, setComplaintsValue] = React.useState<string>("");
+  const [testsValue, setTestsValue] = React.useState<string>("");
+  // Notes-for-Patient + Private Notes + Review-Notes are now controlled too
+  // so we can serialize them on Save.
+  const [notesForPatientValue, setNotesForPatientValue] = React.useState<string>("");
+  const [privateNotesValue, setPrivateNotesValue] = React.useState<string>("");
+  const [reviewNotesValue, setReviewNotesValue] = React.useState<string>("");
+  const [saving, setSaving] = React.useState<boolean>(false);
   // Refer-To doctor — clinic-scoped picker. `referDoctorId` holds the
   // selected doctor's UUID; the visible label comes from the matching row
   // in the `doctors` list fetched via useDoctors().
@@ -401,18 +461,51 @@ export function PrescriptionPage() {
   // Uncontrolled inputs are remounted via the `key` on the visits wrapper
   // below so they pick up new defaultValues automatically.
   React.useEffect(() => {
-    setReviewDate(activeVisit.reviewDate);
-    setReviewDays(activeVisit.reviewDays);
-    setRxRowCount(activeVisit.rxRowCount);
+    setReviewDate(activeVisit?.reviewDate ? new Date(activeVisit.reviewDate) : null);
+    setReviewDays(activeVisit?.reviewDays != null ? String(activeVisit.reviewDays) : "");
+    setReviewNotesValue(activeVisit?.reviewNotes ?? "");
+    setRxRows(
+      activeVisit?.prescriptions && activeVisit.prescriptions.length > 0
+        ? activeVisit.prescriptions.map(fromRxDTO)
+        : Array.from({ length: 5 }, (_, i) => blankRxRow(i + 1))
+    );
     setShowReviewDatePicker(false);
     setVitalState(buildVitalState(activeVisit));
-    setHistoryValues(Object.fromEntries(HISTORY_FIELDS.map((f) => [f.field, ""])));
-    setDiagnosisValue(activeVisit.diagnosis);
-    setComplaintsValue(activeVisit.complaints);
-    setTestsValue(activeVisit.tests);
-    setReferDoctorId(null);
+    setHistoryValues({
+      family_history:       activeVisit?.familyHistory       ?? "",
+      allergies:            activeVisit?.allergies           ?? "",
+      personal_history:     activeVisit?.personalHistory     ?? "",
+      past_medical_history: activeVisit?.pastMedicalHistory  ?? "",
+    });
+    setDiagnosisValue(activeVisit?.diagnosis ?? "");
+    setComplaintsValue(activeVisit?.complaints ?? "");
+    setTestsValue(activeVisit?.tests ?? "");
+    setNotesForPatientValue(activeVisit?.notesForPatient ?? "");
+    setPrivateNotesValue(activeVisit?.privateNotes ?? "");
+    setReferDoctorId(activeVisit?.referDoctorId ?? null);
     setReferOpen(false);
   }, [activeTab, activeVisit]);
+
+  // Auto-create today's draft when the patient has zero visits, so the
+  // form always has a row to write into.
+  React.useEffect(() => {
+    if (selectedPatientId && !visitsLoading && visits.length === 0) {
+      const draft: SaveVisitRequest = {
+        visitDate: todayIso(),
+        bpSystolic: null, bpDiastolic: null, bpUnit: null,
+        bmi: null, bmiUnit: null, height: null, heightUnit: null,
+        weight: null, weightUnit: null, temperature: null, temperatureUnit: null,
+        pulse: null, pulseUnit: null, waist: null, waistUnit: null,
+        hip: null, hipUnit: null, spo2: null, spo2Unit: null,
+        familyHistory: null, allergies: null, personalHistory: null, pastMedicalHistory: null,
+        complaints: null, diagnosis: null, notesForPatient: null, privateNotes: null, tests: null,
+        referDoctorId: null,
+        reviewDate: null, reviewDays: null, reviewNotes: null,
+        prescriptions: [],
+      };
+      void createVisit(selectedPatientId, draft).then(() => refetchVisits());
+    }
+  }, [selectedPatientId, visitsLoading, visits.length, refetchVisits]);
 
   // Toast for validation feedback — fired only when the user presses Enter
   // on an invalid input (or clicks a submit button — not yet wired). Blur
@@ -464,10 +557,19 @@ export function PrescriptionPage() {
     {
       label: "Clear all",
       onClick: () => {
-        setVitalState(buildVitalState(activeVisit));
-        setReviewDate(activeVisit.reviewDate);
-        setReviewDays(activeVisit.reviewDays);
-        setRxRowCount(activeVisit.rxRowCount);
+        setVitalState(buildVitalState(undefined));
+        setReviewDate(null);
+        setReviewDays("");
+        setReviewNotesValue("");
+        setRxRows(Array.from({ length: 5 }, (_, i) => blankRxRow(i + 1)));
+        setHistoryValues({
+          family_history: "", allergies: "", personal_history: "", past_medical_history: "",
+        });
+        setDiagnosisValue("");
+        setComplaintsValue("");
+        setTestsValue("");
+        setNotesForPatientValue("");
+        setPrivateNotesValue("");
       },
     },
     {
@@ -524,7 +626,7 @@ export function PrescriptionPage() {
     if (config) {
       return config.rows.length + (uploadedItems[actionIndex]?.length ?? 0);
     }
-    if (actionIndex === 0) return VISITS.length; // Visits
+    if (actionIndex === 0) return visits.length; // Visits
     return 0; // Timeline (3), Bills (4) — placeholders
   };
   const comingSoonLabel = activeAction === 3 ? "Timeline" : activeAction === 4 ? "Bills" : null;
@@ -550,6 +652,117 @@ export function PrescriptionPage() {
 
   const formatReviewDate = (d: Date): string =>
     d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+  // Build a SaveVisitRequest from the current form state. Vitals are
+  // re-split for BP (sys/dia from the combined "sys/dia" cell value) and
+  // mapped from VITAL_FIELD_MAP for the rest.
+  const buildSaveRequest = (): SaveVisitRequest => {
+    const cellByLabel = (label: string): VitalCellState | undefined => {
+      for (let ci = 0; ci < VITAL_COLUMNS.length; ci++) {
+        for (let ri = 0; ri < VITAL_COLUMNS[ci].length; ri++) {
+          if (VITAL_COLUMNS[ci][ri].label === label) {
+            return vitalState[`${ci}-${ri}`];
+          }
+        }
+      }
+      return undefined;
+    };
+    const bp = cellByLabel("BP");
+    const [bpSys = "", bpDia = ""] = (bp?.value ?? "").split("/");
+    const fmtDate = (d: Date | null): string | null => {
+      if (!d) return null;
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    };
+    const pickValue = (label: string): string | null => cellByLabel(label)?.value || null;
+    const pickUnit = (label: string): string | null => cellByLabel(label)?.unit || null;
+
+    return {
+      visitDate: activeVisit?.visitDate ?? todayIso(),
+      bpSystolic: bpSys || null,
+      bpDiastolic: bpDia || null,
+      bpUnit: bp?.unit || null,
+      bmi: pickValue("BMI"),         bmiUnit: pickUnit("BMI"),
+      height: pickValue("Height"),   heightUnit: pickUnit("Height"),
+      weight: pickValue("Weight"),   weightUnit: pickUnit("Weight"),
+      temperature: pickValue("Temperature"), temperatureUnit: pickUnit("Temperature"),
+      pulse: pickValue("Pulse"),     pulseUnit: pickUnit("Pulse"),
+      waist: pickValue("Waist"),     waistUnit: pickUnit("Waist"),
+      hip: pickValue("Hip"),         hipUnit: pickUnit("Hip"),
+      spo2: pickValue("SPO2"),       spo2Unit: pickUnit("SPO2"),
+      familyHistory:       historyValues.family_history       || null,
+      allergies:           historyValues.allergies            || null,
+      personalHistory:     historyValues.personal_history     || null,
+      pastMedicalHistory:  historyValues.past_medical_history || null,
+      complaints: complaintsValue || null,
+      diagnosis: diagnosisValue || null,
+      notesForPatient: notesForPatientValue || null,
+      privateNotes: privateNotesValue || null,
+      tests: testsValue || null,
+      referDoctorId: referDoctorId,
+      reviewDate: fmtDate(reviewDate),
+      reviewDays: reviewDays.trim() === "" ? null : parseInt(reviewDays, 10),
+      reviewNotes: reviewNotesValue || null,
+      prescriptions: rxRows
+        .filter((r) =>
+          r.medicine || r.medicineNote || r.dosage || r.whenToTake ||
+          r.frequency || r.duration || r.notes
+        )
+        .map((r, i) => ({
+          id: r.id,
+          position: i + 1,
+          medicine: r.medicine || null,
+          medicineNote: r.medicineNote || null,
+          dosage: r.dosage || null,
+          whenToTake: r.whenToTake || null,
+          frequency: r.frequency || null,
+          duration: r.duration || null,
+          notes: r.notes || null,
+        })),
+    };
+  };
+
+  const handleSave = async () => {
+    if (!activeVisit || !selectedPatientId) return;
+    setSaving(true);
+    try {
+      await updateVisit(activeVisit.id, buildSaveRequest());
+      await refetchVisits();
+      showToast("Visit saved");
+    } catch (e) {
+      showToast(`Save failed: ${(e as Error).message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddVisit = async () => {
+    if (!selectedPatientId) return;
+    setSaving(true);
+    try {
+      const draft: SaveVisitRequest = {
+        visitDate: todayIso(),
+        bpSystolic: null, bpDiastolic: null, bpUnit: null,
+        bmi: null, bmiUnit: null, height: null, heightUnit: null,
+        weight: null, weightUnit: null, temperature: null, temperatureUnit: null,
+        pulse: null, pulseUnit: null, waist: null, waistUnit: null,
+        hip: null, hipUnit: null, spo2: null, spo2Unit: null,
+        familyHistory: null, allergies: null, personalHistory: null, pastMedicalHistory: null,
+        complaints: null, diagnosis: null, notesForPatient: null, privateNotes: null, tests: null,
+        referDoctorId: null,
+        reviewDate: null, reviewDays: null, reviewNotes: null,
+        prescriptions: [],
+      };
+      await createVisit(selectedPatientId, draft);
+      await refetchVisits();
+      // Switch to the newly added (last) tab on next render — visits is
+      // sorted ascending by visit_date, so the new one lives at the end.
+      setActiveTab(visits.length); // length BEFORE refetch — the new visit will land at this index after refetch
+    } catch (e) {
+      showToast(`Add visit failed: ${(e as Error).message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (selectedPatientId === null) {
     return <PatientPicker onSelect={setSelectedPatientId} />;
@@ -590,6 +803,16 @@ export function PrescriptionPage() {
                 style={{ display: "none" }}
               />
             </>
+          )}
+          {!listViewConfig && !comingSoonLabel && activeVisit && (
+            <button
+              type="button"
+              style={styles.addReportButton}
+              onClick={handleSave}
+              disabled={saving}
+            >
+              <span>{saving ? "Saving…" : "Save"}</span>
+            </button>
           )}
         </div>
       </header>
@@ -762,16 +985,25 @@ export function PrescriptionPage() {
               row to filter / reconfigure the current visit's view. Each tab
               loads that visit's prescription data into the form below. */}
           <div style={styles.tabsBar}>
-            {VISITS.map((t) => (
+            {visits.map((v, i) => (
               <div
-                key={t.id}
-                style={{ ...styles.tab, ...(activeTab === t.id ? styles.tabActive : styles.tabInactive) }}
-                onClick={() => setActiveTab(t.id)}
+                key={v.id}
+                style={{ ...styles.tab, ...(activeTab === i ? styles.tabActive : styles.tabInactive) }}
+                onClick={() => setActiveTab(i)}
               >
-                <span style={styles.tabCaption}>{t.caption}</span>
-                <span style={styles.tabLabel}>{t.label}</span>
+                <span style={styles.tabCaption}>{`visit ${i + 1}`}</span>
+                <span style={styles.tabLabel}>{formatVisitLabel(v.visitDate)}</span>
               </div>
             ))}
+            <button
+              type="button"
+              style={{ ...styles.tab, ...styles.tabInactive, cursor: "pointer" }}
+              onClick={handleAddVisit}
+              disabled={saving}
+              aria-label="Add new visit"
+            >
+              <span style={styles.tabLabel}>+ New Visit</span>
+            </button>
             <div style={styles.tuningWrap}>
               <PopoverMenu
                 trigger={<TuningIcon width={24} height={24} />}
@@ -1026,23 +1258,62 @@ export function PrescriptionPage() {
                   </span>
                 ))}
               </div>
-              {Array.from({ length: rxRowCount }, (_, i) => i + 1).map((n) => (
-                <div key={n} style={styles.rxRow}>
-                  <span style={styles.rxSerial}>{n}</span>
-                  <div style={styles.rxMedicineCell}>
-                    <input style={styles.rxMedicineInput} placeholder="Medicine" />
-                    <div style={styles.rxMedicineNote}>
-                      <PenIcon width={12} height={12} />
-                      <input style={styles.rxMedicineNoteInput} placeholder="Medicine" />
+              {rxRows.map((row, i) => {
+                const updateField = (key: keyof RxRowDraft, value: string) =>
+                  setRxRows((prev) => prev.map((r, ix) => (ix === i ? { ...r, [key]: value } : r)));
+                return (
+                  <div key={row.id ?? `draft-${i}`} style={styles.rxRow}>
+                    <span style={styles.rxSerial}>{i + 1}</span>
+                    <div style={styles.rxMedicineCell}>
+                      <input
+                        style={styles.rxMedicineInput}
+                        placeholder="Medicine"
+                        value={row.medicine}
+                        onChange={(e) => updateField("medicine", e.target.value)}
+                      />
+                      <div style={styles.rxMedicineNote}>
+                        <PenIcon width={12} height={12} />
+                        <input
+                          style={styles.rxMedicineNoteInput}
+                          placeholder="Medicine"
+                          value={row.medicineNote}
+                          onChange={(e) => updateField("medicineNote", e.target.value)}
+                        />
+                      </div>
                     </div>
+                    <input
+                      style={styles.rxCell}
+                      placeholder="Dosage"
+                      value={row.dosage}
+                      onChange={(e) => updateField("dosage", e.target.value)}
+                    />
+                    <input
+                      style={styles.rxCell}
+                      placeholder="When"
+                      value={row.whenToTake}
+                      onChange={(e) => updateField("whenToTake", e.target.value)}
+                    />
+                    <input
+                      style={styles.rxCell}
+                      placeholder="Frequency"
+                      value={row.frequency}
+                      onChange={(e) => updateField("frequency", e.target.value)}
+                    />
+                    <input
+                      style={styles.rxCell}
+                      placeholder="Duration"
+                      value={row.duration}
+                      onChange={(e) => updateField("duration", e.target.value)}
+                    />
+                    <input
+                      style={styles.rxCell}
+                      placeholder="Notes"
+                      value={row.notes}
+                      onChange={(e) => updateField("notes", e.target.value)}
+                    />
                   </div>
-                  <input style={styles.rxCell} placeholder="Dosage" />
-                  <input style={styles.rxCell} placeholder="When" />
-                  <input style={styles.rxCell} placeholder="Frequency" />
-                  <input style={styles.rxCell} placeholder="Duration" />
-                  <input style={styles.rxCell} placeholder="Notes" />
-                </div>
-              ))}
+                );
+              })}
               {/* Figma node 2143:10552 — "Add Medicine" footer row (white, with
                   dictate icons + drag handle). Clicking "+" or the label
                   appends one more empty row to the Rx table. */}
@@ -1050,7 +1321,7 @@ export function PrescriptionPage() {
                 <button
                   type="button"
                   style={styles.addMedicinePlus}
-                  onClick={() => setRxRowCount((c) => c + 1)}
+                  onClick={() => setRxRows((rows) => [...rows, blankRxRow(rows.length + 1)])}
                   aria-label="Add medicine row"
                 >
                   +
@@ -1058,7 +1329,7 @@ export function PrescriptionPage() {
                 <button
                   type="button"
                   style={styles.addMedicineText}
-                  onClick={() => setRxRowCount((c) => c + 1)}
+                  onClick={() => setRxRows((rows) => [...rows, blankRxRow(rows.length + 1)])}
                 >
                   Add Medicine
                 </button>
@@ -1088,7 +1359,8 @@ export function PrescriptionPage() {
                 <textarea
                   style={styles.noteCardTextarea}
                   placeholder="Type here..."
-                  defaultValue={activeVisit.notesForPatient}
+                  value={notesForPatientValue}
+                  onChange={(e) => setNotesForPatientValue(e.target.value)}
                 />
                 <span style={styles.noteCardDictate}>
                   <RewindIcon width={20} height={20} />
@@ -1108,7 +1380,8 @@ export function PrescriptionPage() {
                 <textarea
                   style={styles.noteCardTextarea}
                   placeholder="Type here..."
-                  defaultValue={activeVisit.privateNotes}
+                  value={privateNotesValue}
+                  onChange={(e) => setPrivateNotesValue(e.target.value)}
                 />
               </div>
             </div>
@@ -1245,7 +1518,12 @@ export function PrescriptionPage() {
                   />
                   <span style={styles.reviewDaysLabel}>days</span>
                 </div>
-                <input style={styles.reviewLong} placeholder="Notes for Review..." />
+                <input
+                  style={styles.reviewLong}
+                  placeholder="Notes for Review..."
+                  value={reviewNotesValue}
+                  onChange={(e) => setReviewNotesValue(e.target.value)}
+                />
               </div>
             </div>
           </div>
