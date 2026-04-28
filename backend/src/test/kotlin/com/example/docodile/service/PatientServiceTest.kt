@@ -2,6 +2,7 @@ package com.example.docodile.service
 
 import com.example.docodile.domain.Patient
 import com.example.docodile.repo.PatientRepository
+import com.example.docodile.repo.VisitRepository
 import com.example.docodile.security.CurrentUser
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -17,6 +18,9 @@ class PatientServiceTest {
 
     @Mock
     private lateinit var patientRepository: PatientRepository
+
+    @Mock
+    private lateinit var visitRepository: VisitRepository
 
     @Mock
     private lateinit var currentUser: CurrentUser
