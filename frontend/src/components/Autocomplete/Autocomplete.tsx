@@ -112,9 +112,16 @@ const styles: Record<string, CSSProperties> = {
   wrap: {
     position: "relative",
     width: "100%",
+    // Flex row so a `trailingSlot` (e.g. mic + rewind icons) sits to the
+    // right of the input instead of wrapping below it. The dropdown menu
+    // is `position: absolute` so it's unaffected by the flex layout.
+    display: "flex",
+    alignItems: "center",
   },
   input: {
-    width: "100%",
+    // No explicit width — caller-provided `inputStyle` decides whether the
+    // input fills the wrap (`width: 100%`) or shares space with a trailing
+    // slot (`flex: 1`). Keep box-sizing predictable for both modes.
     boxSizing: "border-box",
   },
   menu: {
