@@ -36,6 +36,7 @@ import { Toast } from "../../components/Toast";
 import { Autocomplete } from "../../components/Autocomplete/Autocomplete";
 import { useDoctors } from "../../hooks/useDoctors";
 import { colors } from "../../styles/theme";
+import { PatientPicker } from "./PatientPicker";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
@@ -324,6 +325,9 @@ function BpInput({
 }
 
 export function PrescriptionPage() {
+  // null → renders <PatientPicker>; otherwise renders the prescription form
+  // scoped to that patient. Clicking "← back to patients" clears it.
+  const [selectedPatientId, setSelectedPatientId] = React.useState<string | null>(null);
   const [activeTab, setActiveTab] = React.useState(0);
   const [activeAction, setActiveAction] = React.useState(0);
   const activeVisit = VISITS[activeTab];
@@ -547,6 +551,10 @@ export function PrescriptionPage() {
   const formatReviewDate = (d: Date): string =>
     d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
+  if (selectedPatientId === null) {
+    return <PatientPicker onSelect={setSelectedPatientId} />;
+  }
+
   return (
     <div style={styles.page}>
       {/* Header — title + subtitle swap based on which left-rail action is
@@ -554,7 +562,12 @@ export function PrescriptionPage() {
           right (Figma node 2143:11171). */}
       <header style={styles.header}>
         <div style={styles.headerLeft}>
-          <button type="button" style={styles.backButton} aria-label="Back">
+          <button
+            type="button"
+            style={styles.backButton}
+            aria-label="Back to patients"
+            onClick={() => setSelectedPatientId(null)}
+          >
             <ArrowLeftIcon width={24} height={24} />
           </button>
         </div>
