@@ -96,6 +96,7 @@ export const styles: Record<string, CSSProperties> = {
     height: 72,
     borderRadius: radii.full,
     overflow: "hidden",
+    backgroundColor: colors.primary300,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",

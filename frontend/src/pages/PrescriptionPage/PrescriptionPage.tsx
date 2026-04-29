@@ -1,6 +1,6 @@
 import React from "react";
 import { styles } from "./PrescriptionPage.styles";
-import { ReactComponent as PatientAvatar } from "../../assets/staff/patient.svg";
+import { pickAvatar } from "../../utils/avatar";
 // Action-list icons exported from Figma node 2059:6764 (currentColor-normalized)
 import { ReactComponent as VisitsIcon } from "../../assets/icons/visits.svg";
 import { ReactComponent as PulseIcon } from "../../assets/icons/pulse.svg";
@@ -902,7 +902,20 @@ export function PrescriptionPage() {
         <aside style={styles.leftColumn}>
           <div style={styles.patientWrapper}>
             <div style={styles.avatar}>
-              <PatientAvatar width={72} height={72} />
+              <img
+                src={pickAvatar({
+                  gender: selectedPatient?.gender,
+                  // backend stores age in months; the picker buckets in years
+                  ageYears:
+                    selectedPatient?.age != null
+                      ? Math.floor(selectedPatient.age / 12)
+                      : null,
+                })}
+                alt=""
+                width={72}
+                height={72}
+                style={{ display: "block", objectFit: "contain" }}
+              />
             </div>
             <div style={styles.patientCard}>
               <p style={styles.patientPrimary}>{selectedPatient?.name ?? ""}</p>

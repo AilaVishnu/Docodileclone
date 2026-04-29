@@ -168,6 +168,14 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral900,
     margin: 0,
   },
+  // Avatar illustration shown above the Patient ID — Figma 2350:52.
+  // Picked by gender + age band; updates as the user fills the form.
+  patientAvatar: {
+    width: 140,
+    height: 140,
+    objectFit: "contain" as const,
+    display: "block",
+  },
 
   // ─── Center column: Form card + Appointment details card ────────────────
   // Form card — Figma: padding 16/24, gap 16

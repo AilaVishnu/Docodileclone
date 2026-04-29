@@ -91,10 +91,22 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral900,
     textAlign: "left" as const,
   },
+  rowAvatar: {
+    width: 40,
+    height: 40,
+    flexShrink: 0,
+    objectFit: "contain" as const,
+    display: "block",
+  },
   rowName: {
+    flex: 1,
+    minWidth: 0,
     fontSize: fonts.size.m,
     lineHeight: fonts.lineHeight.m,
     color: colors.neutral900,
+    overflow: "hidden" as const,
+    textOverflow: "ellipsis" as const,
+    whiteSpace: "nowrap" as const,
   },
   rowMeta: {
     fontSize: fonts.size.xs,

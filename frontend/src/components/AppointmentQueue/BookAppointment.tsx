@@ -24,6 +24,7 @@ import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
 import { ReactComponent as EditPencilIcon } from "../../assets/icons/edit-pencil.svg";
 import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check.svg";
 import { ReactComponent as ArrowIcon } from "../../assets/Arrow Right.svg";
+import { pickAvatar } from "../../utils/avatar";
 
 type Doctor = {
   id: string;
@@ -383,9 +384,17 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       </header>
 
       <div style={styles.grid}>
-        {/* Patient ID Card */}
+        {/* Patient ID Card — avatar above the ID. Avatar reacts to the gender +
+            age the user has filled in below. */}
         <Card style={{ ...styles.card, ...styles.patientIdCard }}>
-          <span style={{ fontSize: fonts.size.s, color: colors.neutral400 }}>Patient ID</span>
+          <img
+            src={pickAvatar({
+              gender: form.gender,
+              ageYears: form.age ? parseInt(form.age.split("/")[0]?.trim() || "", 10) : null,
+            })}
+            alt=""
+            style={styles.patientAvatar}
+          />
           <h1 style={styles.patientIdText}>{patientId}</h1>
         </Card>
 

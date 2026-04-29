@@ -1,6 +1,7 @@
 import React from "react";
 import { styles } from "./PatientPicker.styles";
 import { Patient, usePatients } from "../../hooks/usePatients";
+import { pickAvatar } from "../../utils/avatar";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal landing view of the Prescription page. Shows a search bar plus
@@ -66,8 +67,12 @@ export function PatientPicker({ onSelect }: PatientPickerProps) {
 }
 
 function PatientRow({ patient, onSelect }: { patient: Patient; onSelect: (p: Patient) => void }) {
+  // Backend stores patient.age in months; the avatar picker buckets by years.
+  const ageYears = patient.age != null ? Math.floor(patient.age / 12) : null;
+  const avatar = pickAvatar({ gender: patient.gender, ageYears });
   return (
     <button type="button" style={styles.row} onClick={() => onSelect(patient)}>
+      <img src={avatar} alt="" style={styles.rowAvatar} />
       <span style={styles.rowName}>{patient.name}</span>
       <span style={styles.rowMeta}>
         {patient.lastVisitDate ? `last visit ${formatDate(patient.lastVisitDate)}` : "no visits yet"}
