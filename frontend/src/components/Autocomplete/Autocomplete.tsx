@@ -138,7 +138,7 @@ const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
     zIndex: 1000,
-    maxHeight: 240,
+    maxHeight: "min(50vh, 480px)",
     overflowY: "auto",
   },
   item: {

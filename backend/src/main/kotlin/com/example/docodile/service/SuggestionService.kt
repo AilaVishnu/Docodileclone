@@ -114,6 +114,6 @@ class SuggestionService(
 
     companion object {
         private const val DEFAULT_LIMIT = 10
-        private const val MAX_LIMIT = 50
+        private const val MAX_LIMIT = 500
     }
 }

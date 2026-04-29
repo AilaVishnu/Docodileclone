@@ -34,7 +34,7 @@ export function useSuggestions(
   query: string,
   options: { debounceMs?: number; limit?: number } = {}
 ): UseSuggestionsResult {
-  const { debounceMs = 200, limit = 10 } = options;
+  const { debounceMs = 200, limit = 500 } = options;
   const [data, setData] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
