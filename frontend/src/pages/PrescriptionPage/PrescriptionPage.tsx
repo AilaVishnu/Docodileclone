@@ -38,6 +38,7 @@ import { useDoctors } from "../../hooks/useDoctors";
 import { colors } from "../../styles/theme";
 import { PatientPicker } from "./PatientPicker";
 import { Patient } from "../../hooks/usePatients";
+import { SessionBar } from "../../components/SessionBar/SessionBar";
 import { useVisits } from "../../hooks/useVisits";
 import { createVisit, updateVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
 
@@ -431,6 +432,10 @@ export function PrescriptionPage() {
   const [privateNotesValue, setPrivateNotesValue] = React.useState<string>("");
   const [reviewNotesValue, setReviewNotesValue] = React.useState<string>("");
   const [saving, setSaving] = React.useState<boolean>(false);
+  // The visit form is locked (non-interactive) until the user clicks
+  // Start Session on the floating SessionBar. Pausing / ending the session
+  // re-locks it. Driven by SessionBar via its onActiveChange callback.
+  const [formActive, setFormActive] = React.useState<boolean>(false);
   // Refer-To doctor — clinic-scoped picker. `referDoctorId` holds the
   // selected doctor's UUID; the visible label comes from the matching row
   // in the `doctors` list fetched via useDoctors().
@@ -942,8 +947,17 @@ export function PrescriptionPage() {
           </div>
         </aside>
 
-        {/* ─── Right area — content swapped via activeAction ─────────── */}
-        <div style={styles.rightArea}>
+        {/* ─── Right area — content swapped via activeAction. Locked behind
+              the session: until the user clicks Start on the SessionBar,
+              pointer-events are disabled and content fades to ~60% so the
+              form reads as "frozen". Resumes interactivity on session start
+              and re-locks on pause/end. */}
+        <div
+          style={{
+            ...styles.rightArea,
+            ...(formActive ? null : { pointerEvents: "none", opacity: 0.6, userSelect: "none" }),
+          }}
+          aria-disabled={!formActive}>
         {comingSoonLabel ? (
           <div style={styles.comingSoon}>
             <h3 style={styles.comingSoonTitle}>{comingSoonLabel}</h3>
@@ -1601,6 +1615,14 @@ export function PrescriptionPage() {
         </div>
       </div>
       <Toast message={toast.message} isVisible={toast.visible} onClose={closeToast} />
+      {/* Floating session toolbar (Figma node 2255:10871) — fixed at the
+          bottom of the viewport so the prescription form scrolls behind it. */}
+      <SessionBar
+        onPrint={() => showToast("Print: not wired yet")}
+        onDownload={() => showToast("Download: not wired yet")}
+        onShare={() => showToast("Share: not wired yet")}
+        onActiveChange={setFormActive}
+      />
     </div>
   );
 }
