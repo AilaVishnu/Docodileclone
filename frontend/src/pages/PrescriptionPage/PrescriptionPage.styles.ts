@@ -567,8 +567,8 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     backgroundColor: colors.primary100,
     borderRadius: radii.m,
-    paddingRight: spacing.xs,
-    height: 36,
+    padding: `0 ${spacing.xs}`,
+    minHeight: 36,
   },
   noteFieldInner: {
     flex: 1,

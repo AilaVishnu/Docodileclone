@@ -34,6 +34,7 @@ import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 import { Toast } from "../../components/Toast";
 import { Autocomplete } from "../../components/Autocomplete/Autocomplete";
+import { AutocompleteTags } from "../../components/Autocomplete/AutocompleteTags";
 import { useDoctors } from "../../hooks/useDoctors";
 import { colors } from "../../styles/theme";
 import { PatientPicker } from "./PatientPicker";
@@ -107,6 +108,37 @@ const HISTORY_FIELDS = [
   { label: "Personal History",     field: "personal_history",    placeholder: "Type here..." },
   { label: "Past Medical History", field: "past_medical_history", placeholder: "Type here..." },
 ];
+
+// History/Complaints/Diagnosis/Tests are stored as comma-joined strings on
+// the visit (TEXT columns); the chip picker works with arrays, so we split
+// on commas at the boundary and trim to drop "" / leading-trailing space.
+const splitTags = (raw: string): string[] =>
+  raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+// Override AutocompleteTags' default cream pill — the host already provides
+// the cream noteCardField wrapper, so the inner box stays transparent and
+// reserves room on the right for the absolute-positioned dictate icons.
+const NOTE_CARD_TAGBOX_STYLE: React.CSSProperties = {
+  backgroundColor: "transparent",
+  borderRadius: 0,
+  padding: 0,
+  alignItems: "flex-start",
+  alignContent: "flex-start",
+  paddingRight: 64,
+  width: "100%",
+  minHeight: 80,
+};
+
+// Tests row — single-line field that grows vertically as chips wrap.
+const TESTS_TAGBOX_STYLE: React.CSSProperties = {
+  backgroundColor: "transparent",
+  borderRadius: 0,
+  padding: 0,
+  width: "100%",
+};
 
 // Figma node 2057:6381 — Rx table columns. Medicine flex-grows, Notes fills remainder.
 const RX_COLUMNS = ["#", "Medicine", "Dosage", "When", "Frequency", "Duration", "Notes"];
@@ -1252,21 +1284,31 @@ export function PrescriptionPage() {
             </div>
             {openSections.history && (
             <div style={styles.historyGrid}>
-              {HISTORY_FIELDS.map((f) => (
-                <label key={f.label} style={styles.fieldGroup}>
-                  <span style={styles.fieldLabel}>{f.label}</span>
-                  <Autocomplete
-                    field={f.field}
-                    value={historyValues[f.field] ?? ""}
-                    onChange={(next) =>
-                      setHistoryValues((prev) => ({ ...prev, [f.field]: next }))
-                    }
-                    placeholder={f.placeholder}
-                    inputStyle={styles.historyField}
-                    ariaLabel={f.label}
-                  />
-                </label>
-              ))}
+              {HISTORY_FIELDS.map((f) => {
+                const raw = historyValues[f.field] ?? "";
+                const tags = splitTags(raw);
+                return (
+                  // Plain <div> instead of <label>: a label forwards clicks
+                  // to the first focusable child, and once chips exist the
+                  // first focusable child is the leftmost chip's ✕ button —
+                  // so clicking the label text would silently remove a tag.
+                  <div key={f.label} style={styles.fieldGroup}>
+                    <span style={styles.fieldLabel}>{f.label}</span>
+                    <AutocompleteTags
+                      field={f.field}
+                      value={tags}
+                      onChange={(next) =>
+                        setHistoryValues((prev) => ({
+                          ...prev,
+                          [f.field]: next.join(", "),
+                        }))
+                      }
+                      placeholder={f.placeholder}
+                      ariaLabel={f.label}
+                    />
+                  </div>
+                );
+              })}
             </div>
             )}
           </div>
@@ -1285,21 +1327,18 @@ export function PrescriptionPage() {
                 <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
               </div>
               <div style={styles.noteCardField}>
-                <Autocomplete
+                <AutocompleteTags
                   field="complaints"
-                  value={complaintsValue}
-                  onChange={setComplaintsValue}
+                  value={splitTags(complaintsValue)}
+                  onChange={(next) => setComplaintsValue(next.join(", "))}
                   placeholder="Type here..."
-                  inputStyle={styles.noteCardTextarea}
-                  multiline
                   ariaLabel="Complaints"
-                  trailingSlot={
-                    <span style={styles.noteCardDictate}>
-                      <RewindIcon width={20} height={20} />
-                      <MicIcon width={20} height={20} />
-                    </span>
-                  }
+                  containerStyle={NOTE_CARD_TAGBOX_STYLE}
                 />
+                <span style={styles.noteCardDictate}>
+                  <RewindIcon width={20} height={20} />
+                  <MicIcon width={20} height={20} />
+                </span>
               </div>
             </div>
             <div style={styles.noteCard}>
@@ -1311,21 +1350,18 @@ export function PrescriptionPage() {
                 <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
               </div>
               <div style={styles.noteCardField}>
-                <Autocomplete
+                <AutocompleteTags
                   field="diagnosis"
-                  value={diagnosisValue}
-                  onChange={setDiagnosisValue}
+                  value={splitTags(diagnosisValue)}
+                  onChange={(next) => setDiagnosisValue(next.join(", "))}
                   placeholder="Type here..."
-                  inputStyle={styles.noteCardTextarea}
-                  multiline
                   ariaLabel="Diagnosis"
-                  trailingSlot={
-                    <span style={styles.noteCardDictate}>
-                      <RewindIcon width={20} height={20} />
-                      <MicIcon width={20} height={20} />
-                    </span>
-                  }
+                  containerStyle={NOTE_CARD_TAGBOX_STYLE}
                 />
+                <span style={styles.noteCardDictate}>
+                  <RewindIcon width={20} height={20} />
+                  <MicIcon width={20} height={20} />
+                </span>
               </div>
             </div>
           </div>
@@ -1502,20 +1538,18 @@ export function PrescriptionPage() {
                 <span style={styles.noteLabelText}>Tests</span>
               </div>
               <div style={styles.noteFieldWrap}>
-                <Autocomplete
+                <AutocompleteTags
                   field="tests"
-                  value={testsValue}
-                  onChange={setTestsValue}
+                  value={splitTags(testsValue)}
+                  onChange={(next) => setTestsValue(next.join(", "))}
                   placeholder="Add tests..."
-                  inputStyle={styles.noteFieldInner}
                   ariaLabel="Tests"
-                  trailingSlot={
-                    <span style={styles.dictateIcons}>
-                      <RewindIcon width={20} height={20} />
-                      <MicIcon width={20} height={20} />
-                    </span>
-                  }
+                  containerStyle={TESTS_TAGBOX_STYLE}
                 />
+                <span style={styles.dictateIcons}>
+                  <RewindIcon width={20} height={20} />
+                  <MicIcon width={20} height={20} />
+                </span>
               </div>
               <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
             </div>
