@@ -14,7 +14,7 @@ import { ReactComponent as PenIcon } from "../../assets/icons/pen.svg";
 // Main content section icons exported from Figma node 2057:6283
 import { ReactComponent as HeartPulseIcon } from "../../assets/icons/heart-pulse.svg";
 import { ReactComponent as HourglassIcon } from "../../assets/icons/hourglass-line.svg";
-import { ReactComponent as ChatDotsIcon } from "../../assets/icons/chat-dots.svg";
+import { ReactComponent as ChatSquareCallIcon } from "../../assets/icons/chat-square-call.svg";
 import { ReactComponent as MagniferBugIcon } from "../../assets/icons/magnifer-bug.svg";
 import { ReactComponent as PillsIcon } from "../../assets/icons/pills.svg";
 import { ReactComponent as DocumentIcon } from "../../assets/icons/document-school.svg";
@@ -1321,10 +1321,10 @@ export function PrescriptionPage() {
             <div style={styles.noteCard}>
               <div style={styles.noteCardHeader}>
                 <div style={styles.sectionTitleWrap}>
-                  <ChatDotsIcon style={styles.sectionIcon} />
+                  <ChatSquareCallIcon style={styles.sectionIcon} />
                   <h3 style={styles.sectionTitle}>Complaints</h3>
                 </div>
-                <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
+                <ReorderIcon style={styles.reorderHandle} width={24} height={24} />
               </div>
               <div style={styles.noteCardField}>
                 <AutocompleteTags
@@ -1347,7 +1347,7 @@ export function PrescriptionPage() {
                   <MagniferBugIcon style={styles.sectionIcon} />
                   <h3 style={styles.sectionTitle}>Diagnosis</h3>
                 </div>
-                <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
+                <ReorderIcon style={styles.reorderHandle} width={24} height={24} />
               </div>
               <div style={styles.noteCardField}>
                 <AutocompleteTags

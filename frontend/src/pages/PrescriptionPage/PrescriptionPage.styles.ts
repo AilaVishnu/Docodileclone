@@ -850,6 +850,10 @@ export const styles: Record<string, CSSProperties> = {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
     columnGap: spacing.m,
+    // Match sectionCard's 20px L/R padding so the Complaints column lines
+    // up vertically with the History / Vitals / Rx section content above
+    // it (icon at the same x; right edge flush with the cards above).
+    padding: `0 ${spacing.l}`,
   },
   noteCard: {
     display: "flex",
@@ -873,8 +877,9 @@ export const styles: Record<string, CSSProperties> = {
     position: "relative" as const,
     backgroundColor: colors.primary100,
     borderRadius: radii.m,
-    padding: spacing.s,
-    minHeight: 96,
+    // Figma 2057:6364 — placeholder at (8, 8); 8px padding all round.
+    padding: spacing.xs,
+    minHeight: 123,
     display: "flex",
   },
   noteCardTextarea: {
@@ -892,8 +897,9 @@ export const styles: Record<string, CSSProperties> = {
   },
   noteCardDictate: {
     position: "absolute" as const,
-    right: spacing.s,
-    bottom: spacing.s,
+    // Figma 2064:6917 — dictate icons sit 8px from the right and bottom edge.
+    right: spacing.xs,
+    bottom: spacing.xs,
     display: "inline-flex",
     alignItems: "center",
     gap: spacing.xs,
