@@ -432,9 +432,9 @@ export function PrescriptionPage() {
   const [privateNotesValue, setPrivateNotesValue] = React.useState<string>("");
   const [reviewNotesValue, setReviewNotesValue] = React.useState<string>("");
   const [saving, setSaving] = React.useState<boolean>(false);
-  // The visit form is locked (non-interactive) until the user clicks
-  // Start Session on the floating SessionBar. Pausing / ending the session
-  // re-locks it. Driven by SessionBar via its onActiveChange callback.
+  // Form is non-interactive until the user clicks Start Session on the
+  // floating SessionBar. Pausing / ending re-locks. Visually unchanged
+  // while locked — only pointer-events are blocked.
   const [formActive, setFormActive] = React.useState<boolean>(false);
   // Refer-To doctor — clinic-scoped picker. `referDoctorId` holds the
   // selected doctor's UUID; the visible label comes from the matching row
@@ -612,9 +612,9 @@ export function PrescriptionPage() {
       return { ...prev, [key]: { value: toggle.convert(cell.value), unit: toggle.altUnit } };
     });
 
-  // List-view tab state — shared across Reports / Files (defaults to the
-  // last tab to mirror the Pathology selection in the Figma reference).
-  const [activeListTab, setActiveListTab] = React.useState<number>(2);
+  // List-view tab state — shared across Reports / Files. Defaults to the
+  // first tab ("All Reports" / "All Files").
+  const [activeListTab, setActiveListTab] = React.useState<number>(0);
   // Toggle between the table layout (default) and the card grid layout
   // (Figma node 2143:11610). Driven by the list/widget icons in the tabs row.
   const [viewMode, setViewMode] = React.useState<"list" | "grid">("list");
@@ -862,7 +862,16 @@ export function PrescriptionPage() {
           </div>
           {listViewConfig && (
             <>
-              <button type="button" style={styles.addReportButton} onClick={openFilePicker}>
+              <button
+                type="button"
+                style={{
+                  ...styles.addReportButton,
+                  ...(formActive ? null : { opacity: 0.55, cursor: "not-allowed" }),
+                }}
+                onClick={openFilePicker}
+                disabled={!formActive}
+                title={!formActive ? "Start a session to upload" : undefined}
+              >
                 <span style={styles.addReportPlus}>+</span>
                 <span>{listViewConfig.addLabel}</span>
               </button>
@@ -947,15 +956,17 @@ export function PrescriptionPage() {
           </div>
         </aside>
 
-        {/* ─── Right area — content swapped via activeAction. Locked behind
-              the session: until the user clicks Start on the SessionBar,
-              pointer-events are disabled and content fades to ~60% so the
-              form reads as "frozen". Resumes interactivity on session start
-              and re-locks on pause/end. */}
+        {/* ─── Right area — content swapped via activeAction. Locked
+              behind the session: until the user clicks Start on the
+              SessionBar, pointer-events are blocked and the content fades
+              very slightly so the form reads as "frozen". */}
         <div
           style={{
             ...styles.rightArea,
-            ...(formActive ? null : { pointerEvents: "none", opacity: 0.6, userSelect: "none" }),
+            ...(formActive
+              ? null
+              : { pointerEvents: "none", opacity: 0.55, userSelect: "none" }),
+            transition: "opacity 0.15s ease",
           }}
           aria-disabled={!formActive}>
         {comingSoonLabel ? (
