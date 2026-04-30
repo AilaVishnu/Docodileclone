@@ -42,11 +42,46 @@ type SessionBarProps = {
    */
   onEnd?: (totalSeconds: number) => void;
   /**
-   * Initial seconds to display on the timer when the bar mounts. Used to
-   * restore a previously-ended session's timer when the visit is reopened.
+   * When provided, the bar persists its full state (seconds, running,
+   * paused, ended) under `docodile_session_state[<storageKey>]` so the
+   * doctor can pause, navigate away, and come back to find the bar in
+   * the exact same state at the same time. Typically set to the active
+   * visit id.
    */
-  initialSeconds?: number;
+  storageKey?: string;
 };
+
+type SessionState = {
+  seconds: number;
+  running: boolean;
+  paused: boolean;
+  ended: boolean;
+};
+
+const STORE_KEY = "docodile_session_state";
+
+function loadState(key: string): SessionState | null {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return null;
+    const map = JSON.parse(raw) as Record<string, SessionState>;
+    return map[key] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function saveState(key: string, state: SessionState | null) {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    const map = (raw ? JSON.parse(raw) : {}) as Record<string, SessionState>;
+    if (state == null) delete map[key];
+    else map[key] = state;
+    localStorage.setItem(STORE_KEY, JSON.stringify(map));
+  } catch {
+    /* quota / private mode — ignore */
+  }
+}
 
 export function SessionBar({
   onPrint,
@@ -55,8 +90,11 @@ export function SessionBar({
   onActiveChange,
   onStart,
   onEnd,
-  initialSeconds = 0,
+  storageKey,
 }: SessionBarProps) {
+  // Restore previous state if the visit had one — covers Pause + navigate
+  // away + come back, plus reopening a visit that ended earlier.
+  const initial = storageKey ? loadState(storageKey) : null;
   // State machine:
   //   idle    →  Start clicked → running (paused = false, seconds = 0)
   //   running →  Pause toggles paused; Restart resets seconds=0; End → idle
@@ -64,16 +102,20 @@ export function SessionBar({
   // The red square button on the right is the End button — it terminates
   // the session entirely and returns to the dark idle state with the Start
   // pill shown again.
-  const [running, setRunning] = React.useState(false);
-  const [paused, setPaused] = React.useState(false);
+  const [running, setRunning] = React.useState(initial?.running ?? false);
+  const [paused, setPaused] = React.useState(initial?.paused ?? false);
   // After End is clicked, the bar flips to a cream "Session Ended" summary
   // showing the final elapsed time + a disabled "Session Ended" pill.
   // Click anywhere on the bar (or wait for the host to dismiss) to reset.
-  // Defaults the bar to "ended" if the visit had a saved final timer, so
-  // the doctor lands back on the Session-Ended pill instead of the idle
-  // Start pill. They can dismiss the pill to start a fresh session.
-  const [ended, setEnded] = React.useState(initialSeconds > 0);
-  const [seconds, setSeconds] = React.useState(initialSeconds);
+  const [ended, setEnded] = React.useState(initial?.ended ?? false);
+  const [seconds, setSeconds] = React.useState(initial?.seconds ?? 0);
+
+  // Persist the full bar state on every change so a remount restores it
+  // bit-for-bit. Skipped when no storageKey is provided.
+  React.useEffect(() => {
+    if (!storageKey) return;
+    saveState(storageKey, { seconds, running, paused, ended });
+  }, [storageKey, seconds, running, paused, ended]);
 
   React.useEffect(() => {
     if (!running || paused) return;

@@ -874,31 +874,6 @@ export function PrescriptionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formActive, activeVisit?.id]);
 
-  // Per-visit timer persistence (localStorage). When the doctor ends a
-  // session, the elapsed seconds are stored; reopening the same visit
-  // shows the same final time on the SessionBar.
-  const TIMER_STORE_KEY = "docodile_visit_timer";
-  const loadTimerFor = React.useCallback((visitId: string): number => {
-    try {
-      const raw = localStorage.getItem(TIMER_STORE_KEY);
-      if (!raw) return 0;
-      const map = JSON.parse(raw) as Record<string, number>;
-      return Number(map[visitId]) || 0;
-    } catch {
-      return 0;
-    }
-  }, []);
-  const saveTimerFor = React.useCallback((visitId: string, seconds: number) => {
-    try {
-      const raw = localStorage.getItem(TIMER_STORE_KEY);
-      const map = (raw ? JSON.parse(raw) : {}) as Record<string, number>;
-      map[visitId] = seconds;
-      localStorage.setItem(TIMER_STORE_KEY, JSON.stringify(map));
-    } catch {
-      /* quota / private mode — ignore */
-    }
-  }, []);
-
   // Best-effort PATCH against the appointment status. Tries the
   // public /api/appointments endpoint first (broad role allowlist) and
   // falls back to /api/tenant/appointments which only accepts ADMIN.
@@ -926,8 +901,9 @@ export function PrescriptionPage() {
     if (selectedPatient) markStarted(selectedPatient.id);
   };
 
-  const handleSessionEnd = (totalSeconds: number) => {
-    if (activeVisit) saveTimerFor(activeVisit.id, totalSeconds);
+  const handleSessionEnd = (_totalSeconds: number) => {
+    // SessionBar self-persists its full state via storageKey, so we no
+    // longer need to save the elapsed seconds here.
     if (selectedPatient) unmarkStarted(selectedPatient.id);
     void handleSave();
     // Move the appointment to COMPLETED so the queues show the right
@@ -1784,10 +1760,10 @@ export function PrescriptionPage() {
       {/* Floating session toolbar (Figma node 2255:10871) — fixed at the
           bottom of the viewport so the prescription form scrolls behind it. */}
       <SessionBar
-        // Remount per-visit so the timer reads the saved seconds for the
+        // Remount per-visit so the bar reads the persisted state for the
         // active visit rather than carrying state across visit switches.
         key={activeVisit?.id ?? "no-visit"}
-        initialSeconds={activeVisit ? loadTimerFor(activeVisit.id) : 0}
+        storageKey={activeVisit?.id}
         onPrint={() => showToast("Print: not wired yet")}
         onDownload={() => showToast("Download: not wired yet")}
         onShare={() => showToast("Share: not wired yet")}
