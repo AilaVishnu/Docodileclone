@@ -14,6 +14,11 @@ export const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     gap: spacing.m,
     width: "100%",
+    // Reserve room at the bottom so the floating SessionBar (fixed-
+    // positioned ~60px tall + 20px from viewport bottom) never covers
+    // the last form fields. Extra room lets the doctor scroll past the
+    // last row comfortably.
+    paddingBottom: 80,
   },
 
   // Header uses the same column grid as the body so the title (column 2)
