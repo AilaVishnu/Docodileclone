@@ -123,21 +123,25 @@ export const styles: Record<string, CSSProperties> = {
     flex: 1,
   },
 
+  // Filled specialty pill — Figma 2392:5347. Dark sage secondary/700 bg
+  // with white text so the chip pops against the cream card.
   tag: {
     display: "inline-flex",
     alignItems: "center",
-    gap: 4,
-    backgroundColor: colors.secondary300,
+    gap: spacing["2xs"],
+    backgroundColor: colors.secondary700,
     color: colors.neutral100,
-    borderRadius: radii.pill,
-    padding: "3px 10px",
+    borderRadius: radii.full,
+    padding: `${spacing["3xs"]} ${spacing["2xs"]} ${spacing["3xs"]} ${spacing.xs}`,
     fontSize: fonts.size.xs,
+    lineHeight: fonts.lineHeight.xs,
     fontFamily: fonts.family.primary,
-    fontWeight: fonts.weight.medium,
+    fontWeight: fonts.weight.regular,
   },
 
   tagX: {
     fontSize: fonts.size.caption,
+    color: colors.neutral100,
     opacity: 0.8,
   },
 

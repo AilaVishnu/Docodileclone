@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, KeyboardEvent } from "react";
 import { Button } from "../Button";
+import { Tag } from "../Tag";
 import { styles } from "./ClinicInfoCard.styles";
 import { colors, fonts } from "../../styles/theme";
 import { ReactComponent as BuildingIcon } from "../../assets/Buildings.svg";
@@ -224,17 +225,13 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
         <span style={styles.fieldIcon}><SpecialtyIcon width={20} height={20} /></span>
         <div style={styles.tagRow}>
           {specialties.map((s: string, i: number) => (
-            <span key={i} style={styles.tag}>
-              {s}
-              <button
-                style={styles.tagRemove}
-                onClick={() => removeSpecialty(i)}
-                aria-label={`Remove ${s}`}
-                type="button"
-              >
-                ✕
-              </button>
-            </span>
+            <Tag
+              key={i}
+              variant="filled"
+              label={s}
+              onRemove={() => removeSpecialty(i)}
+              removeLabel={`Remove ${s}`}
+            />
           ))}
           <input
             style={styles.specialtyAddInput}
