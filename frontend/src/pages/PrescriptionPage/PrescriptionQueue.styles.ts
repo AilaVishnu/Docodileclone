@@ -81,7 +81,8 @@ export const styles: Record<string, CSSProperties> = {
   grid: {
     display: "flex",
     flexWrap: "wrap" as const,
-    gap: spacing.xl, // 24px between cards
+    rowGap: 73,
+    columnGap: spacing.xl, // 24px between cards horizontally; row-gap matches paddingTop so wrapped rows clear the 49px avatar overlap.
     // 49px avatar overlap + 24px breathing room below the tabs above so
     // the avatar tops don't kiss the tab pills.
     paddingTop: 73,
@@ -175,15 +176,15 @@ export const styles: Record<string, CSSProperties> = {
   rowLabel: {
     width: 80,
     color: colors.alphaBlack3,
-    fontSize: fonts.size.s,
-    lineHeight: fonts.lineHeight.s,
+    fontSize: fonts.size.m,
+    lineHeight: fonts.lineHeight.m,
     fontFamily: fonts.family.primary,
   },
   rowValue: {
     width: 80,
     color: colors.neutral900,
-    fontSize: fonts.size.s,
-    lineHeight: fonts.lineHeight.s,
+    fontSize: fonts.size.m,
+    lineHeight: fonts.lineHeight.m,
     fontFamily: fonts.family.primary,
   },
   typeRow: {
@@ -214,12 +215,12 @@ export const styles: Record<string, CSSProperties> = {
   // Figma 1932:2438 row padding: 8px horizontal / 12px vertical. Same for
   // every cell so columns line up vertically across header + data rows.
   th: {
-    padding: `${spacing.s} ${spacing.xs}`,
+    padding: "14px 8px",
     borderBottom: `${strokes.xs} solid ${colors.primary300}`,
     color: colors.alphaBlack3,
     fontWeight: fonts.weight.regular,
-    fontSize: fonts.size.s,
-    lineHeight: fonts.lineHeight.s,
+    fontSize: fonts.size.m,
+    lineHeight: fonts.lineHeight.m,
     fontFamily: fonts.family.primary,
     textAlign: "left" as const,
     verticalAlign: "middle" as const,
@@ -228,18 +229,18 @@ export const styles: Record<string, CSSProperties> = {
     borderBottom: `${strokes.xs} solid ${colors.primary300}`,
   },
   td: {
-    padding: `${spacing.s} ${spacing.xs}`,
-    fontSize: fonts.size.s,
-    lineHeight: fonts.lineHeight.s,
+    padding: "14px 8px",
+    fontSize: fonts.size.m,
+    lineHeight: fonts.lineHeight.m,
     fontFamily: fonts.family.primary,
     color: colors.neutral900,
     verticalAlign: "middle" as const,
     whiteSpace: "nowrap" as const,
   },
   tdSerial: {
-    padding: `${spacing.s} ${spacing.xs}`,
-    fontSize: fonts.size.s,
-    lineHeight: fonts.lineHeight.s,
+    padding: "14px 8px",
+    fontSize: fonts.size.m,
+    lineHeight: fonts.lineHeight.m,
     fontFamily: fonts.family.primary,
     color: colors.neutral900,
     verticalAlign: "middle" as const,
@@ -248,9 +249,9 @@ export const styles: Record<string, CSSProperties> = {
   // <td> can't be display:flex without breaking vertical-align; the inner
   // span handles the flex layout for name + (M|25) meta.
   tdName: {
-    padding: `${spacing.s} ${spacing.xs}`,
-    fontSize: fonts.size.s,
-    lineHeight: fonts.lineHeight.s,
+    padding: "14px 8px",
+    fontSize: fonts.size.m,
+    lineHeight: fonts.lineHeight.m,
     fontFamily: fonts.family.primary,
     color: colors.neutral900,
     verticalAlign: "middle" as const,
@@ -266,8 +267,8 @@ export const styles: Record<string, CSSProperties> = {
   },
   tdNameMeta: {
     color: colors.neutral500,
-    fontSize: fonts.size.xs,
-    lineHeight: fonts.lineHeight.xs,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
     display: "inline-flex",
     alignItems: "center",
     gap: 4,

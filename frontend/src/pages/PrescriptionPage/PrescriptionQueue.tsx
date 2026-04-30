@@ -311,7 +311,7 @@ function PatientCard({
           )}
         </p>
         <div style={styles.cardRows}>
-          <CardRow label="Service" value={apt.service ?? "—"} />
+          <CardRow label="Service" value={abbreviateService(apt.service)} />
           <CardRow
             label="Type"
             value={
@@ -409,11 +409,11 @@ function PatientListTable({
                   {apt.patientPhone ?? "—"}
                 </td>
                 <td style={{ ...styles.td, textAlign: "center" }}>
-                  {apt.service ?? "—"}
+                  {abbreviateService(apt.service)}
                 </td>
                 <td style={{ ...styles.td, textAlign: "center" }}>
                   <span style={styles.typeRow}>
-                    <RestartIcon width={16} height={16} />
+                    <RestartIcon width={18} height={18} />
                     {apt.type ?? "—"}
                   </span>
                 </td>
@@ -483,20 +483,20 @@ const pillStyles: Record<string, React.CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: "2px 8px",
-    minWidth: 72,
+    padding: "4px 8px",
+    minWidth: 90,
     borderRadius: 4,
     color: "#202020",
     fontFamily: "'Inter', sans-serif",
-    fontSize: 10,
-    lineHeight: "14px",
+    fontSize: 12,
+    lineHeight: "16px",
     fontWeight: 400,
   },
   fallback: {
     color: "#8F8F8F",
     fontFamily: "'Inter', sans-serif",
-    fontSize: 10,
-    lineHeight: "14px",
+    fontSize: 12,
+    lineHeight: "16px",
   },
 };
 
@@ -536,6 +536,18 @@ function sameDay(a: Date, b: Date): boolean {
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
   );
+}
+
+// Service abbreviations — mirror the AppointmentQueue's QueueTable so the
+// shortcut language is consistent across both views of the same dataset.
+function abbreviateService(service: string | null): string {
+  if (!service) return "—";
+  return service
+    .replace(/Consultation/gi, "C")
+    .replace(/Hydrafacial/gi, "HF")
+    .replace(/Laser Hair Removal/gi, "LHR")
+    .replace(/Skin Tag Removal/gi, "SKR")
+    .replace(/Acne Scar Treatment/gi, "AST");
 }
 
 function formatTime(iso: string | null): string {
