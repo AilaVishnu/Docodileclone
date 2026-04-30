@@ -1,5 +1,6 @@
 import React, { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { useSuggestions } from "../../hooks/useSuggestions";
+import { Tag } from "../Tag";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -90,20 +91,12 @@ export function AutocompleteTags({
         onClick={() => inputRef.current?.focus()}
       >
         {value.map((tag, i) => (
-          <span key={`${tag}-${i}`} style={styles.tag}>
-            {tag}
-            <button
-              type="button"
-              style={styles.tagRemove}
-              onClick={(e) => {
-                e.stopPropagation();
-                removeTag(i);
-              }}
-              aria-label={`Remove ${tag}`}
-            >
-              ✕
-            </button>
-          </span>
+          <Tag
+            key={`${tag}-${i}`}
+            label={tag}
+            onRemove={() => removeTag(i)}
+            removeLabel={`Remove ${tag}`}
+          />
         ))}
         <input
           ref={inputRef}
@@ -166,32 +159,6 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: radii.m,
     cursor: "text",
     boxSizing: "border-box",
-  },
-  // Chip — sage 300 pill with white label + ✕, mirrors the Build Your Clinic
-  // specialty chip styling (ClinicInfoCard.styles.ts `tag`).
-  tag: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: colors.secondary300,
-    color: colors.neutral100,
-    borderRadius: radii.full,
-    padding: "3px 10px",
-    fontSize: fonts.size.xs,
-    fontFamily: fonts.family.primary,
-    fontWeight: fonts.weight.medium,
-    whiteSpace: "nowrap" as const,
-  },
-  tagRemove: {
-    background: "none",
-    border: "none",
-    color: colors.neutral100,
-    cursor: "pointer",
-    padding: 0,
-    fontSize: fonts.size.xs,
-    lineHeight: 1,
-    display: "flex",
-    alignItems: "center",
   },
   input: {
     flex: 1,
