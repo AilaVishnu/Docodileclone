@@ -548,7 +548,12 @@ export function PrescriptionPage() {
     setPrivateNotesValue(activeVisit?.privateNotes ?? "");
     setReferDoctorId(activeVisit?.referDoctorId ?? null);
     setReferOpen(false);
-  }, [activeTab, activeVisit]);
+    // Dep is the visit id — using the activeVisit object would refire
+    // this on every refetch (auto-save returns a new object even when
+    // the data is unchanged), which would clobber whatever the doctor
+    // typed in the last 10s.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, activeVisit?.id]);
 
   // Auto-create today's draft when the patient has zero visits, so the
   // form always has a row to write into. The ref-guard keeps React
