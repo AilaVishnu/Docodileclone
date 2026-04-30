@@ -348,6 +348,14 @@ function PatientListTable({
   startedSet: Set<string>;
   onViewPad: (apt: AppointmentRow) => void;
 }) {
+  // Mirror the AppointmentQueue's grouping: sort by status group so rows of
+  // the same status sit together, then drop a thin vertical-line separator
+  // row whenever the group changes.
+  const sorted = [...appointments].sort(
+    (a, b) =>
+      groupOrder(groupKeyFor(a, startedSet)) -
+      groupOrder(groupKeyFor(b, startedSet)),
+  );
   return (
     <div style={styles.tableWrap}>
       <table style={styles.table}>
@@ -374,14 +382,41 @@ function PatientListTable({
           </tr>
         </thead>
         <tbody>
-          {appointments.map((apt, index) => {
+          {sorted.map((apt, index) => {
             const ageYears =
               apt.patientAge != null ? Math.floor(apt.patientAge / 12) : null;
             const tNum = patientIdMap[apt.id];
             const started = startedSet.has(apt.patientId);
             const rowBg = rowBgFor(apt.status, started);
+            const group = groupKeyFor(apt, startedSet);
+            const prevGroup =
+              index > 0 ? groupKeyFor(sorted[index - 1], startedSet) : group;
+            const isNewGroup = index > 0 && group !== prevGroup;
             return (
-              <tr key={apt.id} style={{ ...styles.tr, backgroundColor: rowBg }}>
+              <React.Fragment key={apt.id}>
+                {isNewGroup && (
+                  <tr>
+                    <td colSpan={8} style={{ height: 40, border: "none", padding: 0 }}>
+                      <div
+                        style={{
+                          height: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 1.5,
+                            height: 20,
+                            backgroundColor: colors.primary300,
+                          }}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                <tr style={{ ...styles.tr, backgroundColor: rowBg }}>
                 <td style={styles.tdSerial}>
                   {tNum
                     ? `T${String(tNum).padStart(3, "0")}`
@@ -428,7 +463,8 @@ function PatientListTable({
                     View Pad
                   </Button>
                 </td>
-              </tr>
+                </tr>
+              </React.Fragment>
             );
           })}
         </tbody>
@@ -536,6 +572,23 @@ function sameDay(a: Date, b: Date): boolean {
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
   );
+}
+
+// Mirror the AppointmentQueue's row grouping: bucket each appointment into
+// a status group ("AT_DOC" / "IN_PROGRESS" / "WAITING" / "COMPLETED") and
+// keep that order so groups read top-to-bottom in the same priority the
+// queue tab list uses.
+function groupKeyFor(apt: AppointmentRow, startedSet: Set<string>): string {
+  if (apt.status === "IN_PROGRESS") {
+    return startedSet.has(apt.patientId) ? "IN_PROGRESS" : "AT_DOC";
+  }
+  return apt.status || "OTHER";
+}
+
+const GROUP_ORDER = ["AT_DOC", "IN_PROGRESS", "WAITING", "COMPLETED"];
+function groupOrder(group: string): number {
+  const i = GROUP_ORDER.indexOf(group);
+  return i === -1 ? 99 : i;
 }
 
 // Service abbreviations — mirror the AppointmentQueue's QueueTable so the
