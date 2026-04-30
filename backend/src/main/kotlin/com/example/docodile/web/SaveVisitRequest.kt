@@ -1,5 +1,6 @@
 package com.example.docodile.web
 
+import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
@@ -49,6 +50,12 @@ data class SaveVisitRequest(
     val reviewDate: LocalDate? = null,
     val reviewDays: Int? = null,
     val reviewNotes: String? = null,
+
+    // Prescription pad's SessionBar timing — set by the frontend on
+    // Start Session / End Session. Server treats them as opaque.
+    val sessionStartedAt: Instant? = null,
+    val sessionEndedAt: Instant? = null,
+    val sessionDurationSec: Int? = null,
 
     val prescriptions: List<RxRowDTO> = emptyList()
 )

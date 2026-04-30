@@ -120,6 +120,11 @@ class VisitService(
         visit.reviewDate = r.reviewDate
         visit.reviewDays = r.reviewDays
         visit.reviewNotes = r.reviewNotes
+        // Session timing — passed through verbatim. Frontend sets these
+        // from SessionBar's Start / End handlers.
+        visit.sessionStartedAt = r.sessionStartedAt
+        visit.sessionEndedAt = r.sessionEndedAt
+        visit.sessionDurationSec = r.sessionDurationSec
     }
 
     private fun saveRxRows(visit: Visit, rows: List<RxRowDTO>): List<RxRow> =
@@ -182,6 +187,9 @@ class VisitService(
         reviewDate = this.reviewDate,
         reviewDays = this.reviewDays,
         reviewNotes = this.reviewNotes,
+        sessionStartedAt = this.sessionStartedAt,
+        sessionEndedAt = this.sessionEndedAt,
+        sessionDurationSec = this.sessionDurationSec,
         prescriptions = rxRows
     )
 }

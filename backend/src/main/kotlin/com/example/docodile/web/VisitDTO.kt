@@ -1,5 +1,6 @@
 package com.example.docodile.web
 
+import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
@@ -53,6 +54,13 @@ data class VisitDTO(
     val reviewDate: LocalDate?,
     val reviewDays: Int?,
     val reviewNotes: String?,
+
+    // Session timing — when the doctor started/ended the prescription
+    // pad's timer for this visit, plus the locked-in duration shown on
+    // the SessionBar's "Session Ended" pill.
+    val sessionStartedAt: Instant?,
+    val sessionEndedAt: Instant?,
+    val sessionDurationSec: Int?,
 
     val prescriptions: List<RxRowDTO>
 )

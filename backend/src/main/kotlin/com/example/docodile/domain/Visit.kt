@@ -75,6 +75,16 @@ class Visit(
     @Column(name = "review_days") var reviewDays: Int? = null,
     @Column(name = "review_notes") var reviewNotes: String? = null,
 
+    // ── Session timing (Prescription form's SessionBar) ─────────────────
+    // Set when the doctor clicks Start Session on the prescription pad.
+    @Column(name = "session_started_at") var sessionStartedAt: Instant? = null,
+    // Set when End Session fires; the bar locks at this instant.
+    @Column(name = "session_ended_at")   var sessionEndedAt: Instant? = null,
+    // Final elapsed seconds shown on the bar at End. Cached separately
+    // so we don't have to recompute from started/ended (e.g. paused
+    // segments make a wall-clock diff incorrect).
+    @Column(name = "session_duration_sec") var sessionDurationSec: Int? = null,
+
     @Column(name = "created_at") var createdAt: Instant? = null,
     @Column(name = "updated_at") var updatedAt: Instant? = null
 )

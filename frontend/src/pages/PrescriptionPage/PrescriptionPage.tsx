@@ -579,6 +579,7 @@ export function PrescriptionPage() {
         complaints: null, diagnosis: null, notesForPatient: null, privateNotes: null, tests: null,
         referDoctorId: null,
         reviewDate: null, reviewDays: null, reviewNotes: null,
+        sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
         prescriptions: [],
       };
       void createVisit(selectedPatientId, draft).then(() => refetchVisits());
@@ -659,6 +660,10 @@ export function PrescriptionPage() {
   // Tuning button dropdown items — open/close + outside-click handling lives
   // inside <PopoverMenu>, so we just declare the actions here.
   const tuningMenuItems = [
+    {
+      label: "+ New Visit",
+      onClick: () => void handleAddVisit(),
+    },
     {
       label: "Clear all",
       onClick: () => {
@@ -807,6 +812,13 @@ export function PrescriptionPage() {
       reviewDate: fmtDate(reviewDate),
       reviewDays: reviewDays.trim() === "" ? null : parseInt(reviewDays, 10),
       reviewNotes: reviewNotesValue || null,
+      // Pass the SessionBar timing fields through unchanged when saving
+      // so an in-progress timer survives auto-save round-trips. The
+      // bar-driven handlers below also overwrite these explicitly on
+      // Start / End.
+      sessionStartedAt: activeVisit?.sessionStartedAt ?? null,
+      sessionEndedAt: activeVisit?.sessionEndedAt ?? null,
+      sessionDurationSec: activeVisit?.sessionDurationSec ?? null,
       prescriptions: rxRows
         .filter((r) =>
           r.medicine || r.medicineNote || r.dosage || r.whenToTake ||
@@ -899,13 +911,31 @@ export function PrescriptionPage() {
 
   const handleSessionStart = () => {
     if (selectedPatient) markStarted(selectedPatient.id);
+    // Persist the session-start time on the visit row so other devices
+    // see when this prescription session began.
+    if (activeVisit) {
+      const req: SaveVisitRequest = {
+        ...buildSaveRequest(),
+        sessionStartedAt: new Date().toISOString(),
+      };
+      void updateVisit(activeVisit.id, req).then(() => refetchVisits());
+    }
   };
 
-  const handleSessionEnd = (_totalSeconds: number) => {
-    // SessionBar self-persists its full state via storageKey, so we no
-    // longer need to save the elapsed seconds here.
+  const handleSessionEnd = (totalSeconds: number) => {
     if (selectedPatient) unmarkStarted(selectedPatient.id);
-    void handleSave();
+    // Persist the locked-in duration on the visit so reopening the
+    // prescription on any device shows the same final time.
+    if (activeVisit) {
+      const req: SaveVisitRequest = {
+        ...buildSaveRequest(),
+        sessionEndedAt: new Date().toISOString(),
+        sessionDurationSec: totalSeconds,
+      };
+      void updateVisit(activeVisit.id, req).then(() => refetchVisits());
+    } else {
+      void handleSave();
+    }
     // Move the appointment to COMPLETED so the queues show the right
     // status next time they're viewed.
     if (selectedAppointmentId) {
@@ -928,6 +958,7 @@ export function PrescriptionPage() {
         complaints: null, diagnosis: null, notesForPatient: null, privateNotes: null, tests: null,
         referDoctorId: null,
         reviewDate: null, reviewDays: null, reviewNotes: null,
+        sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
         prescriptions: [],
       };
       await createVisit(selectedPatientId, draft);
@@ -1217,15 +1248,8 @@ export function PrescriptionPage() {
                     <span style={styles.tabLabel}>{formatVisitLabel(v.visitDate)}</span>
                   </div>
                 ))}
-                <button
-                  type="button"
-                  style={{ ...styles.tab, ...styles.tabInactive, cursor: "pointer" }}
-                  onClick={handleAddVisit}
-                  disabled={saving}
-                  aria-label="Add new visit"
-                >
-                  <span style={styles.tabLabel}>+ New Visit</span>
-                </button>
+                {/* "+ New Visit" lives inside the tuning dropdown now —
+                    see tuningMenuItems above. */}
                 <div style={styles.tuningWrap}>
                   <PopoverMenu
                     trigger={<TuningIcon width={24} height={24} />}

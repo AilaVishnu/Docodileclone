@@ -52,6 +52,12 @@ export type VisitDTO = {
   reviewDays: number | null;
   reviewNotes: string | null;
 
+  // SessionBar timing (Prescription form). All optional — only set once
+  // the doctor has interacted with Start / End on the floating bar.
+  sessionStartedAt: string | null;
+  sessionEndedAt: string | null;
+  sessionDurationSec: number | null;
+
   prescriptions: RxRowDTO[];
 };
 
