@@ -6,6 +6,8 @@ import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg"
 import { ReactComponent as ShareIcon } from "../../assets/icons/share.svg";
 import { ReactComponent as RestartIcon } from "../../assets/icons/restart.svg";
 import { ReactComponent as StopCircleIcon } from "../../assets/icons/stop-circle.svg";
+import { Button } from "../Button";
+import { confirmStyles } from "../AddStaffModal/AddStaffModal.styles";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Floating session toolbar — Figma nodes 2255:10871 (idle) and 2036:5233
@@ -51,9 +53,16 @@ type SessionBarProps = {
   storageKey?: string;
 };
 
+// Wall-clock based session state. Total elapsed time is reconstructed
+// from `baseSeconds` (whatever was accumulated during paused / ended
+// segments) plus, if currently running, the wall-clock delta since the
+// current run started (`runStartedAtMs`). This means navigating away
+// without pausing keeps the timer ticking — when the bar remounts it
+// reads back the same `runStartedAtMs` and `Date.now() - runStartedAtMs`
+// shows the time that elapsed while the page was unmounted.
 type SessionState = {
-  seconds: number;
-  running: boolean;
+  baseSeconds: number;
+  runStartedAtMs: number | null;
   paused: boolean;
   ended: boolean;
 };
@@ -96,32 +105,48 @@ export function SessionBar({
   // away + come back, plus reopening a visit that ended earlier.
   const initial = storageKey ? loadState(storageKey) : null;
   // State machine:
-  //   idle    →  Start clicked → running (paused = false, seconds = 0)
-  //   running →  Pause toggles paused; Restart resets seconds=0; End → idle
-  //
-  // The red square button on the right is the End button — it terminates
-  // the session entirely and returns to the dark idle state with the Start
-  // pill shown again.
-  const [running, setRunning] = React.useState(initial?.running ?? false);
+  //   idle    →  Start clicked → runStartedAtMs = now, baseSeconds = 0
+  //   running →  Pause stops the run-segment, banks elapsed in baseSeconds
+  //              Resume starts a new run-segment; End freezes
+  const [baseSeconds, setBaseSeconds] = React.useState(initial?.baseSeconds ?? 0);
+  const [runStartedAtMs, setRunStartedAtMs] = React.useState<number | null>(
+    initial?.runStartedAtMs ?? null,
+  );
   const [paused, setPaused] = React.useState(initial?.paused ?? false);
-  // After End is clicked, the bar flips to a cream "Session Ended" summary
-  // showing the final elapsed time + a disabled "Session Ended" pill.
-  // Click anywhere on the bar (or wait for the host to dismiss) to reset.
   const [ended, setEnded] = React.useState(initial?.ended ?? false);
-  const [seconds, setSeconds] = React.useState(initial?.seconds ?? 0);
+  // Confirmation overlay for the End button — once a session ends it
+  // can't be restarted for the visit, so we make sure the click is
+  // intentional.
+  const [showEndConfirm, setShowEndConfirm] = React.useState(false);
+
+  const running = runStartedAtMs != null;
+
+  // Forces a re-render every second while running so the timer text
+  // updates. The visible seconds value is derived from baseSeconds +
+  // (now - runStartedAtMs), so the timer ticks correctly even right
+  // after a remount.
+  const [, setNowTick] = React.useState(0);
+  React.useEffect(() => {
+    if (runStartedAtMs == null) return;
+    const id = window.setInterval(() => setNowTick((n) => n + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [runStartedAtMs]);
+
+  // Recomputed on every render — the per-second setNowTick above forces
+  // a render while running so the displayed timer text advances. NOT
+  // memoised on [baseSeconds, runStartedAtMs] because those don't change
+  // while a run-segment is in progress, which would freeze the display.
+  const seconds = (() => {
+    if (runStartedAtMs == null) return baseSeconds;
+    return baseSeconds + Math.max(0, Math.floor((Date.now() - runStartedAtMs) / 1000));
+  })();
 
   // Persist the full bar state on every change so a remount restores it
   // bit-for-bit. Skipped when no storageKey is provided.
   React.useEffect(() => {
     if (!storageKey) return;
-    saveState(storageKey, { seconds, running, paused, ended });
-  }, [storageKey, seconds, running, paused, ended]);
-
-  React.useEffect(() => {
-    if (!running || paused) return;
-    const id = window.setInterval(() => setSeconds((s) => s + 1), 1000);
-    return () => window.clearInterval(id);
-  }, [running, paused]);
+    saveState(storageKey, { baseSeconds, runStartedAtMs, paused, ended });
+  }, [storageKey, baseSeconds, runStartedAtMs, paused, ended]);
 
   // Notify parent when the form should be editable. Active = running and
   // not paused; everything else (idle / paused / ended) reports false.
@@ -130,28 +155,56 @@ export function SessionBar({
     onActiveChange?.(active);
   }, [active, onActiveChange]);
 
+  // Each handler ALSO writes to localStorage synchronously so the saved
+  // state can never lag behind the user's action — even if the host
+  // navigates away or refreshes immediately after a click.
   const handleStart = () => {
-    setSeconds(0);
+    const now = Date.now();
+    setBaseSeconds(0);
+    setRunStartedAtMs(now);
     setPaused(false);
     setEnded(false);
-    setRunning(true);
+    if (storageKey) saveState(storageKey, { baseSeconds: 0, runStartedAtMs: now, paused: false, ended: false });
     onStart?.();
   };
-  const togglePause = () => setPaused((p) => !p);
-  const handleRestart = () => setSeconds(0);
+  const togglePause = () => {
+    if (paused) {
+      // Resume: start a new run-segment from now.
+      const now = Date.now();
+      setRunStartedAtMs(now);
+      setPaused(false);
+      if (storageKey) saveState(storageKey, { baseSeconds, runStartedAtMs: now, paused: false, ended });
+    } else {
+      // Pause: bank the current run-segment's elapsed seconds and stop running.
+      const elapsed = runStartedAtMs == null ? 0 : Math.max(0, Math.floor((Date.now() - runStartedAtMs) / 1000));
+      const newBase = baseSeconds + elapsed;
+      setBaseSeconds(newBase);
+      setRunStartedAtMs(null);
+      setPaused(true);
+      if (storageKey) saveState(storageKey, { baseSeconds: newBase, runStartedAtMs: null, paused: true, ended });
+    }
+  };
+  const handleRestart = () => {
+    // Restart timer to 0 while preserving running/paused state.
+    const now = runStartedAtMs == null ? null : Date.now();
+    setBaseSeconds(0);
+    setRunStartedAtMs(now);
+    if (storageKey) saveState(storageKey, { baseSeconds: 0, runStartedAtMs: now, paused, ended });
+  };
   const handleEnd = () => {
-    setRunning(false);
+    // Freeze the timer at its current displayed value.
+    const elapsed = runStartedAtMs == null ? 0 : Math.max(0, Math.floor((Date.now() - runStartedAtMs) / 1000));
+    const finalSeconds = baseSeconds + elapsed;
+    setBaseSeconds(finalSeconds);
+    setRunStartedAtMs(null);
     setPaused(false);
     setEnded(true);
-    // seconds is preserved — the Session-Ended view shows the final time.
-    onEnd?.(seconds);
-  };
-  const handleDismissEnded = () => {
-    setEnded(false);
-    setSeconds(0);
+    if (storageKey) saveState(storageKey, { baseSeconds: finalSeconds, runStartedAtMs: null, paused: false, ended: true });
+    onEnd?.(finalSeconds);
   };
 
   return (
+    <>
     <div style={{ ...styles.bar, ...styles.barIdle }}>
       <div style={styles.left}>
         <span
@@ -164,28 +217,42 @@ export function SessionBar({
         >
           {formatTimer(seconds)}
         </span>
-        {!running && !ended && (
+        {!running && !paused && !ended && (
           <button type="button" style={styles.startBtn} onClick={handleStart} aria-label="Start session">
             <PlayCircleIcon style={styles.startIcon} width={24} height={24} />
             <span>Start Session</span>
           </button>
         )}
+        {ended && (
+          // Once a session is ended it stays ended for this visit — the
+          // pill is purely informational so the doctor can't accidentally
+          // restart the timer and overwrite the recorded duration.
+          <span style={styles.endedPill} aria-label="Session ended">
+            Session Ended
+          </span>
+        )}
       </div>
 
       {ended ? (
-        // Post-end summary pill — Figma node 2036:5328:
-        // bg = neutral200 (#E3E3E3), text = neutral500 (#8F8F8F),
-        // pill-shaped, paragraph-m text. Clickable so it dismisses the
-        // bar back to idle.
-        <button
-          type="button"
-          style={styles.endedPill}
-          onClick={handleDismissEnded}
-          aria-label="Dismiss session summary"
-        >
-          Session Ended
-        </button>
-      ) : running ? (
+        // Post-end view — print / download / share icons on the right so
+        // the doctor can act on the just-ended prescription. The
+        // "Session Ended" pill is rendered up in the left group (next to
+        // the timer) so it occupies the same slot as Start Session.
+        <div style={styles.idleActions}>
+          <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
+            <PrinterIcon width={24} height={24} />
+          </button>
+          <button type="button" style={styles.iconBtn} onClick={onDownload} aria-label="Download">
+            <DownloadIcon width={24} height={24} />
+          </button>
+          <button type="button" style={styles.iconBtn} onClick={onShare} aria-label="Share">
+            <ShareIcon width={24} height={24} />
+          </button>
+        </div>
+      ) : running || paused ? (
+        // Paused is also "session in progress" from the controls'
+        // perspective — Pause/Resume + Restart + End. Without paused
+        // here the bar would fall back to the idle Start button.
         <div style={styles.runningActions}>
           <button
             type="button"
@@ -211,7 +278,7 @@ export function SessionBar({
           <button
             type="button"
             style={styles.stopBtn}
-            onClick={handleEnd}
+            onClick={() => setShowEndConfirm(true)}
             aria-label="End session"
           >
             <StopCircleIcon width={18} height={18} />
@@ -231,6 +298,48 @@ export function SessionBar({
         </div>
       )}
     </div>
+
+    {/* Rendered as a sibling of the bar (NOT inside it) — the bar uses
+        transform: translateX(-50%) which creates a new containing block,
+        which would otherwise clip this overlay to the bar's bounds. */}
+    {showEndConfirm && (
+      <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>
+        <div style={confirmStyles.dialog}>
+          <h4 style={confirmStyles.title}>Are you sure?</h4>
+          <p
+            style={{
+              margin: 0,
+              fontSize: fonts.size.s,
+              color: colors.neutral600,
+              textAlign: "center",
+            }}
+          >
+            Ending the session is permanent — you won&rsquo;t be able to
+            restart the timer for this visit.
+          </p>
+          <div style={confirmStyles.actions}>
+            <Button
+              variant="dangerLight"
+              size="sm"
+              onClick={() => setShowEndConfirm(false)}
+            >
+              Nope
+            </Button>
+            <Button
+              variant="dark"
+              size="sm"
+              onClick={() => {
+                setShowEndConfirm(false);
+                handleEnd();
+              }}
+            >
+              Yes, end
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
@@ -364,7 +473,7 @@ const styles: Record<string, CSSProperties> = {
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.m,
     lineHeight: fonts.lineHeight.m,
-    cursor: "pointer",
+    cursor: "default",
     whiteSpace: "nowrap" as const,
   },
   // Red square Stop — Figma 2036:5240
