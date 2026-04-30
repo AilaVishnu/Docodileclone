@@ -171,7 +171,7 @@ export const styles: Record<string, CSSProperties> = {
     border: "none",
     cursor: "pointer",
     padding: "6px 8px",
-    color: colors.neutral400,
+    color: "#000",
     borderRadius: "6px",
     display: "flex",
     alignItems: "center",

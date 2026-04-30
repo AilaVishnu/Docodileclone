@@ -65,6 +65,7 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const isLocked = currentStatus?.toUpperCase() === "COMPLETED";
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -79,7 +80,7 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
       <StatusBadge
         status={currentStatus}
         patientId={appointment.patientId}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={isLocked ? undefined : () => setIsOpen(!isOpen)}
       />
       {isOpen && (
         <div style={{
@@ -400,9 +401,9 @@ export function QueueTable({
                       ) : (
                         <button style={styles.actionButton}>
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="12" cy="5" r="1.5" fill={colors.neutral500} />
-                            <circle cx="12" cy="12" r="1.5" fill={colors.neutral500} />
-                            <circle cx="12" cy="19" r="1.5" fill={colors.neutral500} />
+                            <circle cx="12" cy="5" r="1.5" fill="#000" />
+                            <circle cx="12" cy="12" r="1.5" fill="#000" />
+                            <circle cx="12" cy="19" r="1.5" fill="#000" />
                           </svg>
                         </button>
                       )}
