@@ -870,7 +870,10 @@ export const styles: Record<string, CSSProperties> = {
     // "internal", visually separated from the patient-facing notes.
   },
   noteCardFieldPrivate: {
-    backgroundColor: colors.alphaBlack1,
+    // Figma 2255:10826 — Private Notes field uses neutral/alpha-black-0
+    // (rgba(0,0,0,0.04)) so it reads as a light, internal-only tint
+    // distinct from the patient-facing cream cards above it.
+    backgroundColor: colors.alphaBlack0,
   },
   noteCardHeader: {
     display: "flex",
