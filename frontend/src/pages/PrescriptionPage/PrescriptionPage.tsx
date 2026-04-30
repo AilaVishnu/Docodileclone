@@ -37,7 +37,7 @@ import { Autocomplete } from "../../components/Autocomplete/Autocomplete";
 import { AutocompleteTags } from "../../components/Autocomplete/AutocompleteTags";
 import { useDoctors } from "../../hooks/useDoctors";
 import { colors } from "../../styles/theme";
-import { PatientPicker } from "./PatientPicker";
+import { PrescriptionQueue } from "./PrescriptionQueue";
 import { Patient } from "../../hooks/usePatients";
 import { SessionBar } from "../../components/SessionBar/SessionBar";
 import { useVisits } from "../../hooks/useVisits";
@@ -864,9 +864,11 @@ export function PrescriptionPage() {
   };
 
   if (selectedPatientId === null) {
+    // Today's Queue is the new internal home for the Prescription page
+    // (Figma 2282:17378) — same data source as the Appointment Queue.
     return (
       <div ref={pageRootRef}>
-        <PatientPicker onSelect={setSelectedPatient} />
+        <PrescriptionQueue onSelect={setSelectedPatient} />
       </div>
     );
   }

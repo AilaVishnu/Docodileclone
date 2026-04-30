@@ -228,7 +228,7 @@ export const getStatusStyle = (status: string): CSSProperties => {
 export const getStatusLabel = (status: string): string => {
   switch (status?.toUpperCase()) {
     case "WAITING":      return "Waiting";
-    case "IN_PROGRESS":  return "In Progress";
+    case "IN_PROGRESS":  return "At Doc";
     case "COMPLETED":    return "Completed";
     case "NO_SHOW":      return "No Show";
     case "CANCELLED":    return "Cancelled";
