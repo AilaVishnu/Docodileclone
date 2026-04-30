@@ -59,14 +59,14 @@ const VITAL_FIELD_MAP: Record<
   string,
   { valueKey: keyof VisitDTO; unitKey: keyof VisitDTO } | undefined
 > = {
-  BMI:         { valueKey: "bmi",         unitKey: "bmiUnit" },
-  Height:      { valueKey: "height",      unitKey: "heightUnit" },
-  Weight:      { valueKey: "weight",      unitKey: "weightUnit" },
+  BMI: { valueKey: "bmi", unitKey: "bmiUnit" },
+  Height: { valueKey: "height", unitKey: "heightUnit" },
+  Weight: { valueKey: "weight", unitKey: "weightUnit" },
   Temperature: { valueKey: "temperature", unitKey: "temperatureUnit" },
-  Pulse:       { valueKey: "pulse",       unitKey: "pulseUnit" },
-  Waist:       { valueKey: "waist",       unitKey: "waistUnit" },
-  Hip:         { valueKey: "hip",         unitKey: "hipUnit" },
-  SPO2:        { valueKey: "spo2",        unitKey: "spo2Unit" },
+  Pulse: { valueKey: "pulse", unitKey: "pulseUnit" },
+  Waist: { valueKey: "waist", unitKey: "waistUnit" },
+  Hip: { valueKey: "hip", unitKey: "hipUnit" },
+  SPO2: { valueKey: "spo2", unitKey: "spo2Unit" },
 };
 
 // Figma node 2057:6284 — Vitals laid out as 6 columns × 2 rows.
@@ -75,8 +75,8 @@ const VITAL_FIELD_MAP: Record<
 type VitalCell = { label: string; unit: string; unitWidth?: number; placeholder?: string };
 const VITAL_COLUMNS: VitalCell[][] = [
   [
-    { label: "BP",    unit: "mmHg", unitWidth: 64 },
-    { label: "BMI",   unit: "kg/m²", unitWidth: 64 },
+    { label: "BP", unit: "mmHg", unitWidth: 64 },
+    { label: "BMI", unit: "kg/m²", unitWidth: 64 },
   ],
   [
     { label: "Height", unit: "cm", unitWidth: 44 },
@@ -84,11 +84,11 @@ const VITAL_COLUMNS: VitalCell[][] = [
   ],
   [
     { label: "Temperature", unit: "°C", unitWidth: 44 },
-    { label: "Pulse",       unit: "bpm", unitWidth: 44 },
+    { label: "Pulse", unit: "bpm", unitWidth: 44 },
   ],
   [
     { label: "Waist", unit: "cm", unitWidth: 44 },
-    { label: "Hip",   unit: "cm", unitWidth: 44 },
+    { label: "Hip", unit: "cm", unitWidth: 44 },
   ],
   [
     { label: "SPO2", unit: "%", unitWidth: 44 },
@@ -103,9 +103,9 @@ const VITAL_COLUMNS: VitalCell[][] = [
 // (GET /api/suggestions?field=&q=) so each input can autocomplete from a
 // per-clinic catalog stored in Postgres rather than hardcoded options.
 const HISTORY_FIELDS = [
-  { label: "Family History",       field: "family_history",      placeholder: "Type here..." },
-  { label: "Allergies",            field: "allergies",           placeholder: "Type here..." },
-  { label: "Personal History",     field: "personal_history",    placeholder: "Type here..." },
+  { label: "Family History", field: "family_history", placeholder: "Type here..." },
+  { label: "Allergies", field: "allergies", placeholder: "Type here..." },
+  { label: "Personal History", field: "personal_history", placeholder: "Type here..." },
   { label: "Past Medical History", field: "past_medical_history", placeholder: "Type here..." },
 ];
 
@@ -165,16 +165,16 @@ const convertBp = (v: string, to: "mmHg" | "kPa"): string =>
 // visual warning state. BP sys/dia get separate keys ("BP_sys" / "BP_dia").
 type VitalRange = { min: number; max: number };
 const VITAL_RANGES: Record<string, Record<string, VitalRange>> = {
-  BP_sys:      { mmHg: { min: 60, max: 220 }, kPa:  { min: 8,  max: 30  } },
-  BP_dia:      { mmHg: { min: 30, max: 140 }, kPa:  { min: 4,  max: 19  } },
-  BMI:         { "kg/m²": { min: 10, max: 60 } },
-  Height:      { cm:   { min: 30, max: 250 }, in:   { min: 12, max: 100 } },
-  Weight:      { kg:   { min: 1,  max: 300 }, lb:   { min: 2,  max: 660 } },
-  Temperature: { "°C": { min: 30, max: 45  }, "°F": { min: 86, max: 113 } },
-  Pulse:       { bpm:  { min: 30, max: 220 } },
-  Waist:       { cm:   { min: 30, max: 200 }, in:   { min: 12, max: 80  } },
-  Hip:         { cm:   { min: 30, max: 200 }, in:   { min: 12, max: 80  } },
-  SPO2:        { "%":  { min: 50, max: 100 } },
+  BP_sys: { mmHg: { min: 60, max: 220 }, kPa: { min: 8, max: 30 } },
+  BP_dia: { mmHg: { min: 30, max: 140 }, kPa: { min: 4, max: 19 } },
+  BMI: { "kg/m²": { min: 10, max: 60 } },
+  Height: { cm: { min: 30, max: 250 }, in: { min: 12, max: 100 } },
+  Weight: { kg: { min: 1, max: 300 }, lb: { min: 2, max: 660 } },
+  Temperature: { "°C": { min: 30, max: 45 }, "°F": { min: 86, max: 113 } },
+  Pulse: { bpm: { min: 30, max: 220 } },
+  Waist: { cm: { min: 30, max: 200 }, in: { min: 12, max: 80 } },
+  Hip: { cm: { min: 30, max: 200 }, in: { min: 12, max: 80 } },
+  SPO2: { "%": { min: 50, max: 100 } },
 };
 
 const isVitalValid = (rangeKey: string, value: string, unit: string): boolean => {
@@ -188,14 +188,14 @@ const isVitalValid = (rangeKey: string, value: string, unit: string): boolean =>
 };
 
 const UNIT_TOGGLES: Record<string, { altUnit: string; convert: (v: string) => string }> = {
-  mmHg: { altUnit: "kPa",  convert: (v) => convertBp(v, "kPa") },
-  kPa:  { altUnit: "mmHg", convert: (v) => convertBp(v, "mmHg") },
-  cm:   { altUnit: "in",   convert: (v) => convertNum(v, 0.393701) },
-  in:   { altUnit: "cm",   convert: (v) => convertNum(v, 2.54) },
-  kg:   { altUnit: "lb",   convert: (v) => convertNum(v, 2.20462) },
-  lb:   { altUnit: "kg",   convert: (v) => convertNum(v, 0.453592) },
-  "°C": { altUnit: "°F",   convert: (v) => convertTemp(v, "F") },
-  "°F": { altUnit: "°C",   convert: (v) => convertTemp(v, "C") },
+  mmHg: { altUnit: "kPa", convert: (v) => convertBp(v, "kPa") },
+  kPa: { altUnit: "mmHg", convert: (v) => convertBp(v, "mmHg") },
+  cm: { altUnit: "in", convert: (v) => convertNum(v, 0.393701) },
+  in: { altUnit: "cm", convert: (v) => convertNum(v, 2.54) },
+  kg: { altUnit: "lb", convert: (v) => convertNum(v, 2.20462) },
+  lb: { altUnit: "kg", convert: (v) => convertNum(v, 0.453592) },
+  "°C": { altUnit: "°F", convert: (v) => convertTemp(v, "F") },
+  "°F": { altUnit: "°C", convert: (v) => convertTemp(v, "C") },
 };
 
 // Build per-cell vital state from the active visit's DTO. Keyed by
@@ -314,10 +314,10 @@ const formatPatientMeta = (
 // inside the component from real data sources, not hardcoded here.
 type ActionMeta = { icon: React.ReactNode; label: string };
 const ACTION_META: ActionMeta[] = [
-  { icon: <VisitsIcon style={styles.actionIcon} />,    label: "Visits" },
-  { icon: <PulseIcon style={styles.actionIcon} />,     label: "Reports" },
-  { icon: <FileIcon style={styles.actionIcon} />,      label: "Files" },
-  { icon: <HistoryIcon style={styles.actionIcon} />,   label: "Timeline" },
+  { icon: <VisitsIcon style={styles.actionIcon} />, label: "Visits" },
+  { icon: <PulseIcon style={styles.actionIcon} />, label: "Reports" },
+  { icon: <FileIcon style={styles.actionIcon} />, label: "Files" },
+  { icon: <HistoryIcon style={styles.actionIcon} />, label: "Timeline" },
   { icon: <BillCheckIcon style={styles.actionIcon} />, label: "Bills" },
 ];
 
@@ -530,10 +530,10 @@ export function PrescriptionPage() {
     setShowReviewDatePicker(false);
     setVitalState(buildVitalState(activeVisit));
     setHistoryValues({
-      family_history:       activeVisit?.familyHistory       ?? "",
-      allergies:            activeVisit?.allergies           ?? "",
-      personal_history:     activeVisit?.personalHistory     ?? "",
-      past_medical_history: activeVisit?.pastMedicalHistory  ?? "",
+      family_history: activeVisit?.familyHistory ?? "",
+      allergies: activeVisit?.allergies ?? "",
+      personal_history: activeVisit?.personalHistory ?? "",
+      past_medical_history: activeVisit?.pastMedicalHistory ?? "",
     });
     setDiagnosisValue(activeVisit?.diagnosis ?? "");
     setComplaintsValue(activeVisit?.complaints ?? "");
@@ -780,18 +780,18 @@ export function PrescriptionPage() {
       bpSystolic: bpSys || null,
       bpDiastolic: bpDia || null,
       bpUnit: bp?.unit || null,
-      bmi: pickValue("BMI"),         bmiUnit: pickUnit("BMI"),
-      height: pickValue("Height"),   heightUnit: pickUnit("Height"),
-      weight: pickValue("Weight"),   weightUnit: pickUnit("Weight"),
+      bmi: pickValue("BMI"), bmiUnit: pickUnit("BMI"),
+      height: pickValue("Height"), heightUnit: pickUnit("Height"),
+      weight: pickValue("Weight"), weightUnit: pickUnit("Weight"),
       temperature: pickValue("Temperature"), temperatureUnit: pickUnit("Temperature"),
-      pulse: pickValue("Pulse"),     pulseUnit: pickUnit("Pulse"),
-      waist: pickValue("Waist"),     waistUnit: pickUnit("Waist"),
-      hip: pickValue("Hip"),         hipUnit: pickUnit("Hip"),
-      spo2: pickValue("SPO2"),       spo2Unit: pickUnit("SPO2"),
-      familyHistory:       historyValues.family_history       || null,
-      allergies:           historyValues.allergies            || null,
-      personalHistory:     historyValues.personal_history     || null,
-      pastMedicalHistory:  historyValues.past_medical_history || null,
+      pulse: pickValue("Pulse"), pulseUnit: pickUnit("Pulse"),
+      waist: pickValue("Waist"), waistUnit: pickUnit("Waist"),
+      hip: pickValue("Hip"), hipUnit: pickUnit("Hip"),
+      spo2: pickValue("SPO2"), spo2Unit: pickUnit("SPO2"),
+      familyHistory: historyValues.family_history || null,
+      allergies: historyValues.allergies || null,
+      personalHistory: historyValues.personal_history || null,
+      pastMedicalHistory: historyValues.past_medical_history || null,
       complaints: complaintsValue || null,
       diagnosis: diagnosisValue || null,
       notesForPatient: notesForPatientValue || null,
@@ -1012,666 +1012,669 @@ export function PrescriptionPage() {
             ...styles.rightArea,
             ...(formActive
               ? null
-              : { pointerEvents: "none", opacity: 0.55, userSelect: "none" }),
+              // Mostly readable while locked — labels stay legible so the
+              // doctor can scan the form before starting a session. Clicks
+              // are still blocked via pointer-events:none.
+              : { pointerEvents: "none", opacity: 0.75, userSelect: "none" }),
             transition: "opacity 0.15s ease",
           }}
           aria-disabled={!formActive}>
-        {comingSoonLabel ? (
-          <div style={styles.comingSoon}>
-            <h3 style={styles.comingSoonTitle}>{comingSoonLabel}</h3>
-            <p style={styles.comingSoonBody}>Coming soon</p>
-          </div>
-        ) : listViewConfig ? (
-          <>
-            {/* List-view tabs — same pill style as the visit tabs but with
-                the category filters from the active config. */}
-            <div style={styles.tabsBar}>
-              {listViewConfig.tabs.map((label, i) => (
-                <div
-                  key={label}
-                  style={{ ...styles.tab, ...(activeListTab === i ? styles.tabActive : styles.tabInactive) }}
-                  onClick={() => setActiveListTab(i)}
-                >
-                  <span style={styles.tabLabel}>{label}</span>
-                </div>
-              ))}
-              <div style={styles.reportViewToggle}>
-                <button
-                  type="button"
-                  style={{
-                    ...styles.reportViewToggleButton,
-                    ...(viewMode === "list" ? styles.reportViewToggleButtonActive : {}),
-                  }}
-                  onClick={() => setViewMode("list")}
-                  aria-label="List view"
-                  aria-pressed={viewMode === "list"}
-                >
-                  <ListSortIcon width={24} height={24} />
-                </button>
-                <button
-                  type="button"
-                  style={{
-                    ...styles.reportViewToggleButton,
-                    ...(viewMode === "grid" ? styles.reportViewToggleButtonActive : {}),
-                  }}
-                  onClick={() => setViewMode("grid")}
-                  aria-label="Grid view"
-                  aria-pressed={viewMode === "grid"}
-                >
-                  <WidgetIcon width={24} height={24} />
-                </button>
-              </div>
+          {comingSoonLabel ? (
+            <div style={styles.comingSoon}>
+              <h3 style={styles.comingSoonTitle}>{comingSoonLabel}</h3>
+              <p style={styles.comingSoonBody}>Coming soon</p>
             </div>
-
-            {viewMode === "list" ? (
-              /* List table — header row of column captions + data rows. */
-              <div style={styles.reportsTable}>
-                <div style={styles.reportsHeaderRow}>
-                  <span style={{ textAlign: "center" }}>#</span>
-                  <span></span>
-                  <span>{listViewConfig.nameColumn}</span>
-                  <span style={{ textAlign: "center" }}>Category</span>
-                  <span style={{ textAlign: "center" }}>Date</span>
-                  <span style={{ textAlign: "center" }}>Actions</span>
-                </div>
-                {displayRows.map((r, i) => (
-                  <div key={i} style={styles.reportRow}>
-                    <span style={styles.reportSerial}>{i + 1}</span>
-                    <div style={styles.reportMicChip}>
-                      <MicIcon width={24} height={24} />
-                    </div>
-                    <span style={styles.reportName}>{r.name}</span>
-                    <span style={styles.reportCell}>{r.category}</span>
-                    <span style={styles.reportCell}>{r.date}</span>
-                    <div style={styles.reportActions}>
-                      <DownloadIcon width={24} height={24} />
-                      <ReorderIcon width={20} height={20} style={styles.reorderHandle} />
-                    </div>
+          ) : listViewConfig ? (
+            <>
+              {/* List-view tabs — same pill style as the visit tabs but with
+                the category filters from the active config. */}
+              <div style={styles.tabsBar}>
+                {listViewConfig.tabs.map((label, i) => (
+                  <div
+                    key={label}
+                    style={{ ...styles.tab, ...(activeListTab === i ? styles.tabActive : styles.tabInactive) }}
+                    onClick={() => setActiveListTab(i)}
+                  >
+                    <span style={styles.tabLabel}>{label}</span>
                   </div>
                 ))}
+                <div style={styles.reportViewToggle}>
+                  <button
+                    type="button"
+                    style={{
+                      ...styles.reportViewToggleButton,
+                      ...(viewMode === "list" ? styles.reportViewToggleButtonActive : {}),
+                    }}
+                    onClick={() => setViewMode("list")}
+                    aria-label="List view"
+                    aria-pressed={viewMode === "list"}
+                  >
+                    <ListSortIcon width={24} height={24} />
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      ...styles.reportViewToggleButton,
+                      ...(viewMode === "grid" ? styles.reportViewToggleButtonActive : {}),
+                    }}
+                    onClick={() => setViewMode("grid")}
+                    aria-label="Grid view"
+                    aria-pressed={viewMode === "grid"}
+                  >
+                    <WidgetIcon width={24} height={24} />
+                  </button>
+                </div>
               </div>
-            ) : (
-              /* Grid view — Figma node 2143:11610. Cream cards with a white
-                 inner tile (file thumbnail placeholder + mic chip) and
-                 name + date + size below. Kebab handle in top-right. */
-              <div style={styles.reportsGrid}>
-                {displayRows.map((r, i) => (
-                  <div key={i} style={styles.reportCard}>
-                    <div style={styles.reportCardThumb}>
-                      <FileIcon style={styles.reportCardThumbIcon} />
-                      <span style={styles.reportCardMic}>
-                        <MicIcon width={20} height={20} />
-                      </span>
-                    </div>
-                    <div style={styles.reportCardKebab}>
-                      <ReorderIcon width={20} height={20} />
-                    </div>
-                    <div style={styles.reportCardFooter}>
-                      <span style={styles.reportCardName}>{r.name}</span>
-                      <div style={styles.reportCardMeta}>
-                        <span>{r.date}</span>
-                        <span>2.4MB</span>
+
+              {viewMode === "list" ? (
+                /* List table — header row of column captions + data rows. */
+                <div style={styles.reportsTable}>
+                  <div style={styles.reportsHeaderRow}>
+                    <span style={{ textAlign: "center" }}>#</span>
+                    <span></span>
+                    <span>{listViewConfig.nameColumn}</span>
+                    <span style={{ textAlign: "center" }}>Category</span>
+                    <span style={{ textAlign: "center" }}>Date</span>
+                    <span style={{ textAlign: "center" }}>Actions</span>
+                  </div>
+                  {displayRows.map((r, i) => (
+                    <div key={i} style={styles.reportRow}>
+                      <span style={styles.reportSerial}>{i + 1}</span>
+                      <div style={styles.reportMicChip}>
+                        <MicIcon width={24} height={24} />
+                      </div>
+                      <span style={styles.reportName}>{r.name}</span>
+                      <span style={styles.reportCell}>{r.category}</span>
+                      <span style={styles.reportCell}>{r.date}</span>
+                      <div style={styles.reportActions}>
+                        <DownloadIcon width={24} height={24} />
+                        <ReorderIcon width={20} height={20} style={styles.reorderHandle} />
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        ) : (
-        <>
-          {/* Visit tabs — sit OUTSIDE the cream sheet, above it. The tuning
+                  ))}
+                </div>
+              ) : (
+                /* Grid view — Figma node 2143:11610. Cream cards with a white
+                   inner tile (file thumbnail placeholder + mic chip) and
+                   name + date + size below. Kebab handle in top-right. */
+                <div style={styles.reportsGrid}>
+                  {displayRows.map((r, i) => (
+                    <div key={i} style={styles.reportCard}>
+                      <div style={styles.reportCardThumb}>
+                        <FileIcon style={styles.reportCardThumbIcon} />
+                        <span style={styles.reportCardMic}>
+                          <MicIcon width={20} height={20} />
+                        </span>
+                      </div>
+                      <div style={styles.reportCardKebab}>
+                        <ReorderIcon width={20} height={20} />
+                      </div>
+                      <div style={styles.reportCardFooter}>
+                        <span style={styles.reportCardName}>{r.name}</span>
+                        <div style={styles.reportCardMeta}>
+                          <span>{r.date}</span>
+                          <span>2.4MB</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Visit tabs — sit OUTSIDE the cream sheet, above it. The tuning
               button (Figma node 2133:9927) is pushed to the far right of the
               row to filter / reconfigure the current visit's view. Each tab
               loads that visit's prescription data into the form below. */}
-          <div style={styles.tabsBar}>
-            {visits.map((v, i) => (
-              <div
-                key={v.id}
-                style={{ ...styles.tab, ...(activeTab === i ? styles.tabActive : styles.tabInactive) }}
-                onClick={() => setActiveTab(i)}
-              >
-                <span style={styles.tabCaption}>{`visit ${i + 1}`}</span>
-                <span style={styles.tabLabel}>{formatVisitLabel(v.visitDate)}</span>
+              <div style={styles.tabsBar}>
+                {visits.map((v, i) => (
+                  <div
+                    key={v.id}
+                    style={{ ...styles.tab, ...(activeTab === i ? styles.tabActive : styles.tabInactive) }}
+                    onClick={() => setActiveTab(i)}
+                  >
+                    <span style={styles.tabCaption}>{`visit ${i + 1}`}</span>
+                    <span style={styles.tabLabel}>{formatVisitLabel(v.visitDate)}</span>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  style={{ ...styles.tab, ...styles.tabInactive, cursor: "pointer" }}
+                  onClick={handleAddVisit}
+                  disabled={saving}
+                  aria-label="Add new visit"
+                >
+                  <span style={styles.tabLabel}>+ New Visit</span>
+                </button>
+                <div style={styles.tuningWrap}>
+                  <PopoverMenu
+                    trigger={<TuningIcon width={24} height={24} />}
+                    items={tuningMenuItems}
+                    ariaLabel="Visit settings"
+                  />
+                </div>
               </div>
-            ))}
-            <button
-              type="button"
-              style={{ ...styles.tab, ...styles.tabInactive, cursor: "pointer" }}
-              onClick={handleAddVisit}
-              disabled={saving}
-              aria-label="Add new visit"
-            >
-              <span style={styles.tabLabel}>+ New Visit</span>
-            </button>
-            <div style={styles.tuningWrap}>
-              <PopoverMenu
-                trigger={<TuningIcon width={24} height={24} />}
-                items={tuningMenuItems}
-                ariaLabel="Visit settings"
-              />
-            </div>
-          </div>
 
-          {/* Cream sheet wrapping all visit-content sections. Keyed by the
+              {/* Cream sheet wrapping all visit-content sections. Keyed by the
               active tab so React unmounts/remounts the subtree on switch,
               giving uncontrolled inputs fresh defaultValues for that visit. */}
-          <section key={`visit-${activeTab}`} style={styles.rightColumn}>
+              <section key={`visit-${activeTab}`} style={styles.rightColumn}>
 
-          {/* Vitals */}
-          <div style={styles.sectionCard}>
-            <div style={styles.sectionHeader}>
-              <div style={styles.sectionTitleWrap}>
-                <HeartPulseIcon style={styles.sectionIcon} />
-                <h3 style={styles.sectionTitle}>Vitals</h3>
-              </div>
-              <button
-                type="button"
-                style={styles.sectionToggle}
-                onClick={() => toggleSection("vitals")}
-                aria-label={openSections.vitals ? "Collapse Vitals" : "Expand Vitals"}
-              >
-                <ChevronIcon
-                  style={{
-                    ...styles.sectionIcon,
-                    transform: openSections.vitals ? "rotate(0deg)" : "rotate(180deg)",
-                    transition: "transform 0.15s ease",
-                  }}
-                />
-              </button>
-            </div>
-            {openSections.vitals && (
-            <div style={styles.vitalsGrid}>
-              {VITAL_COLUMNS.map((col, ci) => (
-                <div key={ci} style={styles.vitalColumn}>
-                  {col.map((v, ri) => {
-                    const cellKey = `${ci}-${ri}`;
-                    const cell = vitalState[cellKey];
-                    const canToggle = !!UNIT_TOGGLES[cell.unit];
-                    // BP is rendered as two inputs separated by a fixed `/`.
-                    // The combined "sys/dia" string still lives in vitalState
-                    // so unit conversion (mmHg↔kPa) keeps working.
-                    const isBp = v.label === "BP";
-                    const [bpSys = "", bpDia = ""] = isBp ? cell.value.split("/") : [];
-                    const setBpPart = (sys: string, dia: string) =>
-                      setVitalValue(cellKey, `${sys}/${dia}`);
-                    // Range validation per (label, unit). Out-of-range values
-                    // get a soft red tint; empty values stay neutral.
-                    const sysValid = isBp ? isVitalValid("BP_sys", bpSys, cell.unit) : true;
-                    const diaValid = isBp ? isVitalValid("BP_dia", bpDia, cell.unit) : true;
-                    const valueValid = isBp ? sysValid && diaValid : isVitalValid(v.label, cell.value, cell.unit);
-                    const rangeForLabel = isBp ? VITAL_RANGES.BP_sys?.[cell.unit] : VITAL_RANGES[v.label]?.[cell.unit];
-                    const rangeHint = rangeForLabel
-                      ? `Valid: ${rangeForLabel.min}–${rangeForLabel.max} ${cell.unit}`
-                      : undefined;
-                    return (
-                      <div key={ri} style={styles.vitalCell}>
-                        <span style={styles.vitalLabel}>{v.label}</span>
-                        <div style={styles.vitalInputRow} title={!valueValid ? rangeHint : undefined}>
-                          {isBp ? (
-                            <BpInput
-                              valid={valueValid}
-                              sysValid={sysValid}
-                              diaValid={diaValid}
-                              sys={bpSys}
-                              dia={bpDia}
-                              onSysChange={(v2) => setBpPart(v2, bpDia)}
-                              onDiaChange={(v2) => setBpPart(bpSys, v2)}
-                              onEnter={(e) => validateVitalOnEnter(e, v.label, cell.value, cell.unit, true)}
-                            />
-                          ) : (
-                            <input
-                              style={{
-                                ...styles.vitalInputValue,
-                                ...(!valueValid ? styles.vitalInputValueInvalid : {}),
-                              }}
-                              placeholder={v.placeholder ?? ""}
-                              value={cell.value}
-                              onChange={(e) => setVitalValue(cellKey, e.target.value)}
-                              onKeyDown={(e) => validateVitalOnEnter(e, v.label, cell.value, cell.unit)}
-                              aria-invalid={!valueValid}
-                            />
-                          )}
-                          <button
-                            type="button"
-                            onClick={canToggle ? () => toggleVitalUnit(cellKey) : undefined}
-                            style={{
-                              ...styles.vitalUnit,
-                              width: v.unitWidth ?? 44,
-                              cursor: canToggle ? "pointer" : "default",
-                              ...(!valueValid ? styles.vitalUnitInvalid : {}),
-                            }}
-                            title={canToggle ? `Switch to ${UNIT_TOGGLES[cell.unit].altUnit}` : undefined}
-                          >
-                            {cell.unit}
-                          </button>
-                        </div>
-                        {!valueValid && (
-                          <span style={styles.vitalErrorMessage}>
-                            {rangeForLabel
-                              ? `Enter valid details (${rangeForLabel.min}–${rangeForLabel.max} ${cell.unit})`
-                              : "Enter valid details"}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-            )}
-          </div>
-
-          {/* History — Figma node 2073:3030 (2×2 grid, cream-filled fields) */}
-          <div style={styles.sectionCard}>
-            <div style={styles.sectionHeader}>
-              <div style={styles.sectionTitleWrap}>
-                <HourglassIcon style={styles.sectionIcon} />
-                <h3 style={styles.sectionTitle}>History</h3>
-              </div>
-              <button
-                type="button"
-                style={styles.sectionToggle}
-                onClick={() => toggleSection("history")}
-                aria-label={openSections.history ? "Collapse History" : "Expand History"}
-              >
-                <ChevronIcon
-                  style={{
-                    ...styles.sectionIcon,
-                    transform: openSections.history ? "rotate(0deg)" : "rotate(180deg)",
-                    transition: "transform 0.15s ease",
-                  }}
-                />
-              </button>
-            </div>
-            {openSections.history && (
-            <div style={styles.historyGrid}>
-              {HISTORY_FIELDS.map((f) => {
-                const raw = historyValues[f.field] ?? "";
-                const tags = splitTags(raw);
-                return (
-                  // Plain <div> instead of <label>: a label forwards clicks
-                  // to the first focusable child, and once chips exist the
-                  // first focusable child is the leftmost chip's ✕ button —
-                  // so clicking the label text would silently remove a tag.
-                  <div key={f.label} style={styles.fieldGroup}>
-                    <span style={styles.fieldLabel}>{f.label}</span>
-                    <AutocompleteTags
-                      field={f.field}
-                      value={tags}
-                      onChange={(next) =>
-                        setHistoryValues((prev) => ({
-                          ...prev,
-                          [f.field]: next.join(", "),
-                        }))
-                      }
-                      placeholder={f.placeholder}
-                      ariaLabel={f.label}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-            )}
-          </div>
-
-          {/* Figma node 2057:6283 — Complaints + Diagnosis cards laid out
-              side-by-side. Each card is a multi-line cream textarea with the
-              dictate icons docked at the bottom-right corner and a kebab
-              handle in the section header. */}
-          <div style={styles.noteCardsRow}>
-            <div style={styles.noteCard}>
-              <div style={styles.noteCardHeader}>
-                <div style={styles.sectionTitleWrap}>
-                  <ChatSquareCallIcon style={styles.sectionIcon} />
-                  <h3 style={styles.sectionTitle}>Complaints</h3>
-                </div>
-                <ReorderIcon style={styles.reorderHandle} width={24} height={24} />
-              </div>
-              <div style={styles.noteCardField}>
-                <AutocompleteTags
-                  field="complaints"
-                  value={splitTags(complaintsValue)}
-                  onChange={(next) => setComplaintsValue(next.join(", "))}
-                  placeholder="Type here..."
-                  ariaLabel="Complaints"
-                  containerStyle={NOTE_CARD_TAGBOX_STYLE}
-                />
-                <span style={styles.noteCardDictate}>
-                  <RewindIcon width={20} height={20} />
-                  <MicIcon width={20} height={20} />
-                </span>
-              </div>
-            </div>
-            <div style={styles.noteCard}>
-              <div style={styles.noteCardHeader}>
-                <div style={styles.sectionTitleWrap}>
-                  <MagniferBugIcon style={styles.sectionIcon} />
-                  <h3 style={styles.sectionTitle}>Diagnosis</h3>
-                </div>
-                <ReorderIcon style={styles.reorderHandle} width={24} height={24} />
-              </div>
-              <div style={styles.noteCardField}>
-                <AutocompleteTags
-                  field="diagnosis"
-                  value={splitTags(diagnosisValue)}
-                  onChange={(next) => setDiagnosisValue(next.join(", "))}
-                  placeholder="Type here..."
-                  ariaLabel="Diagnosis"
-                  containerStyle={NOTE_CARD_TAGBOX_STYLE}
-                />
-                <span style={styles.noteCardDictate}>
-                  <RewindIcon width={20} height={20} />
-                  <MicIcon width={20} height={20} />
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Prescription table */}
-          <div style={styles.sectionCard}>
-            <div style={styles.sectionHeader}>
-              <div style={styles.sectionTitleWrap}>
-                <PillsIcon style={styles.sectionIcon} />
-                <h3 style={styles.sectionTitle}>Rx</h3>
-              </div>
-              <button
-                type="button"
-                style={styles.sectionToggle}
-                onClick={() => toggleSection("rx")}
-                aria-label={openSections.rx ? "Collapse Rx" : "Expand Rx"}
-              >
-                <ChevronIcon
-                  style={{
-                    ...styles.sectionIcon,
-                    transform: openSections.rx ? "rotate(0deg)" : "rotate(180deg)",
-                    transition: "transform 0.15s ease",
-                  }}
-                />
-              </button>
-            </div>
-            {openSections.rx && (
-            <div style={styles.rxTable}>
-              <div style={styles.rxHeaderRow}>
-                {RX_COLUMNS.map((c) => (
-                  <span
-                    key={c}
-                    style={{ textAlign: c === "Medicine" ? "left" : "center" }}
-                  >
-                    {c}
-                  </span>
-                ))}
-              </div>
-              {rxRows.map((row, i) => {
-                const updateField = (key: keyof RxRowDraft, value: string) =>
-                  setRxRows((prev) => prev.map((r, ix) => (ix === i ? { ...r, [key]: value } : r)));
-                return (
-                  <div key={row.id ?? `draft-${i}`} style={styles.rxRow}>
-                    <span style={styles.rxSerial}>{i + 1}</span>
-                    <div style={styles.rxMedicineCell}>
-                      <input
-                        style={styles.rxMedicineInput}
-                        placeholder="Medicine"
-                        value={row.medicine}
-                        onChange={(e) => updateField("medicine", e.target.value)}
-                      />
-                      <div style={styles.rxMedicineNote}>
-                        <PenIcon width={12} height={12} />
-                        <input
-                          style={styles.rxMedicineNoteInput}
-                          placeholder="Medicine"
-                          value={row.medicineNote}
-                          onChange={(e) => updateField("medicineNote", e.target.value)}
-                        />
-                      </div>
+                {/* Vitals */}
+                <div style={styles.sectionCard}>
+                  <div style={styles.sectionHeader}>
+                    <div style={styles.sectionTitleWrap}>
+                      <HeartPulseIcon style={styles.sectionIcon} />
+                      <h3 style={styles.sectionTitle}>Vitals</h3>
                     </div>
-                    <input
-                      style={styles.rxCell}
-                      placeholder="Dosage"
-                      value={row.dosage}
-                      onChange={(e) => updateField("dosage", e.target.value)}
-                    />
-                    <input
-                      style={styles.rxCell}
-                      placeholder="When"
-                      value={row.whenToTake}
-                      onChange={(e) => updateField("whenToTake", e.target.value)}
-                    />
-                    <input
-                      style={styles.rxCell}
-                      placeholder="Frequency"
-                      value={row.frequency}
-                      onChange={(e) => updateField("frequency", e.target.value)}
-                    />
-                    <input
-                      style={styles.rxCell}
-                      placeholder="Duration"
-                      value={row.duration}
-                      onChange={(e) => updateField("duration", e.target.value)}
-                    />
-                    <input
-                      style={styles.rxCell}
-                      placeholder="Notes"
-                      value={row.notes}
-                      onChange={(e) => updateField("notes", e.target.value)}
-                    />
-                  </div>
-                );
-              })}
-              {/* Figma node 2143:10552 — "Add Medicine" footer row (white, with
-                  dictate icons + drag handle). Clicking "+" or the label
-                  appends one more empty row to the Rx table. */}
-              <div style={styles.addMedicineRow}>
-                <button
-                  type="button"
-                  style={styles.addMedicinePlus}
-                  onClick={() => setRxRows((rows) => [...rows, blankRxRow(rows.length + 1)])}
-                  aria-label="Add medicine row"
-                >
-                  +
-                </button>
-                <button
-                  type="button"
-                  style={styles.addMedicineText}
-                  onClick={() => setRxRows((rows) => [...rows, blankRxRow(rows.length + 1)])}
-                >
-                  Add Medicine
-                </button>
-                <span style={styles.dictateIcons}>
-                  <RewindIcon width={20} height={20} />
-                  <MicIcon width={20} height={20} />
-                </span>
-                <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
-              </div>
-            </div>
-            )}
-          </div>
-
-          {/* Notes for Patient + Private Notes — same card pattern as
-              Complaints/Diagnosis, but Private Notes uses a neutral grey fill
-              to visually separate "patient-facing" from "internal" notes. */}
-          <div style={styles.noteCardsRow}>
-            <div style={styles.noteCard}>
-              <div style={styles.noteCardHeader}>
-                <div style={styles.sectionTitleWrap}>
-                  <DocumentIcon style={styles.sectionIcon} />
-                  <h3 style={styles.sectionTitle}>Notes for Patient</h3>
-                </div>
-                <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
-              </div>
-              <div style={styles.noteCardField}>
-                <textarea
-                  style={styles.noteCardTextarea}
-                  placeholder="Type here..."
-                  value={notesForPatientValue}
-                  onChange={(e) => setNotesForPatientValue(e.target.value)}
-                />
-                <span style={styles.noteCardDictate}>
-                  <RewindIcon width={20} height={20} />
-                  <MicIcon width={20} height={20} />
-                </span>
-              </div>
-            </div>
-            <div style={{ ...styles.noteCard, ...styles.noteCardPrivate }}>
-              <div style={styles.noteCardHeader}>
-                <div style={styles.sectionTitleWrap}>
-                  <UsersIcon style={styles.sectionIcon} />
-                  <h3 style={styles.sectionTitle}>Private Notes</h3>
-                </div>
-                <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
-              </div>
-              <div style={{ ...styles.noteCardField, ...styles.noteCardFieldPrivate }}>
-                <textarea
-                  style={styles.noteCardTextarea}
-                  placeholder="Type here..."
-                  value={privateNotesValue}
-                  onChange={(e) => setPrivateNotesValue(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom rows — Figma node 2057:6494 */}
-          <div style={styles.bottomRows}>
-            {/* Tests — dictatable with mic/rewind */}
-            <div style={styles.noteRow}>
-              <div style={styles.noteLabel}>
-                <DocumentIcon style={styles.sectionIcon} />
-                <span style={styles.noteLabelText}>Tests</span>
-              </div>
-              <div style={styles.noteFieldWrap}>
-                <AutocompleteTags
-                  field="tests"
-                  value={splitTags(testsValue)}
-                  onChange={(next) => setTestsValue(next.join(", "))}
-                  placeholder="Add tests..."
-                  ariaLabel="Tests"
-                  containerStyle={TESTS_TAGBOX_STYLE}
-                />
-                <span style={styles.dictateIcons}>
-                  <RewindIcon width={20} height={20} />
-                  <MicIcon width={20} height={20} />
-                </span>
-              </div>
-              <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
-            </div>
-            {/* Refer to — dropdown of doctors in the current clinic
-                (fetched from /api/doctors, which filters by the caller's
-                clinicId via the JWT). Click the pill to open; selecting a
-                doctor sets referDoctorId and closes the menu. */}
-            <div style={styles.noteRow}>
-              <div style={styles.noteLabel}>
-                <UsersIcon style={styles.sectionIcon} />
-                <span style={styles.noteLabelText}>Refer to</span>
-              </div>
-              <div ref={referWrapRef} style={{ position: "relative" }}>
-                <div
-                  style={styles.referDropdown}
-                  onClick={() => setReferOpen((v) => !v)}
-                  role="button"
-                  aria-haspopup="listbox"
-                  aria-expanded={referOpen}
-                >
-                  <span
-                    style={{
-                      ...styles.referText,
-                      ...(referDoctorName ? { color: colors.neutral900 } : {}),
-                    }}
-                  >
-                    {referDoctorName || "select doctor"}
-                  </span>
-                  <span style={styles.referChevron}>
-                    <ChevronIcon
-                      width={16}
-                      height={16}
-                      style={{ transform: referOpen ? "rotate(0deg)" : "rotate(180deg)" }}
-                    />
-                  </span>
-                </div>
-                {referOpen && (
-                  <div style={styles.referMenu}>
-                    {doctors.length === 0 ? (
-                      <div style={styles.referMenuEmpty}>No doctors in this clinic</div>
-                    ) : (
-                      doctors.map((d) => (
-                        <button
-                          key={d.id}
-                          type="button"
-                          style={styles.referMenuItem}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            setReferDoctorId(d.id);
-                            setReferOpen(false);
-                          }}
-                        >
-                          <span style={styles.referMenuItemName}>{d.name}</span>
-                          {d.speciality && (
-                            <span style={styles.referMenuItemMeta}>{d.speciality}</span>
-                          )}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-            {/* Next Review — date picker + "or ___ days" + notes field */}
-            <div style={styles.noteRow}>
-              <div style={styles.noteLabel}>
-                <RestartIcon style={styles.sectionIcon} />
-                <span style={styles.noteLabelText}>Next Review</span>
-              </div>
-              <div style={styles.reviewRow}>
-                <div style={{ position: "relative", flexShrink: 0 }}>
-                  <div
-                    style={styles.reviewDate}
-                    onClick={() => setShowReviewDatePicker((v) => !v)}
-                  >
-                    <CalendarIcon width={24} height={24} style={{ color: "currentColor" }} />
-                    <span
-                      style={{
-                        ...styles.reviewDateText,
-                        color: reviewDate ? "inherit" : styles.reviewDateText.color,
-                      }}
+                    <button
+                      type="button"
+                      style={styles.sectionToggle}
+                      onClick={() => toggleSection("vitals")}
+                      aria-label={openSections.vitals ? "Collapse Vitals" : "Expand Vitals"}
                     >
-                      {reviewDate ? formatReviewDate(reviewDate) : "Select Date"}
-                    </span>
-                  </div>
-                  {showReviewDatePicker && (
-                    <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, zIndex: 1100 }}>
-                      <DatePicker
-                        selectedDate={reviewDate ?? new Date()}
-                        onSelect={pickReviewDate}
-                        onClose={() => setShowReviewDatePicker(false)}
-                        style={{ top: "auto", bottom: "8px" }}
-                        disablePast
+                      <ChevronIcon
+                        style={{
+                          ...styles.sectionIcon,
+                          transform: openSections.vitals ? "rotate(0deg)" : "rotate(180deg)",
+                          transition: "transform 0.15s ease",
+                        }}
                       />
+                    </button>
+                  </div>
+                  {openSections.vitals && (
+                    <div style={styles.vitalsGrid}>
+                      {VITAL_COLUMNS.map((col, ci) => (
+                        <div key={ci} style={styles.vitalColumn}>
+                          {col.map((v, ri) => {
+                            const cellKey = `${ci}-${ri}`;
+                            const cell = vitalState[cellKey];
+                            const canToggle = !!UNIT_TOGGLES[cell.unit];
+                            // BP is rendered as two inputs separated by a fixed `/`.
+                            // The combined "sys/dia" string still lives in vitalState
+                            // so unit conversion (mmHg↔kPa) keeps working.
+                            const isBp = v.label === "BP";
+                            const [bpSys = "", bpDia = ""] = isBp ? cell.value.split("/") : [];
+                            const setBpPart = (sys: string, dia: string) =>
+                              setVitalValue(cellKey, `${sys}/${dia}`);
+                            // Range validation per (label, unit). Out-of-range values
+                            // get a soft red tint; empty values stay neutral.
+                            const sysValid = isBp ? isVitalValid("BP_sys", bpSys, cell.unit) : true;
+                            const diaValid = isBp ? isVitalValid("BP_dia", bpDia, cell.unit) : true;
+                            const valueValid = isBp ? sysValid && diaValid : isVitalValid(v.label, cell.value, cell.unit);
+                            const rangeForLabel = isBp ? VITAL_RANGES.BP_sys?.[cell.unit] : VITAL_RANGES[v.label]?.[cell.unit];
+                            const rangeHint = rangeForLabel
+                              ? `Valid: ${rangeForLabel.min}–${rangeForLabel.max} ${cell.unit}`
+                              : undefined;
+                            return (
+                              <div key={ri} style={styles.vitalCell}>
+                                <span style={styles.vitalLabel}>{v.label}</span>
+                                <div style={styles.vitalInputRow} title={!valueValid ? rangeHint : undefined}>
+                                  {isBp ? (
+                                    <BpInput
+                                      valid={valueValid}
+                                      sysValid={sysValid}
+                                      diaValid={diaValid}
+                                      sys={bpSys}
+                                      dia={bpDia}
+                                      onSysChange={(v2) => setBpPart(v2, bpDia)}
+                                      onDiaChange={(v2) => setBpPart(bpSys, v2)}
+                                      onEnter={(e) => validateVitalOnEnter(e, v.label, cell.value, cell.unit, true)}
+                                    />
+                                  ) : (
+                                    <input
+                                      style={{
+                                        ...styles.vitalInputValue,
+                                        ...(!valueValid ? styles.vitalInputValueInvalid : {}),
+                                      }}
+                                      placeholder={v.placeholder ?? ""}
+                                      value={cell.value}
+                                      onChange={(e) => setVitalValue(cellKey, e.target.value)}
+                                      onKeyDown={(e) => validateVitalOnEnter(e, v.label, cell.value, cell.unit)}
+                                      aria-invalid={!valueValid}
+                                    />
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={canToggle ? () => toggleVitalUnit(cellKey) : undefined}
+                                    style={{
+                                      ...styles.vitalUnit,
+                                      width: v.unitWidth ?? 44,
+                                      cursor: canToggle ? "pointer" : "default",
+                                      ...(!valueValid ? styles.vitalUnitInvalid : {}),
+                                    }}
+                                    title={canToggle ? `Switch to ${UNIT_TOGGLES[cell.unit].altUnit}` : undefined}
+                                  >
+                                    {cell.unit}
+                                  </button>
+                                </div>
+                                {!valueValid && (
+                                  <span style={styles.vitalErrorMessage}>
+                                    {rangeForLabel
+                                      ? `Enter valid details (${rangeForLabel.min}–${rangeForLabel.max} ${cell.unit})`
+                                      : "Enter valid details"}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
-                <span style={styles.reviewOr}>or</span>
-                <div style={styles.reviewDaysWrap}>
-                  <input
-                    style={styles.reviewDaysInput}
-                    value={reviewDays}
-                    onChange={(e) => changeReviewDays(e.target.value)}
-                    inputMode="numeric"
-                    placeholder=""
-                  />
-                  <span style={styles.reviewDaysLabel}>days</span>
+
+                {/* History — Figma node 2073:3030 (2×2 grid, cream-filled fields) */}
+                <div style={styles.sectionCard}>
+                  <div style={styles.sectionHeader}>
+                    <div style={styles.sectionTitleWrap}>
+                      <HourglassIcon style={styles.sectionIcon} />
+                      <h3 style={styles.sectionTitle}>History</h3>
+                    </div>
+                    <button
+                      type="button"
+                      style={styles.sectionToggle}
+                      onClick={() => toggleSection("history")}
+                      aria-label={openSections.history ? "Collapse History" : "Expand History"}
+                    >
+                      <ChevronIcon
+                        style={{
+                          ...styles.sectionIcon,
+                          transform: openSections.history ? "rotate(0deg)" : "rotate(180deg)",
+                          transition: "transform 0.15s ease",
+                        }}
+                      />
+                    </button>
+                  </div>
+                  {openSections.history && (
+                    <div style={styles.historyGrid}>
+                      {HISTORY_FIELDS.map((f) => {
+                        const raw = historyValues[f.field] ?? "";
+                        const tags = splitTags(raw);
+                        return (
+                          // Plain <div> instead of <label>: a label forwards clicks
+                          // to the first focusable child, and once chips exist the
+                          // first focusable child is the leftmost chip's ✕ button —
+                          // so clicking the label text would silently remove a tag.
+                          <div key={f.label} style={styles.fieldGroup}>
+                            <span style={styles.fieldLabel}>{f.label}</span>
+                            <AutocompleteTags
+                              field={f.field}
+                              value={tags}
+                              onChange={(next) =>
+                                setHistoryValues((prev) => ({
+                                  ...prev,
+                                  [f.field]: next.join(", "),
+                                }))
+                              }
+                              placeholder={f.placeholder}
+                              ariaLabel={f.label}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-                <input
-                  style={styles.reviewLong}
-                  placeholder="Notes for Review..."
-                  value={reviewNotesValue}
-                  onChange={(e) => setReviewNotesValue(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-          </section>
-        </>
-        )}
+
+                {/* Figma node 2057:6283 — Complaints + Diagnosis cards laid out
+              side-by-side. Each card is a multi-line cream textarea with the
+              dictate icons docked at the bottom-right corner and a kebab
+              handle in the section header. */}
+                <div style={styles.noteCardsRow}>
+                  <div style={styles.noteCard}>
+                    <div style={styles.noteCardHeader}>
+                      <div style={styles.sectionTitleWrap}>
+                        <ChatSquareCallIcon style={styles.sectionIcon} />
+                        <h3 style={styles.sectionTitle}>Complaints</h3>
+                      </div>
+                      <ReorderIcon style={styles.reorderHandle} width={24} height={24} />
+                    </div>
+                    <div style={styles.noteCardField}>
+                      <AutocompleteTags
+                        field="complaints"
+                        value={splitTags(complaintsValue)}
+                        onChange={(next) => setComplaintsValue(next.join(", "))}
+                        placeholder="Type here..."
+                        ariaLabel="Complaints"
+                        containerStyle={NOTE_CARD_TAGBOX_STYLE}
+                      />
+                      <span style={styles.noteCardDictate}>
+                        <RewindIcon width={20} height={20} />
+                        <MicIcon width={20} height={20} />
+                      </span>
+                    </div>
+                  </div>
+                  <div style={styles.noteCard}>
+                    <div style={styles.noteCardHeader}>
+                      <div style={styles.sectionTitleWrap}>
+                        <MagniferBugIcon style={styles.sectionIcon} />
+                        <h3 style={styles.sectionTitle}>Diagnosis</h3>
+                      </div>
+                      <ReorderIcon style={styles.reorderHandle} width={24} height={24} />
+                    </div>
+                    <div style={styles.noteCardField}>
+                      <AutocompleteTags
+                        field="diagnosis"
+                        value={splitTags(diagnosisValue)}
+                        onChange={(next) => setDiagnosisValue(next.join(", "))}
+                        placeholder="Type here..."
+                        ariaLabel="Diagnosis"
+                        containerStyle={NOTE_CARD_TAGBOX_STYLE}
+                      />
+                      <span style={styles.noteCardDictate}>
+                        <RewindIcon width={20} height={20} />
+                        <MicIcon width={20} height={20} />
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Prescription table */}
+                <div style={styles.sectionCard}>
+                  <div style={styles.sectionHeader}>
+                    <div style={styles.sectionTitleWrap}>
+                      <PillsIcon style={styles.sectionIcon} />
+                      <h3 style={styles.sectionTitle}>Rx</h3>
+                    </div>
+                    <button
+                      type="button"
+                      style={styles.sectionToggle}
+                      onClick={() => toggleSection("rx")}
+                      aria-label={openSections.rx ? "Collapse Rx" : "Expand Rx"}
+                    >
+                      <ChevronIcon
+                        style={{
+                          ...styles.sectionIcon,
+                          transform: openSections.rx ? "rotate(0deg)" : "rotate(180deg)",
+                          transition: "transform 0.15s ease",
+                        }}
+                      />
+                    </button>
+                  </div>
+                  {openSections.rx && (
+                    <div style={styles.rxTable}>
+                      <div style={styles.rxHeaderRow}>
+                        {RX_COLUMNS.map((c) => (
+                          <span
+                            key={c}
+                            style={{ textAlign: c === "Medicine" ? "left" : "center" }}
+                          >
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                      {rxRows.map((row, i) => {
+                        const updateField = (key: keyof RxRowDraft, value: string) =>
+                          setRxRows((prev) => prev.map((r, ix) => (ix === i ? { ...r, [key]: value } : r)));
+                        return (
+                          <div key={row.id ?? `draft-${i}`} style={styles.rxRow}>
+                            <span style={styles.rxSerial}>{i + 1}</span>
+                            <div style={styles.rxMedicineCell}>
+                              <input
+                                style={styles.rxMedicineInput}
+                                placeholder="Medicine"
+                                value={row.medicine}
+                                onChange={(e) => updateField("medicine", e.target.value)}
+                              />
+                              <div style={styles.rxMedicineNote}>
+                                <PenIcon width={12} height={12} />
+                                <input
+                                  style={styles.rxMedicineNoteInput}
+                                  placeholder="Medicine"
+                                  value={row.medicineNote}
+                                  onChange={(e) => updateField("medicineNote", e.target.value)}
+                                />
+                              </div>
+                            </div>
+                            <input
+                              style={styles.rxCell}
+                              placeholder="Dosage"
+                              value={row.dosage}
+                              onChange={(e) => updateField("dosage", e.target.value)}
+                            />
+                            <input
+                              style={styles.rxCell}
+                              placeholder="When"
+                              value={row.whenToTake}
+                              onChange={(e) => updateField("whenToTake", e.target.value)}
+                            />
+                            <input
+                              style={styles.rxCell}
+                              placeholder="Frequency"
+                              value={row.frequency}
+                              onChange={(e) => updateField("frequency", e.target.value)}
+                            />
+                            <input
+                              style={styles.rxCell}
+                              placeholder="Duration"
+                              value={row.duration}
+                              onChange={(e) => updateField("duration", e.target.value)}
+                            />
+                            <input
+                              style={styles.rxCell}
+                              placeholder="Notes"
+                              value={row.notes}
+                              onChange={(e) => updateField("notes", e.target.value)}
+                            />
+                          </div>
+                        );
+                      })}
+                      {/* Figma node 2143:10552 — "Add Medicine" footer row (white, with
+                  dictate icons + drag handle). Clicking "+" or the label
+                  appends one more empty row to the Rx table. */}
+                      <div style={styles.addMedicineRow}>
+                        <button
+                          type="button"
+                          style={styles.addMedicinePlus}
+                          onClick={() => setRxRows((rows) => [...rows, blankRxRow(rows.length + 1)])}
+                          aria-label="Add medicine row"
+                        >
+                          +
+                        </button>
+                        <button
+                          type="button"
+                          style={styles.addMedicineText}
+                          onClick={() => setRxRows((rows) => [...rows, blankRxRow(rows.length + 1)])}
+                        >
+                          Add Medicine
+                        </button>
+                        <span style={styles.dictateIcons}>
+                          <RewindIcon width={20} height={20} />
+                          <MicIcon width={20} height={20} />
+                        </span>
+                        <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Notes for Patient + Private Notes — same card pattern as
+              Complaints/Diagnosis, but Private Notes uses a neutral grey fill
+              to visually separate "patient-facing" from "internal" notes. */}
+                <div style={styles.noteCardsRow}>
+                  <div style={styles.noteCard}>
+                    <div style={styles.noteCardHeader}>
+                      <div style={styles.sectionTitleWrap}>
+                        <DocumentIcon style={styles.sectionIcon} />
+                        <h3 style={styles.sectionTitle}>Notes for Patient</h3>
+                      </div>
+                      <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
+                    </div>
+                    <div style={styles.noteCardField}>
+                      <textarea
+                        style={styles.noteCardTextarea}
+                        placeholder="Type here..."
+                        value={notesForPatientValue}
+                        onChange={(e) => setNotesForPatientValue(e.target.value)}
+                      />
+                      <span style={styles.noteCardDictate}>
+                        <RewindIcon width={20} height={20} />
+                        <MicIcon width={20} height={20} />
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ ...styles.noteCard, ...styles.noteCardPrivate }}>
+                    <div style={styles.noteCardHeader}>
+                      <div style={styles.sectionTitleWrap}>
+                        <UsersIcon style={styles.sectionIcon} />
+                        <h3 style={styles.sectionTitle}>Private Notes</h3>
+                      </div>
+                      <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
+                    </div>
+                    <div style={{ ...styles.noteCardField, ...styles.noteCardFieldPrivate }}>
+                      <textarea
+                        style={styles.noteCardTextarea}
+                        placeholder="Type here..."
+                        value={privateNotesValue}
+                        onChange={(e) => setPrivateNotesValue(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom rows — Figma node 2057:6494 */}
+                <div style={styles.bottomRows}>
+                  {/* Tests — dictatable with mic/rewind */}
+                  <div style={styles.noteRow}>
+                    <div style={styles.noteLabel}>
+                      <DocumentIcon style={styles.sectionIcon} />
+                      <span style={styles.noteLabelText}>Tests</span>
+                    </div>
+                    <div style={styles.noteFieldWrap}>
+                      <AutocompleteTags
+                        field="tests"
+                        value={splitTags(testsValue)}
+                        onChange={(next) => setTestsValue(next.join(", "))}
+                        placeholder="Add tests..."
+                        ariaLabel="Tests"
+                        containerStyle={TESTS_TAGBOX_STYLE}
+                      />
+                      <span style={styles.dictateIcons}>
+                        <RewindIcon width={20} height={20} />
+                        <MicIcon width={20} height={20} />
+                      </span>
+                    </div>
+                    <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
+                  </div>
+                  {/* Refer to — dropdown of doctors in the current clinic
+                (fetched from /api/doctors, which filters by the caller's
+                clinicId via the JWT). Click the pill to open; selecting a
+                doctor sets referDoctorId and closes the menu. */}
+                  <div style={styles.noteRow}>
+                    <div style={styles.noteLabel}>
+                      <UsersIcon style={styles.sectionIcon} />
+                      <span style={styles.noteLabelText}>Refer to</span>
+                    </div>
+                    <div ref={referWrapRef} style={{ position: "relative" }}>
+                      <div
+                        style={styles.referDropdown}
+                        onClick={() => setReferOpen((v) => !v)}
+                        role="button"
+                        aria-haspopup="listbox"
+                        aria-expanded={referOpen}
+                      >
+                        <span
+                          style={{
+                            ...styles.referText,
+                            ...(referDoctorName ? { color: colors.neutral900 } : {}),
+                          }}
+                        >
+                          {referDoctorName || "select doctor"}
+                        </span>
+                        <span style={styles.referChevron}>
+                          <ChevronIcon
+                            width={16}
+                            height={16}
+                            style={{ transform: referOpen ? "rotate(0deg)" : "rotate(180deg)" }}
+                          />
+                        </span>
+                      </div>
+                      {referOpen && (
+                        <div style={styles.referMenu}>
+                          {doctors.length === 0 ? (
+                            <div style={styles.referMenuEmpty}>No doctors in this clinic</div>
+                          ) : (
+                            doctors.map((d) => (
+                              <button
+                                key={d.id}
+                                type="button"
+                                style={styles.referMenuItem}
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  setReferDoctorId(d.id);
+                                  setReferOpen(false);
+                                }}
+                              >
+                                <span style={styles.referMenuItemName}>{d.name}</span>
+                                {d.speciality && (
+                                  <span style={styles.referMenuItemMeta}>{d.speciality}</span>
+                                )}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {/* Next Review — date picker + "or ___ days" + notes field */}
+                  <div style={styles.noteRow}>
+                    <div style={styles.noteLabel}>
+                      <RestartIcon style={styles.sectionIcon} />
+                      <span style={styles.noteLabelText}>Next Review</span>
+                    </div>
+                    <div style={styles.reviewRow}>
+                      <div style={{ position: "relative", flexShrink: 0 }}>
+                        <div
+                          style={styles.reviewDate}
+                          onClick={() => setShowReviewDatePicker((v) => !v)}
+                        >
+                          <CalendarIcon width={24} height={24} style={{ color: "currentColor" }} />
+                          <span
+                            style={{
+                              ...styles.reviewDateText,
+                              color: reviewDate ? "inherit" : styles.reviewDateText.color,
+                            }}
+                          >
+                            {reviewDate ? formatReviewDate(reviewDate) : "Select Date"}
+                          </span>
+                        </div>
+                        {showReviewDatePicker && (
+                          <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, zIndex: 1100 }}>
+                            <DatePicker
+                              selectedDate={reviewDate ?? new Date()}
+                              onSelect={pickReviewDate}
+                              onClose={() => setShowReviewDatePicker(false)}
+                              style={{ top: "auto", bottom: "8px" }}
+                              disablePast
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <span style={styles.reviewOr}>or</span>
+                      <div style={styles.reviewDaysWrap}>
+                        <input
+                          style={styles.reviewDaysInput}
+                          value={reviewDays}
+                          onChange={(e) => changeReviewDays(e.target.value)}
+                          inputMode="numeric"
+                          placeholder=""
+                        />
+                        <span style={styles.reviewDaysLabel}>days</span>
+                      </div>
+                      <input
+                        style={styles.reviewLong}
+                        placeholder="Notes for Review..."
+                        value={reviewNotesValue}
+                        onChange={(e) => setReviewNotesValue(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </>
+          )}
         </div>
       </div>
       <Toast message={toast.message} isVisible={toast.visible} onClose={closeToast} />
