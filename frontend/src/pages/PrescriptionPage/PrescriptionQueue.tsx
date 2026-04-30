@@ -99,20 +99,28 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
     const visible = appointments.filter(
       (a) => a.status == null || !HIDDEN_STATUSES.has(a.status),
     );
-    if (statusFilter === "all") return visible;
-    if (statusFilter === "AT_DOC") {
+    let result: AppointmentRow[];
+    if (statusFilter === "all") result = visible;
+    else if (statusFilter === "AT_DOC") {
       // "At Doc" = sent to doctor, Start Session not clicked yet.
-      return visible.filter(
+      result = visible.filter(
         (a) => a.status === "IN_PROGRESS" && !startedSet.has(a.patientId),
       );
-    }
-    if (statusFilter === "IN_PROGRESS") {
+    } else if (statusFilter === "IN_PROGRESS") {
       // "In Progress" = doctor has clicked Start Session for this patient.
-      return visible.filter(
+      result = visible.filter(
         (a) => a.status === "IN_PROGRESS" && startedSet.has(a.patientId),
       );
+    } else {
+      result = visible.filter((a) => a.status === statusFilter);
     }
-    return visible.filter((a) => a.status === statusFilter);
+    // Group-priority sort so both grid and list views read in the same
+    // top-down order (At Doc → In Progress → Waiting → Completed).
+    return [...result].sort(
+      (a, b) =>
+        groupOrder(groupKeyFor(a, startedSet)) -
+        groupOrder(groupKeyFor(b, startedSet)),
+    );
   }, [appointments, statusFilter, startedSet]);
 
   // Patient T-ID is the same client-side counter used by BookAppointment —
@@ -348,14 +356,9 @@ function PatientListTable({
   startedSet: Set<string>;
   onViewPad: (apt: AppointmentRow) => void;
 }) {
-  // Mirror the AppointmentQueue's grouping: sort by status group so rows of
-  // the same status sit together, then drop a thin vertical-line separator
-  // row whenever the group changes.
-  const sorted = [...appointments].sort(
-    (a, b) =>
-      groupOrder(groupKeyFor(a, startedSet)) -
-      groupOrder(groupKeyFor(b, startedSet)),
-  );
+  // The parent already sorts by status-group priority; we just walk that
+  // list and drop a thin vertical-line separator row whenever the group
+  // changes, mirroring the AppointmentQueue table.
   return (
     <div style={styles.tableWrap}>
       <table style={styles.table}>
@@ -382,7 +385,7 @@ function PatientListTable({
           </tr>
         </thead>
         <tbody>
-          {sorted.map((apt, index) => {
+          {appointments.map((apt, index) => {
             const ageYears =
               apt.patientAge != null ? Math.floor(apt.patientAge / 12) : null;
             const tNum = patientIdMap[apt.id];
@@ -390,7 +393,7 @@ function PatientListTable({
             const rowBg = rowBgFor(apt.status, started);
             const group = groupKeyFor(apt, startedSet);
             const prevGroup =
-              index > 0 ? groupKeyFor(sorted[index - 1], startedSet) : group;
+              index > 0 ? groupKeyFor(appointments[index - 1], startedSet) : group;
             const isNewGroup = index > 0 && group !== prevGroup;
             return (
               <React.Fragment key={apt.id}>
