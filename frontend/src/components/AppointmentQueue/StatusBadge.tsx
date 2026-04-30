@@ -2,6 +2,7 @@ import React from "react";
 import { fonts, colors } from "../../styles/theme";
 import { ReactComponent as DangerTriangleIcon } from "../../assets/icons/danger-triangle.svg";
 import { ReactComponent as CheckCircleIcon } from "../../assets/icons/check-circle.svg";
+import { loadStartedSet } from "../../utils/sessionStarted";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -67,13 +68,27 @@ const PAY_CONFIG: Record<
 // ─────────────────────────────────────────────────────────────────────────────
 type StatusBadgeProps = {
   status: string;
+  /**
+   * Optional patient id — when supplied, the IN_PROGRESS pill flips
+   * from "At Doc" → "In Progress" once the doctor has clicked Start
+   * Session for that patient (tracked per-device via localStorage).
+   */
+  patientId?: string;
   /** If true, badge is clickable and calls onClick */
   onClick?: () => void;
 };
 
-export function StatusBadge({ status, onClick }: StatusBadgeProps) {
+export function StatusBadge({ status, patientId, onClick }: StatusBadgeProps) {
   const key = status?.toUpperCase();
-  const cfg = STATUS_CONFIG[key] ?? { bg: colors.neutral200, color: colors.neutral700, label: status };
+  const baseCfg = STATUS_CONFIG[key] ?? { bg: colors.neutral200, color: colors.neutral700, label: status };
+  // For IN_PROGRESS, swap the label to "In Progress" once the doctor has
+  // started the session for this patient (Start Session click on the
+  // PrescriptionPage's SessionBar). Until then the pill stays "At Doc".
+  const startedForPatient =
+    key === "IN_PROGRESS" && patientId ? loadStartedSet().has(patientId) : false;
+  const cfg = startedForPatient
+    ? { ...baseCfg, label: "In Progress" }
+    : baseCfg;
 
   return (
     <span

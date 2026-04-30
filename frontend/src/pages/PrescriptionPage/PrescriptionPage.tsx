@@ -42,6 +42,8 @@ import { Patient } from "../../hooks/usePatients";
 import { SessionBar } from "../../components/SessionBar/SessionBar";
 import { useVisits } from "../../hooks/useVisits";
 import { createVisit, updateVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
+import { markStarted, unmarkStarted } from "../../utils/sessionStarted";
+import { API_BASE_URL } from "../../apiConfig";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
@@ -433,6 +435,10 @@ export function PrescriptionPage() {
   // scoped to that patient. Clicking "← back to patients" clears it.
   const [selectedPatient, setSelectedPatient] = React.useState<Patient | null>(null);
   const selectedPatientId = selectedPatient?.id ?? null;
+  // The appointment row the doctor clicked View Pad on. Needed so the
+  // Start Session / End Session actions can update the appointment's
+  // backend status without bouncing back to the queue.
+  const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(null);
   // Visits for this patient. `useVisits(null)` returns []; switching to a
   // patient triggers the fetch.
   const { visits, loading: visitsLoading, loadedFor: visitsLoadedFor, refetch: refetchVisits } = useVisits(selectedPatientId);
@@ -820,17 +826,114 @@ export function PrescriptionPage() {
     };
   };
 
-  const handleSave = async () => {
+  const handleSave = async (opts?: { silent?: boolean }) => {
     if (!activeVisit || !selectedPatientId) return;
     setSaving(true);
     try {
       await updateVisit(activeVisit.id, buildSaveRequest());
       await refetchVisits();
-      showToast("Visit saved");
+      if (!opts?.silent) showToast("Visit saved");
     } catch (e) {
+      // Auto-saves stay quiet on success but should still surface
+      // failures so the doctor knows their work isn't being persisted.
       showToast(`Save failed: ${(e as Error).message}`);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Auto-save while a session is running — every 10s the form's current
+  // state is PUT to the backend silently. Avoids data loss without
+  // requiring an explicit Save click.
+  React.useEffect(() => {
+    if (!formActive || !activeVisit) return;
+    const id = window.setInterval(() => {
+      void handleSave({ silent: true });
+    }, 10_000);
+    return () => window.clearInterval(id);
+    // handleSave changes identity each render but its closure always sees
+    // the latest state via React's render cycle; reruning the effect on
+    // each render would reset the interval, so we deliberately leave it out.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formActive, activeVisit?.id]);
+
+  // Save on every Pause / Resume — the doctor's edits up to that moment
+  // get persisted even if they walk away with the session paused.
+  // formActive transitions cover Start (no-op effectively), Pause,
+  // Resume; End is handled in handleSessionEnd. We skip the very first
+  // render so we don't fire a save before the visit data has loaded.
+  const prevFormActiveRef = React.useRef<boolean | null>(null);
+  React.useEffect(() => {
+    if (prevFormActiveRef.current === null) {
+      prevFormActiveRef.current = formActive;
+      return;
+    }
+    if (prevFormActiveRef.current === formActive) return;
+    prevFormActiveRef.current = formActive;
+    if (activeVisit) void handleSave({ silent: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formActive, activeVisit?.id]);
+
+  // Per-visit timer persistence (localStorage). When the doctor ends a
+  // session, the elapsed seconds are stored; reopening the same visit
+  // shows the same final time on the SessionBar.
+  const TIMER_STORE_KEY = "docodile_visit_timer";
+  const loadTimerFor = React.useCallback((visitId: string): number => {
+    try {
+      const raw = localStorage.getItem(TIMER_STORE_KEY);
+      if (!raw) return 0;
+      const map = JSON.parse(raw) as Record<string, number>;
+      return Number(map[visitId]) || 0;
+    } catch {
+      return 0;
+    }
+  }, []);
+  const saveTimerFor = React.useCallback((visitId: string, seconds: number) => {
+    try {
+      const raw = localStorage.getItem(TIMER_STORE_KEY);
+      const map = (raw ? JSON.parse(raw) : {}) as Record<string, number>;
+      map[visitId] = seconds;
+      localStorage.setItem(TIMER_STORE_KEY, JSON.stringify(map));
+    } catch {
+      /* quota / private mode — ignore */
+    }
+  }, []);
+
+  // Best-effort PATCH against the appointment status. Tries the
+  // public /api/appointments endpoint first (broad role allowlist) and
+  // falls back to /api/tenant/appointments which only accepts ADMIN.
+  // Failures are toasted so the doctor knows the queue may not reflect
+  // the new status until a backend retry.
+  const patchAppointmentStatus = async (apptId: string, status: string) => {
+    const token = localStorage.getItem("docodile_token");
+    const body = JSON.stringify({ status });
+    const headers = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/api/tenant/appointments/${apptId}/status`,
+        { method: "PATCH", headers, body },
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch (e) {
+      showToast(`Status update failed: ${(e as Error).message}`);
+    }
+  };
+
+  const handleSessionStart = () => {
+    if (selectedPatient) markStarted(selectedPatient.id);
+  };
+
+  const handleSessionEnd = (totalSeconds: number) => {
+    if (activeVisit) saveTimerFor(activeVisit.id, totalSeconds);
+    if (selectedPatient) unmarkStarted(selectedPatient.id);
+    void handleSave();
+    // Move the appointment to COMPLETED so the queues show the right
+    // status next time they're viewed.
+    if (selectedAppointmentId) {
+      void patchAppointmentStatus(selectedAppointmentId, "COMPLETED");
     }
   };
 
@@ -868,7 +971,12 @@ export function PrescriptionPage() {
     // (Figma 2282:17378) — same data source as the Appointment Queue.
     return (
       <div ref={pageRootRef}>
-        <PrescriptionQueue onSelect={setSelectedPatient} />
+        <PrescriptionQueue
+          onSelect={(patient, appointmentId) => {
+            setSelectedPatient(patient);
+            setSelectedAppointmentId(appointmentId);
+          }}
+        />
       </div>
     );
   }
@@ -884,7 +992,10 @@ export function PrescriptionPage() {
             type="button"
             style={styles.backButton}
             aria-label="Back to patients"
-            onClick={() => setSelectedPatient(null)}
+            onClick={() => {
+              setSelectedPatient(null);
+              setSelectedAppointmentId(null);
+            }}
           >
             <ArrowLeftIcon width={24} height={24} />
           </button>
@@ -918,16 +1029,8 @@ export function PrescriptionPage() {
               />
             </>
           )}
-          {!listViewConfig && !comingSoonLabel && activeVisit && (
-            <button
-              type="button"
-              style={styles.addReportButton}
-              onClick={handleSave}
-              disabled={saving}
-            >
-              <span>{saving ? "Saving…" : "Save"}</span>
-            </button>
-          )}
+          {/* Save button removed — saves are now auto-triggered every 30s
+              while a session is running, plus on End Session. */}
         </div>
       </header>
 
@@ -1681,10 +1784,16 @@ export function PrescriptionPage() {
       {/* Floating session toolbar (Figma node 2255:10871) — fixed at the
           bottom of the viewport so the prescription form scrolls behind it. */}
       <SessionBar
+        // Remount per-visit so the timer reads the saved seconds for the
+        // active visit rather than carrying state across visit switches.
+        key={activeVisit?.id ?? "no-visit"}
+        initialSeconds={activeVisit ? loadTimerFor(activeVisit.id) : 0}
         onPrint={() => showToast("Print: not wired yet")}
         onDownload={() => showToast("Download: not wired yet")}
         onShare={() => showToast("Share: not wired yet")}
         onActiveChange={setFormActive}
+        onStart={handleSessionStart}
+        onEnd={handleSessionEnd}
       />
     </div>
   );

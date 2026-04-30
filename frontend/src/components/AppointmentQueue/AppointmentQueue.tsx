@@ -130,6 +130,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
             }
             grouped[apt.doctorId].push({
               id: apt.id,
+              patientId: apt.patientId,
               patientName: apt.patientName,
               patientPhone: apt.patientPhone,
               type: apt.type?.toUpperCase() === "REVIEW" ? "Review" : "New",

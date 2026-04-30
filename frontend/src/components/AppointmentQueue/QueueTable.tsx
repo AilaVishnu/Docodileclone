@@ -18,6 +18,8 @@ export type PayStatus = "PAID" | "DUE" | "NO PAY";
 
 export type Appointment = {
   id: string;
+  /** Patient UUID — used to resolve session-started flag for this row. */
+  patientId?: string;
   patientName: string;
   patientPhone: string;
   patientEmail?: string;
@@ -74,7 +76,11 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
 
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
-      <StatusBadge status={currentStatus} onClick={() => setIsOpen(!isOpen)} />
+      <StatusBadge
+        status={currentStatus}
+        patientId={appointment.patientId}
+        onClick={() => setIsOpen(!isOpen)}
+      />
       {isOpen && (
         <div style={{
           position: "absolute",
@@ -374,7 +380,7 @@ export function QueueTable({
                           onStatusChange={onStatusChange}
                         />
                       ) : (
-                        <StatusBadge status={apt.status} />
+                        <StatusBadge status={apt.status} patientId={apt.patientId} />
                       )}
                     </td>
 

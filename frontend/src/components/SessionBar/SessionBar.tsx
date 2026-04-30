@@ -30,9 +30,33 @@ type SessionBarProps = {
    * Paused / ended / idle all report `false` so the host can lock the form.
    */
   onActiveChange?: (active: boolean) => void;
+  /**
+   * Fires when the doctor clicks the green Start Session button. Used
+   * by the host to flip the appointment's "in progress" flag.
+   */
+  onStart?: () => void;
+  /**
+   * Fires when the doctor clicks the red End button. The host typically
+   * uses this to save the form and persist the elapsed seconds so a
+   * later visit can show the same final time.
+   */
+  onEnd?: (totalSeconds: number) => void;
+  /**
+   * Initial seconds to display on the timer when the bar mounts. Used to
+   * restore a previously-ended session's timer when the visit is reopened.
+   */
+  initialSeconds?: number;
 };
 
-export function SessionBar({ onPrint, onDownload, onShare, onActiveChange }: SessionBarProps) {
+export function SessionBar({
+  onPrint,
+  onDownload,
+  onShare,
+  onActiveChange,
+  onStart,
+  onEnd,
+  initialSeconds = 0,
+}: SessionBarProps) {
   // State machine:
   //   idle    →  Start clicked → running (paused = false, seconds = 0)
   //   running →  Pause toggles paused; Restart resets seconds=0; End → idle
@@ -45,8 +69,11 @@ export function SessionBar({ onPrint, onDownload, onShare, onActiveChange }: Ses
   // After End is clicked, the bar flips to a cream "Session Ended" summary
   // showing the final elapsed time + a disabled "Session Ended" pill.
   // Click anywhere on the bar (or wait for the host to dismiss) to reset.
-  const [ended, setEnded] = React.useState(false);
-  const [seconds, setSeconds] = React.useState(0);
+  // Defaults the bar to "ended" if the visit had a saved final timer, so
+  // the doctor lands back on the Session-Ended pill instead of the idle
+  // Start pill. They can dismiss the pill to start a fresh session.
+  const [ended, setEnded] = React.useState(initialSeconds > 0);
+  const [seconds, setSeconds] = React.useState(initialSeconds);
 
   React.useEffect(() => {
     if (!running || paused) return;
@@ -66,6 +93,7 @@ export function SessionBar({ onPrint, onDownload, onShare, onActiveChange }: Ses
     setPaused(false);
     setEnded(false);
     setRunning(true);
+    onStart?.();
   };
   const togglePause = () => setPaused((p) => !p);
   const handleRestart = () => setSeconds(0);
@@ -74,6 +102,7 @@ export function SessionBar({ onPrint, onDownload, onShare, onActiveChange }: Ses
     setPaused(false);
     setEnded(true);
     // seconds is preserved — the Session-Ended view shows the final time.
+    onEnd?.(seconds);
   };
   const handleDismissEnded = () => {
     setEnded(false);

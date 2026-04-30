@@ -4,6 +4,7 @@ import { Patient } from "../../hooks/usePatients";
 import { pickAvatar } from "../../utils/avatar";
 import { Button } from "../../components/Button";
 import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
+import { loadStartedSet } from "../../utils/sessionStarted";
 import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { ReactComponent as RestartIcon } from "../../assets/icons/restart-24.svg";
@@ -35,34 +36,8 @@ type AppointmentRow = {
 type StatusFilter = "all" | "AT_DOC" | "IN_PROGRESS" | "WAITING" | "COMPLETED";
 type ViewMode = "grid" | "list";
 
-// Prescription-page-only flag tracking which IN_PROGRESS appointments
-// have had their prescription pad opened. The backend status stays
-// IN_PROGRESS the whole time (so the Appointment Queue is unaffected);
-// here we just toggle the displayed pill from "At Doc" → "In Progress"
-// after the doctor clicks View Pad.
-const STARTED_KEY = "docodile_prescription_started";
-
-const loadStartedSet = (): Set<string> => {
-  try {
-    const raw = localStorage.getItem(STARTED_KEY);
-    if (!raw) return new Set();
-    const arr = JSON.parse(raw);
-    return new Set(Array.isArray(arr) ? arr : []);
-  } catch {
-    return new Set();
-  }
-};
-
-const saveStartedSet = (s: Set<string>) => {
-  try {
-    localStorage.setItem(STARTED_KEY, JSON.stringify(Array.from(s)));
-  } catch {
-    /* quota / private mode — ignore */
-  }
-};
-
 type PrescriptionQueueProps = {
-  onSelect: (patient: Patient) => void;
+  onSelect: (patient: Patient, appointmentId: string) => void;
 };
 
 const TAB_ITEMS: { id: StatusFilter; label: string }[] = [
@@ -83,9 +58,13 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
   // the title opens a DatePicker (same component the Appointment Queue uses).
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
-  // Set of appointment ids whose prescription pad has been opened on this
-  // device. Loaded once on mount; persisted whenever an entry is added.
+  // Set of patient ids whose prescription session has been started on
+  // this device. Loaded on mount and on every fetch (so transitions made
+  // inside the form propagate back when the user returns to the queue).
   const [startedSet, setStartedSet] = useState<Set<string>>(loadStartedSet);
+  useEffect(() => {
+    setStartedSet(loadStartedSet());
+  }, [appointments]);
 
   useEffect(() => {
     const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
@@ -122,12 +101,16 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
     );
     if (statusFilter === "all") return visible;
     if (statusFilter === "AT_DOC") {
-      // "At Doc" = sent to doctor, prescription pad NOT opened yet.
-      return visible.filter((a) => a.status === "IN_PROGRESS" && !startedSet.has(a.id));
+      // "At Doc" = sent to doctor, Start Session not clicked yet.
+      return visible.filter(
+        (a) => a.status === "IN_PROGRESS" && !startedSet.has(a.patientId),
+      );
     }
     if (statusFilter === "IN_PROGRESS") {
-      // "In Progress" = doctor has opened the pad on this device.
-      return visible.filter((a) => a.status === "IN_PROGRESS" && startedSet.has(a.id));
+      // "In Progress" = doctor has clicked Start Session for this patient.
+      return visible.filter(
+        (a) => a.status === "IN_PROGRESS" && startedSet.has(a.patientId),
+      );
     }
     return visible.filter((a) => a.status === statusFilter);
   }, [appointments, statusFilter, startedSet]);
@@ -143,16 +126,8 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
   }, []);
 
   const handleViewPad = (apt: AppointmentRow) => {
-    // Mark this appointment as "prescription started" so its pill flips
-    // from "At Doc" → "In Progress" the next time the queue is viewed,
-    // even after a refresh. Persisted to localStorage.
-    setStartedSet((prev) => {
-      if (prev.has(apt.id)) return prev;
-      const next = new Set(prev);
-      next.add(apt.id);
-      saveStartedSet(next);
-      return next;
-    });
+    // Just open the form; the "started" flag now flips when the doctor
+    // clicks Start Session inside the form (handled by PrescriptionPage).
     const patient: Patient = {
       id: apt.patientId,
       name: apt.patientName,
@@ -162,7 +137,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
       age: apt.patientAge,
       lastVisitDate: null,
     };
-    onSelect(patient);
+    onSelect(patient, apt.id);
   };
 
   const renderCards = () => {
@@ -184,6 +159,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
           patientIdMap={patientIdMap}
           startedSet={startedSet}
           onViewPad={handleViewPad}
+          // PatientListTable still keys by patientId via apt.patientId
         />
       );
     }
@@ -194,7 +170,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
             key={apt.id}
             apt={apt}
             tNumber={patientIdMap[apt.id]}
-            started={startedSet.has(apt.id)}
+            started={startedSet.has(apt.patientId)}
             mode={viewMode}
             onViewPad={() => handleViewPad(apt)}
           />
@@ -402,7 +378,7 @@ function PatientListTable({
             const ageYears =
               apt.patientAge != null ? Math.floor(apt.patientAge / 12) : null;
             const tNum = patientIdMap[apt.id];
-            const started = startedSet.has(apt.id);
+            const started = startedSet.has(apt.patientId);
             const rowBg = rowBgFor(apt.status, started);
             return (
               <tr key={apt.id} style={{ ...styles.tr, backgroundColor: rowBg }}>
