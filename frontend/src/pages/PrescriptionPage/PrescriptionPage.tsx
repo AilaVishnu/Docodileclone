@@ -859,18 +859,16 @@ export function PrescriptionPage() {
     }
   };
 
-  // Auto-save while a session is running — every 10s the form's current
-  // state is PUT to the backend silently. Avoids data loss without
-  // requiring an explicit Save click.
-  React.useEffect(() => {
+  // Auto-save trigger: whenever a field within the form loses focus
+  // (i.e. the doctor moves to the next field, clicks elsewhere, or
+  // tabs out of the form). The form is wrapped in a div with this
+  // handler attached — onBlur on a container bubbles every descendant
+  // blur, so one handler covers every input / textarea / dropdown.
+  // No interval, no debounce: each save corresponds to a deliberate
+  // hand-off between fields.
+  const handleFormBlur = React.useCallback(() => {
     if (!formActive || !activeVisit) return;
-    const id = window.setInterval(() => {
-      void handleSave({ silent: true });
-    }, 10_000);
-    return () => window.clearInterval(id);
-    // handleSave changes identity each render but its closure always sees
-    // the latest state via React's render cycle; reruning the effect on
-    // each render would reset the interval, so we deliberately leave it out.
+    void handleSave({ silent: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formActive, activeVisit?.id]);
 
@@ -1150,7 +1148,13 @@ export function PrescriptionPage() {
               : { pointerEvents: "none", opacity: 0.75, userSelect: "none" }),
             transition: "opacity 0.15s ease",
           }}
-          aria-disabled={!formActive}>
+          aria-disabled={!formActive}
+          // Save-on-blur: any descendant input / textarea / select that
+          // loses focus triggers a silent save. React.onBlur surfaces the
+          // bubbled focusout, so a single handler at the form root covers
+          // every field below without needing to wire each one.
+          onBlur={handleFormBlur}>
+
           {comingSoonLabel ? (
             <div style={styles.comingSoon}>
               <h3 style={styles.comingSoonTitle}>{comingSoonLabel}</h3>
