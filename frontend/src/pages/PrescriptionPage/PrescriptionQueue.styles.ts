@@ -148,15 +148,15 @@ export const styles: Record<string, CSSProperties> = {
   },
   // "T023: Vinay Pittampally" — H5 (24/34)
   cardTitleName: {
-    fontSize: 24,
-    lineHeight: "34px",
+    fontSize: fonts.size.h5,
+    lineHeight: fonts.lineHeight.h5,
     fontFamily: fonts.family.secondary,
     color: colors.neutral900,
   },
-  // "(M|25)" — slightly smaller (20/28)
+  // "(M|25)" — slightly smaller (l: 20/28)
   cardTitleMeta: {
-    fontSize: 20,
-    lineHeight: "28px",
+    fontSize: fonts.size.l,
+    lineHeight: fonts.lineHeight.l,
     fontFamily: fonts.family.secondary,
     color: colors.neutral900,
   },

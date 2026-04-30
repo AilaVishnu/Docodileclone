@@ -8,7 +8,7 @@ import { loadStartedSet } from "../../utils/sessionStarted";
 import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { ReactComponent as RestartIcon } from "../../assets/icons/restart-24.svg";
-import { colors } from "../../styles/theme";
+import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { styles } from "./PrescriptionQueue.styles";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -522,20 +522,22 @@ const pillStyles: Record<string, React.CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: "4px 8px",
+    padding: `${spacing["2xs"]} ${spacing.xs}`,
     minWidth: 90,
-    borderRadius: 4,
-    color: "#202020",
-    fontFamily: "'Inter', sans-serif",
-    fontSize: 12,
-    lineHeight: "16px",
-    fontWeight: 400,
+    borderRadius: radii.xs,
+    color: colors.neutral900,
+    fontFamily: fonts.family.primary,
+    // control.xs (static 12px) so the pill text never grows with the
+    // page-level fluid type ramp; matches Figma 566:10941 caption.
+    fontSize: fonts.control.xs,
+    lineHeight: fonts.lineHeight.xs,
+    fontWeight: fonts.weight.regular,
   },
   fallback: {
-    color: "#8F8F8F",
-    fontFamily: "'Inter', sans-serif",
-    fontSize: 12,
-    lineHeight: "16px",
+    color: colors.neutral500,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.xs,
+    lineHeight: fonts.lineHeight.xs,
   },
 };
 
