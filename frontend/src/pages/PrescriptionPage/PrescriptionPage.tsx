@@ -993,6 +993,23 @@ export function PrescriptionPage() {
     );
   }
 
+  // Hold on the queue until visits for the just-selected patient have
+  // resolved. Without this gate the form mounts with empty fields, the
+  // user sees a brief unfilled state, then activeVisit lands and every
+  // field pops in at once — perceived as a jerk.
+  if (visitsLoadedFor !== selectedPatientId) {
+    return (
+      <div ref={pageRootRef}>
+        <PrescriptionQueue
+          onSelect={(patient, appointmentId) => {
+            setSelectedPatient(patient);
+            setSelectedAppointmentId(appointmentId);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div ref={pageRootRef} style={styles.page}>
       {/* Header — title + subtitle swap based on which left-rail action is
@@ -1788,18 +1805,24 @@ export function PrescriptionPage() {
       <Toast message={toast.message} isVisible={toast.visible} onClose={closeToast} />
       {/* Floating session toolbar (Figma node 2255:10871) — fixed at the
           bottom of the viewport so the prescription form scrolls behind it. */}
-      <SessionBar
-        // Remount per-visit so the bar reads the persisted state for the
-        // active visit rather than carrying state across visit switches.
-        key={activeVisit?.id ?? "no-visit"}
-        storageKey={activeVisit?.id}
-        onPrint={() => showToast("Print: not wired yet")}
-        onDownload={() => showToast("Download: not wired yet")}
-        onShare={() => showToast("Share: not wired yet")}
-        onActiveChange={setFormActive}
-        onStart={handleSessionStart}
-        onEnd={handleSessionEnd}
-      />
+      {/* Only mount once the visit fetch has resolved for this patient.
+          Otherwise the bar mounts first with no storageKey, briefly renders
+          its idle Start Session state, then remounts with the real visit
+          id and flips to Running/Paused — visible as a one-frame jerk. */}
+      {visitsLoadedFor === selectedPatientId && (
+        <SessionBar
+          // Remount per-visit so the bar reads the persisted state for the
+          // active visit rather than carrying state across visit switches.
+          key={activeVisit?.id ?? "no-visit"}
+          storageKey={activeVisit?.id}
+          onPrint={() => showToast("Print: not wired yet")}
+          onDownload={() => showToast("Download: not wired yet")}
+          onShare={() => showToast("Share: not wired yet")}
+          onActiveChange={setFormActive}
+          onStart={handleSessionStart}
+          onEnd={handleSessionEnd}
+        />
+      )}
     </div>
   );
 }
