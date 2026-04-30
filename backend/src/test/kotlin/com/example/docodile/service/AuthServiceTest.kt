@@ -56,7 +56,8 @@ class AuthServiceTest {
 
         `when`(appUserRepository.findByEmail(request.email)).thenReturn(Optional.of(user))
         `when`(passwordEncoder.matches(request.password, user.passwordHash)).thenReturn(true)
-        `when`(clinicEntityRepository.findAllByTenantId(tenant.id)).thenReturn(listOf(clinic))
+        `when`(clinicEntityRepository.findFirstByTenantIdOrderByCreatedAtAsc(tenant.id))
+            .thenReturn(Optional.of(clinic))
         `when`(tokenService.generateToken(user.id, tenant.id, user.role.name, user.email, clinic.id))
             .thenReturn("valid_token")
 
