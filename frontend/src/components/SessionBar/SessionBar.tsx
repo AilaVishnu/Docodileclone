@@ -285,17 +285,10 @@ export function SessionBar({
           </button>
         </div>
       ) : (
-        <div style={styles.idleActions}>
-          <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
-            <PrinterIcon width={24} height={24} />
-          </button>
-          <button type="button" style={styles.iconBtn} onClick={onDownload} aria-label="Download">
-            <DownloadIcon width={24} height={24} />
-          </button>
-          <button type="button" style={styles.iconBtn} onClick={onShare} aria-label="Share">
-            <ShareIcon width={24} height={24} />
-          </button>
-        </div>
+        // Idle (Start Session) — no right-side actions. Print / download /
+        // share have nothing to act on until a session has been recorded,
+        // so they're hidden here and only surface in the "ended" state.
+        null
       )}
     </div>
 
