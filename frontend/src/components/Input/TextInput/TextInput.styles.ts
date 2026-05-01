@@ -6,15 +6,15 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: spacing.xs,
-    padding: spacing.xs,
+    padding: "6px 8px",
     borderBottom: `1px solid ${colors.neutral300}`,
     width: "100%",
   },
 
   icon: {
-    fontSize: 20,
+    fontSize: fonts.size.m,
     lineHeight: 1,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     opacity: 0.8,
   },
 
@@ -24,7 +24,11 @@ export const styles: Record<string, CSSProperties> = {
     outline: "none",
     backgroundColor: "transparent",
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.m,
+    fontSize: fonts.size.s,
     color: colors.neutral900,
+  },
+  errorContainer: {
+    borderBottom: `1px solid ${colors.red200}`,
+    backgroundColor: "rgba(255, 0, 0, 0.05)",
   },
 };

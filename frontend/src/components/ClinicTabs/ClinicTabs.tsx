@@ -1,5 +1,6 @@
 import React from "react";
-import { styles } from "./ClinicTabs.styles";
+import { Tabs, TabItem } from "../Tabs";
+import { colors } from "../../styles/theme";
 
 export type Staff = {
   id: string;
@@ -35,28 +36,26 @@ export function ClinicTabs({
   onSelectClinic,
   onAddClinic,
 }: ClinicTabsProps) {
+  const items: TabItem[] = clinics.map((clinic) => ({
+    id: clinic.id,
+    label: clinic.name || "Your Clinic",
+  }));
+
+  const actions = [
+    {
+      label: "+ Add Clinic",
+      onClick: onAddClinic,
+      disabled: false,
+    },
+  ];
+
   return (
-    <div style={styles.container}>
-      {clinics.map((clinic) => {
-        const isActive = clinic.id === activeClinicId;
-
-        return (
-          <button
-            key={clinic.id}
-            onClick={() => onSelectClinic(clinic.id)}
-            style={{
-              ...styles.tab,
-              ...(isActive ? styles.activeTab : {}),
-            }}
-          >
-            {clinic.name}
-          </button>
-        );
-      })}
-
-      <button onClick={onAddClinic} style={styles.addClinic}>
-        + Add Clinic
-      </button>
-    </div>
+    <Tabs
+      items={items}
+      activeId={activeClinicId}
+      onSelect={onSelectClinic}
+      actions={actions}
+      activeBackgroundColor={colors.primary200}
+    />
   );
 }

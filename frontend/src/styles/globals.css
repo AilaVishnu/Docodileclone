@@ -1,16 +1,78 @@
 :root {
-  --yellowTeeth: #F9F9ED;
-  --skinColor: #FFD0BF;
-  --paleBlue: #ECF1FE;
-  --whiteTeeth: #FCFCFC;
-  --blindBlack: #122525;
-  --sunset : linear-gradient(180deg, #F9F9ED 0%, #FFD0BF 100%);
-  --sunrise: linear-gradient(135deg, #F9F9ED 0%, #ECF1FE 100%);
+  --sunset: linear-gradient(180deg, #F9F9ED 0%, #FFD0BF 100%);
+
+  /* Default Active Theme (Primary/Yellow) */
+  --active-shade-50: #FCFCF5;
+  --active-shade-100: #F9F9ED;
+  --active-shade-200: #F3F3DC;
+  --active-shade-300: #EDDFBA;
+  --active-shade-400: #EDCA99;
+  --active-shade-500: #ECA66D;
+  --active-shade-600: #E48647;
+  --active-shade-700: #CF6F2F;
+  --active-shade-800: #AE561A;
 }
+
+[data-theme="secondary"] {
+  --active-shade-50: #F1F6E7;
+  --active-shade-100: #E3EAD7;
+  --active-shade-200: #C8D4B0;
+  --active-shade-300: #ACBF88;
+  --active-shade-400: #98B06C;
+  --active-shade-500: #849D54;
+  --active-shade-600: #6C8145;
+  --active-shade-700: #556536;
+  --active-shade-800: #3D4927;
+}
+
+
 
 
 * {
   box-sizing: border-box;
+}
+
+/* Suppress the browser's default focus ring on form controls. The app
+   handles focus styling per-component (e.g. invalid-state red fill on
+   vitals); the default outline conflicts with that styling. */
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+button:focus,
+button:focus-visible {
+  outline: none;
+}
+
+/* Tint all radios and checkboxes black app-wide (was browser-default blue). */
+input[type="radio"],
+input[type="checkbox"] {
+  accent-color: #202020;
+}
+
+/* Single grey for all placeholders across the app — matches Figma's
+   input-field idle state (border + icon + placeholder share neutral300).
+   Split per vendor prefix: a single comma-list gets discarded wholesale
+   if any selector is unrecognized. */
+input::placeholder,
+textarea::placeholder {
+  color: #ABABAB !important; /* colors.neutral400 */
+  opacity: 1;
+}
+input::-webkit-input-placeholder,
+textarea::-webkit-input-placeholder {
+  color: #ABABAB !important;
+  opacity: 1;
+}
+input::-moz-placeholder,
+textarea::-moz-placeholder {
+  color: #ABABAB !important;
+  opacity: 1;
+}
+input:-ms-input-placeholder,
+textarea:-ms-input-placeholder {
+  color: #ABABAB !important;
+  opacity: 1;
 }
 
 body {
@@ -18,8 +80,13 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
   min-height: 100vh;
   background: var(--sunset);
+}
+
+.centered-layout {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  min-height: 100vh;
+  width: 100%;
 }

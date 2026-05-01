@@ -37,7 +37,15 @@ class AuthService(
         }
 
         val tenantId = user.tenant?.id ?: throw BadCredentialsException("Invalid credentials")
-        val clinic = clinicEntityRepository.findAllByTenantId(tenantId).firstOrNull()
+        // Pick the oldest clinic in the tenant as the admin's default. This
+        // used to be `findAllByTenantId(...).firstOrNull()`, which has no
+        // ORDER BY — Postgres could return clinics in any order, and the
+        // admin would land in a different clinic between logins (e.g. one
+        // session in "Tskin", the next in "Your Clinic 2"), making
+        // appointments and suggestion catalogues silently disappear.
+        val clinic = clinicEntityRepository
+            .findFirstByTenantIdOrderByCreatedAtAsc(tenantId)
+            .orElse(null)
         val token = tokenService.generateToken(user.id, tenantId, user.role.name, user.email, clinic?.id)
 
         val clinicName = clinic?.name ?: "your clinic"

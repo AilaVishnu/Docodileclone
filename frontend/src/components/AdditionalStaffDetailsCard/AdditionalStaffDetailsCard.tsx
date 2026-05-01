@@ -1,114 +1,68 @@
-import React, { useState } from "react";
+import React from "react";
 import { Card } from "../Card";
 import { TextInput } from "../Input/TextInput";
+import { Select } from "../Input/Select/Select";
 import { styles } from "./AdditionalStaffDetailsCard.styles";
 
 // Icons
-import { ReactComponent as RoleIcon } from "../../assets/Mask Happly.svg";
 import { ReactComponent as StethoIcon } from "../../assets/Stethoscope.svg";
 import { ReactComponent as RegIcon } from "../../assets/Document Medicine.svg";
 
-const ROLES = [
-  "Front Desk",
-  "Doctor",
-  "Nurse",
-  "Pharmacy",
-  "Other",
-];
-
 const SPECIALITIES = [
   "Dermatology",
-  "Ophthalmology",
-  "Dentistry",
-  "General Medicine",
-  "Pediatrics",
+  "Cardiology",
+  "Orthopedics", "Gynecology", "Neurology", "Pediatrics", "Ophthalmology", "ENT", "Urology"
 ];
 
+// Doctor-specific fields only. The Role selector now lives at the top of the
+// staff modal (see AddStaffModal.tsx) since it determines everything else.
 type AdditionalStaffDetailsCardProps = {
-  role: string;
-  setRole: (val: string) => void;
   speciality: string;
   setSpeciality: (val: string) => void;
   registrationNo: string;
   setRegistrationNo: (val: string) => void;
+  errors?: Record<string, boolean>;
 };
 
 export function AdditionalStaffDetailsCard({
-  role,
-  setRole,
   speciality,
   setSpeciality,
   registrationNo,
   setRegistrationNo,
+  errors = {},
 }: AdditionalStaffDetailsCardProps) {
-
   return (
     <Card style={styles.card}>
-      {/* Role selection */}
-      <div style={styles.section}>
-        <div style={styles.sectionTitle}>
-          <RoleIcon />
-          <span>Role (select one)</span>
-        </div>
-
-        <div style={styles.radioGroup}>
-          {ROLES.map((r) => (
-            <label key={r} style={styles.radioLabel}>
-              <input
-                type="radio"
-                name="role"
-                value={r}
-                checked={role === r}
-                onChange={() => setRole(r)}
-                style={styles.radioInput}
-              />
-              {r}
-            </label>
-          ))}
-        </div>
-      </div>
-
       {/* Speciality */}
       <div style={styles.section}>
         <div style={styles.label}>Speciality</div>
-
         <div style={styles.fieldRow}>
-          <StethoIcon />
-
-          <select
+          <Select
             value={speciality}
-            onChange={(e) => setSpeciality(e.target.value)}
-            style={styles.select}
-          >
-            <option value="" disabled>
-              Choose Speciality
-            </option>
-            {SPECIALITIES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+            onChange={setSpeciality}
+            options={SPECIALITIES}
+            placeholder="Choose Speciality"
+            iconLeft={<StethoIcon />}
+            error={errors.speciality}
+          />
         </div>
       </div>
-
 
       {/* Registration Number */}
       <div style={styles.section}>
         <div style={styles.label}>Reg. No.</div>
-
         <TextInput
           value={registrationNo}
           onChange={setRegistrationNo}
           placeholder="ABCDEF"
           iconLeft={<RegIcon />}
+          error={errors.registrationNo}
+          errorMessage="Please enter registration number"
         />
-
         <div style={styles.hint}>
           Enter registration number issued by authority
         </div>
       </div>
-
     </Card>
   );
 }

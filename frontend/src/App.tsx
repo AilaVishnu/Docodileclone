@@ -3,58 +3,88 @@ import "./styles/globals.css";
 import { AdminLoginPage, StaffLoginPage } from './pages/LoginPage';
 import { HomePage } from './pages/Home';
 import { BuildYourClinicPage } from './pages/BuildYourClinicPage';
-import { AppointmentsPage } from './pages/AppointmentsPage';
-
-type ViewType = "login" | "home" | "build" | "appointments";
+import { ClinicSelectionPage } from './pages/ClinicSelectionPage';
 
 function App() {
-  const [view, setView] = useState<ViewType>("login");
-
-  const handleLoginSuccess = async () => {
-    const role = localStorage.getItem("docodile_role");
+  const [view, setViewState] = useState<"login" | "home" | "build" | "select">(() => {
     const token = localStorage.getItem("docodile_token");
+    const sessionActive = sessionStorage.getItem("docodile_session");
 
-    if (!token) {
-      setView("login");
-      return;
+    if (!token || !sessionActive) {
+      // New browser session — clear everything and go to login
+      localStorage.removeItem("docodile_token");
+      localStorage.removeItem("docodile_role");
+      localStorage.removeItem("docodile_view");
+      localStorage.removeItem("docodile_home_tab");
+      localStorage.removeItem("docodile_clinic_id");
+      localStorage.removeItem("docodile_clinic_name");
+      return "login";
     }
 
-    if (role !== "ADMIN") {
-      // Non-admin staff go directly to appointments
-      setView("appointments");
-      return;
-    }
+    // Existing session (refresh) — restore saved view
+    const savedView = localStorage.getItem("docodile_view") as "login" | "home" | "build" | "select";
+    return savedView || "select";
+  });
 
-    try {
-      const response = await fetch("http://localhost:8080/api/tenant/status", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  const setView = (newView: "login" | "home" | "build" | "select") => {
+    localStorage.setItem("docodile_view", newView);
+    setViewState(newView);
+  };
 
-      if (!response.ok) {
-        setView("appointments");
-        return;
-      }
+  const handleLoginSuccess = () => {
+    sessionStorage.setItem("docodile_session", "true");
+    setView("select");
+  };
 
-      const data = (await response.json()) as { complete: boolean };
-      // Admin with complete clinic setup goes to appointments
-      setView(data.complete ? "appointments" : "build");
-    } catch {
-      setView("appointments");
-    }
+  const handleLogout = () => {
+    localStorage.removeItem("docodile_token");
+    localStorage.removeItem("docodile_role");
+    localStorage.removeItem("docodile_view");
+    localStorage.removeItem("docodile_home_tab");
+    localStorage.removeItem("docodile_clinic_id");
+    localStorage.removeItem("docodile_clinic_name");
+    sessionStorage.removeItem("docodile_session");
+    setView("login");
+  };
+
+  const handleNavigateToBuild = () => {
+    setView("build");
+  };
+
+  const handleNavigateToSelection = () => {
+    setView("select");
   };
 
   return (
     <div className="App">
-      <header className="App-header">
-        {view === "login" && (
-          <AdminLoginPage onLoginSuccess={handleLoginSuccess} />
-        )}
-        {view === "build" && <BuildYourClinicPage />}
-        {view === "home" && <HomePage />}
-        {view === "appointments" && <AppointmentsPage />}
-      </header>
+      {view === "login" && (
+        <div className="centered-layout">
+          <header className="App-header">
+            <AdminLoginPage onLoginSuccess={handleLoginSuccess} />
+          </header>
+        </div>
+      )}
+      {view === "select" && (
+        <ClinicSelectionPage
+          onSelectClinic={(clinicId, clinicName) => {
+            localStorage.setItem("docodile_clinic_id", clinicId);
+            localStorage.setItem("docodile_clinic_name", clinicName);
+            setView("home");
+          }}
+          onGoToBuild={() => setView("build")}
+          onLogout={handleLogout}
+        />
+      )}
+      {view === "build" && (
+        <BuildYourClinicPage onNext={() => setView("select")} />
+      )}
+      {view === "home" && (
+        <HomePage
+          onLogout={handleLogout}
+          onViewClinic={handleNavigateToBuild}
+          onViewAllClinics={handleNavigateToSelection}
+        />
+      )}
     </div>
   );
 }

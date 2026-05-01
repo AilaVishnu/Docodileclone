@@ -6,7 +6,7 @@ import java.io.Serializable
 import java.util.UUID
 
 @Embeddable
-class ClinicStaffId(
+data class ClinicStaffId(
     @Column(name = "clinic_id")
     var clinicId: UUID = UUID.randomUUID(),
 

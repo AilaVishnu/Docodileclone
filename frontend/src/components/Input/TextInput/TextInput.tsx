@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useRef, useCallback, useEffect } from "react";
 import { styles } from "./TextInput.styles";
+import { fonts, colors } from "../../../styles/theme";
 
 type TextInputProps = {
   value: string;
@@ -9,7 +10,49 @@ type TextInputProps = {
   iconRight?: React.ReactNode;
   type?: "text" | "password" | "email";
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onBlur?: (e?: React.FocusEvent<HTMLInputElement>) => void;
+  error?: boolean;
+  errorMessage?: string;
+  maxLength?: number;
+  multiline?: boolean;
 };
+
+function AutoGrowTextarea({ value, onChange, placeholder, maxLength }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; maxLength?: number;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  const maxHeight = 80; // ~4 lines max
+
+  const resize = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const scrollH = el.scrollHeight;
+    if (scrollH > maxHeight) {
+      el.style.height = maxHeight + "px";
+      el.style.overflowY = "auto";
+    } else {
+      el.style.height = scrollH + "px";
+      el.style.overflowY = "hidden";
+    }
+  }, []);
+
+  useEffect(() => { resize(); }, [value, resize]);
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      maxLength={maxLength}
+      rows={1}
+      className="text-input-field"
+      style={{ ...styles.input, resize: "none" as const, overflow: "hidden", lineHeight: 1.6 }}
+    />
+  );
+}
 
 export function TextInput({
   value,
@@ -19,21 +62,51 @@ export function TextInput({
   iconRight,
   type = "text",
   onKeyDown,
+  onBlur,
+  error,
+  errorMessage,
+  maxLength,
+  multiline,
 }: TextInputProps) {
+  const containerStyle = {
+    ...styles.container,
+    ...(multiline ? { alignItems: "flex-start" as const } : {}),
+    ...(error ? styles.errorContainer : {}),
+  };
+
   return (
-    <div style={styles.container}>
-      {iconLeft && <span style={styles.icon}>{iconLeft}</span>}
+    <div style={{ width: "100%" }}>
+      <div style={containerStyle}>
+        {iconLeft && <span style={{ ...styles.icon, ...(multiline ? { marginTop: 4 } : {}) }}>{iconLeft}</span>}
 
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={onKeyDown}
-        placeholder={placeholder}
-        style={styles.input}
-      />
+        {multiline ? (
+          <AutoGrowTextarea
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            maxLength={maxLength}
+          />
+        ) : (
+          <input
+            type={type}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={onKeyDown}
+            onBlur={onBlur}
+            placeholder={placeholder}
+            maxLength={maxLength}
+            className="text-input-field"
+            style={styles.input}
+          />
+        )}
 
-      {iconRight && <span style={styles.icon}>{iconRight}</span>}
+        {iconRight && <span style={styles.icon}>{iconRight}</span>}
+      </div>
+      {error && errorMessage && (
+        <div style={{ color: colors.red200, fontSize: fonts.size.xs, fontFamily: "'inter', sans-serif", marginTop: 2, marginLeft: 4 }}>
+          {errorMessage}
+        </div>
+      )}
     </div>
   );
 }

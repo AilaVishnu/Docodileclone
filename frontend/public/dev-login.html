@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Docodile — dev auto-login</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; padding: 40px; max-width: 560px; margin: 0 auto; color: #202020; }
+    h1 { font-weight: 500; }
+    .row { margin: 8px 0; }
+    code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; }
+    .ok { color: #1FC16B; }
+    .err { color: #D00416; white-space: pre-wrap; }
+    button { padding: 10px 20px; border-radius: 999px; border: 1px solid #202020; background: #202020; color: white; cursor: pointer; font-size: 16px; }
+    button.secondary { background: transparent; color: #202020; margin-left: 8px; }
+    .staff { margin-top: 24px; display: flex; flex-direction: column; gap: 10px; }
+    .staff button { text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>Docodile dev auto-login</h1>
+  <p>Click a staff member to log in as them. The page will redirect to the app once the token is stored.</p>
+
+  <div class="staff">
+    <button onclick="loginAs('ayesha.k@dummy.test')">Log in as Dr. Ayesha Khan  (Doctor · Dummy Clinic)</button>
+    <button onclick="loginAs('rajesh.k@dummy.test')">Log in as Dr. Rajesh Kumar (Doctor · Dummy Clinic)</button>
+    <button onclick="loginAs('priya.s@dummy.test')">Log in as Priya Shah       (Front Desk · Dummy Clinic)</button>
+  </div>
+
+  <p class="row" id="status"></p>
+
+  <script>
+    const API = window.location.origin.replace(':3000', ':8080');
+
+    async function loginAs(email) {
+      const status = document.getElementById('status');
+      status.className = '';
+      status.textContent = 'Logging in…';
+      try {
+        const res = await fetch(API + '/auth/staff/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domain: 'dummy', email: email, password: 'password' }),
+        });
+        if (!res.ok) {
+          const body = await res.text();
+          throw new Error('HTTP ' + res.status + ' — ' + body);
+        }
+        const data = await res.json();
+        localStorage.setItem('docodile_token', data.token);
+        localStorage.setItem('docodile_role', data.role);
+        localStorage.setItem('docodile_clinic_id', data.clinicId);
+        localStorage.setItem('docodile_clinic_name', data.clinicName);
+        localStorage.setItem('docodile_view', 'home');
+        sessionStorage.setItem('docodile_session', 'true');
+        status.className = 'ok';
+        status.textContent = '✓ Logged in as ' + email + '. Redirecting…';
+        setTimeout(() => { window.location.href = '/'; }, 500);
+      } catch (e) {
+        status.className = 'err';
+        status.textContent = 'Login failed: ' + e.message;
+      }
+    }
+  </script>
+</body>
+</html>

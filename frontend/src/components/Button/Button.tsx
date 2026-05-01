@@ -4,12 +4,13 @@ import { styles, variants } from "./Button.styles";
 
 type ButtonProps = {
   children?: React.ReactNode;
-  variant?: "dark" | "light" | "primary" | "primaryLight" | "secondary" | "secondaryLight";
+  variant?: "dark" | "light" | "primary" | "primaryLight" | "secondary" | "secondaryLight" | "dangerLight";
   size?: "sm" | "md" | "smIcon" | "mdIcon";
   iconLeft?: React.ReactNode;
   iconRight?: React.ReactNode;
   disabled?: boolean;
   onClick?: () => void;
+  style?: React.CSSProperties;
 };
 
 export function Button({
@@ -20,17 +21,19 @@ export function Button({
   iconRight,
   disabled = false,
   onClick,
+  style,
 }: ButtonProps) {
   const [hovered, setHovered] = useState(false);
 
   const variantStyles = variants[variant];
 
-  const style: React.CSSProperties = {
+  const mergedStyle: React.CSSProperties = {
     ...styles.base,
     ...styles[size],
     ...variantStyles.default,
     ...(hovered && !disabled ? variantStyles.hover : {}),
     ...(disabled ? variantStyles.disabled : {}),
+    ...style,
   };
 
   return (
@@ -40,7 +43,7 @@ export function Button({
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      style={style}
+      style={mergedStyle}
     >
       {iconLeft}
       {children && <span>{children}</span>}

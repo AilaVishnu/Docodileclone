@@ -40,8 +40,13 @@ class Appointment(
 
     var type: String? = null,
 
+    var service: String? = null,
+
     @Column(name = "pay_status")
     var payStatus: String? = null,
+
+    @Column(name = "payment_method")
+    var paymentMethod: String? = null,
 
     var fee: BigDecimal? = null,
 

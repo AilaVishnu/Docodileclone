@@ -1,0 +1,1 @@
+export { PrescriptionPage } from "./PrescriptionPage";

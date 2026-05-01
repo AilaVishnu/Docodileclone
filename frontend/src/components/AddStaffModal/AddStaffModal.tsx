@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "../Modal";
+import { Card } from "../Card";
 import { StaffDetailsCard } from "../StaffDetailsCard";
 import { Button } from "../Button";
-import { styles } from "./AddStaffModal.styles";
+import { styles, confirmStyles } from "./AddStaffModal.styles";
 import { AdditionalStaffDetailsCard } from "../AdditionalStaffDetailsCard";
+import { styles as roleStyles } from "../AdditionalStaffDetailsCard/AdditionalStaffDetailsCard.styles";
 import { StaffIllustration } from "./StaffIllustration";
+import { ReactComponent as RoleIcon } from "../../assets/Mask Happly.svg";
+
+// Standard role options that appear as radios. "Other" is a separate entry
+// that reveals a free-text input for custom roles.
+const STANDARD_ROLES = ["Front Desk", "Doctor", "Nurse", "Pharmacy", "Lab"];
 
 
 export type StaffData = {
@@ -21,14 +28,18 @@ type AddStaffModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: StaffData) => void;
+  onDelete?: () => void;
   initialData?: StaffData;
+  onShowToast?: (message: string) => void;
 };
 
 export function AddStaffModal({
   isOpen,
   onClose,
   onSave,
+  onDelete,
   initialData,
+  onShowToast,
 }: AddStaffModalProps) {
   // Local state for all fields
   const [name, setName] = useState("");
@@ -37,46 +48,114 @@ export function AddStaffModal({
   const [gender, setGender] = useState<"male" | "female" | "other" | "">("");
 
   const [role, setRole] = useState<string>("Doctor");
+  // "Other" radio is selected → free text input shown. Role value holds the
+  // custom text the user types (or "" while input is empty).
+  const [isOtherRole, setIsOtherRole] = useState(false);
   const [speciality, setSpeciality] = useState("");
   const [registrationNo, setRegistrationNo] = useState("");
+
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Populate or reset form when modal opens or initialData changes
   useEffect(() => {
     if (isOpen) {
+      setErrors({});
+      setShowDeleteConfirm(false);
       if (initialData) {
         setName(initialData.name);
         setEmail(initialData.email);
         setPhone(initialData.phone);
         setGender(initialData.gender);
         setRole(initialData.role);
+        // Detect custom (Other) role — if the saved role isn't a standard one
+        // and isn't empty, the "Other" radio should be pre-selected with the
+        // custom text already in the input.
+        setIsOtherRole(!!initialData.role && !STANDARD_ROLES.includes(initialData.role));
         setSpeciality(initialData.speciality);
         setRegistrationNo(initialData.registrationNo);
       } else {
         // Reset form for "Add New"
-        setName("");
+        setName("Dr. ");
         setEmail("");
         setPhone("");
         setGender("");
         setRole("Doctor");
+        setIsOtherRole(false);
         setSpeciality("");
         setRegistrationNo("");
       }
     }
   }, [isOpen, initialData]);
 
+  // Prefix "Dr. " when role is Doctor, clear if switching away
+  useEffect(() => {
+    if (role === "Doctor") {
+      if (name && !name.toLowerCase().startsWith("dr. ")) {
+        setName(`Dr. ${name}`);
+      } else if (!name) {
+        setName("Dr. ");
+      }
+    } else {
+      // If switching away from Doctor, remove the "Dr. " prefix but keep the rest
+      if (name.toLowerCase().startsWith("dr. ")) {
+        const nameWithoutPrefix = name.substring(4).trim();
+        setName(nameWithoutPrefix);
+      }
+    }
+  }, [role]);
+
   const handleSave = () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isEmailValid = emailRegex.test(email.trim());
+
+    // Role is valid if either a standard role is picked, or (Other is picked
+    // AND a custom role name has been typed). An "Other" radio selection
+    // with empty text is invalid.
+    const roleInvalid = isOtherRole ? !role.trim() : !role;
+
+    const newErrors: Record<string, boolean> = {
+      name: !name.trim() || name.trim().toLowerCase() === "dr.",
+      email: !email.trim() || !isEmailValid,
+      phone: !phone.trim() || phone.length < 10,
+      gender: !gender,
+      role: roleInvalid,
+    };
+
+    if (role === "Doctor") {
+      newErrors.speciality = !speciality;
+      newErrors.registrationNo = !registrationNo.trim();
+    }
+
+    setErrors(newErrors);
+
+    const hasErrors = Object.values(newErrors).some(Boolean);
+    if (hasErrors) {
+      const messages: string[] = [];
+      if (newErrors.name) messages.push("name");
+      if (newErrors.email) messages.push("valid email");
+      if (newErrors.phone) messages.push("valid phone number");
+      if (newErrors.gender) messages.push("gender");
+      if (newErrors.role) messages.push("role");
+      if (newErrors.speciality) messages.push("speciality");
+      if (newErrors.registrationNo) messages.push("registration number");
+      onShowToast?.(`Please enter ${messages[0]}`);
+      return;
+    }
+
     onSave({
       name,
       email,
       phone,
       gender,
       role,
-      speciality,
-      registrationNo,
+      speciality: role === "Doctor" ? speciality : "",
+      registrationNo: role === "Doctor" ? registrationNo : "",
     });
   };
 
   return (
+    <>
     <Modal isOpen={isOpen} onClose={onClose}>
       {/* Header */}
       <div style={styles.header}>
@@ -86,6 +165,63 @@ export function AddStaffModal({
           ✕
         </button>
       </div>
+
+      {/* Role section — first after the heading. Drives everything else. */}
+      <Card style={{ ...roleStyles.card, marginBottom: 16 }}>
+        <div style={roleStyles.section}>
+          <div style={roleStyles.sectionTitle}>
+            <RoleIcon />
+            <span>Role</span>
+          </div>
+
+          <div
+            style={{
+              ...roleStyles.radioGroup,
+              ...(errors.role ? { border: "1px solid red", borderRadius: "8px", padding: "8px" } : {}),
+            }}
+          >
+            {STANDARD_ROLES.map((r) => (
+              <label key={r} style={roleStyles.radioLabel}>
+                <input
+                  type="radio"
+                  name="role"
+                  checked={!isOtherRole && role === r}
+                  onChange={() => {
+                    setIsOtherRole(false);
+                    setRole(r);
+                  }}
+                  style={roleStyles.radioInput}
+                />
+                {r}
+              </label>
+            ))}
+            <label style={roleStyles.radioLabel}>
+              <input
+                type="radio"
+                name="role"
+                checked={isOtherRole}
+                onChange={() => {
+                  setIsOtherRole(true);
+                  setRole(""); // clear so the user can type their custom role
+                }}
+                style={roleStyles.radioInput}
+              />
+              Other
+            </label>
+          </div>
+
+          {isOtherRole && (
+            <input
+              type="text"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              placeholder="Enter role"
+              style={roleStyles.otherRoleInput}
+              autoFocus
+            />
+          )}
+        </div>
+      </Card>
 
       {/* Top section: Illustration + Staff details */}
       <div style={styles.topSection}>
@@ -100,30 +236,61 @@ export function AddStaffModal({
           setPhone={setPhone}
           gender={gender}
           setGender={setGender}
+          errors={errors}
         />
       </div>
 
-      {/* Bottom section */}
-      <AdditionalStaffDetailsCard
-        role={role}
-        setRole={setRole}
-        speciality={speciality}
-        setSpeciality={setSpeciality}
-        registrationNo={registrationNo}
-        setRegistrationNo={setRegistrationNo}
-      />
+      {/* Doctor-specific fields — only shown when role is Doctor. */}
+      {role === "Doctor" && (
+        <AdditionalStaffDetailsCard
+          speciality={speciality}
+          setSpeciality={setSpeciality}
+          registrationNo={registrationNo}
+          setRegistrationNo={setRegistrationNo}
+          errors={errors}
+        />
+      )}
 
       {/* Footer */}
       <div style={styles.footer}>
-        <Button variant="light" size="sm" onClick={onClose}>
-          Cancel
-        </Button>
+        {initialData ? (
+          <button style={styles.deleteButton} onClick={() => setShowDeleteConfirm(true)}>
+            Delete Staff
+          </button>
+        ) : (
+          <div />
+        )}
 
-        <Button variant="dark" size="sm" onClick={handleSave}>
-          Save
-        </Button>
+        <div style={styles.footerRight}>
+          <Button variant="dangerLight" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+
+          <Button variant="dark" size="sm" onClick={handleSave}>
+            Save
+          </Button>
+        </div>
       </div>
     </Modal>
 
+    {showDeleteConfirm && (
+      <div style={confirmStyles.overlay}>
+        <div style={confirmStyles.dialog}>
+          <h4 style={confirmStyles.title}>Are you sure?</h4>
+          <div style={confirmStyles.actions}>
+            <Button variant="dangerLight" size="sm" onClick={() => setShowDeleteConfirm(false)}>
+              Nope
+            </Button>
+            <Button variant="dark" size="sm" onClick={() => {
+              setShowDeleteConfirm(false);
+              onDelete?.();
+            }}>
+              Yes
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

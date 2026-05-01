@@ -1,4 +1,4 @@
-import React, { useState, useEffect, KeyboardEvent } from "react";
+import React, { useState, useEffect } from "react";
 import { styles } from "./LoginCard.styles";
 import { TextInput } from "../Input/TextInput";
 import { DomainInput } from "../Input/DomainInput";
@@ -9,6 +9,8 @@ import { ReactComponent as PasswordIcon } from "../../assets/Key.svg";
 import { ReactComponent as EyeIcon } from "../../assets/Eye.svg";
 import { ReactComponent as EyeClosedIcon } from "../../assets/Eye Closed.svg";
 import { colors } from "../../styles/theme";
+import { API_BASE_URL } from "../../apiConfig";
+import { Toast } from "../Toast";
 
 
 type LoginMode = "admin" | "staff";
@@ -30,9 +32,9 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -53,20 +55,19 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      setError("Please enter email and password.");
+      setToastMessage("Please enter email and password.");
       return;
     }
 
     if (isStaff && !domain.trim()) {
-      setError("Please enter clinic domain.");
+      setToastMessage("Please enter clinic domain.");
       return;
     }
 
-    setError(null);
     setIsSubmitting(true);
 
     try {
-      const url = isStaff ? "http://localhost:8080/auth/staff/login" : "http://localhost:8080/auth/login";
+      const url = isStaff ? `${API_BASE_URL}/auth/staff/login` : `${API_BASE_URL}/auth/login`;
       const body = isStaff
         ? { domain: domain.trim(), email, password }
         : { email, password };
@@ -78,7 +79,10 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
       });
 
       if (!response.ok) {
-        throw new Error("Invalid credentials");
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("Invalid email or password");
+        }
+        throw new Error(`Login failed (${response.status})`);
       }
 
       const data = (await response.json()) as LoginResponse;
@@ -93,9 +97,15 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
         localStorage.setItem("docodile_clinic_name", data.clinicName);
       }
 
+      setToastMessage("Login successful");
       onLoginSuccess?.();
     } catch (err) {
-      setError("Login failed. Please check your credentials.");
+      const msg = err instanceof TypeError
+        ? "Network error. Please check your connection."
+        : err instanceof Error
+          ? err.message
+          : "Login failed. Please check your credentials.";
+      setToastMessage(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -108,7 +118,7 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
   };
 
   return (
-    <Card style={{ ...styles.card, width: "40vw", backgroundColor: isStaff ? colors.primary100 : colors.secondary50 }}>
+    <Card style={{ ...styles.card, width: "40vw", backgroundColor: isStaff ? colors.active.shade100 : colors.secondary50 }}>
       <h4 style={styles.title}>
         Login as {isStaff ? "Staff" : "Admin"}
       </h4>
@@ -163,16 +173,22 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
         {isSubmitting ? "Signing in..." : "Sign in"}
       </Button>
 
-      {error && (
-        <p style={{ marginTop: 12, color: colors.red200 }}>
-          {error}
-        </p>
-      )}
+      <Toast
+        message={toastMessage}
+        isVisible={!!toastMessage}
+        onClose={() => setToastMessage("")}
+      />
 
       {/* Footer */}
       <div style={styles.footer}>
-        <p style={styles.footerText} onClick={showHelpPopup}>
-          New to docodile? <strong>Book Demo</strong>
+        <p style={styles.footerText}>
+          New to docodile?{" "}
+          <strong
+            style={{ cursor: "pointer" }}
+            onClick={() => window.open("https://calendar.app.google/uQskDY6DM4F8q8Kd9", "_blank")}
+          >
+            Book Demo
+          </strong>
         </p>
 
         <p style={styles.footerText} onClick={showHelpPopup}>
@@ -183,7 +199,7 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
       {showPopup && (
         <div style={{
           ...styles.supportPopup,
-          backgroundColor: isStaff ? colors.primary700 : colors.secondary700,
+          backgroundColor: isStaff ? colors.active.shade700 : colors.secondary700,
           color: colors.neutral100,
         }}>
           Contact Docodile Support Team

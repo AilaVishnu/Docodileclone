@@ -3,7 +3,7 @@ import { colors, radii, fonts } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   card: {
-    border: `1px dashed ${colors.blindBlack}`,
+    border: `1px dashed ${colors.neutral900}`,
     borderRadius: radii.primary,
     padding: 24,
     backgroundColor: "transparent",
@@ -15,14 +15,14 @@ export const styles: Record<string, CSSProperties> = {
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.h3,
     fontWeight: fonts.weight.medium,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     margin: "0 0 8px 0",
   },
 
   description: {
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.h5,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     opacity: 0.7,
     margin: 0,
     lineHeight: 1.4,

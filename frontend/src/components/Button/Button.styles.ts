@@ -16,28 +16,35 @@ export const styles: Record<string, CSSProperties> = {
     cursor: "pointer",
     outline: "none",
     transition: "background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease",
+    // Pill buttons should never wrap their label — if content is too long for
+    // the container, button will overflow visibly (fix container) rather than
+    // silently break onto two lines.
+    whiteSpace: "nowrap",
+    flexShrink: 0,
   },
 
+  // Button text uses STATIC control sizes (fonts.control.*) so proportions
+  // don't drift at larger viewports. See theme.ts `fonts.control` comment.
   smIcon: {
-    fontSize: fonts.size.m,
+    fontSize: fonts.control.md,
     height: 40,
     padding: spacing.xs
   },
 
   mdIcon: {
-    fontSize: fonts.size.l,
-    height: 56,
+    fontSize: fonts.control.md,
+    height: 42,
     padding: spacing.xs
   },
 
   sm: {
-    fontSize: fonts.size.m,
+    fontSize: fonts.control.md,
     height: 40
   },
 
   md: {
-    fontSize: fonts.size.l,
-    height: 56,
+    fontSize: fonts.control.md,
+    height: 42,
   },
 };
 
@@ -79,52 +86,53 @@ export const variants = {
 
   primary: {
     default: {
-      backgroundColor: colors.primary700,
-      borderColor: colors.primary700,
+      backgroundColor: colors.active.shade700,
+      borderColor: colors.active.shade700,
       color: colors.neutral100,
     },
     hover: {
-      backgroundColor: colors.primary800,
-      borderColor: colors.primary800,
+      backgroundColor: colors.active.shade800,
+      borderColor: colors.active.shade800,
       color: colors.neutral100,
     },
     disabled: {
-      backgroundColor: colors.primary300,
-      borderColor: colors.primary300,
+      backgroundColor: colors.active.shade300,
+      borderColor: colors.active.shade300,
       color: colors.neutral100,
     },
   },
 
   primaryLight: {
     default: {
-      borderColor: colors.primary600,
-      color: colors.primary600,
+      borderColor: colors.active.shade600,
+      color: colors.active.shade600,
       backgroundColor: "transparent",
     },
     hover: {
       backgroundColor: colors.neutralAlphaBlack,
-      borderColor: colors.primary700,
-      color: colors.primary700,
+      borderColor: colors.active.shade700,
+      color: colors.active.shade700,
     },
     disabled: {
-      borderColor: colors.primary400,
-      color: colors.primary400,
+      borderColor: colors.active.shade400,
+      color: colors.active.shade400,
     },
   },
 
   secondary: {
     default: {
-      backgroundColor: colors.secondary700,
-      borderColor: colors.secondary700,
-      color: colors.neutral100,
-    },
-    hover: {
       backgroundColor: colors.secondary800,
       borderColor: colors.secondary800,
       color: colors.neutral100,
     },
+    hover: {
+      backgroundColor: colors.secondary700,
+      borderColor: colors.secondary700,
+      color: colors.neutral100,
+    },
     disabled: {
       backgroundColor: colors.secondary300,
+      borderColor: colors.secondary300,
       color: colors.neutral100,
     },
   },
@@ -143,6 +151,23 @@ export const variants = {
     disabled: {
       borderColor: colors.secondary400,
       color: colors.secondary400,
+    },
+  },
+
+  dangerLight: {
+    default: {
+      borderColor: colors.red200,
+      color: colors.red200,
+      backgroundColor: "transparent",
+    },
+    hover: {
+      backgroundColor: colors.redAlpha10,
+      borderColor: colors.red200,
+      color: colors.red200,
+    },
+    disabled: {
+      borderColor: colors.red100,
+      color: colors.red100,
     },
   },
 };
