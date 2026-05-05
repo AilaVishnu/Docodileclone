@@ -206,60 +206,44 @@ export function SessionBar({
   return (
     <>
     <div style={{ ...styles.bar, ...styles.barIdle }}>
-      <div style={styles.left}>
-        <span
-          style={{
-            ...styles.timer,
-            // Sage when paused (frozen). Cream otherwise — bar stays dark
-            // in every state so the timer reads cream against it.
-            color: paused ? colors.secondary400 : colors.primary100,
-          }}
-        >
-          {formatTimer(seconds)}
-        </span>
-        {!running && !paused && !ended && (
-          <button type="button" style={styles.startBtn} onClick={handleStart} aria-label="Start session">
-            <PlayCircleIcon style={styles.startIcon} width={24} height={24} />
-            <span>Start Session</span>
-          </button>
-        )}
-        {ended && (
-          // Once a session is ended it stays ended for this visit — the
-          // pill is purely informational so the doctor can't accidentally
-          // restart the timer and overwrite the recorded duration.
-          <span style={styles.endedPill} aria-label="Session ended">
-            Session Ended
-          </span>
-        )}
-      </div>
+      <span
+        style={{
+          ...styles.timer,
+          // Sage when paused (frozen). Cream otherwise — bar stays dark
+          // in every state so the timer reads cream against it.
+          color: paused ? colors.secondary400 : colors.primary100,
+        }}
+      >
+        {formatTimer(seconds)}
+      </span>
 
       {ended ? (
-        // Post-end view — print / download / share icons on the right so
-        // the doctor can act on the just-ended prescription. The
-        // "Session Ended" pill is rendered up in the left group (next to
-        // the timer) so it occupies the same slot as Start Session.
-        <div style={styles.idleActions}>
-          <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
-            <PrinterIcon width={24} height={24} />
-          </button>
-          <button type="button" style={styles.iconBtn} onClick={onDownload} aria-label="Download">
-            <DownloadIcon width={24} height={24} />
-          </button>
-          <button type="button" style={styles.iconBtn} onClick={onShare} aria-label="Share">
-            <ShareIcon width={24} height={24} />
-          </button>
-        </div>
+        // Centered "Session Ended" text + print / download / share icons on the right.
+        <>
+          <span style={styles.endedCenter} aria-label="Session ended">
+            Session Ended
+          </span>
+          <div style={styles.idleActions}>
+            <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
+              <PrinterIcon width={24} height={24} />
+            </button>
+            <button type="button" style={styles.iconBtn} onClick={onDownload} aria-label="Download">
+              <DownloadIcon width={24} height={24} />
+            </button>
+            <button type="button" style={styles.iconBtn} onClick={onShare} aria-label="Share">
+              <ShareIcon width={24} height={24} />
+            </button>
+          </div>
+        </>
       ) : running || paused ? (
         // Paused is also "session in progress" from the controls'
-        // perspective — Pause/Resume + Restart + End. Without paused
-        // here the bar would fall back to the idle Start button.
+        // perspective — Pause/Resume + Restart + End.
         <div style={styles.runningActions}>
           <button
             type="button"
             style={{
               ...styles.pauseBtn,
-              // Pause = yellow (Figma 2036:5244); Resume (within paused
-              // running) = sage green (Figma 2036:5264).
+              // Pause = yellow; Resume = sage green.
               backgroundColor: paused ? colors.secondary400 : colors.yellow200,
             }}
             onClick={togglePause}
@@ -285,17 +269,11 @@ export function SessionBar({
           </button>
         </div>
       ) : (
-        <div style={styles.idleActions}>
-          <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
-            <PrinterIcon width={24} height={24} />
-          </button>
-          <button type="button" style={styles.iconBtn} onClick={onDownload} aria-label="Download">
-            <DownloadIcon width={24} height={24} />
-          </button>
-          <button type="button" style={styles.iconBtn} onClick={onShare} aria-label="Share">
-            <ShareIcon width={24} height={24} />
-          </button>
-        </div>
+        // Idle — only the green Start Session button, no other icons.
+        <button type="button" style={styles.startBtn} onClick={handleStart} aria-label="Start session">
+          <PlayCircleIcon style={styles.startIcon} width={24} height={24} />
+          <span>Start Session</span>
+        </button>
       )}
     </div>
 
@@ -360,6 +338,7 @@ const styles: Record<string, CSSProperties> = {
     padding: `${spacing.xs} ${spacing.s}`,
     display: "flex",
     alignItems: "center",
+    justifyContent: "space-between",
     gap: spacing.s,
     boxShadow: "4px 4px 24px rgba(0, 0, 0, 0.1)",
     zIndex: 1100,
@@ -369,12 +348,6 @@ const styles: Record<string, CSSProperties> = {
   // group changes (Start / Pause-Resume / Session Ended).
   barIdle: {
     backgroundColor: colors.neutral900,
-  },
-  left: {
-    display: "flex",
-    alignItems: "center",
-    gap: spacing.xs,
-    flex: 1,
   },
   timer: {
     width: 84,
@@ -428,17 +401,18 @@ const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     gap: spacing["2xs"],
   },
-  // Yellow Pause pill — Figma 2036:5244
+  // Yellow Pause / sage Resume pill — sized to match the green Start Session
+  // pill so the bar's right-side control doesn't change height between states.
   pauseBtn: {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    height: 32,
-    padding: `${spacing["2xs"]} ${spacing.xs}`,
+    height: 40,
+    padding: `${spacing["2xs"]} ${spacing.s}`,
     borderRadius: radii.full,
     border: "none",
     backgroundColor: colors.yellow200,
-    color: colors.neutral100,
+    color: colors.neutral900,
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.m,
     lineHeight: fonts.lineHeight.m,
@@ -458,22 +432,15 @@ const styles: Record<string, CSSProperties> = {
     color: colors.neutral900,
     cursor: "pointer",
   },
-  // Figma node 2036:5328 — "Session Ended" disabled-look pill. Light grey
-  // bg + medium grey text, pill-shaped. Clickable as a dismiss target.
-  endedPill: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    height: 32,
-    padding: `${spacing["2xs"]} ${spacing.s}`,
-    borderRadius: radii.full,
-    border: "none",
-    backgroundColor: colors.neutral200,
-    color: colors.neutral500,
+  // Centered "Session Ended" label — grey text, no pill bg, sits in the
+  // middle of the bar between the timer and the action icons.
+  endedCenter: {
+    flex: 1,
+    textAlign: "center" as const,
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.m,
     lineHeight: fonts.lineHeight.m,
-    cursor: "default",
+    color: colors.neutral500,
     whiteSpace: "nowrap" as const,
   },
   // Red square Stop — Figma 2036:5240

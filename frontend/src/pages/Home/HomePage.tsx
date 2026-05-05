@@ -126,12 +126,13 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       />
       <div style={styles.contentArea}>
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-          <TopNav 
-            onBuildClinic={onViewClinic} 
+          <TopNav
+            onBuildClinic={onViewClinic}
             onViewAllClinics={onViewAllClinics}
-            onLogout={onLogout} 
+            onLogout={onLogout}
             onNewAppointment={handleNewAppointment}
             isBooking={isBooking}
+            onNavigate={setActiveTab}
           />
           <main style={styles.mainContent}>
             {renderContent()}
