@@ -40,6 +40,11 @@ import { colors } from "../../styles/theme";
 import { PrescriptionQueue } from "./PrescriptionQueue";
 import { Patient } from "../../hooks/usePatients";
 import { SessionBar } from "../../components/SessionBar/SessionBar";
+import {
+  recordActiveSession,
+  clearActiveSession,
+  consumePendingSessionNav,
+} from "../../components/TopNav/SessionTrayButton";
 import { useVisits } from "../../hooks/useVisits";
 import { createVisit, updateVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
 import { markStarted, unmarkStarted } from "../../utils/sessionStarted";
@@ -439,6 +444,16 @@ export function PrescriptionPage() {
   // Start Session / End Session actions can update the appointment's
   // backend status without bouncing back to the queue.
   const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(null);
+
+  // If the doctor clicked an entry in the header session-tray, route them
+  // straight back to that patient's prescription form on mount.
+  React.useEffect(() => {
+    const pending = consumePendingSessionNav();
+    if (pending) {
+      setSelectedPatient(pending.patient);
+      setSelectedAppointmentId(pending.appointmentId);
+    }
+  }, []);
   // Visits for this patient. `useVisits(null)` returns []; switching to a
   // patient triggers the fetch.
   const { visits, loading: visitsLoading, loadedFor: visitsLoadedFor, refetch: refetchVisits } = useVisits(selectedPatientId);
@@ -914,6 +929,15 @@ export function PrescriptionPage() {
 
   const handleSessionStart = () => {
     if (selectedPatient) markStarted(selectedPatient.id);
+    // Surface this session in the header tray so the doctor can navigate
+    // back to it from any other screen until the session ends.
+    if (activeVisit && selectedPatient) {
+      recordActiveSession({
+        visitId: activeVisit.id,
+        patient: selectedPatient,
+        appointmentId: selectedAppointmentId ?? null,
+      });
+    }
     // Persist the session-start time on the visit row so other devices
     // see when this prescription session began.
     if (activeVisit) {
@@ -927,6 +951,8 @@ export function PrescriptionPage() {
 
   const handleSessionEnd = (totalSeconds: number) => {
     if (selectedPatient) unmarkStarted(selectedPatient.id);
+    // Drop this session from the header tray.
+    if (activeVisit) clearActiveSession(activeVisit.id);
     // Persist the locked-in duration on the visit so reopening the
     // prescription on any device shows the same final time.
     if (activeVisit) {

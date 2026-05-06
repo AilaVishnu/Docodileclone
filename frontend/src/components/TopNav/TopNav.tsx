@@ -5,6 +5,8 @@ import { MessageIcon, BellIcon } from '../../iconsUtil';
 import { StaffIllustration } from '../AddStaffModal/StaffIllustration';
 import { ReactComponent as SearchIcon } from '../../assets/search.svg';
 import { ReactComponent as PlusIcon } from '../../assets/Plus.svg';
+import { SessionTrayButton } from './SessionTrayButton';
+import type { NavTab } from '../SideNav';
 
 type TopNavProps = {
   onBuildClinic?: () => void;
@@ -12,9 +14,12 @@ type TopNavProps = {
   onLogout?: () => void;
   onNewAppointment?: () => void;
   isBooking?: boolean;
+  // Switches the active home tab. Passed from HomePage so the SessionTray
+  // can route the doctor back to the Prescription form on click.
+  onNavigate?: (tab: NavTab) => void;
 };
 
-export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, isBooking }: TopNavProps) {
+export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, isBooking, onNavigate }: TopNavProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -234,6 +239,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
         )}
 
         <div style={styles.iconGroup}>
+          {onNavigate && <SessionTrayButton onNavigate={onNavigate} />}
           <HoverIconButton>
             <MessageIcon />
           </HoverIconButton>
