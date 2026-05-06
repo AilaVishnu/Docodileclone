@@ -102,7 +102,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       case "Prescription":
         return <PrescriptionView />;
       case "Patient Files":
-        return <PatientFilesView />;
+        return <PatientFilesView onNavigate={setActiveTab} />;
       case "Design System":
         return <DesignSystemPage />;
       default:

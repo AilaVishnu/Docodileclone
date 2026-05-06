@@ -75,16 +75,18 @@ export function HomeView() {
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.greeting}>
-        Hello, {name} <span aria-hidden>👋</span>
-      </h1>
+      <div style={styles.topSection}>
+        <h1 style={styles.greeting}>
+          Hello, {name} <span aria-hidden>👋</span>
+        </h1>
 
-      <div style={styles.mainGrid}>
-        <div style={styles.memoSlot}>
-          <MemoBoard />
-        </div>
-        <div style={styles.calendarSlot}>
-          <MyHoursCalendar />
+        <div style={styles.mainGrid}>
+          <div style={styles.memoSlot}>
+            <MemoBoard />
+          </div>
+          <div style={styles.calendarSlot}>
+            <MyHoursCalendar />
+          </div>
         </div>
       </div>
 
@@ -236,12 +238,20 @@ const SCREEN_HEIGHT_PCT = ((249.77 - 14.97) / 340) * 100;
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
+    // Top section flows from the top, desk is absolutely pinned to the
+    // bottom — the visible gap between them becomes the responsive area.
+    // overflow: hidden prevents the page from scrolling when the viewport
+    // is shorter than the combined height.
+    position: "relative",
+    width: "100%",
+    flex: 1,
+    height: "100%",
+    overflow: "hidden",
+  },
+  topSection: {
     display: "flex",
     flexDirection: "column",
     gap: spacing.xl,
-    width: "100%",
-    flex: 1,
-    minHeight: "100%",
   },
 
   greeting: {
@@ -268,22 +278,21 @@ const styles: Record<string, React.CSSProperties> = {
     paddingTop: spacing.xs,
   },
 
-  // ─── Full-width desk band sticky at the bottom of the viewport ──────────────
+  // ─── Full-width desk band absolutely pinned to the bottom of the viewport ───
   desk: {
-    // Bleed past the main content's 40px horizontal padding (and 24px bottom)
-    // so the desk runs edge-to-edge and the front strip sits flush against the dashboard bottom.
-    marginLeft: -40,
-    marginRight: -40,
-    marginBottom: -24,
-    marginTop: "auto",
+    // Absolute positioning keeps the desk locked to the bottom even when the
+    // top section's natural height exceeds the viewport — the desk simply
+    // overlaps from below. The negative left/right/bottom values bleed past
+    // mainContent's 40px horizontal and 24px bottom padding.
+    position: "absolute",
+    left: -40,
+    right: -40,
+    bottom: -24,
     display: "flex",
     flexDirection: "column",
-    position: "sticky",
-    bottom: -24,
-    zIndex: 2,
   },
   deskFront: {
-    height: 112,
+    height: 84,
     backgroundColor: colors.primary400, // #EDCA99
   },
   deskItems: {
