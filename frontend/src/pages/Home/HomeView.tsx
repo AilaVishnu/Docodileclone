@@ -241,11 +241,14 @@ const styles: Record<string, React.CSSProperties> = {
     // Top section flows from the top, desk is absolutely pinned to the
     // bottom — the visible gap between them becomes the responsive area.
     // overflow: hidden prevents the page from scrolling when the viewport
-    // is shorter than the combined height.
+    // is shorter than the combined height. Negative bottom margin lets the
+    // container bleed past mainContent's 24px bottom padding so the desk
+    // strip reaches the actual viewport bottom.
     position: "relative",
     width: "100%",
     flex: 1,
-    height: "100%",
+    height: "calc(100% + 24px)",
+    marginBottom: -24,
     overflow: "hidden",
   },
   topSection: {
@@ -287,7 +290,7 @@ const styles: Record<string, React.CSSProperties> = {
     position: "absolute",
     left: -40,
     right: -40,
-    bottom: -24,
+    bottom: 0,
     display: "flex",
     flexDirection: "column",
   },
