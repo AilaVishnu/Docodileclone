@@ -44,6 +44,7 @@ import {
   recordActiveSession,
   clearActiveSession,
   consumePendingSessionNav,
+  type PendingSessionNav,
 } from "../../components/TopNav/SessionTrayButton";
 import { useVisits } from "../../hooks/useVisits";
 import { createVisit, updateVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
@@ -446,13 +447,21 @@ export function PrescriptionPage() {
   const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(null);
 
   // If the doctor clicked an entry in the header session-tray, route them
-  // straight back to that patient's prescription form on mount.
+  // straight back to that patient's prescription form. Handled both on mount
+  // (component wasn't rendered yet) and via a custom event (already mounted).
   React.useEffect(() => {
     const pending = consumePendingSessionNav();
     if (pending) {
       setSelectedPatient(pending.patient);
       setSelectedAppointmentId(pending.appointmentId);
     }
+    const handler = (e: Event) => {
+      const nav = (e as CustomEvent<PendingSessionNav>).detail;
+      setSelectedPatient(nav.patient);
+      setSelectedAppointmentId(nav.appointmentId);
+    };
+    window.addEventListener("docodile:session-nav", handler);
+    return () => window.removeEventListener("docodile:session-nav", handler);
   }, []);
   // Visits for this patient. `useVisits(null)` returns []; switching to a
   // patient triggers the fetch.

@@ -90,6 +90,7 @@ export type PendingSessionNav = { patient: Patient; appointmentId: string | null
 export function setPendingSessionNav(nav: PendingSessionNav) {
   try {
     localStorage.setItem(PENDING_NAV_KEY, JSON.stringify(nav));
+    window.dispatchEvent(new CustomEvent("docodile:session-nav", { detail: nav }));
   } catch {
     /* ignore */
   }
