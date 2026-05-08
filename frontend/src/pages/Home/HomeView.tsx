@@ -1,8 +1,9 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { colors, fonts, spacing } from "../../styles/theme";
 import { MyHoursCalendar } from "../../components/DoctorSchedule";
 import { MemoBoard } from "../../components/MemoBoard";
 import { AnalogClock } from "../../components/AnalogClock";
+import { API_BASE_URL } from "../../apiConfig";
 
 // ─── Greeting helpers ─────────────────────────────────────────────────────────
 
@@ -35,20 +36,42 @@ function ensureDeskStyles() {
   document.head.appendChild(style);
 }
 
-// ─── Stats (placeholder values, replace with real data when wired up) ─────────
+// ─── Stats (fetched from today's appointment queue) ───────────────────────────
 
-const STATS = {
-  totalAppointments: 13,
-  newPatients: 10,
-  reviews: 2,
-  procedures: 1,
-};
+const EMPTY_STATS = { totalAppointments: 0, newPatients: 0, reviews: 0, procedures: 0 };
+const NON_PROCEDURE_SERVICES = new Set(["Consultation", ""]);
+
+function useTodayStats() {
+  const [stats, setStats] = useState(EMPTY_STATS);
+  useEffect(() => {
+    const token = localStorage.getItem("docodile_token");
+    if (!token) return;
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    fetch(`${API_BASE_URL}/api/tenant/appointments?date=${dateStr}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.ok ? r.json() : [])
+      .then((apts: any[]) => {
+        const active = apts.filter((a) => !["CANCELLED", "NO_SHOW"].includes(a.status));
+        setStats({
+          totalAppointments: active.length,
+          newPatients: active.filter((a) => a.type?.toUpperCase() === "NEW").length,
+          reviews: active.filter((a) => a.type?.toUpperCase() === "REVIEW").length,
+          procedures: active.filter((a) => a.service && !NON_PROCEDURE_SERVICES.has(a.service)).length,
+        });
+      })
+      .catch(() => {/* network error — keep zeros */});
+  }, []);
+  return stats;
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function HomeView() {
   useEffect(() => { ensureDeskStyles(); }, []);
   const name = deriveName();
+  const stats = useTodayStats();
 
   return (
     <div style={styles.container}>
@@ -70,10 +93,10 @@ export function HomeView() {
         <div style={styles.deskItems}>
           <div style={styles.deskLeftGroup}>
             <div style={styles.papersSlot}>
-              <PaperStack count={STATS.totalAppointments} />
+              <PaperStack count={stats.totalAppointments} />
             </div>
             <div style={styles.computerSlot}>
-              <Computer stats={STATS} />
+              <Computer stats={stats} />
             </div>
           </div>
           <div style={styles.clockSlot}>
@@ -134,7 +157,7 @@ function DeskClock() {
 
 // ─── Computer (SVG-based, stats overlaid on the screen) ─────────────────────
 
-type Stats = typeof STATS;
+type Stats = typeof EMPTY_STATS;
 
 function Computer({ stats }: { stats: Stats }) {
   const rows: Array<[string, number]> = [
