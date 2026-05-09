@@ -118,6 +118,7 @@ export function SessionBar({
   // can't be restarted for the visit, so we make sure the click is
   // intentional.
   const [showEndConfirm, setShowEndConfirm] = React.useState(false);
+  const [showRestartConfirm, setShowRestartConfirm] = React.useState(false);
 
   const running = runStartedAtMs != null;
 
@@ -254,7 +255,7 @@ export function SessionBar({
           <button
             type="button"
             style={styles.restartBtn}
-            onClick={handleRestart}
+            onClick={() => setShowRestartConfirm(true)}
             aria-label="Restart session timer"
           >
             <RestartIcon width={18} height={18} />
@@ -312,6 +313,43 @@ export function SessionBar({
               }}
             >
               Yes, end
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {showRestartConfirm && (
+      <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>
+        <div style={confirmStyles.dialog}>
+          <h4 style={confirmStyles.title}>Reset timer?</h4>
+          <p
+            style={{
+              margin: 0,
+              fontSize: fonts.size.s,
+              color: colors.neutral600,
+              textAlign: "center",
+            }}
+          >
+            It will reset the time and will start from the beginning.
+          </p>
+          <div style={confirmStyles.actions}>
+            <Button
+              variant="dangerLight"
+              size="sm"
+              onClick={() => setShowRestartConfirm(false)}
+            >
+              Nope
+            </Button>
+            <Button
+              variant="dark"
+              size="sm"
+              onClick={() => {
+                setShowRestartConfirm(false);
+                handleRestart();
+              }}
+            >
+              Yes, reset
             </Button>
           </div>
         </div>
