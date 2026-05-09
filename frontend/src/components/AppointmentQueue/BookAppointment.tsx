@@ -219,7 +219,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const nameSuggestions: any[] = form.name.trim().length >= 1
     ? allPatients.filter((p) => p.name.toLowerCase().includes(form.name.toLowerCase())).slice(0, 6)
     : [];
-  const phoneSuggestions: any[] = form.phone.replace(/\D/g, "").length >= 3
+  const phoneSuggestions: any[] = form.phone.replace(/\D/g, "").length >= 6
     ? allPatients.filter((p) => (p.phone ?? "").replace(/\D/g, "").includes(form.phone.replace(/\D/g, ""))).slice(0, 6)
     : [];
 

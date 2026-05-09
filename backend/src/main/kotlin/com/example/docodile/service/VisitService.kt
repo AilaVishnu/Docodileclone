@@ -39,9 +39,7 @@ class VisitService(
             listOf(patientId)
         }
 
-        return patientIds
-            .flatMap { pid -> visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAsc(clinicId, pid) }
-            .sortedBy { it.visitDate }
+        return visitRepository.findAllByClinicIdAndPatientIdInOrderByVisitDateAsc(clinicId, patientIds)
             .map { it.toDTO(loadRxRows(it.id)) }
     }
 

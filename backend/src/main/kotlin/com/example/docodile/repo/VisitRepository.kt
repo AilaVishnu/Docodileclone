@@ -10,6 +10,12 @@ import java.util.UUID
 interface VisitRepository : JpaRepository<Visit, UUID> {
     fun findAllByClinicIdAndPatientIdOrderByVisitDateAsc(clinicId: UUID, patientId: UUID): List<Visit>
 
+    @Query("SELECT v FROM Visit v WHERE v.clinic.id = :clinicId AND v.patient.id IN :patientIds ORDER BY v.visitDate ASC")
+    fun findAllByClinicIdAndPatientIdInOrderByVisitDateAsc(
+        @Param("clinicId") clinicId: UUID,
+        @Param("patientIds") patientIds: List<UUID>
+    ): List<Visit>
+
     // Cross-clinic guard: even if a caller knows a visitId, they can only
     // load it if it belongs to their clinic. Mirrors the pattern used by
     // PatientRepository.findAllByClinicId.

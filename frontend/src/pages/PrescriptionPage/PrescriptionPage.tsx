@@ -680,8 +680,8 @@ export function PrescriptionPage() {
         sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
         prescriptions: [],
       };
-      void createVisit(selectedPatientId, draft).then(() => {
-        refetchVisits();
+      void createVisit(selectedPatientId, draft).then(async () => {
+        await refetchVisits();
         // Jump to today's visit tab (it lands at the end after sort).
         if (existingCount > 0) setActiveTab(existingCount);
       });
