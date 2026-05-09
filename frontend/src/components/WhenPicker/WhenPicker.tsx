@@ -1,0 +1,133 @@
+import React, { CSSProperties, useEffect, useRef, useState } from "react";
+import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+
+const OPTIONS = [
+  "After food",
+  "Before food",
+  "With food",
+  "Empty stomach",
+  "At bedtime",
+];
+
+type Props = { value: string; onChange: (v: string) => void };
+
+export function WhenPicker({ value, onChange }: Props) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div ref={wrapRef} style={styles.wrap}>
+      <div
+        role="button"
+        style={styles.trigger}
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span style={{ ...styles.triggerText, ...(value ? { color: colors.neutral900 } : {}) }}>
+          {value || "When"}
+        </span>
+        <span style={{ ...styles.chevron, transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+      </div>
+
+      {open && (
+        <div style={styles.menu} role="listbox">
+          {OPTIONS.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              role="option"
+              aria-selected={value === opt}
+              style={{ ...styles.menuItem, ...(value === opt ? styles.menuItemActive : {}) }}
+              onMouseDown={(e) => { e.preventDefault(); onChange(value === opt ? "" : opt); setOpen(false); }}
+              onMouseEnter={(e) => { if (value !== opt) e.currentTarget.style.backgroundColor = colors.primary100; }}
+              onMouseLeave={(e) => { if (value !== opt) e.currentTarget.style.backgroundColor = "transparent"; }}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const styles: Record<string, CSSProperties> = {
+  wrap: {
+    position: "relative",
+    minWidth: 0,
+    width: "100%",
+  },
+  trigger: {
+    display: "flex",
+    alignItems: "center",
+    height: 28,
+    border: `${strokes.xs} solid ${colors.primary300}`,
+    borderRadius: radii.m,
+    overflow: "hidden",
+    cursor: "pointer",
+    backgroundColor: colors.neutral100,
+    padding: `0 ${spacing["2xs"]}`,
+    gap: spacing["3xs"],
+  },
+  triggerText: {
+    flex: 1,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    fontFamily: fonts.family.primary,
+    color: colors.alphaBlack2,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap" as const,
+    minWidth: 0,
+  },
+  chevron: {
+    flexShrink: 0,
+    fontSize: 12,
+    color: colors.neutral700,
+    transition: "transform 0.15s ease",
+    lineHeight: 1,
+  },
+  menu: {
+    position: "absolute" as const,
+    top: "calc(100% + 4px)",
+    left: 0,
+    minWidth: 200,
+    backgroundColor: colors.neutral100,
+    border: `${strokes.xs} solid ${colors.primary300}`,
+    borderRadius: radii.m,
+    padding: spacing["2xs"],
+    boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+    zIndex: 1200,
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+  },
+  menuItem: {
+    width: "100%",
+    textAlign: "left" as const,
+    padding: `${spacing.xs} ${spacing.s}`,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    fontFamily: fonts.family.primary,
+    color: colors.neutral900,
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    borderRadius: radii.xs,
+    transition: "background-color 0.1s ease",
+  },
+  menuItemActive: {
+    backgroundColor: colors.primary100,
+    color: colors.primary700,
+  },
+};

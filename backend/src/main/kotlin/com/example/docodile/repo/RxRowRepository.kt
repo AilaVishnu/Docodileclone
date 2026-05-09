@@ -1,6 +1,7 @@
 package com.example.docodile.repo
 
 import com.example.docodile.domain.RxRow
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
@@ -16,4 +17,13 @@ interface RxRowRepository : JpaRepository<RxRow, UUID> {
     @Modifying
     @Query("DELETE FROM RxRow r WHERE r.visit.id = :visitId")
     fun deleteByVisitId(@Param("visitId") visitId: UUID): Int
+
+    @Query("""
+        SELECT r.medicine FROM RxRow r
+        WHERE r.visit.patient.clinic.id = :clinicId
+          AND r.medicine IS NOT NULL AND r.medicine <> ''
+        GROUP BY r.medicine
+        ORDER BY COUNT(r.medicine) DESC
+    """)
+    fun findFrequentMedicines(@Param("clinicId") clinicId: UUID, pageable: Pageable): List<String>
 }

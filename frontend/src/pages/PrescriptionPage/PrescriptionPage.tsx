@@ -34,6 +34,11 @@ import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 import { Toast } from "../../components/Toast";
 import { Autocomplete } from "../../components/Autocomplete/Autocomplete";
+import { MedicineAutocomplete } from "../../components/MedicineAutocomplete/MedicineAutocomplete";
+import { FrequencyPicker } from "../../components/FrequencyPicker/FrequencyPicker";
+import { WhenPicker } from "../../components/WhenPicker/WhenPicker";
+import { DosagePicker } from "../../components/DosagePicker/DosagePicker";
+import { DurationPicker } from "../../components/DurationPicker/DurationPicker";
 import { AutocompleteTags } from "../../components/Autocomplete/AutocompleteTags";
 import { useDoctors } from "../../hooks/useDoctors";
 import { colors } from "../../styles/theme";
@@ -237,42 +242,52 @@ const buildVitalState = (visit: VisitDTO | undefined): Record<string, VitalCellS
   return state;
 };
 
+// A secondary dose line added via the "Then" plus icon on a medicine row.
+type ThenRow = { dosage: string; whenToTake: string; frequency: string; duration: string; notes: string };
+const blankThenRow = (): ThenRow => ({ dosage: "", whenToTake: "", frequency: "", duration: "", notes: "" });
+
 // Draft Rx row in component state — `id` may be null for fresh rows that
 // haven't been saved yet; otherwise carries the server-assigned UUID.
 type RxRowDraft = {
   id: string | null;
   position: number;
   medicine: string;
+  genericName: string;
   medicineNote: string;
   dosage: string;
   whenToTake: string;
   frequency: string;
   duration: string;
   notes: string;
+  thenRows: ThenRow[];
 };
 
 const blankRxRow = (position: number): RxRowDraft => ({
   id: null,
   position,
   medicine: "",
+  genericName: "",
   medicineNote: "",
   dosage: "",
   whenToTake: "",
   frequency: "",
   duration: "",
   notes: "",
+  thenRows: [],
 });
 
 const fromRxDTO = (dto: RxRowDTO): RxRowDraft => ({
   id: dto.id ?? null,
   position: dto.position,
   medicine: dto.medicine ?? "",
+  genericName: "",
   medicineNote: dto.medicineNote ?? "",
   dosage: dto.dosage ?? "",
   whenToTake: dto.whenToTake ?? "",
   frequency: dto.frequency ?? "",
   duration: dto.duration ?? "",
   notes: dto.notes ?? "",
+  thenRows: [],
 });
 
 // Format a yyyy-MM-dd date as "DD MMM" (or "Today" if it's today's date).
@@ -472,6 +487,7 @@ export function PrescriptionPage() {
   const [reviewDate, setReviewDate] = React.useState<Date | null>(null);
   const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
   const [rxRows, setRxRows] = React.useState<RxRowDraft[]>([]);
+  const [rxInteractions, setRxInteractions] = React.useState<Array<{ drug: string; interactsWith: string; comment: string }>>([]);
   const [reviewDays, setReviewDays] = React.useState<string>("");
   // Vital values + units (units are clickable to toggle between alternates
   // like cm↔in, kg↔lb, °C↔°F, mmHg↔kPa).
@@ -552,11 +568,36 @@ export function PrescriptionPage() {
     setReviewDate(activeVisit?.reviewDate ? new Date(activeVisit.reviewDate) : null);
     setReviewDays(activeVisit?.reviewDays != null ? String(activeVisit.reviewDays) : "");
     setReviewNotesValue(activeVisit?.reviewNotes ?? "");
-    setRxRows(
+
+    // Build the new rows first so we can also resolve genericNames against
+    // the same list — if we called setRxRows and then read rxRows in a
+    // separate effect the second effect would still see the old state.
+    const newRows =
       activeVisit?.prescriptions && activeVisit.prescriptions.length > 0
         ? activeVisit.prescriptions.map(fromRxDTO)
-        : Array.from({ length: 5 }, (_, i) => blankRxRow(i + 1))
-    );
+        : Array.from({ length: 5 }, (_, i) => blankRxRow(i + 1));
+    setRxRows(newRows);
+
+    // Resolve genericName for every row that has a medicine but no cached
+    // generic name (all rows on first load since fromRxDTO sets it to "").
+    const toResolve = newRows
+      .map((r, i) => ({ row: r, i }))
+      .filter(({ row }) => row.medicine.trim());
+    if (toResolve.length > 0) {
+      const token = localStorage.getItem("docodile_token") ?? "";
+      toResolve.forEach(({ row, i }) => {
+        fetch(`${API_BASE_URL}/api/medicines/search?q=${encodeURIComponent(row.medicine)}&limit=1`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((r) => r.ok ? r.json() : [])
+          .then((data: Array<{ genericName?: string; generic_name?: string }>) => {
+            const gn = data[0]?.genericName ?? data[0]?.generic_name ?? "Unknown";
+            setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, genericName: gn } : r));
+          })
+          .catch(() => {});
+      });
+    }
+
     setShowReviewDatePicker(false);
     setVitalState(buildVitalState(activeVisit));
     setHistoryValues({
@@ -572,12 +613,42 @@ export function PrescriptionPage() {
     setPrivateNotesValue(activeVisit?.privateNotes ?? "");
     setReferDoctorId(activeVisit?.referDoctorId ?? null);
     setReferOpen(false);
-    // Dep is the visit id — using the activeVisit object would refire
-    // this on every refetch (auto-save returns a new object even when
-    // the data is unchanged), which would clobber whatever the doctor
-    // typed in the last 10s.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, activeVisit?.id]);
+
+  // Debounced auto-save whenever rxRows changes while a session is active.
+  // Pickers (WhenPicker, FrequencyPicker) are div/button elements — they
+  // never fire a blur that bubbles to the form wrapper, so relying solely
+  // on handleFormBlur would silently drop every picker selection.
+  // The ref holds the latest save function so the closure is never stale.
+  const latestSaveRef = React.useRef<() => void>(() => {});
+  latestSaveRef.current = () => {
+    if (formActive && activeVisit) void handleSave({ silent: true });
+  };
+  React.useEffect(() => {
+    if (!formActive) return;
+    const timer = setTimeout(() => latestSaveRef.current(), 1500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rxRows]);
+
+  // Check drug interactions whenever the Rx medicine list changes.
+  // Sends saved medicine names to the backend which resolves generics itself —
+  // so warnings persist after page reload without needing to re-select.
+  React.useEffect(() => {
+    const medicines = rxRows.map((r) => r.medicine).filter(Boolean);
+    if (medicines.length < 2) { setRxInteractions([]); return; }
+    const timer = setTimeout(() => {
+      const token = localStorage.getItem("docodile_token") ?? "";
+      fetch(`${API_BASE_URL}/api/medicines/interactions?medicines=${encodeURIComponent(medicines.join(","))}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((r) => r.ok ? r.json() : [])
+        .then(setRxInteractions)
+        .catch(() => setRxInteractions([]));
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [rxRows]);
 
   // Auto-create today's draft when the patient has zero visits, so the
   // form always has a row to write into. The ref-guard keeps React
@@ -752,6 +823,13 @@ export function PrescriptionPage() {
     // Reset so selecting the same file twice still triggers onChange.
     e.target.value = "";
   };
+  const addThenRow = (rowIdx: number) =>
+    setRxRows((prev) => prev.map((r, ri) => ri !== rowIdx ? r : { ...r, thenRows: [...r.thenRows, blankThenRow()] }));
+  const removeThenRow = (rowIdx: number, thenIdx: number) =>
+    setRxRows((prev) => prev.map((r, ri) => ri !== rowIdx ? r : { ...r, thenRows: r.thenRows.filter((_, ti) => ti !== thenIdx) }));
+  const updateThenField = (rowIdx: number, thenIdx: number, key: keyof ThenRow, value: string) =>
+    setRxRows((prev) => prev.map((r, ri) => ri !== rowIdx ? r : { ...r, thenRows: r.thenRows.map((t, ti) => ti !== thenIdx ? t : { ...t, [key]: value }) }));
+
   // Display rows = backend rows (empty for now) + client-side uploads.
   const displayRows: ListRow[] = listViewConfig
     ? [...listViewConfig.rows, ...(uploadedItems[activeAction] ?? [])]
@@ -890,11 +968,13 @@ export function PrescriptionPage() {
   // blur, so one handler covers every input / textarea / dropdown.
   // No interval, no debounce: each save corresponds to a deliberate
   // hand-off between fields.
-  const handleFormBlur = React.useCallback(() => {
+  // Not memoised — useCallback with [formActive, activeVisit?.id] would
+  // capture a stale handleSave whose buildSaveRequest closes over the rxRows
+  // from when the session started, dropping every edit made after that.
+  const handleFormBlur = () => {
     if (!formActive || !activeVisit) return;
     void handleSave({ silent: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formActive, activeVisit?.id]);
+  };
 
   // Save on every Pause / Resume — the doctor's edits up to that moment
   // get persisted even if they walk away with the session paused.
@@ -1559,70 +1639,87 @@ export function PrescriptionPage() {
                   </div>
                   {openSections.rx && (
                     <div style={styles.rxTable}>
+                      {rxInteractions.length > 0 && (
+                        <div style={styles.rxInteractionBanner}>
+                          {rxInteractions.map((w, i) => (
+                            <div key={i} style={styles.rxInteractionRow}>
+                              <span style={styles.rxInteractionIcon}>⚠</span>
+                              <span style={styles.rxInteractionText}>
+                                <strong style={{ textTransform: "capitalize" }}>{w.drug}</strong>
+                                {" + "}
+                                <strong style={{ textTransform: "capitalize" }}>{w.interactsWith}</strong>
+                                {w.comment ? `: ${w.comment}` : ""}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       <div style={styles.rxHeaderRow}>
                         {RX_COLUMNS.map((c) => (
-                          <span
-                            key={c}
-                            style={{ textAlign: c === "Medicine" ? "left" : "center" }}
-                          >
-                            {c}
-                          </span>
+                          <span key={c} style={{ textAlign: c === "Medicine" ? "left" : "center" }}>{c}</span>
                         ))}
+                        <span /> {/* delete column — no header label */}
                       </div>
                       {rxRows.map((row, i) => {
                         const updateField = (key: keyof RxRowDraft, value: string) =>
                           setRxRows((prev) => prev.map((r, ix) => (ix === i ? { ...r, [key]: value } : r)));
                         return (
-                          <div key={row.id ?? `draft-${i}`} style={styles.rxRow}>
-                            <span style={styles.rxSerial}>{i + 1}</span>
-                            <div style={styles.rxMedicineCell}>
-                              <input
-                                style={styles.rxMedicineInput}
-                                placeholder="Medicine"
-                                value={row.medicine}
-                                onChange={(e) => updateField("medicine", e.target.value)}
-                              />
-                              <div style={styles.rxMedicineNote}>
-                                <PenIcon width={12} height={12} />
-                                <input
-                                  style={styles.rxMedicineNoteInput}
+                          <React.Fragment key={row.id ?? `draft-${i}`}>
+                            <div style={{ ...styles.rxRow, zIndex: rxRows.length + 5 - i }}>
+                              <span style={styles.rxSerial}>{i + 1}</span>
+                              <div style={styles.rxMedicineCell}>
+                                <MedicineAutocomplete
+                                  inputStyle={styles.rxMedicineInput}
                                   placeholder="Medicine"
-                                  value={row.medicineNote}
-                                  onChange={(e) => updateField("medicineNote", e.target.value)}
+                                  value={row.medicine}
+                                  onChange={(v) => setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: v, genericName: "" } : r))}
+                                  onSelect={(name, genericName) => setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: name, genericName } : r))}
                                 />
+                                <div style={styles.rxGenericRow}>
+                                  <span style={styles.rxGenericName}>
+                                    {row.medicine ? (row.genericName || "Unknown") : ""}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    style={styles.rxAddNoteBtn}
+                                    title="Add Then dose"
+                                    onClick={() => addThenRow(i)}
+                                  >
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                                      <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                                    </svg>
+                                  </button>
+                                </div>
                               </div>
+                              <DosagePicker value={row.dosage} onChange={(v) => updateField("dosage", v)} medicineName={row.medicine} genericName={row.genericName} />
+                              <WhenPicker value={row.whenToTake} onChange={(v) => updateField("whenToTake", v)} />
+                              <FrequencyPicker value={row.frequency} onChange={(v) => updateField("frequency", v)} />
+                              <DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} />
+                              <input style={styles.rxCell} placeholder="Notes" value={row.notes} onChange={(e) => updateField("notes", e.target.value)} />
+                              <span /> {/* delete placeholder — main row is not individually deletable */}
                             </div>
-                            <input
-                              style={styles.rxCell}
-                              placeholder="Dosage"
-                              value={row.dosage}
-                              onChange={(e) => updateField("dosage", e.target.value)}
-                            />
-                            <input
-                              style={styles.rxCell}
-                              placeholder="When"
-                              value={row.whenToTake}
-                              onChange={(e) => updateField("whenToTake", e.target.value)}
-                            />
-                            <input
-                              style={styles.rxCell}
-                              placeholder="Frequency"
-                              value={row.frequency}
-                              onChange={(e) => updateField("frequency", e.target.value)}
-                            />
-                            <input
-                              style={styles.rxCell}
-                              placeholder="Duration"
-                              value={row.duration}
-                              onChange={(e) => updateField("duration", e.target.value)}
-                            />
-                            <input
-                              style={styles.rxCell}
-                              placeholder="Notes"
-                              value={row.notes}
-                              onChange={(e) => updateField("notes", e.target.value)}
-                            />
-                          </div>
+
+                            {row.thenRows.map((thenRow, ti) => (
+                              <React.Fragment key={`then-${i}-${ti}`}>
+                                <div style={{ ...styles.rxThenDivider, zIndex: rxRows.length + 5 - i }}>
+                                  <span style={styles.rxThenBadge}>Then</span>
+                                </div>
+                                <div style={{ ...styles.rxThenRow, zIndex: rxRows.length + 5 - i }}>
+                                  <span /> {/* empty # cell */}
+                                  <span /> {/* empty medicine cell */}
+                                  <DosagePicker value={thenRow.dosage} onChange={(v) => updateThenField(i, ti, "dosage", v)} medicineName={row.medicine} genericName={row.genericName} />
+                                  <WhenPicker value={thenRow.whenToTake} onChange={(v) => updateThenField(i, ti, "whenToTake", v)} />
+                                  <FrequencyPicker value={thenRow.frequency} onChange={(v) => updateThenField(i, ti, "frequency", v)} />
+                                  <DurationPicker value={thenRow.duration} onChange={(v) => updateThenField(i, ti, "duration", v)} />
+                                  <input style={styles.rxCell} placeholder="Notes" value={thenRow.notes} onChange={(e) => updateThenField(i, ti, "notes", e.target.value)} />
+                                  <button type="button" style={styles.rxDeleteBtn} onClick={() => removeThenRow(i, ti)} title="Remove this dose line">
+                                    ×
+                                  </button>
+                                </div>
+                              </React.Fragment>
+                            ))}
+                          </React.Fragment>
                         );
                       })}
                       {/* Figma node 2143:10552 — "Add Medicine" footer row (white, with
