@@ -117,6 +117,7 @@ const styles: Record<string, CSSProperties> = {
     minWidth: 0,
     border: "none",
     outline: "none",
+    textAlign: "center" as const,
     backgroundColor: "transparent",
     fontSize: fonts.size.s,
     lineHeight: fonts.lineHeight.s,

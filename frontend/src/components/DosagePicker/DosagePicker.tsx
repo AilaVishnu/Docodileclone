@@ -179,6 +179,7 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: fonts.lineHeight.s,
     fontFamily: fonts.family.primary,
     color: colors.neutral900,
+    textAlign: "center" as const,
   },
   clearBtn: {
     flexShrink: 0,

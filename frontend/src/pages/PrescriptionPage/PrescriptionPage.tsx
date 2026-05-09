@@ -30,6 +30,7 @@ import { ReactComponent as TuningIcon } from "../../assets/icons/tuning.svg";
 import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg";
 import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
+import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
 import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 import { Toast } from "../../components/Toast";
@@ -152,9 +153,6 @@ const TESTS_TAGBOX_STYLE: React.CSSProperties = {
   padding: 0,
   width: "100%",
 };
-
-// Figma node 2057:6381 — Rx table columns. Medicine flex-grows, Notes fills remainder.
-const RX_COLUMNS = ["#", "Medicine", "Dosage", "When", "Frequency", "Duration", "Notes"];
 
 // Unit toggles for clickable vital pills. Clicking a unit swaps to the
 // alternative unit and converts the displayed value. Units without an entry
@@ -823,6 +821,8 @@ export function PrescriptionPage() {
     // Reset so selecting the same file twice still triggers onChange.
     e.target.value = "";
   };
+  const removeRxRow = (rowIdx: number) =>
+    setRxRows((prev) => prev.filter((_, ri) => ri !== rowIdx));
   const addThenRow = (rowIdx: number) =>
     setRxRows((prev) => prev.map((r, ri) => ri !== rowIdx ? r : { ...r, thenRows: [...r.thenRows, blankThenRow()] }));
   const removeThenRow = (rowIdx: number, thenIdx: number) =>
@@ -1655,19 +1655,28 @@ export function PrescriptionPage() {
                         </div>
                       )}
                       <div style={styles.rxHeaderRow}>
-                        {RX_COLUMNS.map((c) => (
-                          <span key={c} style={{ textAlign: c === "Medicine" ? "left" : "center" }}>{c}</span>
-                        ))}
-                        <span /> {/* delete column — no header label */}
+                        <div style={styles.rxHeaderLeft}>
+                          <span style={styles.rxHeaderNum}>#</span>
+                          <span>Medicine</span>
+                        </div>
+                        <div style={styles.rxHeaderRight}>
+                          <span style={styles.rxHeaderCol}>Dosage</span>
+                          <span style={styles.rxHeaderCol}>When</span>
+                          <span style={styles.rxHeaderCol}>Frequency</span>
+                          <span style={styles.rxHeaderCol}>Duration</span>
+                          <span style={{ flex: 1, minWidth: 0, textAlign: "center" as const }}>Notes</span>
+                          <span style={{ width: 28, flexShrink: 0 }} />
+                        </div>
                       </div>
                       {rxRows.map((row, i) => {
                         const updateField = (key: keyof RxRowDraft, value: string) =>
                           setRxRows((prev) => prev.map((r, ix) => (ix === i ? { ...r, [key]: value } : r)));
                         return (
-                          <React.Fragment key={row.id ?? `draft-${i}`}>
-                            <div style={{ ...styles.rxRow, zIndex: rxRows.length + 5 - i }}>
+                          <div key={row.id ?? `draft-${i}`} style={{ ...styles.rxGroup, zIndex: rxRows.length + 5 - i }}>
+                            {/* Left: serial + medicine cell — visually anchors for all tapering rows */}
+                            <div style={styles.rxGroupLeft}>
                               <span style={styles.rxSerial}>{i + 1}</span>
-                              <div style={styles.rxMedicineCell}>
+                              <div style={{ ...styles.rxMedicineCell, flex: 1 }}>
                                 <MedicineAutocomplete
                                   inputStyle={styles.rxMedicineInput}
                                   placeholder="Medicine"
@@ -1682,7 +1691,7 @@ export function PrescriptionPage() {
                                   <button
                                     type="button"
                                     style={styles.rxAddNoteBtn}
-                                    title="Add Then dose"
+                                    title="Add tapering dose"
                                     onClick={() => addThenRow(i)}
                                   >
                                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1692,34 +1701,33 @@ export function PrescriptionPage() {
                                   </button>
                                 </div>
                               </div>
-                              <DosagePicker value={row.dosage} onChange={(v) => updateField("dosage", v)} medicineName={row.medicine} genericName={row.genericName} />
-                              <WhenPicker value={row.whenToTake} onChange={(v) => updateField("whenToTake", v)} />
-                              <FrequencyPicker value={row.frequency} onChange={(v) => updateField("frequency", v)} />
-                              <DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} />
-                              <input style={styles.rxCell} placeholder="Notes" value={row.notes} onChange={(e) => updateField("notes", e.target.value)} />
-                              <span /> {/* delete placeholder — main row is not individually deletable */}
                             </div>
-
-                            {row.thenRows.map((thenRow, ti) => (
-                              <React.Fragment key={`then-${i}-${ti}`}>
-                                <div style={{ ...styles.rxThenDivider, zIndex: rxRows.length + 5 - i }}>
-                                  <span style={styles.rxThenBadge}>Then</span>
-                                </div>
-                                <div style={{ ...styles.rxThenRow, zIndex: rxRows.length + 5 - i }}>
-                                  <span /> {/* empty # cell */}
-                                  <span /> {/* empty medicine cell */}
-                                  <DosagePicker value={thenRow.dosage} onChange={(v) => updateThenField(i, ti, "dosage", v)} medicineName={row.medicine} genericName={row.genericName} />
-                                  <WhenPicker value={thenRow.whenToTake} onChange={(v) => updateThenField(i, ti, "whenToTake", v)} />
-                                  <FrequencyPicker value={thenRow.frequency} onChange={(v) => updateThenField(i, ti, "frequency", v)} />
-                                  <DurationPicker value={thenRow.duration} onChange={(v) => updateThenField(i, ti, "duration", v)} />
-                                  <input style={styles.rxCell} placeholder="Notes" value={thenRow.notes} onChange={(e) => updateThenField(i, ti, "notes", e.target.value)} />
-                                  <button type="button" style={styles.rxDeleteBtn} onClick={() => removeThenRow(i, ti)} title="Remove this dose line">
-                                    ×
+                            {/* Right: stacked tapering rows */}
+                            <div style={styles.rxGroupRight}>
+                              <div style={styles.rxDataRow}>
+                                <div style={styles.rxDataCell}><DosagePicker value={row.dosage} onChange={(v) => updateField("dosage", v)} medicineName={row.medicine} genericName={row.genericName} /></div>
+                                <div style={styles.rxDataCell}><WhenPicker value={row.whenToTake} onChange={(v) => updateField("whenToTake", v)} /></div>
+                                <div style={styles.rxDataCell}><FrequencyPicker value={row.frequency} onChange={(v) => updateField("frequency", v)} /></div>
+                                <div style={styles.rxDataCell}><DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} /></div>
+                                <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={row.notes} onChange={(e) => updateField("notes", e.target.value)} />
+                                <button type="button" style={styles.rxDeleteBtn} onClick={() => removeRxRow(i)} title="Remove medicine">
+                                  <TrashIcon style={{ width: 16, height: 16, opacity: 0.45 }} />
+                                </button>
+                              </div>
+                              {row.thenRows.map((thenRow, ti) => (
+                                <div key={`then-${i}-${ti}`} style={styles.rxDataRow}>
+                                  <div style={styles.rxDataCell}><DosagePicker value={thenRow.dosage} onChange={(v) => updateThenField(i, ti, "dosage", v)} medicineName={row.medicine} genericName={row.genericName} /></div>
+                                  <div style={styles.rxDataCell}><WhenPicker value={thenRow.whenToTake} onChange={(v) => updateThenField(i, ti, "whenToTake", v)} /></div>
+                                  <div style={styles.rxDataCell}><FrequencyPicker value={thenRow.frequency} onChange={(v) => updateThenField(i, ti, "frequency", v)} /></div>
+                                  <div style={styles.rxDataCell}><DurationPicker value={thenRow.duration} onChange={(v) => updateThenField(i, ti, "duration", v)} /></div>
+                                  <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={thenRow.notes} onChange={(e) => updateThenField(i, ti, "notes", e.target.value)} />
+                                  <button type="button" style={styles.rxDeleteBtn} onClick={() => removeThenRow(i, ti)} title="Remove tapering row">
+                                    <TrashIcon style={{ width: 16, height: 16, opacity: 0.45 }} />
                                   </button>
                                 </div>
-                              </React.Fragment>
-                            ))}
-                          </React.Fragment>
+                              ))}
+                            </div>
+                          </div>
                         );
                       })}
                       {/* Figma node 2143:10552 — "Add Medicine" footer row (white, with
