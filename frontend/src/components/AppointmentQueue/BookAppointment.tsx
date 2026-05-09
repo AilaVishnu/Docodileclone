@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { styles } from "./BookAppointment.styles";
-import { colors, fonts, spacing, strokes } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 import { DatePicker } from "./DatePicker";
 import { TimePicker } from "./TimePicker";
 import {
@@ -88,6 +88,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const [selectedDoctorId, setSelectedDoctorId] = useState(
     editingAppointment?.doctorId || initialDoctorId || (doctors.length > 0 ? doctors[0].id : "")
   );
+  const [overridePatientNumber, setOverridePatientNumber] = useState<number | null>(null);
   const currentCounter = parseInt(localStorage.getItem("docodile_patient_counter") || "0", 10);
   const patientMap: Record<string, number> = JSON.parse(
     localStorage.getItem("docodile_patient_map") || "{}"
@@ -97,7 +98,9 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     ? editingPatientNumber
       ? "T" + String(editingPatientNumber).padStart(3, "0")
       : "T---"
-    : "T" + String(currentCounter + 1).padStart(3, "0");
+    : overridePatientNumber
+      ? "T" + String(overridePatientNumber).padStart(3, "0")
+      : "T" + String(currentCounter + 1).padStart(3, "0");
   const [form, setForm] = useState({
     name: editingAppointment?.patientName || "",
     email: editingAppointment?.patientEmail || "",
@@ -128,6 +131,9 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const monthInputRef = React.useRef<HTMLInputElement>(null);
+  const [allPatients, setAllPatients] = useState<any[]>([]);
+  const [showNameSugg, setShowNameSugg] = useState(false);
+  const [showPhoneSugg, setShowPhoneSugg] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const initialRenderRef = React.useRef(true);
   useEffect(() => {
@@ -199,6 +205,49 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     if (today.getDate() < birth.getDate()) months--;
     if (months < 0) { years--; months += 12; }
     return `${years} / ${months}`;
+  };
+
+  // Fetch existing patients for autocomplete suggestions.
+  useEffect(() => {
+    const token = localStorage.getItem("docodile_token") ?? "";
+    fetch(`${API_BASE_URL}/api/patients`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.ok ? r.json() : [])
+      .then(setAllPatients)
+      .catch(() => {});
+  }, []);
+
+  const nameSuggestions: any[] = form.name.trim().length >= 1
+    ? allPatients.filter((p) => p.name.toLowerCase().includes(form.name.toLowerCase())).slice(0, 6)
+    : [];
+  const phoneSuggestions: any[] = form.phone.replace(/\D/g, "").length >= 3
+    ? allPatients.filter((p) => (p.phone ?? "").replace(/\D/g, "").includes(form.phone.replace(/\D/g, ""))).slice(0, 6)
+    : [];
+
+  const fillFromPatient = (p: any) => {
+    const clean = (p.phone ?? "").replace(/\D/g, "").slice(-10);
+    const formattedPhone = clean.length === 10
+      ? `+91 ${clean.substring(0, 5)} ${clean.substring(5)}`
+      : (p.phone ?? "");
+    let newDobDigits = "";
+    if (p.dob) {
+      const parts = String(p.dob).split("-");
+      if (parts.length === 3) newDobDigits = parts[2] + parts[1] + parts[0];
+    }
+    // Look up previously assigned T-number for this patient via their phone.
+    const phoneMap: Record<string, number> = JSON.parse(localStorage.getItem("docodile_patient_phone_map") || "{}");
+    const existingNumber = clean ? phoneMap[clean] ?? null : null;
+    setOverridePatientNumber(existingNumber);
+    setForm((prev) => ({
+      ...prev,
+      name: p.name ?? "",
+      phone: formattedPhone,
+      gender: p.gender ?? prev.gender,
+      dob: newDobDigits ? formatDob(newDobDigits) : prev.dob,
+      age: newDobDigits ? calcAge(newDobDigits) : (p.age ? `${Math.floor(p.age / 12)} / ${p.age % 12}` : prev.age),
+    }));
+    if (newDobDigits) setDobDigits(newDobDigits);
+    setShowNameSugg(false);
+    setShowPhoneSugg(false);
   };
 
   // Pre-fill DOB when editing
@@ -305,14 +354,26 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       if (res.ok) {
         if (!editingAppointment) {
           const prev = parseInt(localStorage.getItem("docodile_patient_counter") || "0", 10);
-          const assigned = prev + 1;
-          localStorage.setItem("docodile_patient_counter", String(assigned));
+          // Reuse the existing patient's T-number if we selected from suggestions.
+          const assigned = overridePatientNumber ?? (prev + 1);
+          if (!overridePatientNumber) {
+            localStorage.setItem("docodile_patient_counter", String(assigned));
+          }
           try {
             const savedApt = await res.clone().json();
             if (savedApt?.id) {
               const map = JSON.parse(localStorage.getItem("docodile_patient_map") || "{}");
               map[savedApt.id] = assigned;
               localStorage.setItem("docodile_patient_map", JSON.stringify(map));
+            }
+            // Persist phone → T-number so future bookings for this patient reuse it.
+            const phoneClean = form.phone.replace(/\D/g, "").slice(-10);
+            if (phoneClean) {
+              const phoneMap = JSON.parse(localStorage.getItem("docodile_patient_phone_map") || "{}");
+              if (!phoneMap[phoneClean]) {
+                phoneMap[phoneClean] = assigned;
+                localStorage.setItem("docodile_patient_phone_map", JSON.stringify(phoneMap));
+              }
             }
           } catch {}
         }
@@ -400,16 +461,35 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
         {/* Patient Details Card */}
         <Card style={{ ...styles.card, ...styles.formCard }}>
-          <div>
+          <div style={{ position: "relative" }}>
             <div style={{ ...styles.iconField, ...(errors.name ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
               <UserHandsIcon style={styles.iconFieldIcon} />
               <input
                 style={styles.iconFieldInput}
                 placeholder="Name"
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(e) => { setForm({ ...form, name: e.target.value }); setShowNameSugg(true); }}
+                onFocus={() => setShowNameSugg(true)}
+                onBlur={() => setTimeout(() => setShowNameSugg(false), 150)}
               />
             </div>
+            {showNameSugg && nameSuggestions.length > 0 && (
+              <div style={patientSuggStyle}>
+                {nameSuggestions.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    style={patientSuggItem}
+                    onMouseDown={() => fillFromPatient(p)}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.primary100; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                  >
+                    <span style={{ fontWeight: 500 }}>{p.name}</span>
+                    <span style={{ color: colors.neutral500, fontSize: fonts.size.xs }}>{p.phone ?? ""}</span>
+                  </button>
+                ))}
+              </div>
+            )}
             {errors.name && (
               <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
                 Please enter patient name
@@ -436,7 +516,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 </div>
               )}
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
             <div style={{ ...styles.iconField, ...(errors.phone ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
               <PhoneIcon style={styles.iconFieldIcon} />
               <input
@@ -445,13 +525,15 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 value={form.phone}
                 onChange={(e) => {
                   const val = e.target.value.replace(/[^0-9+ ]/g, "");
-                  // Extract only digits to check length
                   let digits = val.replace(/\D/g, "");
                   if (digits.startsWith("91") && digits.length > 10) digits = digits.substring(2);
-                  if (digits.length > 10) return; // Block input beyond 10 digits
+                  if (digits.length > 10) return;
                   setForm({ ...form, phone: val });
+                  setShowPhoneSugg(true);
                 }}
+                onFocus={() => setShowPhoneSugg(true)}
                 onBlur={() => {
+                  setTimeout(() => setShowPhoneSugg(false), 150);
                   let clean = form.phone.replace(/\D/g, "");
                   if (clean.startsWith("91") && clean.length > 10) clean = clean.substring(2);
                   clean = clean.substring(0, 10);
@@ -464,6 +546,23 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 }}
               />
             </div>
+            {showPhoneSugg && phoneSuggestions.length > 0 && (
+              <div style={patientSuggStyle}>
+                {phoneSuggestions.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    style={patientSuggItem}
+                    onMouseDown={() => fillFromPatient(p)}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.primary100; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                  >
+                    <span style={{ fontWeight: 500 }}>{p.name}</span>
+                    <span style={{ color: colors.neutral500, fontSize: fonts.size.xs }}>{p.phone ?? ""}</span>
+                  </button>
+                ))}
+              </div>
+            )}
               {errors.phone && (
                 <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
                   Please enter a valid phone number
@@ -853,3 +952,36 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     </div>
   );
 }
+
+const patientSuggStyle: React.CSSProperties = {
+  position: "absolute",
+  top: "100%",
+  left: 0,
+  right: 0,
+  zIndex: 2000,
+  backgroundColor: colors.neutral100,
+  border: `${strokes.xs} solid ${colors.primary300}`,
+  borderRadius: radii.m,
+  boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+  display: "flex",
+  flexDirection: "column",
+  overflow: "hidden",
+  marginTop: 4,
+  padding: spacing["2xs"],
+};
+
+const patientSuggItem: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  padding: `${spacing.xs} ${spacing.s}`,
+  background: "transparent",
+  border: "none",
+  borderRadius: radii.xs,
+  cursor: "pointer",
+  textAlign: "left",
+  gap: spacing.s,
+  fontFamily: fonts.family.primary,
+  fontSize: fonts.size.s,
+  color: colors.neutral900,
+};
