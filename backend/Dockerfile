@@ -1,11 +1,11 @@
 # Stage 1: Build the application
-FROM gradle:8.4-jdk17 AS build
+FROM gradle:8.7-jdk17 AS build
 
 WORKDIR /app
 
 COPY . .
 
-RUN gradle clean build -x test
+RUN ./gradlew clean build -x test
 
 # Stage 2: Run the application
 FROM eclipse-temurin:17-jre-jammy
