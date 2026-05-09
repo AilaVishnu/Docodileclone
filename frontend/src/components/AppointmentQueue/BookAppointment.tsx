@@ -825,7 +825,14 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             </>
           ) : (
             <>
-              <button style={styles.pillButtonSecondary} onClick={() => handleBook("Unpaid")} disabled={submitting}>
+              <button
+                style={{
+                  ...styles.pillButtonSecondary,
+                  ...(form.paymentMethod === "Waive" ? { opacity: 0.38, cursor: "not-allowed" } : {}),
+                }}
+                onClick={() => handleBook("Unpaid")}
+                disabled={submitting || form.paymentMethod === "Waive"}
+              >
                 <PlusIcon style={{ width: "20px", height: "20px" }} />
                 {submitting ? "Booking..." : "Book Now Pay Later"}
               </button>
