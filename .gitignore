@@ -33,6 +33,7 @@ out/
 
 # Spring Boot
 application-local.yml
+application-local.properties
 application-dev.yml
 
 
