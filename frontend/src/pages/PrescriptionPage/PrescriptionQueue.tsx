@@ -4,7 +4,7 @@ import { Patient } from "../../hooks/usePatients";
 import { pickAvatar } from "../../utils/avatar";
 import { Button } from "../../components/Button";
 import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
-import { loadStartedSet } from "../../utils/sessionStarted";
+import { loadStartedSet, getSessionSecondsForPatient } from "../../utils/sessionStarted";
 import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { ReactComponent as RestartIcon } from "../../assets/icons/restart-24.svg";
@@ -39,6 +39,9 @@ type ViewMode = "grid" | "list";
 type PrescriptionQueueProps = {
   onSelect: (patient: Patient, appointmentId: string) => void;
 };
+
+const formatTimer = (s: number) =>
+  `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
 const TAB_ITEMS: { id: StatusFilter; label: string }[] = [
   { id: "all", label: "View all" },
@@ -332,7 +335,7 @@ function PatientCard({
           <CardRow label="Time" value={time} />
           <CardRow
             label="Status"
-            value={<StatusPill status={apt.status} started={started} />}
+            value={<StatusPill status={apt.status} started={started} patientId={apt.patientId} />}
           />
         </div>
         <div style={styles.cardFooter}>
@@ -459,7 +462,7 @@ function PatientListTable({
                   {formatTime(apt.scheduledTime)}
                 </td>
                 <td style={{ ...styles.td, textAlign: "center" }}>
-                  <StatusPill status={apt.status} started={started} />
+                  <StatusPill status={apt.status} started={started} patientId={apt.patientId} />
                 </td>
                 <td style={{ ...styles.td, textAlign: "center" }}>
                   <Button variant="dark" size="sm" onClick={() => onViewPad(apt)}>
@@ -494,10 +497,22 @@ function CardRow({ label, value }: { label: string; value: React.ReactNode }) {
 function StatusPill({
   status,
   started,
+  patientId,
 }: {
   status: string | null;
   started: boolean;
+  patientId: string;
 }) {
+  const [liveSeconds, setLiveSeconds] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (status !== "IN_PROGRESS" || !started || !patientId) return;
+    const tick = () => setLiveSeconds(getSessionSecondsForPatient(patientId));
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [status, started, patientId]);
+
   if (!status) return <>—</>;
   type PillKey = "AT_DOC" | "IN_PROGRESS" | "WAITING" | "COMPLETED";
   const variant: PillKey | null = (() => {
@@ -507,14 +522,19 @@ function StatusPill({
     return null;
   })();
   if (!variant) return <span style={pillStyles.fallback}>{status}</span>;
+  const inProgressLabel = `In Progress${liveSeconds != null ? ` (${formatTimer(liveSeconds)})` : ""}`;
   const META: Record<PillKey, { bg: string; label: string }> = {
     AT_DOC: { bg: colors.neutral100, label: "At Doc" },
-    IN_PROGRESS: { bg: colors.secondary100, label: "In Progress" },
+    IN_PROGRESS: { bg: colors.secondary100, label: inProgressLabel },
     WAITING: { bg: colors.yellow100, label: "Waiting" },
     COMPLETED: { bg: colors.green100, label: "Completed" },
   };
   const { bg, label } = META[variant];
-  return <span style={{ ...pillStyles.base, backgroundColor: bg }}>{label}</span>;
+  return (
+    <span style={{ ...pillStyles.base, backgroundColor: bg, minWidth: variant === "IN_PROGRESS" ? "auto" : 90 }}>
+      {label}
+    </span>
+  );
 }
 
 const pillStyles: Record<string, React.CSSProperties> = {

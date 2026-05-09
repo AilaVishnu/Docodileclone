@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { fonts, colors } from "../../styles/theme";
 import { ReactComponent as DangerTriangleIcon } from "../../assets/icons/danger-triangle.svg";
 import { ReactComponent as CheckCircleIcon } from "../../assets/icons/check-circle.svg";
-import { loadStartedSet } from "../../utils/sessionStarted";
+import { loadStartedSet, getSessionSecondsForPatient } from "../../utils/sessionStarted";
+
+const formatTimer = (s: number) =>
+  `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -81,13 +84,27 @@ type StatusBadgeProps = {
 export function StatusBadge({ status, patientId, onClick }: StatusBadgeProps) {
   const key = status?.toUpperCase();
   const baseCfg = STATUS_CONFIG[key] ?? { bg: colors.neutral200, color: colors.neutral700, label: status };
-  // For IN_PROGRESS, swap the label to "In Progress" once the doctor has
-  // started the session for this patient (Start Session click on the
-  // PrescriptionPage's SessionBar). Until then the pill stays "At Doc".
-  const startedForPatient =
-    key === "IN_PROGRESS" && patientId ? loadStartedSet().has(patientId) : false;
-  const cfg = startedForPatient
-    ? { ...baseCfg, label: "In Progress" }
+
+  const [liveStarted, setLiveStarted] = useState(false);
+  const [liveSeconds, setLiveSeconds] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (key !== "IN_PROGRESS" || !patientId) return;
+    const tick = () => {
+      const started = loadStartedSet().has(patientId);
+      setLiveStarted(started);
+      setLiveSeconds(started ? getSessionSecondsForPatient(patientId) : null);
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [key, patientId]);
+
+  const cfg = liveStarted
+    ? {
+        ...baseCfg,
+        label: `In Progress${liveSeconds != null ? ` (${formatTimer(liveSeconds)})` : ""}`,
+      }
     : baseCfg;
 
   return (
@@ -109,7 +126,7 @@ export function StatusBadge({ status, patientId, onClick }: StatusBadgeProps) {
         cursor: onClick ? "pointer" : "default",
         userSelect: "none",
         whiteSpace: "nowrap",
-        minWidth: "90px",
+        minWidth: liveStarted ? "auto" : "90px",
         textAlign: "center" as const,
       }}
     >
