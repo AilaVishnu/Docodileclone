@@ -28,7 +28,20 @@ class VisitService(
 ) {
     fun listForPatient(patientId: UUID): List<VisitDTO> {
         val clinicId = currentUser.clinicId()
-        return visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAsc(clinicId, patientId)
+
+        // Collect all patient UUIDs that share the same phone number so that
+        // visits created before the find-or-create fix (which gave the same
+        // person different UUIDs on each booking) are all returned together.
+        val phone = patientRepository.findById(patientId).orElse(null)?.phone
+        val patientIds: List<UUID> = if (!phone.isNullOrBlank()) {
+            patientRepository.findAllByClinicIdAndPhone(clinicId, phone).map { it.id }
+        } else {
+            listOf(patientId)
+        }
+
+        return patientIds
+            .flatMap { pid -> visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAsc(clinicId, pid) }
+            .sortedBy { it.visitDate }
             .map { it.toDTO(loadRxRows(it.id)) }
     }
 

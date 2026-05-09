@@ -42,18 +42,30 @@ class AppointmentService(
         val doctor = appUserRepository.findById(request.doctorId)
             .orElseThrow { IllegalArgumentException("Doctor not found") }
 
-        // Create or find patient by name + clinic
-        val patient = Patient(
-            clinic = clinic,
-            name = request.patientName,
-            phone = request.patientPhone,
-            email = request.patientEmail,
-            gender = request.patientGender,
-            dob = request.patientDob?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() },
-            age = request.patientAge,
-            createdAt = Instant.now()
-        )
-        val savedPatient = patientRepository.save(patient)
+        // Find existing patient by phone within this clinic, or create a new one.
+        val existingPatient = request.patientPhone?.takeIf { it.isNotBlank() }
+            ?.let { patientRepository.findByClinicIdAndPhone(clinic.id!!, it) }
+        val savedPatient = if (existingPatient != null) {
+            // Update mutable fields on the existing patient record.
+            existingPatient.name = request.patientName
+            existingPatient.email = request.patientEmail
+            existingPatient.gender = request.patientGender
+            existingPatient.dob = request.patientDob?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
+            existingPatient.age = request.patientAge
+            patientRepository.save(existingPatient)
+        } else {
+            val patient = Patient(
+                clinic = clinic,
+                name = request.patientName,
+                phone = request.patientPhone,
+                email = request.patientEmail,
+                gender = request.patientGender,
+                dob = request.patientDob?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() },
+                age = request.patientAge,
+                createdAt = Instant.now()
+            )
+            patientRepository.save(patient)
+        }
 
         val appointment = Appointment(
             clinic = clinic,

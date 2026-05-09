@@ -654,18 +654,18 @@ export function PrescriptionPage() {
   // duplicate today-visit.
   const autoCreatedForPatientRef = React.useRef<string | null>(null);
   React.useEffect(() => {
+    const hasTodayVisit = visits.some((v) => v.visitDate === todayIso());
     if (
       selectedPatientId &&
       !visitsLoading &&
-      // Only fire after a successful fetch has confirmed visits are empty
-      // for THIS patient. Without this guard the initial render (visits=[],
-      // loading=false) tricks the effect into POSTing a duplicate "today"
-      // visit on every reopen.
+      // Only fire after a successful fetch for THIS patient to avoid
+      // creating a duplicate on every reopen.
       visitsLoadedFor === selectedPatientId &&
-      visits.length === 0 &&
+      !hasTodayVisit &&
       autoCreatedForPatientRef.current !== selectedPatientId
     ) {
       autoCreatedForPatientRef.current = selectedPatientId;
+      const existingCount = visits.length;
       const draft: SaveVisitRequest = {
         visitDate: todayIso(),
         bpSystolic: null, bpDiastolic: null, bpUnit: null,
@@ -680,7 +680,11 @@ export function PrescriptionPage() {
         sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
         prescriptions: [],
       };
-      void createVisit(selectedPatientId, draft).then(() => refetchVisits());
+      void createVisit(selectedPatientId, draft).then(() => {
+        refetchVisits();
+        // Jump to today's visit tab (it lands at the end after sort).
+        if (existingCount > 0) setActiveTab(existingCount);
+      });
     }
   }, [selectedPatientId, visitsLoading, visitsLoadedFor, visits.length, refetchVisits]);
   // Reset the auto-create guard whenever the user picks a different patient
