@@ -512,6 +512,36 @@ export function PrescriptionPage() {
   // floating SessionBar. Pausing / ending re-locks. Visually unchanged
   // while locked — only pointer-events are blocked.
   const [formActive, setFormActive] = React.useState<boolean>(false);
+  // Visits are loaded ASC by visit_date, so the latest one sits at the
+  // tail of the array — that's "today's visit", the one whose SessionBar
+  // controls the form's editable state. Older tabs are historic records
+  // and stay read-only forever, regardless of whether today's session
+  // is running.
+  const isLatestVisit = visits.length === 0 || activeTab === visits.length - 1;
+  // Edit flag used by every gate below. Past visits are permanently
+  // locked, so a session running on today's tab does NOT unlock them —
+  // the doctor can read every field but can't change historic data.
+  const canEditForm = formActive && isLatestVisit;
+  // On initial open of a patient, jump to the latest (today's) visit
+  // tab. Without this the tabs default to index 0, which is the OLDEST
+  // visit — confusing when the doctor expects to land on today.
+  // Tracked per-patient so we don't keep snapping the user back to the
+  // tail when they deliberately click an older tab.
+  const initializedTabForRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (selectedPatientId === null) {
+      initializedTabForRef.current = null;
+      return;
+    }
+    if (
+      visitsLoadedFor === selectedPatientId &&
+      visits.length > 0 &&
+      initializedTabForRef.current !== selectedPatientId
+    ) {
+      initializedTabForRef.current = selectedPatientId;
+      setActiveTab(visits.length - 1);
+    }
+  }, [selectedPatientId, visitsLoadedFor, visits.length]);
   // Refer-To doctor — clinic-scoped picker. `referDoctorId` holds the
   // selected doctor's UUID; the visible label comes from the matching row
   // in the `doctors` list fetched via useDoctors().
@@ -621,10 +651,10 @@ export function PrescriptionPage() {
   // The ref holds the latest save function so the closure is never stale.
   const latestSaveRef = React.useRef<() => void>(() => {});
   latestSaveRef.current = () => {
-    if (formActive && activeVisit) void handleSave({ silent: true });
+    if (canEditForm && activeVisit) void handleSave({ silent: true });
   };
   React.useEffect(() => {
-    if (!formActive) return;
+    if (!canEditForm) return;
     const timer = setTimeout(() => latestSaveRef.current(), 1500);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -976,7 +1006,7 @@ export function PrescriptionPage() {
   // capture a stale handleSave whose buildSaveRequest closes over the rxRows
   // from when the session started, dropping every edit made after that.
   const handleFormBlur = () => {
-    if (!formActive || !activeVisit) return;
+    if (!canEditForm || !activeVisit) return;
     void handleSave({ silent: true });
   };
 
@@ -1157,11 +1187,11 @@ export function PrescriptionPage() {
                 type="button"
                 style={{
                   ...styles.addReportButton,
-                  ...(formActive ? null : { opacity: 0.55, cursor: "not-allowed" }),
+                  ...(canEditForm ? null : { opacity: 0.55, cursor: "not-allowed" }),
                 }}
                 onClick={openFilePicker}
-                disabled={!formActive}
-                title={!formActive ? "Start a session to upload" : undefined}
+                disabled={!canEditForm}
+                title={!canEditForm ? (isLatestVisit ? "Start a session to upload" : "Past visits are read-only") : undefined}
               >
                 <span style={styles.addReportPlus}>+</span>
                 <span>{listViewConfig.addLabel}</span>
@@ -1259,15 +1289,16 @@ export function PrescriptionPage() {
         <div
           style={{
             ...styles.rightArea,
-            ...(formActive
+            ...(canEditForm
               ? null
               // Mostly readable while locked — labels stay legible so the
               // doctor can scan the form before starting a session. Clicks
-              // are still blocked via pointer-events:none.
+              // are still blocked via pointer-events:none. Past visits hit
+              // this branch unconditionally so they read as historic only.
               : { pointerEvents: "none", opacity: 0.75, userSelect: "none" }),
             transition: "opacity 0.15s ease",
           }}
-          aria-disabled={!formActive}
+          aria-disabled={!canEditForm}
           // Save-on-blur: any descendant input / textarea / select that
           // loses focus triggers a silent save. React.onBlur surfaces the
           // bubbled focusout, so a single handler at the form root covers
@@ -1381,8 +1412,12 @@ export function PrescriptionPage() {
               {/* Visit tabs — sit OUTSIDE the cream sheet, above it. The tuning
               button (Figma node 2133:9927) is pushed to the far right of the
               row to filter / reconfigure the current visit's view. Each tab
-              loads that visit's prescription data into the form below. */}
-              <div style={styles.tabsBar}>
+              loads that visit's prescription data into the form below.
+              `pointerEvents: auto` is forced on so the tabs remain clickable
+              even when the form below has `pointer-events: none` (locked
+              past visit / pre-Start state) — the doctor must always be
+              able to navigate back to today to start the session. */}
+              <div style={{ ...styles.tabsBar, pointerEvents: "auto" }}>
                 {visits.map((v, i) => (
                   <div
                     key={v.id}
@@ -1956,13 +1991,19 @@ export function PrescriptionPage() {
       {/* Only mount once the visit fetch has resolved for this patient.
           Otherwise the bar mounts first with no storageKey, briefly renders
           its idle Start Session state, then remounts with the real visit
-          id and flips to Running/Paused — visible as a one-frame jerk. */}
+          id and flips to Running/Paused — visible as a one-frame jerk.
+          For past visits we still render the bar but pass readOnly so it
+          shows that visit's recorded duration in a frozen Session Ended
+          view — no interactive controls, can't accidentally start a new
+          session for a historic record. */}
       {visitsLoadedFor === selectedPatientId && (
         <SessionBar
           // Remount per-visit so the bar reads the persisted state for the
           // active visit rather than carrying state across visit switches.
           key={activeVisit?.id ?? "no-visit"}
           storageKey={activeVisit?.id}
+          readOnly={!isLatestVisit}
+          recordedDurationSec={activeVisit?.sessionDurationSec ?? null}
           onPrint={() => showToast("Print: not wired yet")}
           onDownload={() => showToast("Download: not wired yet")}
           onShare={() => showToast("Share: not wired yet")}

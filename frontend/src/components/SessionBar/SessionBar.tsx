@@ -51,6 +51,21 @@ type SessionBarProps = {
    * visit id.
    */
   storageKey?: string;
+  /**
+   * Read-only mode for historic visits. When true the bar shows the
+   * recorded duration in a frozen "Session Ended" view, suppresses every
+   * interactive control, never touches localStorage, and never reports
+   * itself as active to the host. Used by the prescription page when the
+   * doctor switches to a past visit tab.
+   */
+  readOnly?: boolean;
+  /**
+   * Duration in seconds to display when `readOnly` is true. Sourced from
+   * the visit DTO's `sessionDurationSec` so each historic tab shows the
+   * timer that visit actually recorded — not whatever happens to be in
+   * this device's localStorage.
+   */
+  recordedDurationSec?: number | null;
 };
 
 // Wall-clock based session state. Total elapsed time is reconstructed
@@ -100,10 +115,14 @@ export function SessionBar({
   onStart,
   onEnd,
   storageKey,
+  readOnly = false,
+  recordedDurationSec = null,
 }: SessionBarProps) {
   // Restore previous state if the visit had one — covers Pause + navigate
-  // away + come back, plus reopening a visit that ended earlier.
-  const initial = storageKey ? loadState(storageKey) : null;
+  // away + come back, plus reopening a visit that ended earlier. Skipped
+  // entirely in readOnly mode so historic-visit tabs don't pull stale
+  // localStorage state into the throw-away interactive state below.
+  const initial = !readOnly && storageKey ? loadState(storageKey) : null;
   // State machine:
   //   idle    →  Start clicked → runStartedAtMs = now, baseSeconds = 0
   //   running →  Pause stops the run-segment, banks elapsed in baseSeconds
@@ -128,10 +147,10 @@ export function SessionBar({
   // after a remount.
   const [, setNowTick] = React.useState(0);
   React.useEffect(() => {
-    if (runStartedAtMs == null) return;
+    if (readOnly || runStartedAtMs == null) return;
     const id = window.setInterval(() => setNowTick((n) => n + 1), 1000);
     return () => window.clearInterval(id);
-  }, [runStartedAtMs]);
+  }, [runStartedAtMs, readOnly]);
 
   // Recomputed on every render — the per-second setNowTick above forces
   // a render while running so the displayed timer text advances. NOT
@@ -143,18 +162,23 @@ export function SessionBar({
   })();
 
   // Persist the full bar state on every change so a remount restores it
-  // bit-for-bit. Skipped when no storageKey is provided.
+  // bit-for-bit. Skipped when no storageKey is provided, or when the bar
+  // is in readOnly mode (historic visits never write back).
   React.useEffect(() => {
-    if (!storageKey) return;
+    if (readOnly || !storageKey) return;
     saveState(storageKey, { baseSeconds, runStartedAtMs, paused, ended });
-  }, [storageKey, baseSeconds, runStartedAtMs, paused, ended]);
+  }, [readOnly, storageKey, baseSeconds, runStartedAtMs, paused, ended]);
 
   // Notify parent when the form should be editable. Active = running and
   // not paused; everything else (idle / paused / ended) reports false.
+  // readOnly tabs skip this entirely — they neither own nor invalidate
+  // the host's editable flag, which lets a session that was started on
+  // today's tab continue to keep past tabs editable too.
   const active = running && !paused;
   React.useEffect(() => {
+    if (readOnly) return;
     onActiveChange?.(active);
-  }, [active, onActiveChange]);
+  }, [active, onActiveChange, readOnly]);
 
   // Each handler ALSO writes to localStorage synchronously so the saved
   // state can never lag behind the user's action — even if the host
@@ -203,6 +227,36 @@ export function SessionBar({
     if (storageKey) saveState(storageKey, { baseSeconds: finalSeconds, runStartedAtMs: null, paused: false, ended: true });
     onEnd?.(finalSeconds);
   };
+
+  // Read-only branch — historic visits render the recorded duration
+  // alongside a centered "Session Ended" label and the print / download
+  // / share icons. Mirrors the live bar's `ended` layout so the visual
+  // weight is consistent. Placed after every hook so React's rules-of-
+  // hooks ordering stays the same whether the bar mounts interactive
+  // or read-only.
+  if (readOnly) {
+    return (
+      <div style={{ ...styles.bar, ...styles.barIdle }}>
+        <span style={{ ...styles.timer, color: colors.primary100 }}>
+          {formatTimer(recordedDurationSec ?? 0)}
+        </span>
+        <span style={styles.endedCenter} aria-label="Session ended">
+          Session Ended
+        </span>
+        <div style={styles.idleActions}>
+          <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
+            <PrinterIcon width={24} height={24} />
+          </button>
+          <button type="button" style={styles.iconBtn} onClick={onDownload} aria-label="Download">
+            <DownloadIcon width={24} height={24} />
+          </button>
+          <button type="button" style={styles.iconBtn} onClick={onShare} aria-label="Share">
+            <ShareIcon width={24} height={24} />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
