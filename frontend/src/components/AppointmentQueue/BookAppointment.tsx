@@ -309,6 +309,25 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
     setSubmitting(true);
     try {
+      // Duplicate check — block if this phone already has an appointment on the selected date.
+      if (!editingAppointment) {
+        const dateStr = `${form.date.getFullYear()}-${String(form.date.getMonth() + 1).padStart(2, "0")}-${String(form.date.getDate()).padStart(2, "0")}`;
+        const aptsRes = await fetch(`${API_BASE_URL}/api/tenant/appointments?date=${dateStr}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("docodile_token")}` },
+        });
+        if (aptsRes.ok) {
+          const apts: any[] = await aptsRes.json();
+          const phoneClean = form.phone.replace(/\D/g, "").slice(-10);
+          const duplicate = phoneClean
+            ? apts.find((a) => (a.patientPhone ?? "").replace(/\D/g, "").slice(-10) === phoneClean)
+            : null;
+          if (duplicate) {
+            setToastMessage(`${form.name} already has an appointment on ${formatDate(form.date)}`);
+            return;
+          }
+        }
+      }
+
       const { hour, minute } = parseTimeTo24h(form.time);
       const scheduledTime = new Date(form.date);
       scheduledTime.setHours(hour, minute, 0, 0);
