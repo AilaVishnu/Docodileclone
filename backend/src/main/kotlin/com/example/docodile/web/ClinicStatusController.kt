@@ -64,7 +64,7 @@ class ClinicStatusController(
     }
 
     @GetMapping("/appointments")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun getAppointments(
         @RequestParam(required = false)
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
@@ -74,7 +74,7 @@ class ClinicStatusController(
     }
 
     @PostMapping("/appointments")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun bookAppointment(@RequestBody request: BookAppointmentRequest): ResponseEntity<Any> {
         return try {
             ResponseEntity.ok(appointmentService.bookAppointment(request))
@@ -84,7 +84,7 @@ class ClinicStatusController(
     }
 
     @PutMapping("/appointments/{appointmentId}")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun updateAppointment(
         @PathVariable appointmentId: UUID,
         @RequestBody request: BookAppointmentRequest
@@ -97,7 +97,7 @@ class ClinicStatusController(
     }
 
     @PatchMapping("/appointments/{appointmentId}/status")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun updateAppointmentStatus(
         @PathVariable appointmentId: UUID,
         @RequestBody body: Map<String, String>
