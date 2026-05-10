@@ -9,8 +9,19 @@ interface AppointmentRepository : JpaRepository<Appointment, UUID> {
     fun findAllByClinicId(clinicId: UUID): List<Appointment>
 
     fun findAllByClinicIdAndScheduledTimeBetween(
-        clinicId: UUID, 
-        start: LocalDateTime, 
+        clinicId: UUID,
+        start: LocalDateTime,
+        end: LocalDateTime
+    ): List<Appointment>
+
+    // Used by the "one appointment per patient per day" guard — returns
+    // every appointment a given patient already has within the supplied
+    // time window. The caller passes the start/end of the candidate day
+    // so booking another slot on the same calendar day is blocked.
+    fun findAllByClinicIdAndPatientIdAndScheduledTimeBetween(
+        clinicId: UUID,
+        patientId: UUID,
+        start: LocalDateTime,
         end: LocalDateTime
     ): List<Appointment>
 }
