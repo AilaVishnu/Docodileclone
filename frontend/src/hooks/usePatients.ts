@@ -11,10 +11,14 @@ export type Patient = {
   id: string;
   name: string;
   phone: string | null;
+  email: string | null;
   gender: string | null;
   dob: string | null;          // ISO yyyy-MM-dd
   age: number | null;
   lastVisitDate: string | null;
+  // Backend follow-up: add `photo_url` column on the patients table and
+  // return it here. Used by the avatar in PatientFilesPage right pane.
+  photoUrl?: string | null;
 };
 
 type UsePatientsResult = {
