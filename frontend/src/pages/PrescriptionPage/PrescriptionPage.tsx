@@ -56,6 +56,9 @@ import { useVisits } from "../../hooks/useVisits";
 import { createVisit, updateVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
 import { markStarted, unmarkStarted } from "../../utils/sessionStarted";
 import { API_BASE_URL } from "../../apiConfig";
+import { AddReportModal, AddReportRow } from "./AddReportModal";
+import { FileViewer } from "./FileViewer";
+import { Modal } from "../../components/Modal/Modal";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
@@ -336,7 +339,9 @@ const formatPatientMeta = (
 type ActionMeta = { icon: React.ReactNode; label: string };
 const ACTION_META: ActionMeta[] = [
   { icon: <VisitsIcon style={styles.actionIcon} />, label: "Visits" },
-  { icon: <PulseIcon style={styles.actionIcon} />, label: "Reports" },
+  // Reports + Files merged into a single "Files" tab — category is now a
+  // first-class metadata field on each upload (Reports / Prescriptions /
+  // Observations / Admin / Other), with chip filtering below.
   { icon: <FileIcon style={styles.actionIcon} />, label: "Files" },
   { icon: <HistoryIcon style={styles.actionIcon} />, label: "Timeline" },
   { icon: <BillCheckIcon style={styles.actionIcon} />, label: "Bills" },
@@ -354,35 +359,30 @@ const CONTACT_ACTIONS: { icon: React.ReactNode; label: string }[] = [
 // TODO(backend): replace with `useAiSummary(patientId).text`.
 const AI_SUMMARY_TEXT = "";
 
-// List-view config — Reports (action 1) and Files (action 2) render the same
-// table/grid layout with their own header copy, tabs, and rows. Tab metadata
-// stays static; `rows` comes from the backend per-patient.
-// TODO(backend): replace empty `rows` arrays with fetched data, e.g.
-//   const { data: reports } = useReports(patientId);
-//   const { data: files }   = useFiles(patientId);
+// List-view config — single "Files" entry at action 1. Tabs are semantic
+// categories (not file formats) — the chip the user picks at upload time
+// drives both the table and these filter chips.
+// TODO(backend): replace empty `rows` with `useFiles(patientId).data`.
 type ListViewConfig = {
   title: string;
   subtitle: string;
   addLabel: string;
   nameColumn: string;
+  dateColumn: string;
   tabs: readonly string[];
   rows: { name: string; category: string; date: string }[];
 };
 const LIST_VIEWS: Record<number, ListViewConfig> = {
   1: {
-    title: "Reports",
-    subtitle: "",
-    addLabel: "Add Report",
-    nameColumn: "Report name",
-    tabs: ["All Reports", "Blood", "Pathology"],
-    rows: [],
-  },
-  2: {
     title: "Files",
     subtitle: "",
     addLabel: "Add File",
     nameColumn: "File name",
-    tabs: ["All Files", "Documents", "Images"],
+    dateColumn: "Investigation date",
+    // Semantic categories — match the values used in AddReportModal's
+    // Category dropdown so chip filtering is exact-match against `row.category`.
+    // "All" is a virtual chip handled in `displayRows` (passes everything through).
+    tabs: ["All", "Reports", "Prescriptions", "Observations", "Admin", "Other"],
     rows: [],
   },
 };
@@ -829,31 +829,29 @@ export function PrescriptionPage() {
   const listViewConfig = LIST_VIEWS[activeAction] ?? null;
 
   // Client-side uploads for the Reports / Files list views, keyed by
-  // activeAction (1 = Reports, 2 = Files). Clicking the "+ Add" pill in the
-  // page header opens a native file picker; selected files are appended to
-  // this map so they show up immediately in the list/grid below.
-  // TODO(backend): on upload, also POST the file to /reports or /files.
-  type ListRow = { name: string; category: string; date: string };
+  // activeAction (1 = Reports, 2 = Files). Clicking the "+ Add" pill opens
+  // AddReportModal; the modal collects file + name + category + date + visit
+  // tie + notes per file, then emits an array of rows that we append here.
+  // TODO(backend): on save, also POST the files (multipart) and metadata to
+  // /reports or /files endpoints — handle inside AddReportModal once the
+  // endpoint exists, then drop the local row insert.
+  type ListRow = {
+    id?: string;
+    name: string;
+    category: string;
+    date: string;
+    fileUrl?: string | null;
+    mimeType?: string | null;
+  };
   const [uploadedItems, setUploadedItems] = React.useState<Record<number, ListRow[]>>({});
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const openFilePicker = () => fileInputRef.current?.click();
-  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    if (files.length === 0) return;
-    const today = new Date().toLocaleDateString("en-GB", {
-      day: "2-digit", month: "short", year: "2-digit",
-    });
-    const newRows: ListRow[] = files.map((f) => ({
-      name: f.name,
-      category: "Uploaded",
-      date: today,
-    }));
+  const [showAddModal, setShowAddModal] = React.useState(false);
+  // The currently-open file row, by activeAction and index. null = list view.
+  const [viewerOpen, setViewerOpen] = React.useState<{ action: number; index: number } | null>(null);
+  const handleAddRows = (rows: AddReportRow[]) => {
     setUploadedItems((prev) => ({
       ...prev,
-      [activeAction]: [...(prev[activeAction] ?? []), ...newRows],
+      [activeAction]: [...(prev[activeAction] ?? []), ...rows],
     }));
-    // Reset so selecting the same file twice still triggers onChange.
-    e.target.value = "";
   };
   const removeRxRow = (rowIdx: number) =>
     setRxRows((prev) => prev.filter((_, ri) => ri !== rowIdx));
@@ -865,9 +863,15 @@ export function PrescriptionPage() {
     setRxRows((prev) => prev.map((r, ri) => ri !== rowIdx ? r : { ...r, thenRows: r.thenRows.map((t, ti) => ti !== thenIdx ? t : { ...t, [key]: value }) }));
 
   // Display rows = backend rows (empty for now) + client-side uploads.
-  const displayRows: ListRow[] = listViewConfig
+  // displayRows: all uploads merged, then filtered by the active category
+  // chip. Chip 0 ("All") is the pass-through.
+  const allRows: ListRow[] = listViewConfig
     ? [...listViewConfig.rows, ...(uploadedItems[activeAction] ?? [])]
     : [];
+  const activeChipLabel = listViewConfig?.tabs[activeListTab] ?? "All";
+  const displayRows: ListRow[] = activeChipLabel === "All"
+    ? allRows
+    : allRows.filter((r) => r.category === activeChipLabel);
 
   // Action-list badge counts pulled from the same data sources the right
   // pane reads from. Timeline + Bills have no data layer yet so they show 0
@@ -878,9 +882,11 @@ export function PrescriptionPage() {
       return config.rows.length + (uploadedItems[actionIndex]?.length ?? 0);
     }
     if (actionIndex === 0) return visits.length; // Visits
-    return 0; // Timeline (3), Bills (4) — placeholders
+    return 0; // Timeline (2), Bills (3) — placeholders, post-merge indexes.
   };
-  const comingSoonLabel = activeAction === 3 ? "Timeline" : activeAction === 4 ? "Bills" : null;
+  // Action indices after the Reports/Files merge:
+  //   0 = Visits   1 = Files   2 = Timeline   3 = Bills
+  const comingSoonLabel = activeAction === 2 ? "Timeline" : activeAction === 3 ? "Bills" : null;
   const headerTitle =
     listViewConfig?.title ?? comingSoonLabel ?? "Visits";
   // Subtitle is derived from the displayed row count for list views (backend
@@ -1182,28 +1188,19 @@ export function PrescriptionPage() {
             <p style={styles.subtitle}>{headerSubtitle}</p>
           </div>
           {listViewConfig && (
-            <>
-              <button
-                type="button"
-                style={{
-                  ...styles.addReportButton,
-                  ...(canEditForm ? null : { opacity: 0.55, cursor: "not-allowed" }),
-                }}
-                onClick={openFilePicker}
-                disabled={!canEditForm}
-                title={!canEditForm ? (isLatestVisit ? "Start a session to upload" : "Past visits are read-only") : undefined}
-              >
-                <span style={styles.addReportPlus}>+</span>
-                <span>{listViewConfig.addLabel}</span>
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                onChange={handleFilesSelected}
-                style={{ display: "none" }}
-              />
-            </>
+            <button
+              type="button"
+              style={{
+                ...styles.addReportButton,
+                ...(canEditForm ? null : { opacity: 0.55, cursor: "not-allowed" }),
+              }}
+              onClick={() => setShowAddModal(true)}
+              disabled={!canEditForm}
+              title={!canEditForm ? (isLatestVisit ? "Start a session to upload" : "Past visits are read-only") : undefined}
+            >
+              <span style={styles.addReportPlus}>+</span>
+              <span>{listViewConfig.addLabel}</span>
+            </button>
           )}
           {/* Save button removed — saves are now auto-triggered every 30s
               while a session is running, plus on End Session. */}
@@ -1360,11 +1357,23 @@ export function PrescriptionPage() {
                     <span></span>
                     <span>{listViewConfig.nameColumn}</span>
                     <span style={{ textAlign: "center" }}>Category</span>
-                    <span style={{ textAlign: "center" }}>Date</span>
+                    <span style={{ textAlign: "center" }}>{listViewConfig.dateColumn}</span>
                     <span style={{ textAlign: "center" }}>Actions</span>
                   </div>
                   {displayRows.map((r, i) => (
-                    <div key={i} style={styles.reportRow}>
+                    <div
+                      key={i}
+                      style={{ ...styles.reportRow, cursor: "pointer" }}
+                      onClick={() => setViewerOpen({ action: activeAction, index: i })}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setViewerOpen({ action: activeAction, index: i });
+                        }
+                      }}
+                    >
                       <span style={styles.reportSerial}>{i + 1}</span>
                       <div style={styles.reportMicChip}>
                         <MicIcon width={24} height={24} />
@@ -1385,9 +1394,35 @@ export function PrescriptionPage() {
                    name + date + size below. Kebab handle in top-right. */
                 <div style={styles.reportsGrid}>
                   {displayRows.map((r, i) => (
-                    <div key={i} style={styles.reportCard}>
+                    <div
+                      key={i}
+                      style={{ ...styles.reportCard, cursor: "pointer" }}
+                      onClick={() => setViewerOpen({ action: activeAction, index: i })}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setViewerOpen({ action: activeAction, index: i });
+                        }
+                      }}
+                    >
                       <div style={styles.reportCardThumb}>
-                        <FileIcon style={styles.reportCardThumbIcon} />
+                        {r.fileUrl && (r.mimeType ?? "").startsWith("image/") ? (
+                          <img
+                            src={r.fileUrl}
+                            alt=""
+                            style={{
+                              position: "absolute",
+                              inset: 0,
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                            }}
+                          />
+                        ) : (
+                          <FileIcon style={styles.reportCardThumbIcon} />
+                        )}
                         <span style={styles.reportCardMic}>
                           <MicIcon width={20} height={20} />
                         </span>
@@ -2012,6 +2047,38 @@ export function PrescriptionPage() {
           onEnd={handleSessionEnd}
         />
       )}
+
+      {/* Add File modal. Drag-drop or click-to-choose, multi-file, per-file
+          metadata (name, category, investigation date, tie-to-visit, notes).
+          One unified flow now that Reports + Files are a single tab. */}
+      <AddReportModal
+        isOpen={showAddModal}
+        visits={visits}
+        defaultVisitId={activeVisit?.id ?? null}
+        onClose={() => setShowAddModal(false)}
+        onAdd={handleAddRows}
+      />
+
+      {/* File viewer modal — opens when a row in the Files list is clicked.
+          Shows the file with the annotation toolbar; close × dismisses. */}
+      <Modal isOpen={viewerOpen !== null} onClose={() => setViewerOpen(null)}>
+        {(() => {
+          if (!viewerOpen) return null;
+          const row = (uploadedItems[viewerOpen.action] ?? [])[viewerOpen.index];
+          if (!row) return null;
+          return (
+            <FileViewer
+              file={{
+                id: row.id ?? `${viewerOpen.action}-${viewerOpen.index}`,
+                name: row.name,
+                fileUrl: row.fileUrl ?? null,
+                mimeType: row.mimeType ?? null,
+              }}
+              onBack={() => setViewerOpen(null)}
+            />
+          );
+        })()}
+      </Modal>
     </div>
   );
 }
