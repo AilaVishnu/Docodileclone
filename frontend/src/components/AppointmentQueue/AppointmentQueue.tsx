@@ -5,6 +5,7 @@ import { styles } from "./AppointmentQueue.styles";
 import { DatePicker } from "./DatePicker";
 import { colors } from "../../styles/theme";
 import { BookAppointment, EditAppointmentData } from "./BookAppointment";
+import { BillMedicinesModal } from "./BillMedicinesModal";
 import { DoctorStatusCard } from "./DoctorStatusCard";
 import { HeatmapCard } from "./HeatmapCard";
 import { Toast } from "../Toast";
@@ -16,6 +17,22 @@ type Doctor = {
   id: string;
   name: string;
 };
+
+// Frontend-only stub: returns the medicines "prescribed" in this session.
+// Real wire-up will pull from prescription Rx rows by appointment id.
+function mockMedicinesFor(aptId: string) {
+  const pool = [
+    { id: "m1", name: "Paracetamol 500mg", dosage: "1-0-1 × 5 days", unitPrice: 12, qty: 10 },
+    { id: "m2", name: "Amoxicillin 500mg", dosage: "1-1-1 × 5 days", unitPrice: 18, qty: 15 },
+    { id: "m3", name: "Cetirizine 10mg", dosage: "0-0-1 × 7 days", unitPrice: 8, qty: 7 },
+    { id: "m4", name: "Pantoprazole 40mg", dosage: "1-0-0 × 10 days", unitPrice: 22, qty: 10 },
+    { id: "m5", name: "Vitamin D3 60K", dosage: "Once weekly × 4", unitPrice: 45, qty: 4 },
+  ];
+  // Deterministic subset per appointment so the modal shows consistent rows.
+  const hash = Array.from(aptId).reduce((a, c) => a + c.charCodeAt(0), 0);
+  const count = 2 + (hash % 3); // 2–4 medicines
+  return pool.slice(0, count).map((m, i) => ({ ...m, id: `${aptId}-${m.id}-${i}` }));
+}
 
 type AppointmentQueueProps = {
   isBooking?: boolean;
@@ -35,6 +52,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
   const [refreshKey, setRefreshKey] = useState(0);
   const [toastMessage, setToastMessage] = useState("");
   const [pendingCancelId, setPendingCancelId] = useState<string | null>(null);
+  const [medsBillingApt, setMedsBillingApt] = useState<Appointment | null>(null);
 
   const doStatusChange = async (aptId: string, newStatus: string) => {
     const token = localStorage.getItem("docodile_token");
@@ -207,34 +225,52 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
     <div style={styles.container}>
       <header style={{ ...styles.header, marginBottom: "24px", position: "relative" }}>
         <div style={{ flex: 1 }} />
-        <h1 style={{ ...styles.title, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
+        <h1 style={{ ...styles.title, position: "absolute", left: "50%", transform: "translateX(-50%)", zIndex: showDatePicker ? 1100 : "auto" }}>
           <span
             onClick={() => setShowDatePicker(!showDatePicker)}
             style={{
               textDecoration: "underline",
               cursor: "pointer",
-              color: colors.neutral900
+              color: colors.neutral900,
+              position: "relative",
+              display: "inline-block",
             }}
           >
             {dateText}
+            {showDatePicker && (
+              <DatePicker
+                selectedDate={selectedDate}
+                onSelect={(date) => {
+                  setSelectedDate(date);
+                  setShowDatePicker(false);
+                }}
+                onClose={() => setShowDatePicker(false)}
+                style={{
+                  top: "calc(100% + 12px)",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                }}
+                showDoneButton
+              />
+            )}
           </span> Queue
         </h1>
+
+        {showDatePicker && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
+              zIndex: 1050,
+            }}
+            onClick={() => setShowDatePicker(false)}
+          />
+        )}
 
         <div style={{ display: "flex", gap: "12px" }}>
           {/* Internal booking trigger removed in favor of TopNav trigger */}
         </div>
-
-        {showDatePicker && (
-          <DatePicker
-            selectedDate={selectedDate}
-            onSelect={(date) => {
-              setSelectedDate(date);
-              setShowDatePicker(false);
-            }}
-            onClose={() => setShowDatePicker(false)}
-            showDoneButton
-          />
-        )}
       </header>
 
       {(isBooking || editingAppointment) && (
@@ -290,7 +326,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
                 setToastMessage(`Opening ${apt.patientName}'s file...`);
               } },
               { label: "Bill Medicines", onClick: (apt) => {
-                setToastMessage(`Medicine billing for ${apt.patientName} coming soon`);
+                setMedsBillingApt(apt);
               } },
               { label: "Generate Bill", onClick: (apt) => {
                 setToastMessage(`Bill generated for ${apt.patientName}`);
@@ -346,6 +382,14 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
           </div>
         </div>
       )}
+
+      <BillMedicinesModal
+        isOpen={!!medsBillingApt}
+        onClose={() => setMedsBillingApt(null)}
+        patientName={medsBillingApt?.patientName || ""}
+        medicines={medsBillingApt ? mockMedicinesFor(medsBillingApt.id) : []}
+        pendingDue={medsBillingApt?.payStatus === "DUE" ? (medsBillingApt.fee ?? 500) : 0}
+      />
     </div>
   );
 }

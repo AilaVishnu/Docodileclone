@@ -303,6 +303,11 @@ export function AddReportModal({
                             setOpenPickerFor(null);
                           }}
                           onClose={() => setOpenPickerFor(null)}
+                          style={{
+                            top: "calc(100% + 8px)",
+                            left: 0,
+                            transform: "none",
+                          }}
                         />
                       )}
                     </div>

@@ -4,7 +4,7 @@ import { Service } from "./types";
 import { AddServiceModal } from "./AddServiceModal";
 import { Button } from "../../components/Button";
 import { PlusIcon } from "../../iconsUtil";
-import { colors } from "../../styles/theme";
+import { ReactComponent as SearchIcon } from "../../assets/search.svg";
 import { ReactComponent as EditPencilIcon } from "../../assets/icons/edit-pencil.svg";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
 
@@ -58,29 +58,26 @@ export function ServicesView() {
 
   return (
     <div style={styles.page}>
-      <div style={styles.header}>
-        <div>
-          <h1 style={styles.title}>Services</h1>
-          <div style={styles.subtitle}>Manage the services your clinic offers</div>
-        </div>
-        <Button variant="dark" size="md" iconLeft={<PlusIcon style={{ width: 16, height: 16 }} />} onClick={openAdd}>
-          Add Service
-        </Button>
-      </div>
+      <header style={styles.header}>
+        <h1 style={styles.title}>Services</h1>
+      </header>
 
       <div style={styles.toolbar}>
-        <div style={styles.searchWrapper}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: colors.alphaBlack3 }}>
-            <circle cx="11" cy="11" r="7" />
-            <path d="M21 21l-4.3-4.3" />
-          </svg>
+        <div style={styles.searchBox}>
+          <SearchIcon style={styles.searchIcon} />
           <input
             style={styles.searchInput}
             placeholder="Search by name or short form"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {search && (
+            <button type="button" style={styles.clearBtn} onClick={() => setSearch("")} aria-label="Clear search">×</button>
+          )}
         </div>
+        <Button variant="dark" size="md" iconLeft={<PlusIcon style={{ width: 16, height: 16 }} />} onClick={openAdd}>
+          Add Service
+        </Button>
       </div>
 
       <div style={styles.tableContainer}>

@@ -29,7 +29,7 @@ export const styles: Record<string, CSSProperties> = {
     bottom: 0,
     backgroundColor: colors.active.shade200,
     zIndex: 2000,
-    padding: `${fluidSpacing.outerY} ${fluidSpacing.outerX}`,
+    padding: `40px ${fluidSpacing.outerX} ${fluidSpacing.outerY}`,
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,
@@ -45,7 +45,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     position: "relative",
-    marginBottom: spacing["2xs"],
+    marginBottom: spacing.l,
     // Cap at content max-width, center in viewport
     width: "100%",
     maxWidth: layout.contentMaxWidth,

@@ -5,7 +5,7 @@ export const styles: Record<string, CSSProperties> = {
   backdrop: {
     position: "fixed",
     inset: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "transparent",
     zIndex: 1050,
   },
 
@@ -26,6 +26,8 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: "16px",
+    fontFamily: fonts.family.primary,
+    color: colors.neutral900,
   },
 
   header: {

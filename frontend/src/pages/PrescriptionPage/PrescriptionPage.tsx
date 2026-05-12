@@ -1984,15 +1984,18 @@ export function PrescriptionPage() {
                           </span>
                         </div>
                         {showReviewDatePicker && (
-                          <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, zIndex: 1100 }}>
-                            <DatePicker
-                              selectedDate={reviewDate ?? new Date()}
-                              onSelect={pickReviewDate}
-                              onClose={() => setShowReviewDatePicker(false)}
-                              style={{ top: "auto", bottom: "8px" }}
-                              disablePast
-                            />
-                          </div>
+                          <DatePicker
+                            selectedDate={reviewDate ?? new Date()}
+                            onSelect={pickReviewDate}
+                            onClose={() => setShowReviewDatePicker(false)}
+                            style={{
+                              top: "auto",
+                              bottom: "calc(100% + 8px)",
+                              left: 0,
+                              transform: "none",
+                            }}
+                            disablePast
+                          />
                         )}
                       </div>
                       <span style={styles.reviewOr}>or</span>

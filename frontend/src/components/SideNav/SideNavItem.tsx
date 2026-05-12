@@ -39,10 +39,9 @@ export function SideNavItem({ label, icon, active, onClick, isExpanded }: SideNa
     label: {
       textAlign: isExpanded ? 'left' : 'center' as const,
       fontSize: isExpanded ? fonts.size.s : fonts.size.caption,
-      fontWeight: active ? 600 : 400,
+      fontWeight: 500,
       color: colors.neutral900,
       fontFamily: 'Inter, sans-serif',
-      transition: 'all 0.3s ease',
       whiteSpace: 'nowrap' as const,
       overflow: 'hidden' as const,
       textOverflow: 'ellipsis' as const,

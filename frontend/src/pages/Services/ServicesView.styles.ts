@@ -11,14 +11,14 @@ export const styles: Record<string, CSSProperties> = {
 
   header: {
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    gap: spacing.m,
-    marginTop: spacing.m,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
   },
 
   title: {
     margin: 0,
+    textAlign: "center",
     fontFamily: fonts.family.secondary,
     fontSize: fonts.size.h5,
     lineHeight: fonts.lineHeight.h5,
@@ -26,38 +26,56 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral900,
   },
 
-  subtitle: {
-    fontSize: fonts.size.s,
-    color: colors.alphaBlack3,
-    marginTop: spacing["2xs"],
-  },
-
   toolbar: {
     display: "flex",
     alignItems: "center",
+    justifyContent: "space-between",
     gap: spacing.m,
   },
 
-  searchWrapper: {
-    flex: 1,
-    maxWidth: "360px",
+  searchBox: {
     display: "flex",
     alignItems: "center",
+    width: "100%",
+    maxWidth: 360,
+    height: 40,
+    gap: 12,
+    padding: "0 16px",
+    borderRadius: 55,
     backgroundColor: colors.neutral100,
-    border: `${strokes.xs} solid ${colors.primary300}`,
-    borderRadius: radii.full,
-    padding: `${spacing.xs} ${spacing.m}`,
-    gap: spacing.xs,
+    boxSizing: "border-box",
+  },
+
+  searchIcon: {
+    width: 20,
+    height: 20,
+    color: colors.neutral400,
+    flexShrink: 0,
   },
 
   searchInput: {
     flex: 1,
+    minWidth: 0,
     border: "none",
     outline: "none",
     background: "transparent",
-    fontSize: fonts.size.s,
     fontFamily: fonts.family.primary,
+    fontSize: fonts.control.md,
     color: colors.neutral900,
+  },
+
+  clearBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: "50%",
+    border: "none",
+    backgroundColor: colors.neutral200,
+    color: colors.neutral900,
+    cursor: "pointer",
+    fontSize: 14,
+    lineHeight: "18px",
+    padding: 0,
+    flexShrink: 0,
   },
 
   tableContainer: {
@@ -126,7 +144,7 @@ export const styles: Record<string, CSSProperties> = {
     borderRadius: radii.s,
     padding: `2px ${spacing.xs}`,
     letterSpacing: "0.04em",
-    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+    fontFamily: fonts.family.primary,
   },
 
   actions: {

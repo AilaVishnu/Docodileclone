@@ -72,7 +72,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       transition: "margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     },
     mainContent: {
-      padding: "24px 40px",
+      padding: "40px 40px 24px",
       display: "flex",
       flexDirection: "column" as const,
       gap: "24px",
@@ -84,12 +84,13 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       position: "relative",
     },
     title: {
+      margin: 0,
+      textAlign: "center" as const,
       fontFamily: fonts.family.secondary,
       fontSize: fonts.size.h5,
-      fontWeight: 400,
-      lineHeight: "34px",
+      lineHeight: fonts.lineHeight.h5,
+      fontWeight: fonts.weight.regular,
       color: colors.neutral900,
-      margin: 0,
     }
   } as const;
 
