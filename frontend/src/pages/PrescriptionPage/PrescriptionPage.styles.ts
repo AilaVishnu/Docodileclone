@@ -269,14 +269,17 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: colors.neutral100,
     color: colors.neutral900,
   },
+  // Inactive tab text + caption use a solid neutral grey instead of
+  // alphaBlack3 — 30% black on the cream page background blended into the
+  // page tint, washing the labels out.
   tabInactive: {
-    color: colors.alphaBlack3,
+    color: colors.neutral500,
   },
   tabCaption: {
     fontSize: fonts.size.xs,
     lineHeight: fonts.lineHeight.xs,
     fontWeight: fonts.weight.regular,
-    color: colors.alphaBlack3,
+    color: colors.neutral500,
   },
   tabLabel: {
     fontSize: fonts.size.m,
