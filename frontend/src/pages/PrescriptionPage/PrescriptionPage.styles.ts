@@ -317,10 +317,10 @@ export const styles: Record<string, CSSProperties> = {
   },
   sectionTitle: {
     margin: 0,
-    fontFamily: fonts.family.secondary,
+    fontFamily: fonts.family.primary,
     fontSize: fonts.size.m,
     lineHeight: fonts.lineHeight.m,
-    fontWeight: fonts.weight.semibold,
+    fontWeight: fonts.weight.regular,
     color: colors.neutral900,
   },
   // Chevron toggle — transparent button, rotates 180° when collapsed.
@@ -547,10 +547,10 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.m,
   },
   noteLabelText: {
-    fontFamily: fonts.family.secondary,
+    fontFamily: fonts.family.primary,
     fontSize: fonts.size.m,
     lineHeight: fonts.lineHeight.m,
-    fontWeight: fonts.weight.semibold,
+    fontWeight: fonts.weight.regular,
     color: colors.neutral900,
   },
   noteField: {
@@ -576,7 +576,7 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: colors.primary100,
     borderRadius: radii.m,
     padding: `0 ${spacing.xs}`,
-    minHeight: 36,
+    minHeight: 40,
   },
   noteFieldInner: {
     flex: 1,
@@ -917,12 +917,12 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral700,
   },
 
-  // Refer to — split dropdown with neutral300 border, 120px text + chevron tail.
+  // Refer to — cream-filled dropdown matching the Tests dictatable row.
   referDropdown: {
     display: "inline-flex",
-    alignItems: "stretch",
-    height: 32,
-    border: `${strokes.xs} solid ${colors.neutral300}`,
+    alignItems: "center",
+    height: 40,
+    backgroundColor: colors.primary100,
     borderRadius: radii.m,
     overflow: "hidden",
     cursor: "pointer",
@@ -930,19 +930,18 @@ export const styles: Record<string, CSSProperties> = {
   referText: {
     display: "flex",
     alignItems: "center",
-    width: 120,
-    padding: spacing.xs,
+    minWidth: 160,
+    padding: `0 ${spacing.s}`,
     fontSize: fonts.size.s,
     lineHeight: fonts.lineHeight.s,
     fontFamily: fonts.family.primary,
-    color: colors.alphaBlack2,
-    borderRight: `${strokes.xs} solid ${colors.neutral300}`,
+    color: colors.neutral500,
   },
   referChevron: {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: `${spacing.xs} ${spacing["2xs"]}`,
+    padding: `0 ${spacing.s} 0 0`,
     color: colors.neutral700,
   },
   // Dropdown menu of clinic doctors, opens below the Refer-To pill.
@@ -1072,7 +1071,9 @@ export const styles: Record<string, CSSProperties> = {
     flexShrink: 0,
     textAlign: "center" as const,
   },
-  // rxGroup is the card container — cream background spans full row width.
+  // rxGroup is the card container — white background matches the section card,
+  // letting the cream (primary100) inputs inside read as fields (consistent
+  // with the rest of the prescription form's white-card / cream-input pattern).
   rxGroup: {
     position: "relative" as const,
     display: "flex",
@@ -1080,7 +1081,7 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing.s,
     alignItems: "stretch",
     overflow: "visible" as const,
-    backgroundColor: colors.primary100,
+    backgroundColor: colors.neutral100,
     borderRadius: radii.xs,
     padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
   },
@@ -1089,7 +1090,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "row" as const,
     gap: spacing["2xs"],
-    alignItems: "center",
+    alignItems: "stretch",
   },
   rxGroupRight: {
     flex: 1,
@@ -1155,15 +1156,17 @@ export const styles: Record<string, CSSProperties> = {
   },
   rxCell: {
     border: "none",
-    borderRadius: radii.xs,
-    padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
+    borderRadius: radii.m,
+    padding: `${spacing["3xs"]} ${spacing.s}`,
     fontSize: fonts.size.s,
     lineHeight: fonts.lineHeight.s,
     color: colors.neutral900,
-    backgroundColor: "transparent",
+    backgroundColor: colors.primary100,
     outline: "none",
     fontFamily: fonts.family.primary,
     minWidth: 0,
+    height: 28,
+    boxSizing: "border-box",
     textAlign: "center" as const,
   },
   rxSerial: {
@@ -1174,31 +1177,48 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral900,
     textAlign: "center" as const,
     padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  // Medicine cell stacks name + pen-icon note below it.
+  // Medicine cell — input + (generic-name + add-tapering) stacked horizontally.
+  // The input column centers vertically; the trailing column (generic + button)
+  // sits at the bottom of the cell. Cell keeps the full row height.
   rxMedicineCell: {
     display: "flex",
-    flexDirection: "column",
-    gap: 0,
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: spacing.xs,
+    minHeight: 56,
     minWidth: 0,
+  },
+  rxMedicineInputCol: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    alignItems: "center",
   },
   rxMedicineInput: {
     border: "none",
     outline: "none",
-    padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
+    padding: `0 ${spacing.s}`,
+    height: 28,
+    boxSizing: "border-box" as const,
     fontSize: fonts.size.s,
     lineHeight: fonts.lineHeight.s,
     fontFamily: fonts.family.primary,
     color: colors.neutral900,
-    backgroundColor: "transparent",
+    backgroundColor: colors.primary100,
+    borderRadius: radii.m,
     minWidth: 0,
   },
   rxGenericRow: {
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-end",
+    justifyContent: "flex-end",
     gap: spacing["2xs"],
     padding: `2px ${spacing["2xs"]}`,
-    width: "100%",
+    flexShrink: 0,
     minWidth: 0,
   },
   rxGenericName: {

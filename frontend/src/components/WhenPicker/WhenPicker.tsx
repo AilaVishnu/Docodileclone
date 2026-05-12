@@ -73,11 +73,10 @@ const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     height: 28,
-    border: `${strokes.xs} solid ${colors.primary300}`,
     borderRadius: radii.m,
     overflow: "hidden",
     cursor: "pointer",
-    backgroundColor: colors.neutral100,
+    backgroundColor: colors.primary100,
     padding: `0 ${spacing.m}`,
   },
   triggerText: {

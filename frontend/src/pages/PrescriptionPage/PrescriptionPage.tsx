@@ -1753,17 +1753,21 @@ export function PrescriptionPage() {
                             <div style={styles.rxGroupLeft}>
                               <span style={styles.rxSerial}>{i + 1}</span>
                               <div style={{ ...styles.rxMedicineCell, flex: 1 }}>
-                                <MedicineAutocomplete
-                                  inputStyle={styles.rxMedicineInput}
-                                  placeholder="Medicine"
-                                  value={row.medicine}
-                                  onChange={(v) => setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: v, genericName: "" } : r))}
-                                  onSelect={(name, genericName) => setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: name, genericName } : r))}
-                                />
+                                <div style={styles.rxMedicineInputCol}>
+                                  <MedicineAutocomplete
+                                    inputStyle={styles.rxMedicineInput}
+                                    placeholder="Medicine"
+                                    value={row.medicine}
+                                    onChange={(v) => setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: v, genericName: "" } : r))}
+                                    onSelect={(name, genericName) => setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: name, genericName } : r))}
+                                  />
+                                </div>
                                 <div style={styles.rxGenericRow}>
-                                  <span style={styles.rxGenericName}>
-                                    {row.medicine ? (row.genericName || "Unknown") : ""}
-                                  </span>
+                                  {row.medicine && (
+                                    <span style={styles.rxGenericName}>
+                                      {row.genericName || "Unknown"}
+                                    </span>
+                                  )}
                                   <button
                                     type="button"
                                     style={styles.rxAddNoteBtn}
@@ -1967,7 +1971,7 @@ export function PrescriptionPage() {
                   <div style={styles.noteRow}>
                     <div style={styles.noteLabel}>
                       <RestartIcon style={styles.sectionIcon} />
-                      <span style={styles.noteLabelText}>Next Review</span>
+                      <span style={styles.noteLabelText}>Review</span>
                     </div>
                     <div style={styles.reviewRow}>
                       <div style={{ position: "relative", flexShrink: 0 }}>
