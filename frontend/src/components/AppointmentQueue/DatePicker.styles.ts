@@ -4,21 +4,17 @@ import { colors, radii, fonts, spacing } from "../../styles/theme";
 export const styles: Record<string, CSSProperties> = {
   backdrop: {
     position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    inset: 0,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
-    zIndex: 999,
+    zIndex: 1050,
   },
 
   overlay: {
     position: "absolute",
-    top: "100%",
-    left: "50%",
-    transform: "translateX(-50%)",
-    zIndex: 1000,
-    marginTop: "16px",
+    top: "50%",
+    left: "calc(100% + 12px)",
+    transform: "translateY(-50%)",
+    zIndex: 1100,
   },
 
   container: {

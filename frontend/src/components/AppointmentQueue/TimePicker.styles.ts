@@ -2,24 +2,61 @@ import { CSSProperties } from "react";
 import { colors, radii, fonts, spacing } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
+  backdrop: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    zIndex: 1050,
+  },
+
   overlay: {
     position: "absolute",
-    top: "100%",
-    left: "50%",
-    transform: "translateX(-50%)",
-    zIndex: 1000,
-    marginTop: "8px",
+    top: "50%",
+    left: "calc(100% + 12px)",
+    transform: "translateY(-50%)",
+    zIndex: 1100,
   },
 
   container: {
     backgroundColor: colors.neutral100,
-    width: "240px",
+    width: "280px",
     padding: "16px",
     borderRadius: "20px",
     boxShadow: "2px 2px 16px 0px rgba(0,0,0,0.12)",
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "12px",
+  },
+
+  sectionLabel: {
+    fontSize: fonts.size.xs,
+    color: colors.neutral500,
+    fontWeight: 500,
+    marginBottom: "6px",
+  },
+
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, 1fr)",
+    gap: "4px",
+  },
+
+  cell: {
+    padding: "8px 0",
+    textAlign: "center",
+    cursor: "pointer",
+    borderRadius: "6px",
+    fontSize: fonts.size.s,
+    color: colors.neutral700,
+    border: `1px solid ${colors.neutral200}`,
+    backgroundColor: "transparent",
+    userSelect: "none",
+  },
+
+  selectedCell: {
+    backgroundColor: colors.active.shade600,
+    color: colors.neutral100,
+    borderColor: colors.active.shade600,
   },
 
   header: {

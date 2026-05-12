@@ -624,21 +624,19 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 onChange={() => { }}
               />
               {showDobPicker && (
-                <div style={{ position: "absolute", bottom: "100%", left: 0, zIndex: 1100 }}>
-                  <DatePicker
-                    selectedDate={new Date()}
-                    onSelect={(date: Date) => {
-                      const dd = String(date.getDate()).padStart(2, "0");
-                      const mm = String(date.getMonth() + 1).padStart(2, "0");
-                      const yyyy = String(date.getFullYear());
-                      const digits = dd + mm + yyyy;
-                      setDobDigits(digits);
-                      setForm((prev) => ({ ...prev, dob: formatDob(digits), age: calcAge(digits) }));
-                      setShowDobPicker(false);
-                    }}
-                    onClose={() => setShowDobPicker(false)}
-                  />
-                </div>
+                <DatePicker
+                  selectedDate={new Date()}
+                  onSelect={(date: Date) => {
+                    const dd = String(date.getDate()).padStart(2, "0");
+                    const mm = String(date.getMonth() + 1).padStart(2, "0");
+                    const yyyy = String(date.getFullYear());
+                    const digits = dd + mm + yyyy;
+                    setDobDigits(digits);
+                    setForm((prev) => ({ ...prev, dob: formatDob(digits), age: calcAge(digits) }));
+                    setShowDobPicker(false);
+                  }}
+                  onClose={() => setShowDobPicker(false)}
+                />
               )}
             </div>
             <div style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>or</div>
@@ -780,18 +778,15 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               </span>
             </div>
             {showDatePicker && (
-              <div style={{ position: "absolute", bottom: "100%", left: "50%", zIndex: 1100 }}>
-                <DatePicker
-                  selectedDate={form.date}
-                  onSelect={(date: Date) => {
-                    setForm({ ...form, date });
-                    setShowDatePicker(false);
-                  }}
-                  onClose={() => setShowDatePicker(false)}
-                  style={{ top: "auto", bottom: "8px" }}
-                  disablePast
-                />
-              </div>
+              <DatePicker
+                selectedDate={form.date}
+                onSelect={(date: Date) => {
+                  setForm({ ...form, date });
+                  setShowDatePicker(false);
+                }}
+                onClose={() => setShowDatePicker(false)}
+                disablePast
+              />
             )}
           </Card>
 
@@ -806,28 +801,14 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               </span>
             </div>
             {showTimePicker && (
-              <>
-                <div
-                  style={{
-                    position: "fixed",
-                    inset: 0,
-                    backgroundColor: "rgba(0, 0, 0, 0.5)",
-                    zIndex: 1050,
-                  }}
-                  onClick={() => setShowTimePicker(false)}
-                />
-                <div style={{ position: "absolute", bottom: "100%", left: "50%", zIndex: 1100 }}>
-                  <TimePicker
-                    initialTime={form.time}
-                    onSelect={(time: string) => {
-                      setForm({ ...form, time });
-                      setShowTimePicker(false);
-                    }}
-                    onClose={() => setShowTimePicker(false)}
-                    style={{ top: "auto", bottom: "8px" }}
-                  />
-                </div>
-              </>
+              <TimePicker
+                initialTime={form.time}
+                onSelect={(time: string) => {
+                  setForm({ ...form, time });
+                  setShowTimePicker(false);
+                }}
+                onClose={() => setShowTimePicker(false)}
+              />
             )}
           </Card>
           {errors.time && (
