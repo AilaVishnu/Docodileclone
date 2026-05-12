@@ -207,7 +207,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
     <div style={styles.container}>
       <header style={{ ...styles.header, marginBottom: "24px", position: "relative" }}>
         <div style={{ flex: 1 }} />
-        <h2 style={{ ...styles.title, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
+        <h1 style={{ ...styles.title, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
           <span
             onClick={() => setShowDatePicker(!showDatePicker)}
             style={{
@@ -218,7 +218,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
           >
             {dateText}
           </span> Queue
-        </h2>
+        </h1>
 
         <div style={{ display: "flex", gap: "12px" }}>
           {/* Internal booking trigger removed in favor of TopNav trigger */}

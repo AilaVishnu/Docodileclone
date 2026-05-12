@@ -258,12 +258,13 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   greeting: {
-    fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h4,
-    fontWeight: 400,
-    color: colors.neutral900,
     margin: 0,
     textAlign: "center",
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h5,
+    lineHeight: fonts.lineHeight.h5,
+    fontWeight: fonts.weight.regular,
+    color: colors.neutral900,
   },
 
   mainGrid: {

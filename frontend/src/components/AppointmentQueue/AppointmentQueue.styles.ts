@@ -16,13 +16,13 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   title: {
+    margin: 0,
+    textAlign: "center" as const,
     fontFamily: fonts.family.secondary,
     fontSize: fonts.size.h5,
-    fontWeight: 400,
-    lineHeight: "34px",
+    lineHeight: fonts.lineHeight.h5,
+    fontWeight: fonts.weight.regular,
     color: colors.neutral900,
-    margin: 0,
-    fontStyle: "normal",
   },
 
   tableContainer: {
