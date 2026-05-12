@@ -10,6 +10,7 @@ data class PatientWithLastVisitDTO(
     val id: UUID,
     val name: String,
     val phone: String?,
+    val email: String?,
     val gender: String?,
     val dob: LocalDate?,
     val age: Int?,

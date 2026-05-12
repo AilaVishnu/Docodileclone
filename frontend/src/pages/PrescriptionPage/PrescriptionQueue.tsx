@@ -140,6 +140,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
       id: apt.patientId,
       name: apt.patientName,
       phone: apt.patientPhone,
+      email: null,
       gender: apt.patientGender,
       dob: apt.patientDob,
       age: apt.patientAge,

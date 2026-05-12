@@ -35,6 +35,7 @@ class PatientService(
                     id = p.id,
                     name = p.name,
                     phone = p.phone,
+                    email = p.email,
                     gender = p.gender,
                     dob = p.dob,
                     age = p.age,
