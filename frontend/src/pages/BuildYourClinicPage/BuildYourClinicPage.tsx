@@ -49,7 +49,9 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                   staffList = staffData.map((s: any) => ({
                     id: s.id,
                     name: s.name || "",
-                    role: s.role.split("_").map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "),
+                    role: s.role === "OTHER" && s.customRole
+                      ? s.customRole
+                      : s.role.split("_").map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "),
                     gender: s.gender || "",
                     email: s.email || "",
                     phone: s.phone || "",
@@ -202,7 +204,9 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
         const mappedStaff: Staff = {
           id: savedStaffData.id,
           name: savedStaffData.name || "",
-          role: savedStaffData.role.split("_").map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "),
+          role: savedStaffData.role === "OTHER" && savedStaffData.customRole
+            ? savedStaffData.customRole
+            : savedStaffData.role.split("_").map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "),
           gender: savedStaffData.gender || "",
           email: savedStaffData.email || "",
           phone: savedStaffData.phone || "",
@@ -280,6 +284,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                               width="100%"
                               height="100%"
                               borderRadius="0"
+                              crop="bust"
                             />
                           </StaffWindow>
                           <div style={styles.staffName}>{staff.name}</div>
@@ -319,10 +324,10 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
 
         {/* Footer actions */}
         <div style={styles.footer}>
-          <Button size="md" variant="secondaryLight" iconRight={<HelpIcon />} style={{ padding: "8px 50px" }}>
+          <Button size="md" variant="secondaryLight" iconRight={<HelpIcon />} style={{ minWidth: 180 }}>
             Help
           </Button>
-          <Button size="md" variant="dark" iconRight={<NextIcon />} onClick={async () => {
+          <Button size="md" variant="dark" iconRight={<NextIcon />} style={{ minWidth: 180 }} onClick={async () => {
             const incomplete = clinics.find(c => !c.name.trim() || !c.phone.trim() || !c.domain.trim() || !c.address.trim());
             if (incomplete) {
               setActiveClinicId(incomplete.id);
@@ -362,7 +367,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
             } catch {
               setToastMessage("An error occurred while saving clinics");
             }
-          }} style={{ padding: "8px 100px" }}>
+          }}>
             Next
           </Button>
         </div>

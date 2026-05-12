@@ -6,6 +6,7 @@ Thumbs.db
 # IDEs
 .idea/
 .vscode/
+.claude/
 *.iml
 
 
@@ -33,6 +34,7 @@ out/
 
 # Spring Boot
 application-local.yml
+application-local.properties
 application-dev.yml
 
 

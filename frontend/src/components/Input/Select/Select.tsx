@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 import { styles } from "./Select.styles";
-import { colors } from "../../../styles/theme";
 
 type SelectOption = {
   label: string;
@@ -14,6 +13,7 @@ type SelectProps = {
   placeholder?: string;
   iconLeft?: React.ReactNode;
   error?: boolean;
+  disabled?: boolean;
 };
 
 export function Select({
@@ -23,8 +23,11 @@ export function Select({
   placeholder = "Select...",
   iconLeft,
   error = false,
+  disabled = false,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,88 +46,84 @@ export function Select({
 
   const selectedOption = normalizedOptions.find((opt) => opt.value === value);
 
+  // Active = any "interacting" or "has value" state. All of these unify the
+  // border + arrow + iconLeft color to neutral900 via inherited `color`.
+  //   isOpen    → Figma "Typing/Open"
+  //   isHovered → Figma "Hover"
+  //   has value → Figma "Typed"
+  const active = !disabled && (isOpen || isHovered || !!selectedOption);
+
+  // Style priority (last wins): error > disabled > active > default
+  const containerStyle: React.CSSProperties = {
+    ...styles.container,
+    ...(active ? styles.containerActive : {}),
+    ...(disabled ? styles.containerDisabled : {}),
+    ...(error ? styles.errorContainer : {}),
+  };
+
   return (
-    <div 
-      style={{ 
-        display: "flex", 
-        alignItems: "center", 
-        gap: "8px", 
-        paddingLeft: "8px", // Align with TextInput padding
-        width: "100%", 
-        position: "relative" 
-      }}
+    <div
+      ref={containerRef}
+      style={containerStyle}
+      onClick={() => { if (!disabled) setIsOpen(!isOpen); }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      {iconLeft && <span style={{ display: "flex", alignItems: "center", opacity: 0.8 }}>{iconLeft}</span>}
-      
-      <div
-        ref={containerRef}
-        style={{
-          ...styles.container,
-          flex: 1,
-          border: selectedOption ? `1.5px solid ${colors.neutral900}` : `1px solid ${colors.neutral300}`,
-          ...(error ? styles.errorContainer : {})
-        }}
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <div style={styles.select}>
-          {selectedOption ? (
-            selectedOption.label
-          ) : (
-            <span style={{ opacity: 0.5 }}>{placeholder}</span>
-          )}
-        </div>
+      {iconLeft && <span style={styles.iconLeft}>{iconLeft}</span>}
 
-        <div style={{ ...styles.arrow, transform: isOpen ? "rotate(180deg)" : "rotate(0)" }}>
-          <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
-            <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
+      <div style={styles.select}>
+        {selectedOption ? (
+          selectedOption.label
+        ) : (
+          <span style={styles.placeholder}>{placeholder}</span>
+        )}
+      </div>
 
-        {isOpen && (
-          <div className="select-dropdown-scroll" style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
-            right: 0,
-            backgroundColor: "#fff",
-            border: "1px solid #c7c7c7",
-            borderRadius: "8px",
-            boxShadow: "2px 2px 12px rgba(0,0,0,0.08)",
-            zIndex: 100,
-            maxHeight: "178px",
-            overflowY: "auto",
-            padding: "4px",
-            scrollbarWidth: "none" as const,
-            msOverflowStyle: "none" as const,
-          }}>
-            <style>{`
-              .select-dropdown-scroll::-webkit-scrollbar { display: none; }
-            `}</style>
-            {normalizedOptions.map((option) => (
+      <div style={{ ...styles.arrow, transform: isOpen ? "rotate(180deg)" : "rotate(0)" }}>
+        <svg width="14" height="6" viewBox="0 0 14 6" fill="none">
+          <path
+            d="M1 1L7 5L13 1"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+
+      {isOpen && !disabled && (
+        <div
+          className="select-dropdown-scroll"
+          style={styles.menu}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <style>{`
+            .select-dropdown-scroll::-webkit-scrollbar { display: none; }
+          `}</style>
+          {normalizedOptions.map((option, i) => {
+            const isSelected = value === option.value;
+            const isItemHovered = hoverIndex === i;
+            return (
               <div
                 key={option.value}
-                onClick={(e) => {
-                  e.stopPropagation();
+                onClick={() => {
                   onChange(option.value);
                   setIsOpen(false);
                 }}
+                onMouseEnter={() => setHoverIndex(i)}
+                onMouseLeave={() => setHoverIndex((prev) => (prev === i ? null : prev))}
                 style={{
-                  padding: "8px",
-                  cursor: "pointer",
-                  borderRadius: "4px",
-                  fontSize: "14px",
-                  textAlign: "left",
-                  backgroundColor: value === option.value ? "#f5f5f5" : "transparent",
+                  ...styles.menuItem,
+                  ...(isSelected ? styles.menuItemSelected : {}),
+                  ...(isItemHovered && !isSelected ? styles.menuItemHovered : {}),
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#fafafa")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = value === option.value ? "#f5f5f5" : "transparent")}
               >
                 {option.label}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

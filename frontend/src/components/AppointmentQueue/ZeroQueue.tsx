@@ -46,18 +46,18 @@ const styles: Record<string, React.CSSProperties> = {
   title: {
     margin: 0,
     fontFamily: fonts.family.secondary,
-    fontSize: "32px",
+    fontSize: fonts.size.h4,
     fontWeight: 400,
     lineHeight: "44px",
-    color: "#000606",
+    color: colors.neutral1000,
   },
   subtitle: {
     margin: 0,
     fontFamily: fonts.family.secondary,
     fontStyle: "italic",
-    fontSize: "16px",
+    fontSize: fonts.size.m,
     fontWeight: 400,
     lineHeight: "22px",
-    color: "#000606",
+    color: colors.neutral1000,
   },
 };

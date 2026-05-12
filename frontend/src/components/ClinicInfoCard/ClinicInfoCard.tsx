@@ -1,11 +1,8 @@
-import React, { useState, useEffect, KeyboardEvent } from "react";
-import { Card } from "../Card";
-import { TextInput } from "../Input/TextInput";
-import { DomainInput } from "../Input/DomainInput";
-import { Select } from "../Input/Select/Select";
+import React, { useState, useEffect, useRef, KeyboardEvent } from "react";
 import { Button } from "../Button";
+import { Tag } from "../Tag";
 import { styles } from "./ClinicInfoCard.styles";
-import { colors } from "../../styles/theme";
+import { colors, fonts } from "../../styles/theme";
 import { ReactComponent as BuildingIcon } from "../../assets/Buildings.svg";
 import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
 import { ReactComponent as SpecialtyIcon } from "../../assets/Stethoscope.svg";
@@ -19,9 +16,11 @@ type ClinicInfoCardProps = {
   onShowToast?: (message: string) => void;
 };
 
+const isUuid = (str: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
 export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCardProps) {
   const [specialtyInput, setSpecialtyInput] = useState("");
-  const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
   const [isSaved, setIsSaved] = useState(isUuid(clinic.id));
   const [showErrors, setShowErrors] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -33,6 +32,44 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
   }, [clinic.id]);
 
   const { domain, name: clinicName, phone, specialties, address } = clinic;
+
+  const [domainAvailability, setDomainAvailability] = useState<
+    "idle" | "checking" | "available" | "taken"
+  >("idle");
+  const domainCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const locked = isSaved;
+    if (!domain || domain.trim().length < 2 || locked) {
+      setDomainAvailability("idle");
+      return;
+    }
+    setDomainAvailability("checking");
+    if (domainCheckTimer.current) clearTimeout(domainCheckTimer.current);
+    domainCheckTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/api/tenant/domain/check?domain=${encodeURIComponent(domain.trim())}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
+            },
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setDomainAvailability(data.available ? "available" : "taken");
+        } else {
+          setDomainAvailability("idle");
+        }
+      } catch {
+        setDomainAvailability("idle");
+      }
+    }, 500);
+    return () => {
+      if (domainCheckTimer.current) clearTimeout(domainCheckTimer.current);
+    };
+  }, [domain, isSaved]);
 
   const addSpecialty = () => {
     const trimmed = specialtyInput.trim();
@@ -63,6 +100,13 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
 
   const isPhoneValid = validatePhone(phone);
 
+  // Most fields lock after save and unlock when the user clicks Edit Details.
+  const fieldsLocked = isSaved && !isEditing;
+  // Domain (the subdomain/nick-name) is permanent: once saved it's locked
+  // forever, even in Edit Details mode. Front-end enforcement only — the
+  // back-end still accepts updates but the UI disallows them.
+  const domainLocked = isSaved;
+
   const handleSave = async () => {
     const missing = [];
     if (!clinicName.trim()) missing.push("clinic name");
@@ -79,10 +123,7 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
     setShowErrors(false);
 
     try {
-      // Basic UUID validation for existing clinics
-      const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
       const clinicId = isUuid(clinic.id) ? clinic.id : null;
-
       const response = await fetch(`${API_BASE_URL}/api/tenant/clinic`, {
         method: "POST",
         headers: {
@@ -115,119 +156,180 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
     }
   };
 
-  return (
-    <Card style={styles.outerCard}>
-      {/* Clinic display name heading */}
-      <h3 style={styles.cardTitle} title={displayName}>{displayName}</h3>
+  const handlePhoneChange = (val: string) => {
+    let digits = val.replace(/\D/g, "");
+    if (digits.startsWith("91") && val.startsWith("+")) {
+      digits = digits.substring(2);
+    }
+    digits = digits.substring(0, 10);
+    if (digits.length === 0) onUpdate({ phone: "" });
+    else onUpdate({ phone: "+91 " + digits });
+  };
 
-      {/* Domain input - locked after save */}
-      <div style={isSaved ? { pointerEvents: "none" as const, opacity: 0.6 } : {}}>
-        <DomainInput
-          value={domain}
-          onChange={(val) => onUpdate({ domain: val })}
-          disabled={isSaved || (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clinic.id) && !!domain)}
+  const handlePhoneBlur = () => {
+    let clean = phone.replace(/\D/g, "");
+    if (clean.length === 0) return;
+    if (clean.startsWith("91")) clean = clean.substring(2);
+    clean = clean.substring(0, 10);
+    if (clean.length > 5) {
+      onUpdate({ phone: `+91 ${clean.substring(0, 5)} ${clean.substring(5)}` });
+    } else if (clean.length > 0) {
+      onUpdate({ phone: `+91 ${clean}` });
+    }
+  };
+
+  return (
+    <div style={styles.card}>
+      <h3 style={styles.clinicName} title={displayName}>{displayName}</h3>
+
+      {/* Clinic name */}
+      <div
+        style={{
+          ...styles.fieldRow,
+          ...(fieldsLocked ? styles.locked : {}),
+          ...(showErrors && !clinicName.trim() ? styles.fieldError : {}),
+        }}
+      >
+        <span style={styles.fieldIcon}><BuildingIcon width={20} height={20} /></span>
+        <input
+          style={styles.fieldInput}
+          value={clinicName}
+          onChange={(e) => onUpdate({ name: e.target.value })}
+          placeholder="Clinic Name"
+          maxLength={32}
+          disabled={fieldsLocked}
         />
       </div>
 
-      <Card style={styles.innerCard}>
-        {/* Clinic name - locked after save */}
-        <div style={isSaved ? { pointerEvents: "none" as const, opacity: 0.6 } : {}}>
-          <TextInput
-            value={clinicName}
-            onChange={(val) => onUpdate({ name: val })}
-            placeholder="Clinic Name"
-            maxLength={32}
-            iconLeft={<BuildingIcon />}
-            error={showErrors && !clinicName.trim()}
-          />
-        </div>
+      {/* Phone */}
+      <div
+        style={{
+          ...styles.fieldRow,
+          ...(fieldsLocked ? styles.locked : {}),
+          ...((!isPhoneValid || (showErrors && !phone.trim())) ? styles.fieldError : {}),
+        }}
+      >
+        <span style={styles.fieldIcon}><PhoneIcon width={20} height={20} /></span>
+        <input
+          style={styles.fieldInput}
+          value={phone}
+          onChange={(e) => handlePhoneChange(e.target.value)}
+          onBlur={handlePhoneBlur}
+          placeholder="+91 XXXXX XXXXX"
+          disabled={fieldsLocked}
+        />
+      </div>
 
-        {/* Phone - always editable when editing */}
-        <div style={isSaved && !isEditing ? { pointerEvents: "none" as const, opacity: 0.6 } : {}}>
-          <TextInput
-            value={phone}
-            onChange={(val) => {
-              let digits = val.replace(/\D/g, "");
-              if (digits.startsWith("91") && val.startsWith("+")) {
-                digits = digits.substring(2);
-              }
-              digits = digits.substring(0, 10);
-              if (digits.length === 0) onUpdate({ phone: "" });
-              else onUpdate({ phone: "+91 " + digits });
-            }}
-            onBlur={() => {
-              let clean = phone.replace(/\D/g, "");
-              if (clean.length === 0) return;
-              if (clean.startsWith("91")) clean = clean.substring(2);
-              clean = clean.substring(0, 10);
-              if (clean.length > 5) {
-                onUpdate({ phone: `+91 ${clean.substring(0, 5)} ${clean.substring(5)}` });
-              } else if (clean.length > 0) {
-                onUpdate({ phone: `+91 ${clean}` });
-              }
-            }}
-            placeholder="+91 XXXXX XXXXX"
-            iconLeft={<PhoneIcon />}
-            error={!isPhoneValid || (showErrors && !phone.trim())}
-          />
-        </div>
-
-        {/* Specialty - always editable when editing */}
-        <div style={isSaved && !isEditing ? { pointerEvents: "none" as const, opacity: 0.6 } : {}}>
-          <div style={{ ...styles.specialtySection, borderBottom: `1px solid ${colors.neutral300}`, paddingBottom: 8 }}>
-            <Select
-              options={["Dermatology", "Cardiology", "Orthopedics", "Gynecology", "Neurology", "Pediatrics", "Ophthalmology", "ENT", "Urology"]}
-              value=""
-              onChange={(val: string) => {
-                if (val && !specialties.includes(val)) {
-                  onUpdate({ specialties: [...specialties, val] });
-                }
-              }}
-              placeholder="Add specialty"
-              iconLeft={<SpecialtyIcon />}
+      {/* Specialties — icon + tag list + inline add input */}
+      <div style={{ ...styles.specialtyRow, ...(fieldsLocked ? styles.locked : {}) }}>
+        <span style={styles.fieldIcon}><SpecialtyIcon width={20} height={20} /></span>
+        <div style={styles.tagRow}>
+          {specialties.map((s: string, i: number) => (
+            <Tag
+              key={i}
+              variant="filled"
+              label={s}
+              onRemove={() => removeSpecialty(i)}
+              removeLabel={`Remove ${s}`}
             />
-            <div style={{ ...styles.tagRow, marginTop: 8, minHeight: 32 }}>
-              {specialties.map((s: string, i: number) => (
-                <span key={i} style={styles.tag}>
-                  {s}
-                  <button
-                    style={styles.tagRemove}
-                    onClick={() => removeSpecialty(i)}
-                    aria-label={`Remove ${s}`}
-                  >
-                    ✕
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Address - locked after save */}
-        <div style={isSaved ? { pointerEvents: "none" as const, opacity: 0.6 } : {}}>
-          <TextInput
-            value={address}
-            onChange={(val) => onUpdate({ address: val })}
-            placeholder="Clinic address"
-            iconLeft={<LocationIcon />}
-            multiline
-            error={showErrors && !address.trim()}
+          ))}
+          <input
+            style={styles.specialtyAddInput}
+            value={specialtyInput}
+            onChange={(e) => setSpecialtyInput(e.target.value)}
+            onKeyDown={handleSpecialtyKeyDown}
+            onBlur={addSpecialty}
+            placeholder={specialties.length === 0 ? "Add specialty" : ""}
+            disabled={fieldsLocked}
           />
         </div>
-      </Card>
+      </div>
 
-      {/* Save / Edit Details button */}
-      <div style={styles.saveButton}>
+      {/* Address (multiline) */}
+      <div
+        style={{
+          ...styles.fieldRowMultiline,
+          ...(fieldsLocked ? styles.locked : {}),
+          ...(showErrors && !address.trim() ? styles.fieldError : {}),
+        }}
+      >
+        <span style={styles.fieldIcon}><LocationIcon width={20} height={20} /></span>
+        <textarea
+          style={styles.fieldTextArea}
+          value={address}
+          onChange={(e) => onUpdate({ address: e.target.value })}
+          placeholder="Clinic address"
+          rows={4}
+          disabled={fieldsLocked}
+        />
+      </div>
+
+      {/* Domain (nick name) — sits at the bottom. Editable only during the
+          initial setup; locked permanently once the clinic is saved. */}
+      <div style={{ ...styles.domainSection, ...(domainLocked ? styles.locked : {}) }}>
+        <label style={styles.domainLabel}>give a nick name to your clinic</label>
+        <div
+          style={{
+            ...styles.domainBox,
+            ...(domainAvailability === "taken"
+              ? { borderColor: colors.red200 }
+              : domainAvailability === "available"
+                ? { borderColor: colors.secondary700 }
+                : {}),
+          }}
+        >
+          <input
+            style={styles.domainInput}
+            value={domain}
+            onChange={(e) => onUpdate({ domain: e.target.value })}
+            placeholder="your-clinic"
+            disabled={domainLocked}
+          />
+          <span
+            style={{
+              ...styles.domainSuffix,
+              ...(domainLocked ? styles.domainSuffixLocked : {}),
+            }}
+          >
+            .docodile.app
+          </span>
+        </div>
+        {!domainLocked && domainAvailability !== "idle" && (
+          <div
+            style={{
+              fontSize: fonts.size.xs,
+              fontFamily: fonts.family.primary,
+              color:
+                domainAvailability === "available"
+                  ? colors.secondary700
+                  : domainAvailability === "taken"
+                    ? colors.red200
+                    : colors.neutral700,
+              marginTop: 4,
+              marginLeft: 4,
+            }}
+          >
+            {domainAvailability === "checking"
+              ? "Checking..."
+              : domainAvailability === "available"
+                ? "Available"
+                : "Already taken"}
+          </div>
+        )}
+      </div>
+
+      {/* Save / Edit toggle */}
+      <div style={styles.buttonWrapper}>
         {isSaved && !isEditing ? (
-          <Button size="md" variant="light" onClick={() => setIsEditing(true)}>
+          <Button size="md" variant="light" onClick={() => setIsEditing(true)} style={{ minWidth: 180 }}>
             Edit Details
           </Button>
         ) : (
-          <Button size="md" variant="dark" onClick={handleSave}>
+          <Button size="md" variant="dark" onClick={handleSave} style={{ minWidth: 180 }}>
             Save
           </Button>
         )}
       </div>
-    </Card>
+    </div>
   );
 }

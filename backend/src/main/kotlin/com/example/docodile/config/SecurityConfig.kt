@@ -19,7 +19,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
-@EnableConfigurationProperties(JwtProperties::class)
+@EnableConfigurationProperties(JwtProperties::class, EkaProperties::class)
 class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilter) {
     @Bean
     fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()

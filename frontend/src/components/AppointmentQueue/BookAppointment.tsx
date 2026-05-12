@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { styles } from "./BookAppointment.styles";
-import { colors } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 import { DatePicker } from "./DatePicker";
 import { TimePicker } from "./TimePicker";
 import {
@@ -24,6 +24,7 @@ import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
 import { ReactComponent as EditPencilIcon } from "../../assets/icons/edit-pencil.svg";
 import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check.svg";
 import { ReactComponent as ArrowIcon } from "../../assets/Arrow Right.svg";
+import { pickAvatar } from "../../utils/avatar";
 
 type Doctor = {
   id: string;
@@ -87,6 +88,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const [selectedDoctorId, setSelectedDoctorId] = useState(
     editingAppointment?.doctorId || initialDoctorId || (doctors.length > 0 ? doctors[0].id : "")
   );
+  const [overridePatientNumber, setOverridePatientNumber] = useState<number | null>(null);
   const currentCounter = parseInt(localStorage.getItem("docodile_patient_counter") || "0", 10);
   const patientMap: Record<string, number> = JSON.parse(
     localStorage.getItem("docodile_patient_map") || "{}"
@@ -96,7 +98,9 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     ? editingPatientNumber
       ? "T" + String(editingPatientNumber).padStart(3, "0")
       : "T---"
-    : "T" + String(currentCounter + 1).padStart(3, "0");
+    : overridePatientNumber
+      ? "T" + String(overridePatientNumber).padStart(3, "0")
+      : "T" + String(currentCounter + 1).padStart(3, "0");
   const [form, setForm] = useState({
     name: editingAppointment?.patientName || "",
     email: editingAppointment?.patientEmail || "",
@@ -125,6 +129,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const [toastMessage, setToastMessage] = useState("");
   const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
   const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
+  const monthInputRef = React.useRef<HTMLInputElement>(null);
+  const [allPatients, setAllPatients] = useState<any[]>([]);
+  const [showNameSugg, setShowNameSugg] = useState(false);
+  const [showPhoneSugg, setShowPhoneSugg] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const initialRenderRef = React.useRef(true);
   useEffect(() => {
@@ -134,7 +143,40 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   useEffect(() => {
     if (initialRenderRef.current) return;
     setIsDirty(true);
+    setErrors((prev) => {
+      if (Object.values(prev).every((v) => !v)) return prev;
+      return {
+        ...prev,
+        name: prev.name && !form.name.trim(),
+        email: prev.email && !!form.email.trim() && !isValidEmail(form.email),
+        phone: prev.phone && (!form.phone.trim() || form.phone.trim() === "+91" || !isValidPhone(form.phone)),
+        dob: prev.dob && !form.dob && !form.age,
+        doctor: prev.doctor && !selectedDoctorId,
+        services: prev.services && form.services.length === 0,
+        time: prev.time && !form.time,
+        paymentMethod: prev.paymentMethod && !form.paymentMethod,
+      };
+    });
   }, [form, selectedDoctorId, dobDigits]);
+
+  // Auto-select Waive whenever discount+mode drives the total to zero (or below).
+  // Skipped on initial render so a saved paymentMethod (e.g. "Waive") isn't
+  // wiped before the user has had a chance to interact with the bill.
+  useEffect(() => {
+    if (initialRenderRef.current) return;
+    const sub = form.services.reduce((s, svc) => s + (SERVICE_PRICES[svc] || 0), 0);
+    const d = Number(form.discount) || 0;
+    const isFullWaive =
+      sub > 0 &&
+      ((discountMode === "%" && d >= 100) ||
+        (discountMode === "₹" && d >= sub));
+    if (isFullWaive && form.paymentMethod !== "Waive") {
+      setForm((prev) => ({ ...prev, paymentMethod: "Waive" }));
+    } else if (!isFullWaive && form.paymentMethod === "Waive") {
+      setForm((prev) => ({ ...prev, paymentMethod: "" }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.discount, discountMode, form.services]);
 
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const hasDob = dobDigits.length > 0;
@@ -145,16 +187,8 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     const mm = digits.slice(2, 4);
     const yyyy = digits.slice(4, 8);
     if (digits.length <= 2) return dd;
-    if (digits.length <= 4) {
-      if (mm.length === 2) {
-        const mIdx = Number(mm) - 1;
-        return (mIdx >= 0 && mIdx <= 11) ? `${dd} ${MONTHS[mIdx]}` : `${dd} ${mm}`;
-      }
-      return `${dd} ${mm}`;
-    }
-    const mIdx = Number(mm) - 1;
-    const monName = (mIdx >= 0 && mIdx <= 11) ? MONTHS[mIdx] : mm;
-    return `${dd} ${monName} ${yyyy}`;
+    if (digits.length <= 4) return `${dd} ${mm}`;
+    return `${dd} ${mm} ${yyyy}`;
   };
 
   const calcAge = (digits: string): string => {
@@ -171,6 +205,49 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     if (today.getDate() < birth.getDate()) months--;
     if (months < 0) { years--; months += 12; }
     return `${years} / ${months}`;
+  };
+
+  // Fetch existing patients for autocomplete suggestions.
+  useEffect(() => {
+    const token = localStorage.getItem("docodile_token") ?? "";
+    fetch(`${API_BASE_URL}/api/patients`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.ok ? r.json() : [])
+      .then(setAllPatients)
+      .catch(() => {});
+  }, []);
+
+  const nameSuggestions: any[] = form.name.trim().length >= 1
+    ? allPatients.filter((p) => p.name.toLowerCase().includes(form.name.toLowerCase())).slice(0, 6)
+    : [];
+  const phoneSuggestions: any[] = form.phone.replace(/\D/g, "").length >= 6
+    ? allPatients.filter((p) => (p.phone ?? "").replace(/\D/g, "").includes(form.phone.replace(/\D/g, ""))).slice(0, 6)
+    : [];
+
+  const fillFromPatient = (p: any) => {
+    const clean = (p.phone ?? "").replace(/\D/g, "").slice(-10);
+    const formattedPhone = clean.length === 10
+      ? `+91 ${clean.substring(0, 5)} ${clean.substring(5)}`
+      : (p.phone ?? "");
+    let newDobDigits = "";
+    if (p.dob) {
+      const parts = String(p.dob).split("-");
+      if (parts.length === 3) newDobDigits = parts[2] + parts[1] + parts[0];
+    }
+    // Look up previously assigned T-number for this patient via their phone.
+    const phoneMap: Record<string, number> = JSON.parse(localStorage.getItem("docodile_patient_phone_map") || "{}");
+    const existingNumber = clean ? phoneMap[clean] ?? null : null;
+    setOverridePatientNumber(existingNumber);
+    setForm((prev) => ({
+      ...prev,
+      name: p.name ?? "",
+      phone: formattedPhone,
+      gender: p.gender ?? prev.gender,
+      dob: newDobDigits ? formatDob(newDobDigits) : prev.dob,
+      age: newDobDigits ? calcAge(newDobDigits) : (p.age ? `${Math.floor(p.age / 12)} / ${p.age % 12}` : prev.age),
+    }));
+    if (newDobDigits) setDobDigits(newDobDigits);
+    setShowNameSugg(false);
+    setShowPhoneSugg(false);
   };
 
   // Pre-fill DOB when editing
@@ -204,18 +281,53 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   };
 
   const handleBook = async (payStatus: string, successMessage?: string) => {
-    if (!form.name.trim()) { setToastMessage("Please enter patient name"); return; }
-    if (form.email.trim() && !isValidEmail(form.email)) { setToastMessage("Please enter a valid email address"); return; }
-    if (!form.phone.trim() || form.phone.trim() === "+91") { setToastMessage("Please enter phone number"); return; }
-    if (!isValidPhone(form.phone)) { setToastMessage("Please enter a valid 10-digit phone number"); return; }
-    if (!form.dob && !form.age) { setToastMessage("Please enter date of birth or age"); return; }
-    if (!activeDoctor) { setToastMessage("Please select a doctor"); return; }
-    if (form.services.length === 0) { setToastMessage("Please select at least one service"); return; }
-    if (!form.time) { setToastMessage("Please select a time"); return; }
-    if (!form.paymentMethod) { setToastMessage("Please select a payment method"); return; }
+    const newErrors: Record<string, boolean> = {
+      name: !form.name.trim(),
+      email: !!form.email.trim() && !isValidEmail(form.email),
+      phone: !form.phone.trim() || form.phone.trim() === "+91" || !isValidPhone(form.phone),
+      dob: !form.dob && !form.age,
+      doctor: !activeDoctor,
+      services: form.services.length === 0,
+      time: !form.time,
+      paymentMethod: !form.paymentMethod,
+    };
+    setErrors(newErrors);
+    const firstError =
+      newErrors.name ? "Please enter patient name" :
+      newErrors.email ? "Please enter a valid email address" :
+      newErrors.phone ? "Please enter a valid phone number" :
+      newErrors.dob ? "Please enter date of birth or age" :
+      newErrors.doctor ? "Please select a doctor" :
+      newErrors.services ? "Please select at least one service" :
+      newErrors.time ? "Please select a time" :
+      newErrors.paymentMethod ? "Please select a payment method" :
+      null;
+    if (firstError) {
+      setToastMessage(firstError);
+      return;
+    }
 
     setSubmitting(true);
     try {
+      // Duplicate check — block if this phone already has an appointment on the selected date.
+      if (!editingAppointment) {
+        const dateStr = `${form.date.getFullYear()}-${String(form.date.getMonth() + 1).padStart(2, "0")}-${String(form.date.getDate()).padStart(2, "0")}`;
+        const aptsRes = await fetch(`${API_BASE_URL}/api/tenant/appointments?date=${dateStr}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("docodile_token")}` },
+        });
+        if (aptsRes.ok) {
+          const apts: any[] = await aptsRes.json();
+          const phoneClean = form.phone.replace(/\D/g, "").slice(-10);
+          const duplicate = phoneClean
+            ? apts.find((a) => (a.patientPhone ?? "").replace(/\D/g, "").slice(-10) === phoneClean)
+            : null;
+          if (duplicate) {
+            setToastMessage(`${form.name} already has an appointment on ${formatDate(form.date)}`);
+            return;
+          }
+        }
+      }
+
       const { hour, minute } = parseTimeTo24h(form.time);
       const scheduledTime = new Date(form.date);
       scheduledTime.setHours(hour, minute, 0, 0);
@@ -261,14 +373,26 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       if (res.ok) {
         if (!editingAppointment) {
           const prev = parseInt(localStorage.getItem("docodile_patient_counter") || "0", 10);
-          const assigned = prev + 1;
-          localStorage.setItem("docodile_patient_counter", String(assigned));
+          // Reuse the existing patient's T-number if we selected from suggestions.
+          const assigned = overridePatientNumber ?? (prev + 1);
+          if (!overridePatientNumber) {
+            localStorage.setItem("docodile_patient_counter", String(assigned));
+          }
           try {
             const savedApt = await res.clone().json();
             if (savedApt?.id) {
               const map = JSON.parse(localStorage.getItem("docodile_patient_map") || "{}");
               map[savedApt.id] = assigned;
               localStorage.setItem("docodile_patient_map", JSON.stringify(map));
+            }
+            // Persist phone → T-number so future bookings for this patient reuse it.
+            const phoneClean = form.phone.replace(/\D/g, "").slice(-10);
+            if (phoneClean) {
+              const phoneMap = JSON.parse(localStorage.getItem("docodile_patient_phone_map") || "{}");
+              if (!phoneMap[phoneClean]) {
+                phoneMap[phoneClean] = assigned;
+                localStorage.setItem("docodile_patient_phone_map", JSON.stringify(phoneMap));
+              }
             }
           } catch {}
         }
@@ -331,7 +455,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   value={selectedDoctorId}
                   onChange={(val) => setSelectedDoctorId(val)}
                   placeholder="Select Doctor"
-                  fontSize="24px"
+                  fontSize={fonts.size.h5}
                 />
               </>
             )}
@@ -340,37 +464,79 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       </header>
 
       <div style={styles.grid}>
-        {/* Patient ID Card */}
+        {/* Patient ID Card — avatar above the ID. Avatar reacts to the gender +
+            age the user has filled in below. */}
         <Card style={{ ...styles.card, ...styles.patientIdCard }}>
-          <span style={{ fontSize: "14px", color: colors.neutral500 }}>Patient ID</span>
+          <img
+            src={pickAvatar({
+              gender: form.gender,
+              ageYears: form.age ? parseInt(form.age.split("/")[0]?.trim() || "", 10) : null,
+            })}
+            alt=""
+            style={styles.patientAvatar}
+          />
           <h1 style={styles.patientIdText}>{patientId}</h1>
         </Card>
 
         {/* Patient Details Card */}
         <Card style={{ ...styles.card, ...styles.formCard }}>
-          <div style={styles.iconField}>
-            <UserHandsIcon style={styles.iconFieldIcon} />
-            <input
-              style={styles.iconFieldInput}
-              placeholder="Name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
+          <div style={{ position: "relative" }}>
+            <div style={{ ...styles.iconField, ...(errors.name ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
+              <UserHandsIcon style={styles.iconFieldIcon} />
+              <input
+                style={styles.iconFieldInput}
+                placeholder="Name"
+                value={form.name}
+                onChange={(e) => { setForm({ ...form, name: e.target.value }); setShowNameSugg(true); }}
+                onFocus={() => setShowNameSugg(true)}
+                onBlur={() => setTimeout(() => setShowNameSugg(false), 150)}
+              />
+            </div>
+            {showNameSugg && nameSuggestions.length > 0 && (
+              <div style={patientSuggStyle}>
+                {nameSuggestions.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    style={patientSuggItem}
+                    onMouseDown={() => fillFromPatient(p)}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.primary100; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                  >
+                    <span style={{ fontWeight: 500 }}>{p.name}</span>
+                    <span style={{ color: colors.neutral500, fontSize: fonts.size.xs }}>{p.phone ?? ""}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {errors.name && (
+              <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
+                Please enter patient name
+              </div>
+            )}
           </div>
 
           <div style={styles.row}>
-            <div style={styles.iconField}>
-              <LetterIcon style={styles.iconFieldIcon} />
-              <input
-                style={styles.iconFieldInput}
-                type="text"
-                placeholder="hello@example.com"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                onBlur={() => setForm((prev) => ({ ...prev, email: prev.email.trim().toLowerCase() }))}
-              />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ ...styles.iconField, ...(errors.email ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
+                <LetterIcon style={styles.iconFieldIcon} />
+                <input
+                  style={styles.iconFieldInput}
+                  type="text"
+                  placeholder="hello@example.com"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  onBlur={() => setForm((prev) => ({ ...prev, email: prev.email.trim().toLowerCase() }))}
+                />
+              </div>
+              {errors.email && (
+                <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
+                  Please enter a valid email
+                </div>
+              )}
             </div>
-            <div style={{ ...styles.iconField, width: "200px" }}>
+            <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
+            <div style={{ ...styles.iconField, ...(errors.phone ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
               <PhoneIcon style={styles.iconFieldIcon} />
               <input
                 style={styles.iconFieldInput}
@@ -378,13 +544,15 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 value={form.phone}
                 onChange={(e) => {
                   const val = e.target.value.replace(/[^0-9+ ]/g, "");
-                  // Extract only digits to check length
                   let digits = val.replace(/\D/g, "");
                   if (digits.startsWith("91") && digits.length > 10) digits = digits.substring(2);
-                  if (digits.length > 10) return; // Block input beyond 10 digits
+                  if (digits.length > 10) return;
                   setForm({ ...form, phone: val });
+                  setShowPhoneSugg(true);
                 }}
+                onFocus={() => setShowPhoneSugg(true)}
                 onBlur={() => {
+                  setTimeout(() => setShowPhoneSugg(false), 150);
                   let clean = form.phone.replace(/\D/g, "");
                   if (clean.startsWith("91") && clean.length > 10) clean = clean.substring(2);
                   clean = clean.substring(0, 10);
@@ -397,18 +565,48 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 }}
               />
             </div>
+            {showPhoneSugg && phoneSuggestions.length > 0 && (
+              <div style={patientSuggStyle}>
+                {phoneSuggestions.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    style={patientSuggItem}
+                    onMouseDown={() => fillFromPatient(p)}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.primary100; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                  >
+                    <span style={{ fontWeight: 500 }}>{p.name}</span>
+                    <span style={{ color: colors.neutral500, fontSize: fonts.size.xs }}>{p.phone ?? ""}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+              {errors.phone && (
+                <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
+                  Please enter a valid phone number
+                </div>
+              )}
+            </div>
           </div>
 
           <div style={styles.row}>
-            <div style={{ ...styles.iconField, position: "relative", width: "240px" }}>
-              <span onClick={() => setShowDobPicker(true)} style={{ cursor: "pointer", display: "flex" }}>
+            <div style={{ ...styles.iconField, position: "relative", flex: 1, minWidth: 0, ...(errors.dob ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
+              <span
+                onClick={() => {
+                  if (hasManualAge) setForm((prev) => ({ ...prev, age: "", dob: "" }));
+                  setShowDobPicker(true);
+                }}
+                style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: spacing.xs, opacity: hasManualAge ? 0.4 : 1 }}
+              >
                 <CalendarIcon style={styles.iconFieldIcon} />
+                <span style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>DOB</span>
               </span>
               <input
                 style={{ ...styles.iconFieldInput, opacity: hasManualAge ? 0.4 : 1 }}
                 type="text"
-                placeholder="DD MM YYYY"
-                disabled={hasManualAge}
+                placeholder="dd mm yyyy"
+                onFocus={() => { if (hasManualAge) setForm((prev) => ({ ...prev, age: "", dob: "" })); }}
                 value={formatDob(dobDigits)}
                 onKeyDown={(e) => {
                   if (e.key === "Backspace") {
@@ -426,40 +624,48 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 onChange={() => { }}
               />
               {showDobPicker && (
-                <div style={{ position: "absolute", bottom: "100%", left: 0, zIndex: 1100 }}>
-                  <DatePicker
-                    selectedDate={new Date()}
-                    onSelect={(date: Date) => {
-                      const dd = String(date.getDate()).padStart(2, "0");
-                      const mm = String(date.getMonth() + 1).padStart(2, "0");
-                      const yyyy = String(date.getFullYear());
-                      const digits = dd + mm + yyyy;
-                      setDobDigits(digits);
-                      setForm((prev) => ({ ...prev, dob: formatDob(digits), age: calcAge(digits) }));
-                      setShowDobPicker(false);
-                    }}
-                    onClose={() => setShowDobPicker(false)}
-                  />
-                </div>
+                <DatePicker
+                  selectedDate={new Date()}
+                  onSelect={(date: Date) => {
+                    const dd = String(date.getDate()).padStart(2, "0");
+                    const mm = String(date.getMonth() + 1).padStart(2, "0");
+                    const yyyy = String(date.getFullYear());
+                    const digits = dd + mm + yyyy;
+                    setDobDigits(digits);
+                    setForm((prev) => ({ ...prev, dob: formatDob(digits), age: calcAge(digits) }));
+                    setShowDobPicker(false);
+                  }}
+                  onClose={() => setShowDobPicker(false)}
+                />
               )}
             </div>
-            <div style={{ fontSize: "16px", color: colors.neutral900 }}>or</div>
-            <div style={{ ...styles.iconField, width: "200px", gap: "4px", marginLeft: "auto" }}>
-              <HashtagIcon style={styles.iconFieldIcon} />
+            <div style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>or</div>
+            <div
+              style={{
+                ...styles.iconField,
+                flex: 1,
+                minWidth: 0,
+                gap: spacing.xs,
+                justifyContent: "flex-start",
+                ...(errors.dob ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}),
+              }}
+            >
+              <span style={{ fontSize: fonts.size.m, color: colors.neutral900, opacity: hasDob ? 0.4 : 1 }}>Age</span>
               <input
                 className="text-input-field"
-                style={{ ...styles.iconFieldInput, width: "28px", textAlign: "center", MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
-                placeholder="0"
+                style={{ ...styles.iconFieldInput, width: 32, flex: "0 0 auto", borderBottom: "none", textAlign: "center", MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
                 type="number"
                 min="0"
                 max="150"
-                disabled={hasDob}
+                placeholder="-"
+                onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
                 value={form.age.split("/")[0]?.trim() || ""}
                 onChange={(e) => {
                   const y = e.target.value;
                   const m = form.age.split("/")[1]?.trim() || "";
                   setDobDigits("");
-                  setForm({ ...form, age: `${y} / ${m}`, dob: "" });
+                  setForm({ ...form, age: (y || m) ? `${y || "0"} / ${m || "0"}` : "", dob: "" });
+                  if (y.length >= 2) monthInputRef.current?.focus();
                 }}
               />
               <style>{`
@@ -467,27 +673,34 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
                 input[type=number] { -moz-appearance: textfield; }
               `}</style>
-              <span style={{ fontSize: "12px", color: "#747474" }}>Y</span>
-              <span style={{ fontSize: "16px", color: "#747474" }}>/</span>
+              <span style={{ fontSize: fonts.size.m, color: colors.neutral400, opacity: hasDob ? 0.4 : 1 }}>yrs</span>
               <input
+                ref={monthInputRef}
                 className="text-input-field"
-                style={{ ...styles.iconFieldInput, width: "28px", textAlign: "center", MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
-                placeholder="0"
+                style={{ ...styles.iconFieldInput, width: 32, flex: "0 0 auto", borderBottom: "none", textAlign: "center", MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
                 type="number"
                 min="0"
                 max="11"
-                disabled={hasDob}
+                placeholder="-"
+                onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
                 value={form.age.split("/")[1]?.trim() || ""}
                 onChange={(e) => {
-                  const m = e.target.value;
+                  let m = e.target.value;
+                  const n = parseInt(m, 10);
+                  if (m !== "" && (isNaN(n) || n < 0 || n > 11)) return;
                   const y = form.age.split("/")[0]?.trim() || "";
                   setDobDigits("");
-                  setForm({ ...form, age: `${y} / ${m}`, dob: "" });
+                  setForm({ ...form, age: (y || m) ? `${y || "0"} / ${m || "0"}` : "", dob: "" });
                 }}
               />
-              <span style={{ fontSize: "12px", color: "#747474", marginRight: "16px" }}>M</span>
+              <span style={{ fontSize: fonts.size.m, color: colors.neutral400, opacity: hasDob ? 0.4 : 1 }}>mos</span>
             </div>
           </div>
+          {errors.dob && (
+            <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
+              Please enter date of birth or age
+            </div>
+          )}
 
           <div style={{ ...styles.radioGroup, marginTop: "8px" }}>
             {["Male", "Female", "Other"].map((g) => (
@@ -509,11 +722,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
           <BillCard
             paymentMethod={form.paymentMethod}
             onPaymentMethodChange={(m) => {
-              if (m === "No Bill") {
+              if (m === "Waive") {
                 setDiscountMode("%");
                 setForm({ ...form, paymentMethod: m, discount: 100 });
               } else {
-                if (form.paymentMethod === "No Bill") {
+                if (form.paymentMethod === "Waive") {
                   setForm({ ...form, paymentMethod: m, discount: 0 });
                 } else {
                   setForm({ ...form, paymentMethod: m });
@@ -560,61 +773,49 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               onClick={() => setShowDatePicker(true)}
             >
               <CalendarIcon style={styles.iconFieldIcon} />
-              <span style={{ fontSize: "16px", color: form.date ? colors.neutral900 : colors.neutral500 }}>
+              <span style={{ fontSize: fonts.size.m, color: form.date ? colors.neutral900 : colors.neutral400 }}>
                 {formatDate(form.date) || "Select Date"}
               </span>
             </div>
             {showDatePicker && (
-              <div style={{ position: "absolute", bottom: "100%", left: "50%", zIndex: 1100 }}>
-                <DatePicker
-                  selectedDate={form.date}
-                  onSelect={(date: Date) => {
-                    setForm({ ...form, date });
-                    setShowDatePicker(false);
-                  }}
-                  onClose={() => setShowDatePicker(false)}
-                  style={{ top: "auto", bottom: "8px" }}
-                  disablePast
-                />
-              </div>
+              <DatePicker
+                selectedDate={form.date}
+                onSelect={(date: Date) => {
+                  setForm({ ...form, date });
+                  setShowDatePicker(false);
+                }}
+                onClose={() => setShowDatePicker(false)}
+                disablePast
+              />
             )}
           </Card>
 
-          <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative" }}>
+          <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative", ...(errors.time ? { borderColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
             <div
               style={{ ...styles.iconField, borderBottom: "none", cursor: "pointer", padding: 0 }}
               onClick={() => setShowTimePicker(true)}
             >
               <ClockIcon style={styles.iconFieldIcon} />
-              <span style={{ fontSize: "16px", color: form.time ? colors.neutral900 : colors.neutral500 }}>
+              <span style={{ fontSize: fonts.size.m, color: form.time ? colors.neutral900 : colors.neutral400 }}>
                 {form.time || "Select Time"}
               </span>
             </div>
             {showTimePicker && (
-              <>
-                <div
-                  style={{
-                    position: "fixed",
-                    inset: 0,
-                    backgroundColor: "rgba(0, 0, 0, 0.5)",
-                    zIndex: 1050,
-                  }}
-                  onClick={() => setShowTimePicker(false)}
-                />
-                <div style={{ position: "absolute", bottom: "100%", left: "50%", zIndex: 1100 }}>
-                  <TimePicker
-                    initialTime={form.time}
-                    onSelect={(time: string) => {
-                      setForm({ ...form, time });
-                      setShowTimePicker(false);
-                    }}
-                    onClose={() => setShowTimePicker(false)}
-                    style={{ top: "auto", bottom: "8px" }}
-                  />
-                </div>
-              </>
+              <TimePicker
+                initialTime={form.time}
+                onSelect={(time: string) => {
+                  setForm({ ...form, time });
+                  setShowTimePicker(false);
+                }}
+                onClose={() => setShowTimePicker(false)}
+              />
             )}
           </Card>
+          {errors.time && (
+            <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginLeft: 4 }}>
+              Please select a time
+            </div>
+          )}
         </div>
 
         {/* Appointment Details Card */}
@@ -633,6 +834,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                     value={selectedDoctorId}
                     onChange={(val: string) => setSelectedDoctorId(val)}
                     placeholder="Select Doctor"
+                    error={errors.doctor}
                   />
                 </div>
               </div>
@@ -692,6 +894,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                         value=""
                         onChange={(val: string) => setForm({ ...form, services: [...form.services, val] })}
                         placeholder="+ Add Service"
+                        error={errors.services}
                       />
                     </div>
                     <div style={{ width: "28px", flexShrink: 0 }} />
@@ -708,25 +911,32 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             <>
               {isDirty && (
                 <button style={styles.pillButtonPrimary} onClick={() => handleBook(editingAppointment.payStatus || "Unpaid")} disabled={submitting}>
-                  <EditPencilIcon width={18} height={18} style={{ color: "white" }} />
+                  <EditPencilIcon width={18} height={18} style={{ color: colors.neutral100 }} />
                   {submitting ? "Saving..." : "Save Edits"}
                 </button>
               )}
               {editingAppointment.payStatus?.toUpperCase() !== "PAID" && (
                 <button style={styles.pillButtonPayDue} onClick={() => handleBook("Paid", "Payment is done")} disabled={submitting}>
-                  <BillCheckIcon width={20} height={20} style={{ color: "white" }} />
+                  <BillCheckIcon width={20} height={20} style={{ color: colors.neutral100 }} />
                   {submitting ? "Saving..." : "Pay Due"}
                 </button>
               )}
             </>
           ) : (
             <>
-              <button style={styles.pillButtonSecondary} onClick={() => handleBook("Unpaid")} disabled={submitting}>
+              <button
+                style={{
+                  ...styles.pillButtonSecondary,
+                  ...(form.paymentMethod === "Waive" ? { opacity: 0.38, cursor: "not-allowed" } : {}),
+                }}
+                onClick={() => handleBook("Unpaid")}
+                disabled={submitting || form.paymentMethod === "Waive"}
+              >
                 <PlusIcon style={{ width: "20px", height: "20px" }} />
                 {submitting ? "Booking..." : "Book Now Pay Later"}
               </button>
               <button style={styles.pillButtonPrimary} onClick={() => handleBook("Paid")} disabled={submitting}>
-                <CalendarIcon style={{ width: "20px", height: "20px", color: "white" }} />
+                <CalendarIcon style={{ width: "20px", height: "20px", color: colors.neutral100 }} />
                 {submitting ? "Booking..." : "Pay & Book"}
               </button>
             </>
@@ -742,3 +952,36 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     </div>
   );
 }
+
+const patientSuggStyle: React.CSSProperties = {
+  position: "absolute",
+  top: "100%",
+  left: 0,
+  right: 0,
+  zIndex: 2000,
+  backgroundColor: colors.neutral100,
+  border: `${strokes.xs} solid ${colors.primary300}`,
+  borderRadius: radii.m,
+  boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+  display: "flex",
+  flexDirection: "column",
+  overflow: "hidden",
+  marginTop: 4,
+  padding: spacing["2xs"],
+};
+
+const patientSuggItem: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  padding: `${spacing.xs} ${spacing.s}`,
+  background: "transparent",
+  border: "none",
+  borderRadius: radii.xs,
+  cursor: "pointer",
+  textAlign: "left",
+  gap: spacing.s,
+  fontFamily: fonts.family.primary,
+  fontSize: fonts.size.s,
+  color: colors.neutral900,
+};

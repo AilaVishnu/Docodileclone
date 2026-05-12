@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { styles } from "./DatePicker.styles";
 import { ChevronLeftIcon, ChevronRightIcon } from "../../iconsUtil";
+import { fonts, colors } from "../../styles/theme";
 
 type DatePickerProps = {
   selectedDate: Date;
@@ -114,12 +115,12 @@ export function DatePicker({ selectedDate, onSelect, onClose, style, disablePast
           textAlign: "center",
           cursor: "pointer",
           borderRadius: "8px",
-          fontSize: "14px",
+          fontSize: fonts.size.s,
           fontWeight: viewDate.getMonth() === i ? 600 : 400,
-          backgroundColor: viewDate.getMonth() === i ? "#E48647" : "transparent",
-          color: viewDate.getMonth() === i ? "#fff" : "#202020",
+          backgroundColor: viewDate.getMonth() === i ? colors.primary600 : "transparent",
+          color: viewDate.getMonth() === i ? colors.neutral100 : colors.neutral900,
         }}
-        onMouseEnter={(e) => { if (viewDate.getMonth() !== i) e.currentTarget.style.backgroundColor = "#f5f5f5"; }}
+        onMouseEnter={(e) => { if (viewDate.getMonth() !== i) e.currentTarget.style.backgroundColor = colors.neutral150; }}
         onMouseLeave={(e) => { if (viewDate.getMonth() !== i) e.currentTarget.style.backgroundColor = "transparent"; }}
       >
         {m}
@@ -145,12 +146,12 @@ export function DatePicker({ selectedDate, onSelect, onClose, style, disablePast
             textAlign: "center",
             cursor: "pointer",
             borderRadius: "8px",
-            fontSize: "14px",
+            fontSize: fonts.size.s,
             fontWeight: currentYear === y ? 600 : 400,
-            backgroundColor: currentYear === y ? "#E48647" : "transparent",
-            color: currentYear === y ? "#fff" : "#202020",
+            backgroundColor: currentYear === y ? colors.primary600 : "transparent",
+            color: currentYear === y ? colors.neutral100 : colors.neutral900,
           }}
-          onMouseEnter={(e) => { if (currentYear !== y) e.currentTarget.style.backgroundColor = "#f5f5f5"; }}
+          onMouseEnter={(e) => { if (currentYear !== y) e.currentTarget.style.backgroundColor = colors.neutral150; }}
           onMouseLeave={(e) => { if (currentYear !== y) e.currentTarget.style.backgroundColor = "transparent"; }}
         >
           {y}

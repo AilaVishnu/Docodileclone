@@ -27,7 +27,7 @@ export const styles: Record<string, CSSProperties> = {
   message: {
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.s,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     margin: 0,
   },
 
@@ -35,9 +35,22 @@ export const styles: Record<string, CSSProperties> = {
     background: "none",
     border: "none",
     cursor: "pointer",
-    fontSize: 16,
+    fontSize: fonts.size.m,
     color: colors.neutral500,
     padding: 0,
+    marginLeft: spacing.xs,
+    flexShrink: 0,
+  },
+
+  actionButton: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    fontWeight: 600,
+    color: colors.primary700,
+    padding: `2px ${spacing.xs}`,
     marginLeft: spacing.xs,
     flexShrink: 0,
   },

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { SideNav, NavTab } from "../../components/SideNav";
 import { TopNav } from "../../components/TopNav";
 import { PrescriptionView, PatientFilesView, AppointmentsView } from "./Views";
+import { HomeView } from "./HomeView";
+import { DesignSystemPage } from "../DesignSystem";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
 import { confirmStyles } from "../../components/AddStaffModal/AddStaffModal.styles";
 import { Button } from "../../components/Button";
@@ -26,8 +28,6 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   
   // Selected theme mode
   const [themeMode] = useState<ThemeMode>("primary");
-
-  const clinicName = localStorage.getItem("docodile_clinic_name") || "your clinic";
 
   const [bookingKey, setBookingKey] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
@@ -84,10 +84,10 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
     },
     title: {
       fontFamily: fonts.family.secondary,
-      fontSize: "24px",
+      fontSize: fonts.size.h5,
       fontWeight: 400,
       lineHeight: "34px",
-      color: "#202020",
+      color: colors.neutral900,
       margin: 0,
     }
   } as const;
@@ -96,18 +96,15 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   const renderContent = () => {
     switch (activeTab) {
       case "Home":
-        return (
-          <div>
-            <h1 style={styles.title}>Welcome back to {clinicName}</h1>
-            <p style={{ marginTop: '12px', color: '#666' }}>Select a tab from the sidebar to manage your clinic operations.</p>
-          </div>
-        );
+        return <HomeView />;
       case "Appointments":
         return <AppointmentsView isBooking={isBooking} bookingKey={bookingKey} onBack={() => { setIsBooking(false); setIsEditing(false); }} onEditStart={() => setIsEditing(true)} />;
       case "Prescription":
         return <PrescriptionView />;
       case "Patient Files":
-        return <PatientFilesView />;
+        return <PatientFilesView onNavigate={setActiveTab} />;
+      case "Design System":
+        return <DesignSystemPage />;
       default:
         return (
           <div>
@@ -129,12 +126,13 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       />
       <div style={styles.contentArea}>
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-          <TopNav 
-            onBuildClinic={onViewClinic} 
+          <TopNav
+            onBuildClinic={onViewClinic}
             onViewAllClinics={onViewAllClinics}
-            onLogout={onLogout} 
+            onLogout={onLogout}
             onNewAppointment={handleNewAppointment}
             isBooking={isBooking}
+            onNavigate={setActiveTab}
           />
           <main style={styles.mainContent}>
             {renderContent()}
@@ -147,7 +145,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>
         <div style={confirmStyles.dialog}>
           <h4 style={confirmStyles.title}>Are you sure?</h4>
-          <p style={{ margin: 0, fontSize: "13px", color: "#747474", textAlign: "center" }}>Current booking data will be discarded.</p>
+          <p style={{ margin: 0, fontSize: fonts.size.s, color: colors.neutral600, textAlign: "center" }}>Current booking data will be discarded.</p>
           <div style={confirmStyles.actions}>
             <Button variant="dangerLight" size="sm" onClick={() => setShowConfirm(false)}>
               Nope

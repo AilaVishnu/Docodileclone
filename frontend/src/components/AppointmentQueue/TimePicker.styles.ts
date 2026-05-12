@@ -2,24 +2,61 @@ import { CSSProperties } from "react";
 import { colors, radii, fonts, spacing } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
+  backdrop: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    zIndex: 1050,
+  },
+
   overlay: {
     position: "absolute",
-    top: "100%",
-    left: "50%",
-    transform: "translateX(-50%)",
-    zIndex: 1000,
-    marginTop: "8px",
+    top: "50%",
+    left: "calc(100% + 12px)",
+    transform: "translateY(-50%)",
+    zIndex: 1100,
   },
 
   container: {
-    backgroundColor: "white",
-    width: "240px",
+    backgroundColor: colors.neutral100,
+    width: "280px",
     padding: "16px",
     borderRadius: "20px",
     boxShadow: "2px 2px 16px 0px rgba(0,0,0,0.12)",
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "12px",
+  },
+
+  sectionLabel: {
+    fontSize: fonts.size.xs,
+    color: colors.neutral500,
+    fontWeight: 500,
+    marginBottom: "6px",
+  },
+
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, 1fr)",
+    gap: "4px",
+  },
+
+  cell: {
+    padding: "8px 0",
+    textAlign: "center",
+    cursor: "pointer",
+    borderRadius: "6px",
+    fontSize: fonts.size.s,
+    color: colors.neutral700,
+    border: `1px solid ${colors.neutral200}`,
+    backgroundColor: "transparent",
+    userSelect: "none",
+  },
+
+  selectedCell: {
+    backgroundColor: colors.active.shade600,
+    color: colors.neutral100,
+    borderColor: colors.active.shade600,
   },
 
   header: {
@@ -28,7 +65,7 @@ export const styles: Record<string, CSSProperties> = {
 
   title: {
     margin: 0,
-    fontSize: "16px",
+    fontSize: fonts.size.m,
     fontWeight: 600,
     color: colors.neutral900,
   },
@@ -48,7 +85,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   unitHeader: {
-    fontSize: "12px",
+    fontSize: fonts.size.xs,
     color: colors.neutral500,
     fontWeight: 500,
   },
@@ -72,54 +109,51 @@ export const styles: Record<string, CSSProperties> = {
     textAlign: "center",
     cursor: "pointer",
     borderRadius: "6px",
-    fontSize: "14px",
+    fontSize: fonts.size.s,
     color: colors.neutral700,
   },
 
   selectedItem: {
     backgroundColor: colors.active.shade600,
-    color: "white",
+    color: colors.neutral100,
   },
 
   separator: {
-    fontSize: "20px",
+    fontSize: fonts.size.l,
     fontWeight: 600,
     paddingTop: "20px",
   },
 
   amPmToggle: {
     display: "flex",
-    backgroundColor: colors.neutral100,
-    borderRadius: "8px",
-    padding: "2px",
+    gap: "4px",
     marginTop: "4px",
   },
 
   toggleBtn: {
     flex: 1,
-    padding: "6px 12px",
-    fontSize: "14px",
-    fontWeight: 600,
-    border: "none",
-    borderRadius: "6px",
+    padding: "8px",
+    textAlign: "center",
     cursor: "pointer",
+    borderRadius: "6px",
+    fontSize: fonts.size.s,
+    color: colors.neutral700,
+    border: "none",
     backgroundColor: "transparent",
-    color: colors.neutral500,
   },
 
   activeToggleBtn: {
-    backgroundColor: "white",
-    color: colors.neutral900,
-    boxShadow: "0px 1px 3px rgba(0,0,0,0.1)",
+    backgroundColor: colors.active.shade600,
+    color: colors.neutral100,
   },
 
   doneButton: {
     backgroundColor: colors.neutral900,
-    color: "white",
+    color: colors.neutral100,
     border: "none",
     borderRadius: "999px",
     padding: "10px",
-    fontSize: "15px",
+    fontSize: fonts.size.m,
     fontWeight: 500,
     cursor: "pointer",
     width: "100%",

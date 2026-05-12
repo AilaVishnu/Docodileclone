@@ -16,6 +16,10 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
 
+// Thrown when a booking would violate the "one appointment per patient
+// per day" rule. Mapped to HTTP 409 Conflict by ClinicStatusController.
+class DuplicateAppointmentException(message: String) : RuntimeException(message)
+
 @Service
 class AppointmentService(
     private val appointmentRepository: AppointmentRepository,
@@ -42,18 +46,56 @@ class AppointmentService(
         val doctor = appUserRepository.findById(request.doctorId)
             .orElseThrow { IllegalArgumentException("Doctor not found") }
 
-        // Create or find patient by name + clinic
-        val patient = Patient(
-            clinic = clinic,
-            name = request.patientName,
-            phone = request.patientPhone,
-            email = request.patientEmail,
-            gender = request.patientGender,
-            dob = request.patientDob?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() },
-            age = request.patientAge,
-            createdAt = Instant.now()
-        )
-        val savedPatient = patientRepository.save(patient)
+        // Find existing patient by phone within this clinic, or create a new one.
+        // The phone column stores whatever string the user typed ("+91 99999
+        // 99999", "9999999999", "+91-99999-99999", etc.) and an exact-string
+        // lookup treated all of those as different patients — so booking the
+        // same person twice silently created duplicate Patient rows. Match
+        // on the digits-only suffix instead so any reasonable formatting of
+        // the same number is recognised as the same patient.
+        val reqDigits = normalizePhone(request.patientPhone)
+        val existingPatient = reqDigits?.let { digits ->
+            patientRepository.findAllByClinicId(clinic.id!!)
+                .filter { normalizePhone(it.phone) == digits }
+                .minByOrNull { it.createdAt ?: Instant.EPOCH }
+        }
+        val savedPatient = if (existingPatient != null) {
+            // Update mutable fields on the existing patient record.
+            existingPatient.name = request.patientName
+            existingPatient.email = request.patientEmail
+            existingPatient.gender = request.patientGender
+            existingPatient.dob = request.patientDob?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
+            existingPatient.age = request.patientAge
+            patientRepository.save(existingPatient)
+        } else {
+            val patient = Patient(
+                clinic = clinic,
+                name = request.patientName,
+                phone = request.patientPhone,
+                email = request.patientEmail,
+                gender = request.patientGender,
+                dob = request.patientDob?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() },
+                age = request.patientAge,
+                createdAt = Instant.now()
+            )
+            patientRepository.save(patient)
+        }
+
+        // One appointment per patient per day, per clinic. Blocks both the
+        // soft-FE-only path and any direct API call. Storage-side guard is
+        // the partial unique index added in V25; this check just lets us
+        // surface a friendly 409 instead of letting the constraint trip.
+        val dayStart = request.scheduledTime.toLocalDate().atStartOfDay()
+        val dayEnd = request.scheduledTime.toLocalDate().atTime(23, 59, 59)
+        val sameDay = appointmentRepository
+            .findAllByClinicIdAndPatientIdAndScheduledTimeBetween(
+                clinic.id!!, savedPatient.id!!, dayStart, dayEnd,
+            )
+        if (sameDay.isNotEmpty()) {
+            throw DuplicateAppointmentException(
+                "${savedPatient.name} already has an appointment on ${request.scheduledTime.toLocalDate()}",
+            )
+        }
 
         val appointment = Appointment(
             clinic = clinic,
@@ -115,6 +157,16 @@ class AppointmentService(
             .orElseThrow { IllegalArgumentException("Appointment not found") }
         appointment.status = status
         return appointmentRepository.save(appointment).toDTO()
+    }
+
+    // Strip every non-digit and keep the trailing 10 digits — the canonical
+    // local form most Indian phone numbers boil down to. Used solely for
+    // patient-lookup equality; the original string the user typed is still
+    // what we store so the UI keeps the formatting they entered.
+    private fun normalizePhone(phone: String?): String? {
+        val digits = phone?.filter { it.isDigit() } ?: return null
+        if (digits.isEmpty()) return null
+        return digits.takeLast(10)
     }
 
     private fun Appointment.toDTO(): AppointmentDTO {

@@ -5,9 +5,9 @@ export const styles: Record<string, CSSProperties> = {
   card: {
     display: "flex",
     flexDirection: "column",
-    gap: spacing.xs,
+    gap: spacing.s,     // was spacing.xs — more breath between inputs
     borderRadius: radii.m,
-    padding: spacing.s,
+    padding: spacing.l, // was spacing.s — more generous interior
     backgroundColor: colors.primary100,
     minWidth: "25vw",
     flex: 1,
@@ -24,12 +24,12 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     gap: "2px",
     padding: "2px",
-    color: colors.blindBlack,
+    color: colors.neutral900,
     cursor: "pointer",
   },
 
   radioInput: {
     cursor: "pointer",
-    accentColor: colors.blindBlack
+    accentColor: colors.neutral900
   },
 };

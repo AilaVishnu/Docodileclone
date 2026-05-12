@@ -1,11 +1,5 @@
 :root {
-  --yellowTeeth: #F9F9ED;
-  --skinColor: #FFD0BF;
-  --paleBlue: #ECF1FE;
-  --whiteTeeth: #FCFCFC;
-  --blindBlack: #122525;
-  --sunset : linear-gradient(180deg, #F9F9ED 0%, #FFD0BF 100%);
-  --sunrise: linear-gradient(135deg, #F9F9ED 0%, #ECF1FE 100%);
+  --sunset: linear-gradient(180deg, #F9F9ED 0%, #FFD0BF 100%);
 
   /* Default Active Theme (Primary/Yellow) */
   --active-shade-50: #FCFCF5;
@@ -15,7 +9,7 @@
   --active-shade-400: #EDCA99;
   --active-shade-500: #ECA66D;
   --active-shade-600: #E48647;
-  --active-shade-700: #D26D2A;
+  --active-shade-700: #CF6F2F;
   --active-shade-800: #AE561A;
 }
 
@@ -36,6 +30,49 @@
 
 * {
   box-sizing: border-box;
+}
+
+/* Suppress the browser's default focus ring on form controls. The app
+   handles focus styling per-component (e.g. invalid-state red fill on
+   vitals); the default outline conflicts with that styling. */
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+button:focus,
+button:focus-visible {
+  outline: none;
+}
+
+/* Tint all radios and checkboxes black app-wide (was browser-default blue). */
+input[type="radio"],
+input[type="checkbox"] {
+  accent-color: #202020;
+}
+
+/* Single grey for all placeholders across the app — matches Figma's
+   input-field idle state (border + icon + placeholder share neutral300).
+   Split per vendor prefix: a single comma-list gets discarded wholesale
+   if any selector is unrecognized. */
+input::placeholder,
+textarea::placeholder {
+  color: #ABABAB !important; /* colors.neutral400 */
+  opacity: 1;
+}
+input::-webkit-input-placeholder,
+textarea::-webkit-input-placeholder {
+  color: #ABABAB !important;
+  opacity: 1;
+}
+input::-moz-placeholder,
+textarea::-moz-placeholder {
+  color: #ABABAB !important;
+  opacity: 1;
+}
+input:-ms-input-placeholder,
+textarea:-ms-input-placeholder {
+  color: #ABABAB !important;
+  opacity: 1;
 }
 
 body {

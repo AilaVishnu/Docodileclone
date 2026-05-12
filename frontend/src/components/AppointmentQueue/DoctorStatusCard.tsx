@@ -65,6 +65,7 @@ export function DoctorStatusCard({
           width="56px"
           height="56px"
           borderRadius="50%"
+          crop="face"
         />
       </div>
 
@@ -153,7 +154,7 @@ const cardStyles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fff",
+    backgroundColor: colors.neutral100,
     zIndex: 2,
     marginBottom: "-30px",
   },
@@ -171,9 +172,9 @@ const cardStyles: Record<string, React.CSSProperties> = {
 
   doctorName: {
     fontFamily: fonts.family.primary,
-    fontSize: "15px",
+    fontSize: fonts.size.m,
     fontWeight: 600,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     textAlign: "center",
     margin: "0 0 8px",
   },
@@ -204,7 +205,7 @@ const statStyles: Record<string, React.CSSProperties> = {
 
   text: {
     fontFamily: fonts.family.primary,
-    fontSize: "14px",
+    fontSize: fonts.size.s,
     color: colors.neutral900,
     lineHeight: "20px",
   },

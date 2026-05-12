@@ -7,5 +7,6 @@ enum class Role {
     FRONT_DESK,
     NURSE,
     PHARMACY,
+    LAB,
     OTHER
 }

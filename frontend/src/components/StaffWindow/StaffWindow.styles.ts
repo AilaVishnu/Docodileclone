@@ -21,6 +21,14 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "flex-end",
     justifyContent: "center",
+    transition: "transform 0.15s ease, filter 0.15s ease, background-color 0.15s ease, border-color 0.15s ease",
+  },
+
+  // Subtle hover for existing staff windows — lift + slight brighten so it
+  // feels clickable without being noisy.
+  windowHover: {
+    transform: "translateY(-2px)",
+    filter: "brightness(1.08)",
   },
 
   dashedWindow: {
@@ -28,5 +36,13 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: "transparent",
     alignItems: "center",
     color: "#F3F3DC",
+  },
+
+  // Obvious affordance for the "+" button so users see it's clickable.
+  dashedWindowHover: {
+    border: "2px dashed #FFFFFF",
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    color: "#FFFFFF",
+    transform: "translateY(-2px)",
   },
 };

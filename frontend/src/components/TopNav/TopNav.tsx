@@ -5,6 +5,8 @@ import { MessageIcon, BellIcon } from '../../iconsUtil';
 import { StaffIllustration } from '../AddStaffModal/StaffIllustration';
 import { ReactComponent as SearchIcon } from '../../assets/search.svg';
 import { ReactComponent as PlusIcon } from '../../assets/Plus.svg';
+import { SessionTrayButton } from './SessionTrayButton';
+import type { NavTab } from '../SideNav';
 
 type TopNavProps = {
   onBuildClinic?: () => void;
@@ -12,9 +14,12 @@ type TopNavProps = {
   onLogout?: () => void;
   onNewAppointment?: () => void;
   isBooking?: boolean;
+  // Switches the active home tab. Passed from HomePage so the SessionTray
+  // can route the doctor back to the Prescription form on click.
+  onNavigate?: (tab: NavTab) => void;
 };
 
-export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, isBooking }: TopNavProps) {
+export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, isBooking, onNavigate }: TopNavProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -45,12 +50,12 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
     actions: {
       display: 'flex',
       alignItems: 'center',
-      gap: spacing.l,
+      gap: spacing.s, // was spacing.l (20) — tighter grouping per design
     },
     iconGroup: {
       display: 'flex',
       alignItems: 'center',
-      gap: spacing.s,
+      gap: spacing['2xs'], // was spacing.s (12) — icons sit close together
     },
     iconButton: {
       position: 'relative' as const,
@@ -62,7 +67,10 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       borderRadius: '50%',
       backgroundColor: 'transparent',
       cursor: 'pointer',
-      transition: 'all 0.2s ease',
+      transition: 'background-color 0.15s ease, transform 0.15s ease',
+    },
+    iconButtonHover: {
+      backgroundColor: colors.neutralAlphaBlack, // subtle dim bg on hover
     },
     searchBarContainer: {
       display: 'flex',
@@ -93,11 +101,15 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       height: '48px',
       borderRadius: '50%',
       overflow: 'hidden',
-      backgroundColor: '#C4581C',
       display: 'flex',
-      alignItems: 'flex-end',
-      justifyContent: 'center',
       cursor: 'pointer',
+      transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+      boxSizing: 'border-box' as const,
+    },
+    profileAvatarHover: {
+      transform: 'scale(1.05)',
+      // Very subtle ring — just enough to feel interactive, not an outline
+      boxShadow: '0 0 0 2px rgba(0, 0, 0, 0.08)',
     },
     dropdown: {
       position: 'absolute' as const,
@@ -139,6 +151,41 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
   const handleDropdownItemClick = (action: () => void) => {
     setIsDropdownOpen(false);
     action();
+  };
+
+  const HoverIconButton = ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => {
+    const [hovered, setHovered] = useState(false);
+    return (
+      <div
+        style={{ ...styles.iconButton, ...(hovered ? styles.iconButtonHover : {}) }}
+        onClick={onClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {children}
+      </div>
+    );
+  };
+
+  const HoverAvatar = ({ onClick }: { onClick: () => void }) => {
+    const [hovered, setHovered] = useState(false);
+    return (
+      <div
+        style={{ ...styles.profileAvatar, ...(hovered ? styles.profileAvatarHover : {}) }}
+        onClick={onClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <StaffIllustration
+          role="Doctor"
+          gender="male"
+          width="100%"
+          height="100%"
+          borderRadius="0"
+          crop="face"
+        />
+      </div>
+    );
   };
 
   const DropdownItem = ({ label, onClick, destructive = false }: { label: string, onClick: () => void, destructive?: boolean }) => {
@@ -184,7 +231,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
             variant="primary"
             size="sm"
             iconLeft={<PlusIcon style={{ width: 16, height: 16, fill: '#fff' }} />}
-            style={{ height: '40px', fontSize: '14px', padding: '0 16px' }}
+            style={{ height: '40px', fontSize: fonts.size.s, padding: '0 16px' }}
             onClick={onNewAppointment}
           >
             New Appointment
@@ -192,24 +239,17 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
         )}
 
         <div style={styles.iconGroup}>
-          <div style={styles.iconButton}>
+          {onNavigate && <SessionTrayButton onNavigate={onNavigate} />}
+          <HoverIconButton>
             <MessageIcon />
-          </div>
-          <div style={styles.iconButton}>
+          </HoverIconButton>
+          <HoverIconButton>
             <BellIcon />
-          </div>
+          </HoverIconButton>
         </div>
 
         <div style={styles.profileWrapper} ref={dropdownRef}>
-          <div style={styles.profileAvatar} onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
-            <StaffIllustration
-              role="Doctor"
-              gender="male"
-              width="44px"
-              height="44px"
-              borderRadius="0"
-            />
-          </div>
+          <HoverAvatar onClick={() => setIsDropdownOpen(!isDropdownOpen)} />
 
           {isDropdownOpen && (
             <div style={styles.dropdown}>

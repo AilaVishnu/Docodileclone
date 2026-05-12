@@ -66,11 +66,11 @@ export function DomainInput({
 
   const statusColor =
     availability === "available" ? colors.secondary700 :
-    availability === "taken" ? "#d32f2f" :
+    availability === "taken" ? colors.red200 :
     colors.neutral700;
 
   const borderColor =
-    availability === "taken" ? "#d32f2f" :
+    availability === "taken" ? colors.red200 :
     availability === "available" ? colors.secondary700 :
     undefined;
 

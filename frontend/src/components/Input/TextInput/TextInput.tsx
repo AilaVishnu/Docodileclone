@@ -1,5 +1,6 @@
 import React, { useRef, useCallback, useEffect } from "react";
 import { styles } from "./TextInput.styles";
+import { fonts, colors } from "../../../styles/theme";
 
 type TextInputProps = {
   value: string;
@@ -75,10 +76,6 @@ export function TextInput({
 
   return (
     <div style={{ width: "100%" }}>
-      <style>{`
-        .text-input-field::placeholder,
-        .text-input-field::-webkit-input-placeholder { color: #C7C7C7; opacity: 1; }
-      `}</style>
       <div style={containerStyle}>
         {iconLeft && <span style={{ ...styles.icon, ...(multiline ? { marginTop: 4 } : {}) }}>{iconLeft}</span>}
 
@@ -106,7 +103,7 @@ export function TextInput({
         {iconRight && <span style={styles.icon}>{iconRight}</span>}
       </div>
       {error && errorMessage && (
-        <div style={{ color: "#D00416", fontSize: 12, fontFamily: "'inter', sans-serif", marginTop: 2, marginLeft: 4 }}>
+        <div style={{ color: colors.red200, fontSize: fonts.size.xs, fontFamily: "'inter', sans-serif", marginTop: 2, marginLeft: 4 }}>
           {errorMessage}
         </div>
       )}

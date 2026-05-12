@@ -54,43 +54,43 @@ export function TimePicker({ initialTime, onSelect, onClose, style }: TimePicker
   };
 
   return (
-    <div style={{ ...styles.overlay, ...style }} onClick={(e) => e.stopPropagation()}>
-      <div style={styles.container} ref={containerRef}>
+    <>
+      <div style={styles.backdrop} onClick={onClose} />
+      <div style={{ ...styles.overlay, ...style }} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.container} ref={containerRef}>
         <div style={styles.header}>
           <h4 style={styles.title}>Select Time</h4>
         </div>
 
-        <div style={styles.selectors}>
-          <div style={styles.column}>
-            <span style={styles.unitHeader}>Hours</span>
-            <div style={styles.scrollBox}>
-              {hours.map(h => (
-                <div 
-                  key={h} 
-                  style={{ ...styles.item, ...(hour === h ? styles.selectedItem : {}) }}
-                  onClick={() => setHour(h)}
-                >
-                  {h}
-                </div>
-              ))}
-            </div>
+        <div>
+          <div style={styles.sectionLabel}>Hour</div>
+          <div style={styles.grid}>
+            {hours.map(h => (
+              <button
+                key={h}
+                type="button"
+                style={{ ...styles.cell, ...(hour === h ? styles.selectedCell : {}) }}
+                onClick={() => setHour(h)}
+              >
+                {h}
+              </button>
+            ))}
           </div>
+        </div>
 
-          <div style={styles.separator}>:</div>
-
-          <div style={styles.column}>
-            <span style={styles.unitHeader}>Minutes</span>
-            <div style={styles.scrollBox}>
-              {minutes.map(m => (
-                <div 
-                  key={m} 
-                  style={{ ...styles.item, ...(minute === m ? styles.selectedItem : {}) }}
-                  onClick={() => setMinute(m)}
-                >
-                  {m.toString().padStart(2, "0")}
-                </div>
-              ))}
-            </div>
+        <div>
+          <div style={styles.sectionLabel}>Minute</div>
+          <div style={styles.grid}>
+            {minutes.map(m => (
+              <button
+                key={m}
+                type="button"
+                style={{ ...styles.cell, ...(minute === m ? styles.selectedCell : {}) }}
+                onClick={() => setMinute(m)}
+              >
+                {m.toString().padStart(2, "0")}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -112,7 +112,8 @@ export function TimePicker({ initialTime, onSelect, onClose, style }: TimePicker
         <button style={styles.doneButton} onClick={handleDone}>
           Done
         </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

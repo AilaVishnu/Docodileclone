@@ -6,4 +6,6 @@ import java.util.UUID
 
 interface PatientRepository : JpaRepository<Patient, UUID> {
     fun findAllByClinicId(clinicId: UUID): List<Patient>
+    fun findByClinicIdAndPhone(clinicId: UUID, phone: String): Patient?
+    fun findAllByClinicIdAndPhone(clinicId: UUID, phone: String): List<Patient>
 }

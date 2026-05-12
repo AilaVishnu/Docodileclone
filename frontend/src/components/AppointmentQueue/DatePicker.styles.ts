@@ -4,25 +4,21 @@ import { colors, radii, fonts, spacing } from "../../styles/theme";
 export const styles: Record<string, CSSProperties> = {
   backdrop: {
     position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    inset: 0,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
-    zIndex: 999,
+    zIndex: 1050,
   },
 
   overlay: {
     position: "absolute",
-    top: "100%",
-    left: "50%",
-    transform: "translateX(-50%)",
-    zIndex: 1000,
-    marginTop: "16px",
+    top: "50%",
+    left: "calc(100% + 12px)",
+    transform: "translateY(-50%)",
+    zIndex: 1100,
   },
 
   container: {
-    backgroundColor: "white",
+    backgroundColor: colors.neutral100,
     width: "300px",
     padding: "20px",
     borderRadius: "16px",
@@ -41,7 +37,7 @@ export const styles: Record<string, CSSProperties> = {
 
   monthTitle: {
     fontWeight: 600,
-    fontSize: "16px",
+    fontSize: fonts.size.m,
     color: "black",
     margin: 0,
   },
@@ -63,7 +59,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   weekDay: {
-    fontSize: "12px",
+    fontSize: fonts.size.xs,
     color: colors.neutral500,
   },
 
@@ -79,7 +75,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "12px",
+    fontSize: fonts.size.xs,
     cursor: "pointer",
     borderRadius: "8px",
     transition: "background-color 0.2s",
@@ -92,7 +88,7 @@ export const styles: Record<string, CSSProperties> = {
 
   selectedDay: {
     backgroundColor: colors.active.shade600,
-    color: "white",
+    color: colors.neutral100,
     borderRadius: "999px",
   },
 
@@ -107,11 +103,11 @@ export const styles: Record<string, CSSProperties> = {
 
   doneButton: {
     backgroundColor: colors.neutral900,
-    color: "white",
+    color: colors.neutral100,
     border: "none",
     borderRadius: "999px",
     padding: "8px 24px",
-    fontSize: "16px",
+    fontSize: fonts.size.m,
     cursor: "pointer",
     width: "100%",
     marginTop: "8px",

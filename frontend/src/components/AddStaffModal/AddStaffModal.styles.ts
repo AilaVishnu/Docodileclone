@@ -6,7 +6,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.s,
+    marginBottom: spacing.m, // was spacing.s
   },
 
   title: {
@@ -14,26 +14,26 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.h5,
     fontWeight: fonts.weight.regular,
     margin: 0,
-    color: colors.blindBlack,
+    color: colors.neutral900,
   },
 
   closeButton: {
     background: "none",
     border: "none",
-    fontSize: 18,
+    fontSize: fonts.size.m,
     cursor: "pointer",
-    color: colors.blindBlack,
+    color: colors.neutral900,
   },
 
   topSection: {
     display: "flex",
-    gap: spacing.s,
-    marginBottom: spacing.s,
+    gap: spacing.m,         // was spacing.s — between illustration and details
+    marginBottom: spacing.m, // was spacing.s — before Doctor fields card
     alignItems: "stretch",
   },
 
   footer: {
-    marginTop: spacing.s,
+    marginTop: spacing.m, // was spacing.s — between last card and footer
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
@@ -86,7 +86,7 @@ export const confirmStyles: Record<string, CSSProperties> = {
     fontFamily: fonts.family.secondary,
     fontSize: fonts.size.h6,
     fontWeight: fonts.weight.medium,
-    color: colors.blindBlack,
+    color: colors.neutral900,
     margin: 0,
   },
 

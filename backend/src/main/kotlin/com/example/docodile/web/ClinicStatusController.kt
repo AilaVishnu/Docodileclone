@@ -3,8 +3,10 @@ package com.example.docodile.web
 import com.example.docodile.domain.ClinicEntity
 import com.example.docodile.service.AppointmentService
 import com.example.docodile.service.ClinicStatusService
+import com.example.docodile.service.DuplicateAppointmentException
 import org.springframework.format.annotation.DateTimeFormat
 import java.time.LocalDate
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
@@ -64,7 +66,7 @@ class ClinicStatusController(
     }
 
     @GetMapping("/appointments")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun getAppointments(
         @RequestParam(required = false)
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
@@ -74,17 +76,21 @@ class ClinicStatusController(
     }
 
     @PostMapping("/appointments")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun bookAppointment(@RequestBody request: BookAppointmentRequest): ResponseEntity<Any> {
         return try {
             ResponseEntity.ok(appointmentService.bookAppointment(request))
+        } catch (e: DuplicateAppointmentException) {
+            // 409 — same patient already has an appointment that day.
+            ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(mapOf("error" to (e.message ?: "Duplicate appointment")))
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
         }
     }
 
     @PutMapping("/appointments/{appointmentId}")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun updateAppointment(
         @PathVariable appointmentId: UUID,
         @RequestBody request: BookAppointmentRequest
@@ -97,7 +103,7 @@ class ClinicStatusController(
     }
 
     @PatchMapping("/appointments/{appointmentId}/status")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun updateAppointmentStatus(
         @PathVariable appointmentId: UUID,
         @RequestBody body: Map<String, String>
