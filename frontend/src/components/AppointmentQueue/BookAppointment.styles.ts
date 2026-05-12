@@ -412,7 +412,7 @@ export const styles: Record<string, CSSProperties> = {
     justifyContent: "center",
     gap: spacing.xs,
     cursor: "pointer",
-    border: "none",
+    border: `${strokes.s} solid ${colors.neutral900}`,
     fontSize: fonts.size.m,
     fontWeight: fonts.weight.regular,
     fontFamily: fonts.family.primary,

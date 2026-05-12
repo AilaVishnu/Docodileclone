@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { SideNav, NavTab } from "../../components/SideNav";
 import { TopNav } from "../../components/TopNav";
 import { PrescriptionView, PatientFilesView, AppointmentsView } from "./Views";
+import { ServicesView } from "../Services";
 import { HomeView } from "./HomeView";
 import { DesignSystemPage } from "../DesignSystem";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
@@ -103,6 +104,8 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         return <PrescriptionView />;
       case "Patient Files":
         return <PatientFilesView onNavigate={setActiveTab} />;
+      case "Services":
+        return <ServicesView />;
       case "Design System":
         return <DesignSystemPage />;
       default:
