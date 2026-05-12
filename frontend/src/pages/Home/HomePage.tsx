@@ -8,6 +8,7 @@ import { DesignSystemPage } from "../DesignSystem";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
 import { confirmStyles } from "../../components/AddStaffModal/AddStaffModal.styles";
 import { Button } from "../../components/Button";
+import { ChatBubble } from "../../components/Chat/ChatBubble";
 
 type HomePageProps = {
   onLogout: () => void;
@@ -144,6 +145,12 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         </div>
       </div>
     </div>
+
+    <ChatBubble
+      clinicId={localStorage.getItem("docodile_clinic_id") ?? ""}
+      currentUserId={localStorage.getItem("docodile_user_id") ?? ""}
+      currentUserName={localStorage.getItem("docodile_user_email") ?? ""}
+    />
 
     {showConfirm && (
       <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>

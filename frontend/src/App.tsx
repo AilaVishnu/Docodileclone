@@ -18,6 +18,8 @@ function App() {
       localStorage.removeItem("docodile_home_tab");
       localStorage.removeItem("docodile_clinic_id");
       localStorage.removeItem("docodile_clinic_name");
+      localStorage.removeItem("docodile_user_id");
+      localStorage.removeItem("docodile_user_email");
       return "login";
     }
 
@@ -43,6 +45,8 @@ function App() {
     localStorage.removeItem("docodile_home_tab");
     localStorage.removeItem("docodile_clinic_id");
     localStorage.removeItem("docodile_clinic_name");
+    localStorage.removeItem("docodile_user_id");
+    localStorage.removeItem("docodile_user_email");
     sessionStorage.removeItem("docodile_session");
     setView("login");
   };
