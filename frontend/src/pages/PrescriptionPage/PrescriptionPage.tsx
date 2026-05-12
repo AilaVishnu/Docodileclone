@@ -714,6 +714,8 @@ export function PrescriptionPage() {
         await refetchVisits();
         // Jump to today's visit tab (it lands at the end after sort).
         if (existingCount > 0) setActiveTab(existingCount);
+      }).catch((err: Error) => {
+        showToast(err.message || "Failed to create visit");
       });
     }
   }, [selectedPatientId, visitsLoading, visitsLoadedFor, visits.length, refetchVisits]);
