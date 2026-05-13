@@ -35,6 +35,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   const [bookingKey, setBookingKey] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [patientFileNavId, setPatientFileNavId] = useState<string | null>(null);
 
   const handleNewAppointment = () => {
     if (isBooking || isEditing) {
@@ -102,11 +103,11 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       case "Home":
         return <HomeView />;
       case "Appointments":
-        return <AppointmentsView isBooking={isBooking} bookingKey={bookingKey} onBack={() => { setIsBooking(false); setIsEditing(false); }} onEditStart={() => setIsEditing(true)} />;
+        return <AppointmentsView isBooking={isBooking} bookingKey={bookingKey} onBack={() => { setIsBooking(false); setIsEditing(false); }} onEditStart={() => setIsEditing(true)} onViewPatientFile={(patientId) => { setPatientFileNavId(patientId); setActiveTab("Patient Files"); }} />;
       case "Prescription":
         return <PrescriptionView />;
       case "Patient Files":
-        return <PatientFilesView onNavigate={setActiveTab} />;
+        return <PatientFilesView onNavigate={setActiveTab} initialSelectedId={patientFileNavId} />;
       case "Services":
         return <ServicesView />;
       case "Stats":

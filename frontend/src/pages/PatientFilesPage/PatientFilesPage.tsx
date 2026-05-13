@@ -24,9 +24,10 @@ const ANY = "__any__";
 
 type Props = {
   onNavigate?: (tab: NavTab) => void;
+  initialSelectedId?: string | null;
 };
 
-export function PatientFilesPage({ onNavigate }: Props) {
+export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
   const { data: patients, loading, error } = usePatients();
   const { data: doctors } = useDoctors();
 
@@ -49,7 +50,13 @@ export function PatientFilesPage({ onNavigate }: Props) {
   // Split-pane: left index lets you scan, right pane shows the selected file
   // in full. selection auto-falls to the first visible patient when the
   // current one is filtered out.
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
+
+  // When navigated here with a specific patient (e.g. from the queue's
+  // "View Patient File"), jump straight to that patient's right-pane.
+  useEffect(() => {
+    if (initialSelectedId) setSelectedId(initialSelectedId);
+  }, [initialSelectedId]);
   // Departments are derived from doctor specialities. When a department is
   // picked, the doctor dropdown narrows to that speciality.
   const departments = useMemo(() => {

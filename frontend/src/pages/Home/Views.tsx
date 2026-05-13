@@ -4,9 +4,9 @@ import { PrescriptionPage } from '../PrescriptionPage';
 import { PatientFilesPage } from '../PatientFilesPage';
 import type { NavTab } from '../../components/SideNav';
 
-export function AppointmentsView({ isBooking, bookingKey, onBack, onEditStart }: { isBooking?: boolean, bookingKey?: number, onBack?: () => void, onEditStart?: () => void }) {
+export function AppointmentsView({ isBooking, bookingKey, onBack, onEditStart, onViewPatientFile }: { isBooking?: boolean, bookingKey?: number, onBack?: () => void, onEditStart?: () => void, onViewPatientFile?: (patientId: string) => void }) {
   return (
-    <AppointmentQueue isBooking={isBooking} bookingKey={bookingKey} onBack={onBack} onEditStart={onEditStart} />
+    <AppointmentQueue isBooking={isBooking} bookingKey={bookingKey} onBack={onBack} onEditStart={onEditStart} onViewPatientFile={onViewPatientFile} />
   );
 }
 
@@ -14,7 +14,7 @@ export function PrescriptionView() {
   return <PrescriptionPage />;
 }
 
-export function PatientFilesView({ onNavigate }: { onNavigate?: (tab: NavTab) => void }) {
-  return <PatientFilesPage onNavigate={onNavigate} />;
+export function PatientFilesView({ onNavigate, initialSelectedId }: { onNavigate?: (tab: NavTab) => void; initialSelectedId?: string | null }) {
+  return <PatientFilesPage onNavigate={onNavigate} initialSelectedId={initialSelectedId} />;
 }
 // Add others as needed or just use a generic one

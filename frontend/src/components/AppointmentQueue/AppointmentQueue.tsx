@@ -39,9 +39,10 @@ type AppointmentQueueProps = {
   bookingKey?: number;
   onBack?: () => void;
   onEditStart?: () => void;
+  onViewPatientFile?: (patientId: string) => void;
 };
 
-export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }: AppointmentQueueProps) {
+export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, onViewPatientFile }: AppointmentQueueProps) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [activeDoctorId, setActiveDoctorId] = useState<string>("");
   const [appointments, setAppointments] = useState<Record<string, Appointment[]>>({});
@@ -323,7 +324,9 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
                 onEditStart?.();
               } },
               { label: "View Patient File", onClick: (apt) => {
-                setToastMessage(`Opening ${apt.patientName}'s file...`);
+                if (apt.patientId && onViewPatientFile) {
+                  onViewPatientFile(apt.patientId);
+                }
               } },
               { label: "Bill Medicines", onClick: (apt) => {
                 setMedsBillingApt(apt);
