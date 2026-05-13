@@ -24,6 +24,58 @@ const RANGES: { id: RangeId; label: string }[] = [
   { id: "custom", label: "Custom" },
 ];
 
+// ── Real overview stats hook ─────────────────────────────────────────────────
+
+type OverviewStats = {
+  totalAppointments: number;
+  newPatients: number;
+  completedAppointments: number;
+  revenue: number;
+  composition: { consultation: number; review: number; walkin: number; procedure: number };
+};
+
+function useOverviewStats(range: RangeId, customStart: string, customEnd: string) {
+  const [stats, setStats] = useState<OverviewStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem("docodile_token") ?? "";
+    const today = new Date().toISOString().slice(0, 10);
+    const weekAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+    const monthAgo = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
+    const yearAgo = new Date(Date.now() - 364 * 86400000).toISOString().slice(0, 10);
+    const startMap: Record<RangeId, string> = { today, week: weekAgo, month: monthAgo, year: yearAgo, custom: customStart };
+    const endMap: Record<RangeId, string>   = { today, week: today,   month: today,    year: today,    custom: customEnd };
+    const start = startMap[range];
+    const end   = endMap[range];
+    if (!start || !end) { setStats(null); setLoading(false); return; }
+    setLoading(true);
+    fetch(`${API_BASE_URL}/api/stats/overview?startDate=${start}&endDate=${end}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then((d: any) => {
+        if (!d) { setStats(null); return; }
+        setStats({
+          totalAppointments: d.totalAppointments ?? 0,
+          newPatients: d.newPatients ?? 0,
+          completedAppointments: d.completedAppointments ?? 0,
+          revenue: d.revenue ?? 0,
+          composition: {
+            consultation: d.composition?.consultation ?? 0,
+            review: d.composition?.review ?? 0,
+            walkin: d.composition?.walkin ?? 0,
+            procedure: d.composition?.procedure ?? 0,
+          },
+        });
+      })
+      .catch(() => setStats(null))
+      .finally(() => setLoading(false));
+  }, [range, customStart, customEnd]);
+
+  return { stats, loading };
+}
+
 // ── Mock data per range (Overview) ───────────────────────────────────────────
 
 type RangeData = {
@@ -144,6 +196,7 @@ export function BusinessPage() {
   const [customEnd, setCustomEnd] = useState("");
 
   const data = useMemo(() => OVERVIEW_MOCK[range], [range]);
+  const { stats: overviewStats, loading: overviewLoading } = useOverviewStats(range, customStart, customEnd);
 
   return (
     <div style={styles.page}>
@@ -192,7 +245,7 @@ export function BusinessPage() {
         </div>
       )}
 
-      {tab === "overview"   && <OverviewTab data={data} range={range} />}
+      {tab === "overview"   && <OverviewTab data={data} range={range} realStats={overviewStats} realStatsLoading={overviewLoading} />}
       {tab === "health"     && <HealthTab range={range} />}
       {tab === "patients"   && <PatientsTab range={range} />}
       {tab === "doctors"    && <DoctorsTab range={range} customStart={customStart} customEnd={customEnd} />}
@@ -205,19 +258,28 @@ export function BusinessPage() {
 
 // ── Overview tab ─────────────────────────────────────────────────────────────
 
-function OverviewTab({ data, range }: { data: RangeData; range: RangeId }) {
+function OverviewTab({ data, range, realStats, realStatsLoading }: {
+  data: RangeData;
+  range: RangeId;
+  realStats: OverviewStats | null;
+  realStatsLoading: boolean;
+}) {
+  const footfall = realStatsLoading ? "…" : realStats ? String(realStats.totalAppointments) : String(data.footfall.value);
+  const newPatients = realStatsLoading ? "…" : realStats ? String(realStats.newPatients) : String(data.newPatients.value);
+  const composition = realStats ? realStats.composition : data.composition;
+
   return (
     <div style={styles.tabBody}>
       <div style={styles.kpiGrid}>
-        <KpiTile label="Footfall" value={String(data.footfall.value)} delta={data.footfall.delta} tone={data.footfall.tone} sub={data.footfall.sub} />
+        <KpiTile label="Footfall" value={footfall} delta="" tone="flat" sub={subFor(range)} />
         <InClinicTile data={data.inClinic} live={range === "today"} />
         <KpiTile label="No-show rate" value={data.noShow.value} delta={data.noShow.delta} tone={data.noShow.tone} sub={data.noShow.sub} />
-        <KpiTile label="New patients" value={String(data.newPatients.value)} delta={data.newPatients.delta} tone={data.newPatients.tone} sub={data.newPatients.sub} />
+        <KpiTile label="New patients" value={newPatients} delta="" tone="flat" sub={subFor(range)} />
       </div>
 
       <div style={styles.midRow}>
         <PeakHoursCard />
-        <CompositionCard data={data.composition} />
+        <CompositionCard data={composition} />
         <TopComplaintsCard data={data.topComplaints} />
       </div>
 
