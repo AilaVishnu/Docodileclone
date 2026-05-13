@@ -1,6 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "../../apiConfig";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
+import {
+  AgePyramid,
+  AreaTrend,
+  CategoryRows,
+  InsetLabelBar,
+  MiniArea,
+  RadialStacked,
+  ThemedDonut,
+  ThemedHorizontalBar,
+  ThemedVerticalBar,
+} from "../../components/charts";
 
 type TabId = "overview" | "health" | "patients" | "doctors" | "clinical" | "operations" | "finance";
 type RangeId = "today" | "week" | "month" | "year" | "custom";
@@ -495,7 +506,7 @@ function HealthTab({ range }: { range: RangeId }) {
   return (
     <div style={styles.tabBody}>
       <div style={styles.healthTopRow}>
-        <HealthScoreCard score={stats?.overallScore ?? 0} loading={loading} />
+        <HealthScoreCard score={stats?.overallScore ?? 0} subscores={stats?.subscores ?? []} loading={loading} />
         <HealthSubscoresCard subscores={stats?.subscores ?? []} loading={loading} />
       </div>
       <InsightsCard insights={stats?.insights ?? []} loading={loading} />
@@ -503,11 +514,19 @@ function HealthTab({ range }: { range: RangeId }) {
   );
 }
 
-function HealthScoreCard({ score, loading }: { score: number; loading: boolean }) {
-  const band  = score >= 80 ? "Strong" : score >= 65 ? "Steady" : score >= 50 ? "Needs attention" : "At risk";
-  const color = score >= 80 ? colors.secondary500 : score >= 65 ? colors.active.shade600 : colors.red200;
-  const r = 56, c = 2 * Math.PI * r;
-  const offset = c - (score / 100) * c;
+function HealthScoreCard({ score, subscores, loading }: {
+  score: number;
+  subscores: { label: string; value: number; hint: string }[];
+  loading: boolean;
+}) {
+  // Half-arc stacked gauge: Care quality (patient experience + clinical) and
+  // Business (operational + financial). Each pair averages 0–100, then each
+  // contributes half-weight (÷2) so the stack lands at the composite score.
+  const pick = (label: string) => subscores.find((s) => s.label === label)?.value ?? 0;
+  const careAvg = (pick("Patient experience") + pick("Clinical quality")) / 2;
+  const bizAvg  = (pick("Operational")        + pick("Financial"))        / 2;
+  const band = score >= 80 ? "Strong" : score >= 65 ? "Steady" : score >= 50 ? "Needs attention" : "At risk";
+  const bandColor = score >= 80 ? colors.secondary500 : score >= 65 ? colors.active.shade600 : colors.red200;
   return (
     <section style={{ ...styles.card, alignItems: "center", justifyContent: "center", textAlign: "center" }}>
       <header style={{ ...styles.cardHeader, justifyContent: "center" }}>
@@ -517,17 +536,22 @@ function HealthScoreCard({ score, loading }: { score: number; loading: boolean }
       {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s, padding: 24 }}>Computing…</div> : (
         <>
           <div style={{ display: "flex", justifyContent: "center", padding: spacing.s }}>
-            <svg width={140} height={140} viewBox="0 0 140 140">
-              <circle cx={70} cy={70} r={r} fill="none" stroke={colors.primary100} strokeWidth={12} />
-              <circle cx={70} cy={70} r={r} fill="none" stroke={color} strokeWidth={12}
-                strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round" transform="rotate(-90 70 70)" />
-              <text x={70} y={68} textAnchor="middle" dominantBaseline="middle"
-                fontFamily={fonts.family.secondary} fontSize={36} fill={colors.neutral900}>{score}</text>
-              <text x={70} y={92} textAnchor="middle" dominantBaseline="middle"
-                fontFamily={fonts.family.primary} fontSize={11} fill={colors.neutral500}>out of 100</text>
-            </svg>
+            <RadialStacked
+              segments={[
+                { key: "care", value: careAvg / 2, label: "Care quality", color: colors.secondary500 },
+                { key: "biz",  value: bizAvg  / 2, label: "Business",     color: colors.active.shade600 },
+              ]}
+              maxTotal={100}
+              centerValue={score}
+              centerLabel="out of 100"
+              size={220}
+            />
           </div>
-          <div style={{ fontSize: fonts.size.s, color: colors.neutral700, fontWeight: fonts.weight.semibold }}>{band}</div>
+          <div style={{ display: "flex", gap: spacing.m, justifyContent: "center", fontSize: fonts.size.xs, color: colors.neutral700 }}>
+            <span><Swatch color={colors.secondary500} /> Care {Math.round(careAvg)}</span>
+            <span><Swatch color={colors.active.shade600} /> Business {Math.round(bizAvg)}</span>
+          </div>
+          <div style={{ fontSize: fonts.size.s, color: bandColor, fontWeight: fonts.weight.semibold }}>{band}</div>
         </>
       )}
     </section>
@@ -630,11 +654,16 @@ function AgeDistributionCard({ ageGroups, genderSplit, loading }: {
   loading: boolean;
 }) {
   const BANDS = ["0–12", "13–25", "26–40", "41–60", "61+"];
-  const max = Math.max(...BANDS.map(b => ageGroups[b] ?? 0), 1);
+  const ageData = BANDS.map((b) => ({ label: `${b} yrs`, value: ageGroups[b] ?? 0 }));
   const male   = genderSplit["male"]   ?? 0;
   const female = genderSplit["female"] ?? 0;
   const other  = genderSplit["other"]  ?? 0;
-  const totalG = male + female + other || 1;
+  const totalG = male + female + other;
+  const genderSegments = [
+    { label: "Male",   value: male,   color: colors.active.shade600 },
+    { label: "Female", value: female, color: colors.secondary500 },
+    { label: "Other",  value: other,  color: colors.neutral300 },
+  ].filter((s) => s.value > 0);
 
   return (
     <div style={styles.twoCol}>
@@ -644,19 +673,12 @@ function AgeDistributionCard({ ageGroups, genderSplit, loading }: {
           <span style={styles.cardSub}>active patients</span>
         </header>
         {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {BANDS.map(band => (
-              <div key={band}>
-                <div style={styles.complaintRow}>
-                  <span>{band} yrs</span>
-                  <span style={styles.complaintCount}>{ageGroups[band] ?? 0}</span>
-                </div>
-                <div style={styles.barTrack}>
-                  <div style={{ ...styles.barFill, width: `${((ageGroups[band] ?? 0) / max) * 100}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
+          <ThemedHorizontalBar
+            data={ageData}
+            height={Math.max(180, ageData.length * 40)}
+            color={colors.active.shade600}
+            fmtValue={(v) => String(v)}
+          />
         )}
       </section>
 
@@ -665,24 +687,32 @@ function AgeDistributionCard({ ageGroups, genderSplit, loading }: {
           <h3 style={styles.cardTitle}>Gender split</h3>
           <span style={styles.cardSub}>active patients</span>
         </header>
-        {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {[
-              { label: "Male",   value: male,   color: colors.active.shade600 },
-              { label: "Female", value: female, color: colors.secondary500 },
-              { label: "Other",  value: other,  color: colors.neutral300 },
-            ].map(row => (
-              <div key={row.label}>
-                <div style={styles.complaintRow}>
-                  <span><Swatch color={row.color} />{row.label}</span>
-                  <span style={styles.complaintCount}>{row.value} <span style={{ color: colors.neutral500, fontWeight: 400 }}>({Math.round(row.value / totalG * 100)}%)</span></span>
+        {loading ? (
+          <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div>
+        ) : totalG === 0 ? (
+          <div style={{ color: colors.neutral500, fontSize: fonts.size.s }}>No gender data</div>
+        ) : (
+          <>
+            <div style={{ display: "flex", justifyContent: "center", paddingTop: 4 }}>
+              <ThemedDonut
+                segments={genderSegments}
+                total={totalG}
+                size={180}
+                centerLabel="patients"
+                centerValue={totalG.toLocaleString("en-IN")}
+              />
+            </div>
+            <div style={styles.donutLegend}>
+              {genderSegments.map((s) => (
+                <div key={s.label} style={styles.donutLegendRow}>
+                  <Swatch color={s.color} />
+                  <span style={{ flex: 1 }}>{s.label}</span>
+                  <span style={{ fontWeight: 600 }}>{s.value}</span>
+                  <span style={{ color: colors.neutral500, marginLeft: 8 }}>{Math.round((s.value / totalG) * 100)}%</span>
                 </div>
-                <div style={styles.barTrack}>
-                  <div style={{ ...styles.barFill, width: `${(row.value / totalG) * 100}%`, backgroundColor: row.color }} />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </section>
     </div>
@@ -706,7 +736,7 @@ function ComplaintsTrendCard({ data, loading }: { data: ComplaintTrend[]; loadin
             return (
               <div key={c.name} style={styles.complaintTrendRow}>
                 <span style={styles.complaintTrendName}>{c.name}</span>
-                <Sparkline points={c.points} />
+                <MiniArea points={c.points} width={140} height={32} />
                 <span style={styles.complaintTrendValue}>{last}</span>
                 <span style={{ ...styles.complaintTrendDelta, color: delta > 0 ? colors.red200 : colors.secondary500 }}>
                   {delta > 0 ? `+${delta}` : delta}
@@ -812,56 +842,42 @@ function DoctorsTab({ range, customStart, customEnd }: { range: RangeId; customS
 }
 
 function DoctorRevenueCard({ doctors, loading }: { doctors: DoctorStat[]; loading: boolean }) {
-  const max = Math.max(...doctors.map(d => d.revenue), 1);
+  const data = doctors.map((d) => ({ label: d.name.replace(/^Dr\.\s+/, ""), value: d.revenue }));
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
         <h3 style={styles.cardTitle}>Revenue per doctor</h3>
         <span style={styles.cardSub}>paid appointments · this period</span>
       </header>
-      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {doctors.length === 0 && <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>No data for this period</div>}
-          {doctors.map((d) => (
-            <div key={d.doctorId}>
-              <div style={styles.complaintRow}>
-                <span>{d.name}</span>
-                <span style={styles.complaintCount}>₹ {d.revenue.toLocaleString("en-IN")}</span>
-              </div>
-              <div style={styles.barTrack}>
-                <div style={{ ...styles.barFill, width: `${(d.revenue / max) * 100}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
+      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> :
+       doctors.length === 0 ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>No data for this period</div> : (
+        <ThemedHorizontalBar
+          data={data}
+          height={Math.max(160, data.length * 44)}
+          color={colors.active.shade600}
+          fmtValue={(v) => `₹ ${v.toLocaleString("en-IN")}`}
+        />
       )}
     </section>
   );
 }
 
 function DoctorDaysWorkedCard({ doctors, loading }: { doctors: DoctorStat[]; loading: boolean }) {
-  const max = Math.max(...doctors.map(d => d.daysWorked), 1);
+  const data = doctors.map((d) => ({ label: d.name.replace(/^Dr\.\s+/, ""), value: d.daysWorked }));
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
         <h3 style={styles.cardTitle}>Days worked</h3>
         <span style={styles.cardSub}>days with at least one appointment</span>
       </header>
-      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {doctors.length === 0 && <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>No data for this period</div>}
-          {doctors.map((d) => (
-            <div key={d.doctorId}>
-              <div style={styles.complaintRow}>
-                <span>{d.name}</span>
-                <span style={styles.complaintCount}>{d.daysWorked} days</span>
-              </div>
-              <div style={styles.barTrack}>
-                <div style={{ ...styles.barFill, width: `${(d.daysWorked / max) * 100}%`, backgroundColor: colors.secondary500 }} />
-              </div>
-            </div>
-          ))}
-        </div>
+      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> :
+       doctors.length === 0 ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>No data for this period</div> : (
+        <ThemedHorizontalBar
+          data={data}
+          height={Math.max(160, data.length * 44)}
+          color={colors.secondary500}
+          fmtValue={(v) => `${v} days`}
+        />
       )}
     </section>
   );
@@ -961,7 +977,15 @@ function DiagnosisMixCard({ data, loading }: { data: NameCount[]; loading: boole
         <div style={{ color: colors.neutral500, fontSize: fonts.size.s }}>No data</div>
       ) : (
         <>
-          <Donut segments={segments} total={total} />
+          <div style={{ display: "flex", justifyContent: "center", paddingTop: 4 }}>
+            <ThemedDonut
+              segments={segments}
+              total={total}
+              size={180}
+              centerLabel="diagnoses"
+              centerValue={total.toLocaleString("en-IN")}
+            />
+          </div>
           <div style={styles.donutLegend}>
             {segments.map((s) => (
               <div key={s.label} style={styles.donutLegendRow}>
@@ -979,7 +1003,7 @@ function DiagnosisMixCard({ data, loading }: { data: NameCount[]; loading: boole
 }
 
 function TopPrescriptionsCard({ data, loading }: { data: NameCount[]; loading: boolean }) {
-  const max = Math.max(...data.map(p => p.count), 1);
+  const chartData = data.map((p) => ({ label: p.name, value: p.count }));
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
@@ -989,19 +1013,12 @@ function TopPrescriptionsCard({ data, loading }: { data: NameCount[]; loading: b
       {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> : data.length === 0 ? (
         <div style={{ color: colors.neutral500, fontSize: fonts.size.s }}>No prescription data</div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {data.map((p) => (
-            <div key={p.name}>
-              <div style={styles.complaintRow}>
-                <span>{p.name}</span>
-                <span style={styles.complaintCount}>{p.count}</span>
-              </div>
-              <div style={styles.barTrack}>
-                <div style={{ ...styles.barFill, width: `${(p.count / max) * 100}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
+        <ThemedHorizontalBar
+          data={chartData}
+          height={Math.max(180, chartData.length * 36)}
+          color={colors.active.shade600}
+          fmtValue={(v) => String(v)}
+        />
       )}
     </section>
   );
@@ -1072,7 +1089,16 @@ function PaymentMixCard({ data, loading }: { data: Record<string, number>; loadi
         <div style={{ color: colors.neutral500, fontSize: fonts.size.s }}>No payment data</div>
       ) : (
         <>
-          <Donut segments={segments} total={total} />
+          <div style={{ display: "flex", justifyContent: "center", paddingTop: 4 }}>
+            <ThemedDonut
+              segments={segments}
+              total={total}
+              size={180}
+              centerLabel="collected"
+              centerValue={`₹ ${(total / 1000).toFixed(0)}k`}
+              fmtValue={(v) => `₹ ${v.toLocaleString("en-IN")}`}
+            />
+          </div>
           <div style={styles.donutLegend}>
             {segments.map((s) => (
               <div key={s.label} style={styles.donutLegendRow}>
@@ -1090,152 +1116,28 @@ function PaymentMixCard({ data, loading }: { data: Record<string, number>; loadi
 }
 
 function RevenueTrendCardFin({ data, loading }: { data: DailyCount[]; loading: boolean }) {
-  const values = data.map(d => d.count);
-  const dayLabels   = data.map(d => new Date(d.date).toLocaleDateString("en-US", { weekday: "short" }));
-  const dateLabels  = data.map(d => new Date(d.date).toLocaleDateString("en-US", { day: "numeric", month: "short" }));
-
-  const W = 900;
-  const H = 320;
-  const padLeft = 60;
-  const padRight = 24;
-  const padTop = 36;
-  const padBot = 32;
-  const innerW = W - padLeft - padRight;
-  const innerH = H - padTop - padBot;
-
-  const dataMax = Math.max(...values);
-  const tickStep = niceStep(dataMax / 4 || 1);
-  const axisMax = Math.ceil(dataMax / tickStep) * tickStep;
-  const yTicks: number[] = [];
-  for (let t = 0; t <= axisMax + 1e-9; t += tickStep) yTicks.push(Math.round(t));
-
-  const barCount = values.length;
-  const slotW = barCount > 0 ? innerW / barCount : innerW;
-  const barW = Math.min(64, slotW * 0.62);
-  const todayIdx = barCount - 1;
-
+  const chartData = data.map((d) => ({
+    label: new Date(d.date).toLocaleDateString("en-US", { weekday: "short" }),
+    sub:   new Date(d.date).toLocaleDateString("en-US", { day: "numeric", month: "short" }),
+    value: d.count,
+  }));
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
         <h3 style={styles.cardTitle}>Revenue trend</h3>
         <span style={styles.cardSub}>₹ per day · paid appointments</span>
       </header>
-      {loading && <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div>}
-      {!loading && data.length === 0 && <div style={{ color: colors.neutral500, fontSize: fonts.size.s }}>No revenue data for this period</div>}
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" style={{ width: "100%", height: 320, display: "block" }}>
-        {/* Y-axis gridlines + labels */}
-        {yTicks.map((t) => {
-          const y = padTop + innerH - (t / axisMax) * innerH;
-          return (
-            <g key={t}>
-              <line x1={padLeft} x2={W - padRight} y1={y} y2={y} stroke={colors.neutral200} strokeWidth={1} />
-              <text
-                x={padLeft - 10}
-                y={y}
-                textAnchor="end"
-                dominantBaseline="middle"
-                fontSize={11}
-                fontFamily="Inter, sans-serif"
-                fill={colors.neutral500}
-              >
-                ₹ {t}k
-              </text>
-            </g>
-          );
-        })}
-
-        {/* Bars */}
-        {values.map((v, i) => {
-          const barH = (v / axisMax) * innerH;
-          const x = padLeft + slotW * i + (slotW - barW) / 2;
-          const y = padTop + innerH - barH;
-          const cx = x + barW / 2;
-          const isToday = i === todayIdx;
-          const fill = isToday ? colors.active.shade700 : colors.active.shade400;
-          const fillOpacity = isToday ? 1 : 0.55;
-          const textColor = isToday ? colors.neutral100 : colors.active.shade800;
-
-          // Label sits 14px above the bar's bottom edge, rotated -90 so it reads upward.
-          const labelAnchorY = padTop + innerH - 14;
-          return (
-            <g key={i}>
-              <rect
-                x={x}
-                y={y}
-                width={barW}
-                height={barH}
-                rx={barW / 2}
-                ry={barW / 2}
-                fill={fill}
-                fillOpacity={fillOpacity}
-              />
-              <text
-                x={cx}
-                y={labelAnchorY}
-                fontSize={16}
-                fontWeight={isToday ? 700 : 600}
-                textAnchor="start"
-                fill={textColor}
-                fontFamily="Inter, sans-serif"
-                transform={`rotate(-90, ${cx}, ${labelAnchorY})`}
-              >
-                {dayLabels[i]}
-              </text>
-            </g>
-          );
-        })}
-
-        {/* Today's value above its bar */}
-        {(() => {
-          const v = values[todayIdx];
-          const barH = (v / axisMax) * innerH;
-          const x = padLeft + slotW * todayIdx + slotW / 2;
-          const y = padTop + innerH - barH - 8;
-          return (
-            <text
-              x={x}
-              y={y}
-              fontSize={12}
-              fontWeight={600}
-              fontFamily="Inter, sans-serif"
-              fill={colors.neutral900}
-              textAnchor="middle"
-            >
-              ₹ {v}k
-            </text>
-          );
-        })()}
-
-        {/* Date row below bars */}
-        {dateLabels.map((d, i) => {
-          const cx = padLeft + slotW * i + slotW / 2;
-          return (
-            <text
-              key={i}
-              x={cx}
-              y={H - padBot + 18}
-              fontSize={11}
-              fontFamily="Inter, sans-serif"
-              fill={colors.neutral500}
-              textAnchor="middle"
-            >
-              {d}
-            </text>
-          );
-        })}
-      </svg>
+      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> :
+       data.length === 0 ? <div style={{ color: colors.neutral500, fontSize: fonts.size.s }}>No revenue data for this period</div> : (
+        <ThemedVerticalBar
+          data={chartData}
+          height={300}
+          highlightLastIdx={chartData.length - 1}
+          fmtValue={(v) => `₹ ${v}k`}
+        />
+      )}
     </section>
   );
-}
-
-// Round to the next "nice" axis step (1, 2, 5 × 10^k).
-function niceStep(raw: number): number {
-  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
-  const norm = raw / pow;
-  if (norm <= 1) return 1 * pow;
-  if (norm <= 2) return 2 * pow;
-  if (norm <= 5) return 5 * pow;
-  return 10 * pow;
 }
 
 function DuesAgingCard() {
@@ -1293,25 +1195,22 @@ function KpiTile({ label, value, delta, tone, sub }: {
   );
 }
 
-function InClinicTile({ data, live, loading }: { data: { waiting: number; inConsult: number; done: number }; live: boolean; loading?: boolean }) {
+function InClinicTile({ data, live }: { data: { waiting: number; inConsult: number; done: number }; live: boolean; loading?: boolean }) {
   const total = data.waiting + data.inConsult + data.done;
-  const seg = (n: number) => total > 0 ? (n / total) * 100 : 0;
+  const rows = [
+    { label: "Waiting",    value: data.waiting,    color: colors.active.shade500 },
+    { label: "In consult", value: data.inConsult,  color: colors.active.shade700 },
+    { label: "Done",       value: data.done,       color: colors.neutral300 },
+  ];
   return (
-    <div style={styles.kpiCard}>
+    <div style={{ ...styles.kpiCard, minHeight: 150 }}>
       <div style={styles.kpiLabel}>
         {live ? "Patients in clinic now" : "Avg patients in clinic"}
         {live && <span style={styles.liveDot} aria-hidden />}
       </div>
       <div style={styles.kpiValue}>{total}</div>
-      <div style={styles.funnelBar}>
-        <div style={{ ...styles.funnelSeg, width: `${seg(data.waiting)}%`, backgroundColor: colors.active.shade500 }} />
-        <div style={{ ...styles.funnelSeg, width: `${seg(data.inConsult)}%`, backgroundColor: colors.active.shade700 }} />
-        <div style={{ ...styles.funnelSeg, width: `${seg(data.done)}%`, backgroundColor: colors.neutral300 }} />
-      </div>
-      <div style={styles.funnelLegend}>
-        <span><Swatch color={colors.active.shade500} /> Waiting <b>{data.waiting}</b></span>
-        <span><Swatch color={colors.active.shade700} /> In consult <b>{data.inConsult}</b></span>
-        <span><Swatch color={colors.neutral300} /> Done <b>{data.done}</b></span>
+      <div style={{ marginTop: 4 }}>
+        <CategoryRows data={rows} height={62} barSize={10} yAxisWidth={78} barCategoryGap={4} />
       </div>
     </div>
   );
@@ -1319,56 +1218,6 @@ function InClinicTile({ data, live, loading }: { data: { waiting: number; inCons
 
 function Swatch({ color }: { color: string }) {
   return <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, backgroundColor: color, marginRight: 4 }} />;
-}
-
-function Donut({ segments, total, size = 140 }: { segments: { label: string; value: number; color: string }[]; total: number; size?: number }) {
-  const stroke = 18;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  let offset = 0;
-  return (
-    <div style={{ display: "flex", justifyContent: "center", paddingTop: 4 }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={colors.neutral100} strokeWidth={stroke} />
-        {segments.map((s) => {
-          const length = (s.value / total) * c;
-          const dashArray = `${length} ${c - length}`;
-          const el = (
-            <circle
-              key={s.label}
-              cx={size / 2}
-              cy={size / 2}
-              r={r}
-              fill="none"
-              stroke={s.color}
-              strokeWidth={stroke}
-              strokeDasharray={dashArray}
-              strokeDashoffset={-offset}
-              transform={`rotate(-90 ${size / 2} ${size / 2})`}
-            />
-          );
-          offset += length;
-          return el;
-        })}
-      </svg>
-    </div>
-  );
-}
-
-function Sparkline({ points, width = 80, height = 24 }: { points: number[]; width?: number; height?: number }) {
-  const max = Math.max(...points);
-  const min = Math.min(...points);
-  const range = max - min || 1;
-  const d = points.map((p, i) => {
-    const x = (i / (points.length - 1)) * width;
-    const y = height - ((p - min) / range) * height;
-    return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
-  }).join(" ");
-  return (
-    <svg width={width} height={height} style={{ flexShrink: 0 }}>
-      <path d={d} fill="none" stroke={colors.active.shade600} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
 }
 
 function PeakHoursCard({ peakData, loading }: { peakData: Record<string, Record<number, number>>; loading: boolean }) {
@@ -1442,7 +1291,7 @@ function CompositionCard({ data }: { data: { consultation: number; review: numbe
 }
 
 function TopComplaintsCard({ data, loading }: { data: { name: string; count: number }[]; loading?: boolean }) {
-  const max = Math.max(...data.map((d) => d.count), 1);
+  const chartData = data.map((d) => ({ label: d.name, value: d.count }));
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
@@ -1452,19 +1301,7 @@ function TopComplaintsCard({ data, loading }: { data: { name: string; count: num
        data.length === 0 ? (
         <div style={{ color: colors.neutral500, fontSize: fonts.size.s }}>No data</div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {data.map((c) => (
-            <div key={c.name}>
-              <div style={styles.complaintRow}>
-                <span>{c.name}</span>
-                <span style={styles.complaintCount}>{c.count}</span>
-              </div>
-              <div style={styles.barTrack}>
-                <div style={{ ...styles.barFill, width: `${(c.count / max) * 100}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
+        <InsetLabelBar data={chartData} height={Math.max(140, data.length * 42)} />
       )}
     </section>
   );
@@ -1477,11 +1314,9 @@ function FootfallTrendCard({ hourly, daily, range, loading }: {
   loading: boolean;
 }) {
   const isToday = range === "today";
-  const labels  = isToday
-    ? hourly.map(d => `${d.hour % 12 || 12}${d.hour < 12 ? "a" : "p"}`)
-    : daily.map(d => new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }));
-  const values  = isToday ? hourly.map(d => d.count) : daily.map(d => d.count);
-  const max = Math.max(...values, 1);
+  const chartData = isToday
+    ? hourly.map((d) => ({ label: `${d.hour % 12 || 12}${d.hour < 12 ? "a" : "p"}`, value: d.count }))
+    : daily.map((d) => ({ label: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }), value: d.count }));
   const title = isToday ? "Footfall by hour" : range === "week" ? "Footfall this week" : range === "month" ? "Footfall last 30 days" : range === "year" ? "Footfall last 12 months" : "Footfall — custom range";
 
   return (
@@ -1490,25 +1325,10 @@ function FootfallTrendCard({ hourly, daily, range, loading }: {
         <h3 style={styles.cardTitle}>{title}</h3>
       </header>
       {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> :
-       values.length === 0 ? (
+       chartData.length === 0 ? (
         <div style={{ color: colors.neutral500, fontSize: fonts.size.s, padding: spacing.m }}>No appointment data for this period.</div>
       ) : (
-        <>
-          <div style={styles.barChart}>
-            {values.map((v, i) => (
-              <div key={i} style={styles.barChartCol} title={`${labels[i]}: ${v}`}>
-                <div style={{ ...styles.barChartBar, height: `${(v / max) * 100}%` }} />
-              </div>
-            ))}
-          </div>
-          <div style={styles.barChartLabels}>
-            {labels.map((l, i) => (
-              <span key={i} style={{ flex: 1, textAlign: "center", fontSize: fonts.size.xs, color: colors.neutral500 }}>
-                {values.length > 14 ? (i % Math.ceil(values.length / 7) === 0 ? l : "") : l}
-              </span>
-            ))}
-          </div>
-        </>
+        <AreaTrend data={chartData} height={220} axisLabel="Visits" />
       )}
     </section>
   );
