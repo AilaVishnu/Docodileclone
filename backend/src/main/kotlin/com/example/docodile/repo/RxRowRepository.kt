@@ -26,4 +26,7 @@ interface RxRowRepository : JpaRepository<RxRow, UUID> {
         ORDER BY COUNT(r.medicine) DESC
     """)
     fun findFrequentMedicines(@Param("clinicId") clinicId: UUID, pageable: Pageable): List<String>
+
+    @Query("SELECT r.medicine FROM RxRow r WHERE r.visit.id IN :visitIds AND r.medicine IS NOT NULL AND r.medicine <> ''")
+    fun findMedicinesByVisitIds(@Param("visitIds") visitIds: List<UUID>): List<String>
 }

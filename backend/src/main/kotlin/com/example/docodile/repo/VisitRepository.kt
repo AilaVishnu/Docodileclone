@@ -8,6 +8,8 @@ import java.time.LocalDate
 import java.util.UUID
 
 interface VisitRepository : JpaRepository<Visit, UUID> {
+    fun findAllByClinicIdAndVisitDateBetween(clinicId: UUID, start: LocalDate, end: LocalDate): List<Visit>
+
     fun findAllByClinicIdAndPatientIdOrderByVisitDateAsc(clinicId: UUID, patientId: UUID): List<Visit>
 
     @Query("SELECT v FROM Visit v WHERE v.clinic.id = :clinicId AND v.patient.id IN :patientIds ORDER BY v.visitDate ASC")

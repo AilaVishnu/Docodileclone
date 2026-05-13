@@ -24,7 +24,28 @@ const RANGES: { id: RangeId; label: string }[] = [
   { id: "custom", label: "Custom" },
 ];
 
-// ── Real overview stats hook ─────────────────────────────────────────────────
+// ── Shared types ─────────────────────────────────────────────────────────────
+
+type NameCount = { name: string; count: number };
+type DailyCount = { date: string; count: number };
+
+// ── Date range helpers ────────────────────────────────────────────────────────
+
+function buildDateRange(range: RangeId, customStart: string, customEnd: string) {
+  const today = new Date().toISOString().slice(0, 10);
+  const weekAgo  = new Date(Date.now() - 6  * 86400000).toISOString().slice(0, 10);
+  const monthAgo = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
+  const yearAgo  = new Date(Date.now() - 364 * 86400000).toISOString().slice(0, 10);
+  const starts: Record<RangeId, string> = { today, week: weekAgo, month: monthAgo, year: yearAgo, custom: customStart };
+  const ends:   Record<RangeId, string> = { today, week: today,   month: today,    year: today,   custom: customEnd  };
+  return { start: starts[range], end: ends[range] };
+}
+
+function authHeaders() {
+  return { Authorization: `Bearer ${localStorage.getItem("docodile_token") ?? ""}` };
+}
+
+// ── Overview stats hook ───────────────────────────────────────────────────────
 
 type OverviewStats = {
   totalAppointments: number;
@@ -32,6 +53,12 @@ type OverviewStats = {
   completedAppointments: number;
   revenue: number;
   composition: { consultation: number; review: number; walkin: number; procedure: number };
+  inClinic: { waiting: number; inConsult: number; done: number };
+  noShowRate: number;
+  hourlyTrend: { hour: number; count: number }[];
+  dailyTrend: DailyCount[];
+  peakHours: Record<string, Record<number, number>>;
+  topComplaints: NameCount[];
 };
 
 function useOverviewStats(range: RangeId, customStart: string, customEnd: string) {
@@ -39,20 +66,10 @@ function useOverviewStats(range: RangeId, customStart: string, customEnd: string
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("docodile_token") ?? "";
-    const today = new Date().toISOString().slice(0, 10);
-    const weekAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
-    const monthAgo = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
-    const yearAgo = new Date(Date.now() - 364 * 86400000).toISOString().slice(0, 10);
-    const startMap: Record<RangeId, string> = { today, week: weekAgo, month: monthAgo, year: yearAgo, custom: customStart };
-    const endMap: Record<RangeId, string>   = { today, week: today,   month: today,    year: today,    custom: customEnd };
-    const start = startMap[range];
-    const end   = endMap[range];
+    const { start, end } = buildDateRange(range, customStart, customEnd);
     if (!start || !end) { setStats(null); setLoading(false); return; }
     setLoading(true);
-    fetch(`${API_BASE_URL}/api/stats/overview?startDate=${start}&endDate=${end}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    fetch(`${API_BASE_URL}/api/stats/overview?startDate=${start}&endDate=${end}`, { headers: authHeaders() })
       .then(r => r.ok ? r.json() : null)
       .then((d: any) => {
         if (!d) { setStats(null); return; }
@@ -67,8 +84,124 @@ function useOverviewStats(range: RangeId, customStart: string, customEnd: string
             walkin: d.composition?.walkin ?? 0,
             procedure: d.composition?.procedure ?? 0,
           },
+          inClinic: {
+            waiting:   d.inClinic?.waiting   ?? 0,
+            inConsult: d.inClinic?.inConsult ?? 0,
+            done:      d.inClinic?.done      ?? 0,
+          },
+          noShowRate: d.noShowRate ?? 0,
+          hourlyTrend: d.hourlyTrend ?? [],
+          dailyTrend:  d.dailyTrend  ?? [],
+          peakHours:   d.peakHours   ?? {},
+          topComplaints: d.topComplaints ?? [],
         });
       })
+      .catch(() => setStats(null))
+      .finally(() => setLoading(false));
+  }, [range, customStart, customEnd]);
+
+  return { stats, loading };
+}
+
+// ── Patients stats hook ───────────────────────────────────────────────────────
+
+type PatientsStats = {
+  activePatients: number;
+  ageGroups: Record<string, number>;
+  genderSplit: Record<string, number>;
+};
+
+function usePatientsStats() {
+  const [stats, setStats] = useState<PatientsStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/stats/patients`, { headers: authHeaders() })
+      .then(r => r.ok ? r.json() : null)
+      .then((d: any) => setStats(d ?? null))
+      .catch(() => setStats(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { stats, loading };
+}
+
+// ── Clinical stats hook ───────────────────────────────────────────────────────
+
+type ClinicalStats = {
+  topComplaints: NameCount[];
+  topDiagnoses: NameCount[];
+  topMedicines: NameCount[];
+  reviewScheduledRate: number;
+};
+
+function useClinicalStats(range: RangeId, customStart: string, customEnd: string) {
+  const [stats, setStats] = useState<ClinicalStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const { start, end } = buildDateRange(range, customStart, customEnd);
+    if (!start || !end) { setStats(null); setLoading(false); return; }
+    setLoading(true);
+    fetch(`${API_BASE_URL}/api/stats/clinical?startDate=${start}&endDate=${end}`, { headers: authHeaders() })
+      .then(r => r.ok ? r.json() : null)
+      .then((d: any) => setStats(d ?? null))
+      .catch(() => setStats(null))
+      .finally(() => setLoading(false));
+  }, [range, customStart, customEnd]);
+
+  return { stats, loading };
+}
+
+// ── Finance stats hook ────────────────────────────────────────────────────────
+
+type FinanceStats = {
+  revenue: number;
+  outstandingDues: number;
+  avgPerVisit: number;
+  revenueTrend: DailyCount[];
+  paymentMix: Record<string, number>;
+};
+
+function useFinanceStats(range: RangeId, customStart: string, customEnd: string) {
+  const [stats, setStats] = useState<FinanceStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const { start, end } = buildDateRange(range, customStart, customEnd);
+    if (!start || !end) { setStats(null); setLoading(false); return; }
+    setLoading(true);
+    fetch(`${API_BASE_URL}/api/stats/finance?startDate=${start}&endDate=${end}`, { headers: authHeaders() })
+      .then(r => r.ok ? r.json() : null)
+      .then((d: any) => setStats(d ?? null))
+      .catch(() => setStats(null))
+      .finally(() => setLoading(false));
+  }, [range, customStart, customEnd]);
+
+  return { stats, loading };
+}
+
+// ── Operations stats hook ─────────────────────────────────────────────────────
+
+type OperationsStats = {
+  totalAppointments: number;
+  cancelled: number;
+  noShow: number;
+  cancellationRate: number;
+  noShowRate: number;
+};
+
+function useOperationsStats(range: RangeId, customStart: string, customEnd: string) {
+  const [stats, setStats] = useState<OperationsStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const { start, end } = buildDateRange(range, customStart, customEnd);
+    if (!start || !end) { setStats(null); setLoading(false); return; }
+    setLoading(true);
+    fetch(`${API_BASE_URL}/api/stats/operations?startDate=${start}&endDate=${end}`, { headers: authHeaders() })
+      .then(r => r.ok ? r.json() : null)
+      .then((d: any) => setStats(d ?? null))
       .catch(() => setStats(null))
       .finally(() => setLoading(false));
   }, [range, customStart, customEnd]);
@@ -195,8 +328,7 @@ export function StatsPage() {
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
 
-  const data = useMemo(() => OVERVIEW_MOCK[range], [range]);
-  const { stats: overviewStats, loading: overviewLoading } = useOverviewStats(range, customStart, customEnd);
+  const highlights = useMemo(() => OVERVIEW_MOCK[range].highlights, [range]);
 
   return (
     <div style={styles.page}>
@@ -245,47 +377,46 @@ export function StatsPage() {
         </div>
       )}
 
-      {tab === "overview"   && <OverviewTab data={data} range={range} realStats={overviewStats} realStatsLoading={overviewLoading} />}
+      {tab === "overview"   && <OverviewTab range={range} customStart={customStart} customEnd={customEnd} highlights={highlights} />}
       {tab === "health"     && <HealthTab range={range} />}
-      {tab === "patients"   && <PatientsTab range={range} />}
+      {tab === "patients"   && <PatientsTab range={range} customStart={customStart} customEnd={customEnd} />}
       {tab === "doctors"    && <DoctorsTab range={range} customStart={customStart} customEnd={customEnd} />}
-      {tab === "clinical"   && <ClinicalTab range={range} />}
-      {tab === "operations" && <OperationsTab range={range} />}
-      {tab === "finance"    && <FinanceTab range={range} />}
+      {tab === "clinical"   && <ClinicalTab range={range} customStart={customStart} customEnd={customEnd} />}
+      {tab === "operations" && <OperationsTab range={range} customStart={customStart} customEnd={customEnd} />}
+      {tab === "finance"    && <FinanceTab range={range} customStart={customStart} customEnd={customEnd} />}
     </div>
   );
 }
 
 // ── Overview tab ─────────────────────────────────────────────────────────────
 
-function OverviewTab({ data, range, realStats, realStatsLoading }: {
-  data: RangeData;
+function OverviewTab({ range, customStart, customEnd, highlights }: {
   range: RangeId;
-  realStats: OverviewStats | null;
-  realStatsLoading: boolean;
+  customStart: string;
+  customEnd: string;
+  highlights: { tone: "good" | "warn" | "info"; text: string }[];
 }) {
-  const footfall = realStatsLoading ? "…" : realStats ? String(realStats.totalAppointments) : String(data.footfall.value);
-  const newPatients = realStatsLoading ? "…" : realStats ? String(realStats.newPatients) : String(data.newPatients.value);
-  const composition = realStats ? realStats.composition : data.composition;
+  const { stats: s, loading } = useOverviewStats(range, customStart, customEnd);
+  const L = loading ? "…" : undefined;
 
   return (
     <div style={styles.tabBody}>
       <div style={styles.kpiGrid}>
-        <KpiTile label="Footfall" value={footfall} delta="" tone="flat" sub={subFor(range)} />
-        <InClinicTile data={data.inClinic} live={range === "today"} />
-        <KpiTile label="No-show rate" value={data.noShow.value} delta={data.noShow.delta} tone={data.noShow.tone} sub={data.noShow.sub} />
-        <KpiTile label="New patients" value={newPatients} delta="" tone="flat" sub={subFor(range)} />
+        <KpiTile label="Footfall"     value={L ?? String(s?.totalAppointments ?? 0)} delta="" tone="flat" sub={subFor(range)} />
+        <InClinicTile data={s?.inClinic ?? { waiting: 0, inConsult: 0, done: 0 }} live={range === "today"} loading={loading} />
+        <KpiTile label="No-show / cancelled" value={L ?? `${(s?.noShowRate ?? 0).toFixed(1)}%`} delta="" tone="flat" sub={subFor(range)} />
+        <KpiTile label="New patients" value={L ?? String(s?.newPatients ?? 0)} delta="" tone="flat" sub={subFor(range)} />
       </div>
 
       <div style={styles.midRow}>
-        <PeakHoursCard />
-        <CompositionCard data={composition} />
-        <TopComplaintsCard data={data.topComplaints} />
+        <PeakHoursCard peakData={s?.peakHours ?? {}} loading={loading} />
+        <CompositionCard data={s?.composition ?? { consultation: 0, review: 0, walkin: 0, procedure: 0 }} />
+        <TopComplaintsCard data={s?.topComplaints ?? []} loading={loading} />
       </div>
 
       <div style={styles.bottomRow}>
-        <FootfallTrendCard data={data.footfallTrend} range={range} />
-        <HighlightsCard items={data.highlights} />
+        <FootfallTrendCard hourly={s?.hourlyTrend ?? []} daily={s?.dailyTrend ?? []} range={range} loading={loading} />
+        <HighlightsCard items={highlights} />
       </div>
     </div>
   );
@@ -467,17 +598,19 @@ const COMPLAINTS_TREND = [
   { name: "Hypertension",  points: [16, 16, 17, 18, 17, 17, 18] },
 ];
 
-function PatientsTab({ range }: { range: RangeId }) {
+function PatientsTab({ range, customStart, customEnd }: { range: RangeId; customStart: string; customEnd: string }) {
+  const { stats: pts, loading: ptsLoading } = usePatientsStats();
+  const { stats: ov, loading: ovLoading } = useOverviewStats(range, customStart, customEnd);
+  const L = (ptsLoading || ovLoading) ? "…" : undefined;
+
   return (
     <div style={styles.tabBody}>
       <div style={styles.kpiGrid}>
-        <KpiTile label="Active patients" value="2,148" delta="+34%" tone="up" sub="visited in last 6 mo" />
-        <KpiTile label="New this period" value="156" delta="+22" tone="up" sub={subFor(range)} />
-        <KpiTile label="30-day return rate" value="42%" delta="+3%" tone="up" sub="vs prior period" />
-        <KpiTile label="90-day return rate" value="64%" delta="+6%" tone="up" sub="vs prior period" />
+        <KpiTile label="Active patients"   value={L ?? String(pts?.activePatients ?? 0)} delta="" tone="flat" sub="visited in last 6 mo" />
+        <KpiTile label="New this period"   value={L ?? String(ov?.newPatients ?? 0)}  delta="" tone="flat" sub={subFor(range)} />
       </div>
 
-      <AgePyramidCard />
+      <AgeDistributionCard ageGroups={pts?.ageGroups ?? {}} genderSplit={pts?.genderSplit ?? {}} loading={ptsLoading} />
 
       <ComplaintsTrendCard />
 
@@ -486,34 +619,68 @@ function PatientsTab({ range }: { range: RangeId }) {
   );
 }
 
-function AgePyramidCard() {
-  const max = Math.max(...AGE_PYRAMID.flatMap((b) => [b.male, b.female]));
+function AgeDistributionCard({ ageGroups, genderSplit, loading }: {
+  ageGroups: Record<string, number>;
+  genderSplit: Record<string, number>;
+  loading: boolean;
+}) {
+  const BANDS = ["0–12", "13–25", "26–40", "41–60", "61+"];
+  const max = Math.max(...BANDS.map(b => ageGroups[b] ?? 0), 1);
+  const male   = genderSplit["male"]   ?? 0;
+  const female = genderSplit["female"] ?? 0;
+  const other  = genderSplit["other"]  ?? 0;
+  const totalG = male + female + other || 1;
+
   return (
-    <section style={styles.card}>
-      <header style={styles.cardHeader}>
-        <h3 style={styles.cardTitle}>Age & gender distribution</h3>
-        <span style={styles.cardSub}>active patients</span>
-      </header>
-      <div style={styles.pyramidLegend}>
-        <span><Swatch color={colors.active.shade600} /> Male</span>
-        <span><Swatch color={colors.secondary500} /> Female</span>
-      </div>
-      <div style={styles.pyramidWrap}>
-        {AGE_PYRAMID.slice().reverse().map((b) => (
-          <div key={b.band} style={styles.pyramidRow}>
-            <div style={styles.pyramidSideLeft}>
-              <div style={{ ...styles.pyramidBar, width: `${(b.male / max) * 100}%`, backgroundColor: colors.active.shade600, marginLeft: "auto" }} />
-              <span style={styles.pyramidValue}>{b.male}</span>
-            </div>
-            <div style={styles.pyramidBand}>{b.band}</div>
-            <div style={styles.pyramidSideRight}>
-              <span style={styles.pyramidValue}>{b.female}</span>
-              <div style={{ ...styles.pyramidBar, width: `${(b.female / max) * 100}%`, backgroundColor: colors.secondary500 }} />
-            </div>
+    <div style={styles.twoCol}>
+      <section style={styles.card}>
+        <header style={styles.cardHeader}>
+          <h3 style={styles.cardTitle}>Age distribution</h3>
+          <span style={styles.cardSub}>active patients</span>
+        </header>
+        {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {BANDS.map(band => (
+              <div key={band}>
+                <div style={styles.complaintRow}>
+                  <span>{band} yrs</span>
+                  <span style={styles.complaintCount}>{ageGroups[band] ?? 0}</span>
+                </div>
+                <div style={styles.barTrack}>
+                  <div style={{ ...styles.barFill, width: `${((ageGroups[band] ?? 0) / max) * 100}%` }} />
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-    </section>
+        )}
+      </section>
+
+      <section style={styles.card}>
+        <header style={styles.cardHeader}>
+          <h3 style={styles.cardTitle}>Gender split</h3>
+          <span style={styles.cardSub}>active patients</span>
+        </header>
+        {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {[
+              { label: "Male",   value: male,   color: colors.active.shade600 },
+              { label: "Female", value: female, color: colors.secondary500 },
+              { label: "Other",  value: other,  color: colors.neutral300 },
+            ].map(row => (
+              <div key={row.label}>
+                <div style={styles.complaintRow}>
+                  <span><Swatch color={row.color} />{row.label}</span>
+                  <span style={styles.complaintCount}>{row.value} <span style={{ color: colors.neutral500, fontWeight: 400 }}>({Math.round(row.value / totalG * 100)}%)</span></span>
+                </div>
+                <div style={styles.barTrack}>
+                  <div style={{ ...styles.barFill, width: `${(row.value / totalG) * 100}%`, backgroundColor: row.color }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 
@@ -765,78 +932,97 @@ const TOP_PRESCRIPTIONS = [
   { name: "Azithromycin 250mg",  count: 48,  dosage: "tablet" },
 ];
 
-function ClinicalTab({ range }: { range: RangeId }) {
+function ClinicalTab({ range, customStart, customEnd }: { range: RangeId; customStart: string; customEnd: string }) {
+  const { stats, loading } = useClinicalStats(range, customStart, customEnd);
+
   return (
     <div style={styles.tabBody}>
       <div style={styles.kpiGrid}>
-        <KpiTile label="Review scheduled rate" value="71%" delta="+4%" tone="up" sub="follow-up plan made" />
+        <KpiTile label="Review scheduled rate" value={loading ? "…" : `${stats?.reviewScheduledRate ?? 0}%`} delta="" tone="flat" sub="of visits have a follow-up date" />
       </div>
 
       <div style={styles.twoCol}>
-        <DiagnosisMixCard />
-        <TopPrescriptionsCard />
+        <DiagnosisMixCard data={stats?.topDiagnoses ?? []} loading={loading} />
+        <TopPrescriptionsCard data={stats?.topMedicines ?? []} loading={loading} />
       </div>
+
+      <TopComplaintsCard data={stats?.topComplaints ?? []} loading={loading} />
     </div>
   );
 }
 
-function DiagnosisMixCard() {
-  const total = DIAGNOSIS_MIX.reduce((a, d) => a + d.value, 0);
+function DiagnosisMixCard({ data, loading }: { data: NameCount[]; loading: boolean }) {
+  const PALETTE = [colors.active.shade600, colors.active.shade500, colors.secondary500, colors.active.shade400, colors.neutral300, colors.neutral200];
+  const total = data.reduce((a, d) => a + d.count, 0) || 1;
+  const segments = data.map((d, i) => ({ label: d.name, value: d.count, color: PALETTE[i % PALETTE.length] }));
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
-        <h3 style={styles.cardTitle}>Diagnosis mix</h3>
+        <h3 style={styles.cardTitle}>Top diagnoses</h3>
         <span style={styles.cardSub}>this period</span>
       </header>
-      <Donut segments={DIAGNOSIS_MIX} total={total} />
-      <div style={styles.donutLegend}>
-        {DIAGNOSIS_MIX.map((s) => (
-          <div key={s.label} style={styles.donutLegendRow}>
-            <Swatch color={s.color} />
-            <span style={{ flex: 1 }}>{s.label}</span>
-            <span style={{ fontWeight: 600 }}>{s.value}</span>
-            <span style={{ color: colors.neutral500, marginLeft: 8 }}>{Math.round((s.value / total) * 100)}%</span>
+      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> : data.length === 0 ? (
+        <div style={{ color: colors.neutral500, fontSize: fonts.size.s }}>No data</div>
+      ) : (
+        <>
+          <Donut segments={segments} total={total} />
+          <div style={styles.donutLegend}>
+            {segments.map((s) => (
+              <div key={s.label} style={styles.donutLegendRow}>
+                <Swatch color={s.color} />
+                <span style={{ flex: 1 }}>{s.label}</span>
+                <span style={{ fontWeight: 600 }}>{s.value}</span>
+                <span style={{ color: colors.neutral500, marginLeft: 8 }}>{Math.round((s.value / total) * 100)}%</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
     </section>
   );
 }
 
-function TopPrescriptionsCard() {
-  const max = Math.max(...TOP_PRESCRIPTIONS.map((p) => p.count));
+function TopPrescriptionsCard({ data, loading }: { data: NameCount[]; loading: boolean }) {
+  const max = Math.max(...data.map(p => p.count), 1);
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
         <h3 style={styles.cardTitle}>Most prescribed medicines</h3>
         <span style={styles.cardSub}>this period</span>
       </header>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {TOP_PRESCRIPTIONS.map((p) => (
-          <div key={p.name}>
-            <div style={styles.complaintRow}>
-              <span>{p.name} <span style={styles.cardSub}>· {p.dosage}</span></span>
-              <span style={styles.complaintCount}>{p.count}</span>
+      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> : data.length === 0 ? (
+        <div style={{ color: colors.neutral500, fontSize: fonts.size.s }}>No prescription data</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {data.map((p) => (
+            <div key={p.name}>
+              <div style={styles.complaintRow}>
+                <span>{p.name}</span>
+                <span style={styles.complaintCount}>{p.count}</span>
+              </div>
+              <div style={styles.barTrack}>
+                <div style={{ ...styles.barFill, width: `${(p.count / max) * 100}%` }} />
+              </div>
             </div>
-            <div style={styles.barTrack}>
-              <div style={{ ...styles.barFill, width: `${(p.count / max) * 100}%` }} />
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
 
 // ── Operations tab ──────────────────────────────────────────────────────────
 
-function OperationsTab({ range }: { range: RangeId }) {
+function OperationsTab({ range, customStart, customEnd }: { range: RangeId; customStart: string; customEnd: string }) {
+  const { stats, loading } = useOperationsStats(range, customStart, customEnd);
+  const L = loading ? "…" : undefined;
+
   return (
     <div style={styles.tabBody}>
       <div style={styles.kpiGrid}>
-        <KpiTile label="Cancellation rate" value="6%" delta="+1%" tone="down" sub={subFor(range)} />
-        <KpiTile label="No-show rate" value="8%" delta="+1%" tone="down" sub={subFor(range)} />
-        <KpiTile label="Same-day reschedules" value="4" delta="−1" tone="up" sub={subFor(range)} />
+        <KpiTile label="Total appointments" value={L ?? String(stats?.totalAppointments ?? 0)} delta="" tone="flat" sub={subFor(range)} />
+        <KpiTile label="Cancellation rate"  value={L ?? `${(stats?.cancellationRate ?? 0).toFixed(1)}%`} delta="" tone="flat" sub={`${stats?.cancelled ?? 0} cancelled`} />
+        <KpiTile label="No-show rate"       value={L ?? `${(stats?.noShowRate ?? 0).toFixed(1)}%`}       delta="" tone="flat" sub={`${stats?.noShow ?? 0} no-shows`} />
       </div>
     </div>
   );
@@ -863,7 +1049,12 @@ const REVENUE_TREND_FIN = [
   21, 24, 26, 30, 33, 36, 15, 22, 25, 28, 31, 34, 38, 16, 27, 33,
 ];
 
-function FinanceTab({ range }: { range: RangeId }) {
+function FinanceTab({ range, customStart, customEnd }: { range: RangeId; customStart: string; customEnd: string }) {
+  const { stats, loading } = useFinanceStats(range, customStart, customEnd);
+  const L = loading ? "…" : undefined;
+
+  const fmtInr = (v: number) => `₹ ${v.toLocaleString("en-IN")}`;
+
   return (
     <div style={styles.tabBody}>
       <div style={styles.adminBadgeRow}>
@@ -871,59 +1062,53 @@ function FinanceTab({ range }: { range: RangeId }) {
       </div>
 
       <div style={styles.kpiGrid}>
-        <KpiTile label="Revenue" value="₹ 5,70,000" delta="+12%" tone="up" sub={subFor(range)} />
-        <KpiTile label="Outstanding dues" value="₹ 47,200" delta="23 patients" tone="flat" sub="across all aging buckets" />
-        <KpiTile label="Avg revenue / visit" value="₹ 800" delta="+₹40" tone="up" sub="vs prior period" />
+        <KpiTile label="Revenue"              value={L ?? fmtInr(stats?.revenue ?? 0)}        delta="" tone="flat" sub={subFor(range)} />
+        <KpiTile label="Outstanding dues"     value={L ?? fmtInr(stats?.outstandingDues ?? 0)} delta="" tone="flat" sub="unpaid appointments with fee" />
+        <KpiTile label="Avg revenue / visit"  value={L ?? fmtInr(stats?.avgPerVisit ?? 0)}    delta="" tone="flat" sub="paid visits" />
       </div>
 
-      <div style={styles.twoCol}>
-        <PaymentMixCard />
-        <DuesAgingCard />
-      </div>
+      <PaymentMixCard data={stats?.paymentMix ?? {}} loading={loading} />
 
-      <RevenueTrendCardFin />
+      <RevenueTrendCardFin data={stats?.revenueTrend ?? []} loading={loading} />
     </div>
   );
 }
 
-function PaymentMixCard() {
-  const total = PAYMENT_MIX.reduce((a, s) => a + s.value, 0);
+function PaymentMixCard({ data, loading }: { data: Record<string, number>; loading: boolean }) {
+  const PALETTE = [colors.active.shade600, colors.secondary500, colors.active.shade400, colors.neutral300, colors.neutral200];
+  const entries = Object.entries(data);
+  const total = entries.reduce((a, [, v]) => a + v, 0) || 1;
+  const segments = entries.map(([label, value], i) => ({ label, value, color: PALETTE[i % PALETTE.length] }));
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
         <h3 style={styles.cardTitle}>Payment method mix</h3>
       </header>
-      <Donut segments={PAYMENT_MIX} total={total} />
-      <div style={styles.donutLegend}>
-        {PAYMENT_MIX.map((s) => (
-          <div key={s.label} style={styles.donutLegendRow}>
-            <Swatch color={s.color} />
-            <span style={{ flex: 1 }}>{s.label}</span>
-            <span style={{ fontWeight: 600 }}>₹ {s.value.toLocaleString("en-IN")}</span>
-            <span style={{ color: colors.neutral500, marginLeft: 8 }}>{Math.round((s.value / total) * 100)}%</span>
+      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> : entries.length === 0 ? (
+        <div style={{ color: colors.neutral500, fontSize: fonts.size.s }}>No payment data</div>
+      ) : (
+        <>
+          <Donut segments={segments} total={total} />
+          <div style={styles.donutLegend}>
+            {segments.map((s) => (
+              <div key={s.label} style={styles.donutLegendRow}>
+                <Swatch color={s.color} />
+                <span style={{ flex: 1 }}>{s.label}</span>
+                <span style={{ fontWeight: 600 }}>₹ {s.value.toLocaleString("en-IN")}</span>
+                <span style={{ color: colors.neutral500, marginLeft: 8 }}>{Math.round((s.value / total) * 100)}%</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
     </section>
   );
 }
 
-function RevenueTrendCardFin() {
-  // Last 7 days of revenue.
-  const values = REVENUE_TREND_FIN.slice(-7);
-
-  // Day labels derived from today.
-  const today = new Date();
-  const dayLabels = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - (6 - i));
-    return d.toLocaleDateString("en-US", { weekday: "long" });
-  });
-  const dateLabels = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - (6 - i));
-    return d.toLocaleDateString("en-US", { day: "numeric", month: "short" });
-  });
+function RevenueTrendCardFin({ data, loading }: { data: DailyCount[]; loading: boolean }) {
+  const values = data.map(d => d.count);
+  const dayLabels   = data.map(d => new Date(d.date).toLocaleDateString("en-US", { weekday: "short" }));
+  const dateLabels  = data.map(d => new Date(d.date).toLocaleDateString("en-US", { day: "numeric", month: "short" }));
 
   const W = 900;
   const H = 320;
@@ -941,17 +1126,18 @@ function RevenueTrendCardFin() {
   for (let t = 0; t <= axisMax + 1e-9; t += tickStep) yTicks.push(Math.round(t));
 
   const barCount = values.length;
-  const slotW = innerW / barCount;
+  const slotW = barCount > 0 ? innerW / barCount : innerW;
   const barW = Math.min(64, slotW * 0.62);
-
   const todayIdx = barCount - 1;
 
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
-        <h3 style={styles.cardTitle}>Revenue this week</h3>
-        <span style={styles.cardSub}>₹ in thousands</span>
+        <h3 style={styles.cardTitle}>Revenue trend</h3>
+        <span style={styles.cardSub}>₹ per day · paid appointments</span>
       </header>
+      {loading && <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div>}
+      {!loading && data.length === 0 && <div style={{ color: colors.neutral500, fontSize: fonts.size.s }}>No revenue data for this period</div>}
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" style={{ width: "100%", height: 320, display: "block" }}>
         {/* Y-axis gridlines + labels */}
         {yTicks.map((t) => {
@@ -1123,7 +1309,7 @@ function KpiTile({ label, value, delta, tone, sub }: {
   );
 }
 
-function InClinicTile({ data, live }: { data: { waiting: number; inConsult: number; done: number }; live: boolean }) {
+function InClinicTile({ data, live, loading }: { data: { waiting: number; inConsult: number; done: number }; live: boolean; loading?: boolean }) {
   const total = data.waiting + data.inConsult + data.done;
   const seg = (n: number) => total > 0 ? (n / total) * 100 : 0;
   return (
@@ -1201,34 +1387,41 @@ function Sparkline({ points, width = 80, height = 24 }: { points: number[]; widt
   );
 }
 
-function PeakHoursCard() {
-  const max = 10;
+function PeakHoursCard({ peakData, loading }: { peakData: Record<string, Record<number, number>>; loading: boolean }) {
+  const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+  const allVals = DAYS.flatMap(d => HOURS.map(h => peakData[d]?.[h] ?? 0));
+  const max = Math.max(...allVals, 1);
+
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
         <h3 style={styles.cardTitle}>Peak hours</h3>
         <span style={styles.cardSub}>last 30 days</span>
       </header>
-      <div style={styles.heatmapMini}>
-        {HEATMAP.map((row, dayIdx) => (
-          <div key={dayIdx} style={styles.heatmapMiniRow}>
-            <span style={styles.heatmapMiniAxis}>{HEATMAP_DAYS[dayIdx]}</span>
-            {row.map((v, hIdx) => {
-              const intensity = v / max;
-              return (
-                <div
-                  key={hIdx}
-                  title={`${HEATMAP_DAYS[dayIdx]} ${HEATMAP_HOURS[hIdx]}: ${v}/10`}
-                  style={{
-                    ...styles.heatmapMiniCell,
-                    backgroundColor: intensity === 0 ? colors.neutral100 : `rgba(207, 111, 47, ${0.15 + intensity * 0.7})`,
-                  }}
-                />
-              );
-            })}
-          </div>
-        ))}
-      </div>
+      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> : (
+        <div style={styles.heatmapMini}>
+          {DAYS.map((day) => (
+            <div key={day} style={{ ...styles.heatmapMiniRow, gridTemplateColumns: `32px repeat(${HOURS.length}, 1fr)` }}>
+              <span style={styles.heatmapMiniAxis}>{day}</span>
+              {HOURS.map((h) => {
+                const v = peakData[day]?.[h] ?? 0;
+                const intensity = v / max;
+                return (
+                  <div
+                    key={h}
+                    title={`${day} ${h}:00 — ${v} apts`}
+                    style={{
+                      ...styles.heatmapMiniCell,
+                      backgroundColor: intensity === 0 ? colors.neutral100 : `rgba(207, 111, 47, ${0.15 + intensity * 0.7})`,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -1264,14 +1457,15 @@ function CompositionCard({ data }: { data: { consultation: number; review: numbe
   );
 }
 
-function TopComplaintsCard({ data }: { data: { name: string; count: number }[] }) {
+function TopComplaintsCard({ data, loading }: { data: { name: string; count: number }[]; loading?: boolean }) {
   const max = Math.max(...data.map((d) => d.count), 1);
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
         <h3 style={styles.cardTitle}>Top complaints</h3>
       </header>
-      {data.length === 0 ? (
+      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> :
+       data.length === 0 ? (
         <div style={{ color: colors.neutral500, fontSize: fonts.size.s }}>No data</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1292,34 +1486,41 @@ function TopComplaintsCard({ data }: { data: { name: string; count: number }[] }
   );
 }
 
-function FootfallTrendCard({ data, range }: { data: { labels: string[]; values: number[] }; range: RangeId }) {
-  const max = Math.max(...data.values, 1);
-  const title =
-    range === "today" ? "Footfall by hour" :
-    range === "week"  ? "Footfall this week" :
-    range === "month" ? "Footfall last 30 days" :
-    range === "year"  ? "Footfall last 12 months" :
-                        "Footfall — custom range";
+function FootfallTrendCard({ hourly, daily, range, loading }: {
+  hourly: { hour: number; count: number }[];
+  daily: DailyCount[];
+  range: RangeId;
+  loading: boolean;
+}) {
+  const isToday = range === "today";
+  const labels  = isToday
+    ? hourly.map(d => `${d.hour % 12 || 12}${d.hour < 12 ? "a" : "p"}`)
+    : daily.map(d => new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }));
+  const values  = isToday ? hourly.map(d => d.count) : daily.map(d => d.count);
+  const max = Math.max(...values, 1);
+  const title = isToday ? "Footfall by hour" : range === "week" ? "Footfall this week" : range === "month" ? "Footfall last 30 days" : range === "year" ? "Footfall last 12 months" : "Footfall — custom range";
+
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
         <h3 style={styles.cardTitle}>{title}</h3>
       </header>
-      {data.values.length === 0 ? (
-        <div style={{ color: colors.neutral500, fontSize: fonts.size.s, padding: spacing.m }}>Pick a range to see the trend.</div>
+      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> :
+       values.length === 0 ? (
+        <div style={{ color: colors.neutral500, fontSize: fonts.size.s, padding: spacing.m }}>No appointment data for this period.</div>
       ) : (
         <>
           <div style={styles.barChart}>
-            {data.values.map((v, i) => (
-              <div key={i} style={styles.barChartCol} title={`${data.labels[i]}: ${v}`}>
+            {values.map((v, i) => (
+              <div key={i} style={styles.barChartCol} title={`${labels[i]}: ${v}`}>
                 <div style={{ ...styles.barChartBar, height: `${(v / max) * 100}%` }} />
               </div>
             ))}
           </div>
           <div style={styles.barChartLabels}>
-            {data.labels.map((l, i) => (
+            {labels.map((l, i) => (
               <span key={i} style={{ flex: 1, textAlign: "center", fontSize: fonts.size.xs, color: colors.neutral500 }}>
-                {data.values.length > 14 ? (i % Math.ceil(data.values.length / 7) === 0 ? l : "") : l}
+                {values.length > 14 ? (i % Math.ceil(values.length / 7) === 0 ? l : "") : l}
               </span>
             ))}
           </div>
