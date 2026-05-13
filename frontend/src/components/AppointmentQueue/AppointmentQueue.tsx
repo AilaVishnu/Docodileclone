@@ -18,21 +18,13 @@ type Doctor = {
   name: string;
 };
 
-// Frontend-only stub: returns the medicines "prescribed" in this session.
-// Real wire-up will pull from prescription Rx rows by appointment id.
-function mockMedicinesFor(aptId: string) {
-  const pool = [
-    { id: "m1", name: "Paracetamol 500mg", dosage: "1-0-1 × 5 days", unitPrice: 12, qty: 10 },
-    { id: "m2", name: "Amoxicillin 500mg", dosage: "1-1-1 × 5 days", unitPrice: 18, qty: 15 },
-    { id: "m3", name: "Cetirizine 10mg", dosage: "0-0-1 × 7 days", unitPrice: 8, qty: 7 },
-    { id: "m4", name: "Pantoprazole 40mg", dosage: "1-0-0 × 10 days", unitPrice: 22, qty: 10 },
-    { id: "m5", name: "Vitamin D3 60K", dosage: "Once weekly × 4", unitPrice: 45, qty: 4 },
-  ];
-  // Deterministic subset per appointment so the modal shows consistent rows.
-  const hash = Array.from(aptId).reduce((a, c) => a + c.charCodeAt(0), 0);
-  const count = 2 + (hash % 3); // 2–4 medicines
-  return pool.slice(0, count).map((m, i) => ({ ...m, id: `${aptId}-${m.id}-${i}` }));
-}
+type BillingMedicine = {
+  id: string;
+  name: string;
+  dosage?: string;
+  unitPrice: number;
+  qty: number;
+};
 
 type AppointmentQueueProps = {
   isBooking?: boolean;
@@ -54,6 +46,8 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
   const [toastMessage, setToastMessage] = useState("");
   const [pendingCancelId, setPendingCancelId] = useState<string | null>(null);
   const [medsBillingApt, setMedsBillingApt] = useState<Appointment | null>(null);
+  const [billingMedicines, setBillingMedicines] = useState<BillingMedicine[]>([]);
+  const [billingLoading, setBillingLoading] = useState(false);
 
   const doStatusChange = async (aptId: string, newStatus: string) => {
     const token = localStorage.getItem("docodile_token");
@@ -101,6 +95,37 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
       setEditingAppointment(undefined);
     }
   }, [bookingKey]);
+
+  // Fetch real prescription Rx rows for the selected patient when Bill Medicines opens
+  useEffect(() => {
+    if (!medsBillingApt?.patientId) {
+      setBillingMedicines([]);
+      return;
+    }
+    const patientId = medsBillingApt.patientId;
+    setBillingLoading(true);
+    const token = localStorage.getItem("docodile_token");
+    fetch(`${API_BASE_URL}/api/patients/${patientId}/visits`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((visits: any[]) => {
+        // visits are sorted ASC; last entry is the most recent
+        const latest = visits[visits.length - 1];
+        const rows: BillingMedicine[] = (latest?.prescriptions ?? [])
+          .filter((p: any) => p.medicine)
+          .map((p: any, i: number) => ({
+            id: p.id ?? `rx-${i}`,
+            name: p.medicine as string,
+            dosage: [p.dosage, p.frequency, p.duration].filter(Boolean).join(" · ") || undefined,
+            unitPrice: 0,
+            qty: 1,
+          }));
+        setBillingMedicines(rows);
+      })
+      .catch(() => setBillingMedicines([]))
+      .finally(() => setBillingLoading(false));
+  }, [medsBillingApt]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -389,8 +414,16 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
       <BillMedicinesModal
         isOpen={!!medsBillingApt}
         onClose={() => setMedsBillingApt(null)}
+        onBilled={(method, total) => {
+          const inr = total.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+          const msg = method === "Waive"
+            ? `Bill waived for ${medsBillingApt?.patientName}`
+            : `₹${inr} billed via ${method} for ${medsBillingApt?.patientName}`;
+          setToastMessage(msg);
+        }}
         patientName={medsBillingApt?.patientName || ""}
-        medicines={medsBillingApt ? mockMedicinesFor(medsBillingApt.id) : []}
+        medicines={billingMedicines}
+        loading={billingLoading}
         pendingDue={medsBillingApt?.payStatus === "DUE" ? (medsBillingApt.fee ?? 500) : 0}
       />
     </div>

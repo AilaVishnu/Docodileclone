@@ -31,8 +31,10 @@ const DEFAULT_CATALOG: CatalogItem[] = [
 type Props = {
   isOpen: boolean;
   onClose: () => void;
+  onBilled?: (paymentMethod: string, total: number) => void;
   patientName: string;
   medicines: Medicine[];
+  loading?: boolean;
   /** Catalog the user can pick from when adding a new medicine. */
   catalog?: CatalogItem[];
   /** Outstanding amount from the consultation (or other un-paid items) carried into this bill. */
@@ -44,7 +46,7 @@ type Props = {
 const inr = (n: number) =>
   `₹ ${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export function BillMedicinesModal({ isOpen, onClose, patientName, medicines: initial, catalog = DEFAULT_CATALOG, pendingDue = 0, pendingDueLabel = "Consultation due" }: Props) {
+export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, medicines: initial, loading = false, catalog = DEFAULT_CATALOG, pendingDue = 0, pendingDueLabel = "Consultation due" }: Props) {
   const [items, setItems] = useState<Medicine[]>(initial);
   const [discount, setDiscount] = useState<number>(0);
   const [discountMode, setDiscountMode] = useState<"%" | "₹">("%");
@@ -122,7 +124,14 @@ export function BillMedicinesModal({ isOpen, onClose, patientName, medicines: in
                 </tr>
               </thead>
               <tbody>
-                {items.length === 0 && !isAdding && (
+                {loading && (
+                  <tr>
+                    <td colSpan={4} style={{ ...styles.td, textAlign: "center", color: colors.neutral500, borderBottom: "none" }}>
+                      Loading prescription…
+                    </td>
+                  </tr>
+                )}
+                {!loading && items.length === 0 && !isAdding && (
                   <tr>
                     <td colSpan={4} style={{ ...styles.td, textAlign: "center", color: colors.neutral500, borderBottom: "none" }}>
                       No medicines prescribed yet.
@@ -273,7 +282,7 @@ export function BillMedicinesModal({ isOpen, onClose, patientName, medicines: in
                 size="sm"
                 style={{ height: "40px", fontSize: fonts.size.s, padding: "0 20px" }}
                 disabled={items.length === 0 || total <= 0}
-                onClick={onClose}
+                onClick={() => { onBilled?.(paymentMethod, total); onClose(); }}
               >
                 {paymentMethod === "Waive" ? "Mark Waived" : "Charge & Bill"}
               </Button>

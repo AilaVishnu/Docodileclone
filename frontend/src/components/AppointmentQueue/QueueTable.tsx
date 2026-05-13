@@ -6,6 +6,7 @@ import { ReactComponent as StarOutlineIcon } from "../../assets/icons/star.svg";
 import { ReactComponent as ReorderDotsIcon } from "../../assets/icons/reorder.svg";
 import { ReactComponent as RestartArrowIcon } from "../../assets/icons/restart.svg";
 import { ZeroQueue } from "./ZeroQueue";
+import { loadStartedSet } from "../../utils/sessionStarted";
 
 export type AppointmentStatus =
   | "WAITING"
@@ -64,8 +65,20 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
   onStatusChange: (appointmentId: string, newStatus: string) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [timerStarted, setTimerStarted] = useState(() =>
+    appointment.patientId ? loadStartedSet().has(appointment.patientId) : false
+  );
   const ref = useRef<HTMLDivElement>(null);
-  const isLocked = currentStatus?.toUpperCase() === "COMPLETED";
+  const isLocked = currentStatus === "COMPLETED" || timerStarted;
+
+  useEffect(() => {
+    if (!appointment.patientId) return;
+    const pid = appointment.patientId;
+    const interval = setInterval(() => {
+      setTimerStarted(loadStartedSet().has(pid));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [appointment.patientId]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
