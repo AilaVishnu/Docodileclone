@@ -75,6 +75,16 @@ data class OperationsStatsDTO(
     val noShowRate: Double,
 )
 
+data class OverdueReviewDTO(val patientName: String, val doctorName: String, val reviewDate: String, val daysSince: Long)
+data class ComplaintTrendDTO(val name: String, val points: List<Int>)
+data class HealthSubscoreDTO(val label: String, val value: Int, val hint: String)
+data class HealthInsightDTO(val tone: String, val text: String, val action: String?)
+data class HealthStatsDTO(
+    val overallScore: Int,
+    val subscores: List<HealthSubscoreDTO>,
+    val insights: List<HealthInsightDTO>,
+)
+
 // ─── Controller ──────────────────────────────────────────────────────────────
 
 @RestController
@@ -273,6 +283,185 @@ class StatsController(
             ageGroups = ageGroups,
             genderSplit = genderSplit,
         )
+    }
+
+    // ── Health score ──────────────────────────────────────────────────────────
+
+    @GetMapping("/health")
+    fun healthStats(): HealthStatsDTO {
+        val clinicId = currentUser.clinicId()
+        val today = LocalDate.now()
+        val thirtyAgo = today.minusDays(29)
+        val start = thirtyAgo.atStartOfDay()
+        val end = today.atTime(23, 59, 59)
+
+        val apts = appointmentRepository.findAllByClinicIdAndScheduledTimeBetween(clinicId, start, end)
+        val total = apts.size.coerceAtLeast(1)
+        val completed  = apts.count { it.status?.uppercase() == "COMPLETED" || it.payStatus?.uppercase() == "PAID" }
+        val cancelled  = apts.count { it.status?.uppercase() == "CANCELLED" }
+        val noShow     = apts.count { it.status?.uppercase() == "NO_SHOW" }
+        val paid       = apts.filter { it.payStatus?.uppercase() == "PAID" }
+        val unpaid     = apts.filter { it.payStatus?.uppercase() != "PAID" && (it.fee ?: BigDecimal.ZERO) > BigDecimal.ZERO }
+        val totalFee   = apts.mapNotNull { it.fee }.fold(BigDecimal.ZERO, BigDecimal::add)
+        val paidFee    = paid.mapNotNull { it.fee }.fold(BigDecimal.ZERO, BigDecimal::add)
+        val collectionRate = if (totalFee > BigDecimal.ZERO) (paidFee.toDouble() / totalFee.toDouble() * 100).toInt() else 100
+
+        val completionRate = (completed * 100 / total)
+        val noShowRate     = (noShow * 100 / total)
+        val cancelRate     = (cancelled * 100 / total)
+
+        val visits = visitRepository.findAllByClinicIdAndVisitDateBetween(clinicId, thirtyAgo, today)
+        val totalVisits = visits.size.coerceAtLeast(1)
+        val diagFilled  = visits.count { !it.diagnosis.isNullOrBlank() }
+        val reviewSet   = visits.count { it.reviewDate != null }
+        val diagRate    = diagFilled * 100 / totalVisits
+        val reviewRate  = reviewSet * 100 / totalVisits
+
+        // Compute subscores (0–100)
+        val patientExp = (70 + when {
+            noShowRate > 25  -> -20
+            noShowRate > 15  -> -10
+            noShowRate < 5   -> 10
+            else             -> 0
+        } + when {
+            completionRate > 80 -> 15
+            completionRate < 50 -> -10
+            else                -> 0
+        } + when {
+            cancelRate > 20 -> -10
+            cancelRate < 5  ->  5
+            else            ->  0
+        }).coerceIn(0, 100)
+
+        val operational = (70 + when {
+            cancelRate > 20 -> -20
+            cancelRate > 10 -> -10
+            cancelRate < 5  ->  15
+            else            ->  0
+        } + when {
+            completionRate > 80 -> 10
+            completionRate < 50 -> -15
+            else                -> 0
+        }).coerceIn(0, 100)
+
+        val clinical = (60 + when {
+            diagRate > 80 -> 25
+            diagRate > 60 -> 15
+            diagRate < 30 -> -15
+            else          -> 0
+        } + when {
+            reviewRate > 70 -> 15
+            reviewRate > 40 ->  5
+            else            ->  0
+        }).coerceIn(0, 100)
+
+        val financial = (60 + when {
+            collectionRate > 90 -> 30
+            collectionRate > 75 -> 15
+            collectionRate > 60 ->  5
+            collectionRate < 40 -> -20
+            else                -> -5
+        }).coerceIn(0, 100)
+
+        val overallScore = ((patientExp + operational + clinical + financial) / 4.0).toInt()
+
+        val patExpHint = if (noShowRate < 5) "Low no-show, strong completion rate"
+                         else if (noShowRate > 15) "High no-show rate — follow up with patients"
+                         else "Moderate no-show rate; completion is ${completionRate}%"
+        val opHint = if (cancelRate < 5) "Cancellations under control; slots well-filled"
+                     else if (cancelRate > 15) "Cancellation rate at ${cancelRate}% — check roster"
+                     else "Cancellation rate at ${cancelRate}%; completion ${completionRate}%"
+        val clinHint = "Diagnosis filled ${diagRate}%; review plans set ${reviewRate}%"
+        val finHint = "Collection rate ${collectionRate}%; ${unpaid.size} unpaid appointments"
+
+        val subscores = listOf(
+            HealthSubscoreDTO("Patient experience", patientExp, patExpHint),
+            HealthSubscoreDTO("Operational",        operational, opHint),
+            HealthSubscoreDTO("Clinical quality",   clinical,   clinHint),
+            HealthSubscoreDTO("Financial",          financial,  finHint),
+        )
+
+        // Dynamic insights
+        val insights = mutableListOf<HealthInsightDTO>()
+        if (completionRate > 75)
+            insights += HealthInsightDTO("good", "Appointment completion rate is ${completionRate}% — strong throughput.", null)
+        if (noShowRate > 15)
+            insights += HealthInsightDTO("act",  "${noShow} no-shows in the last 30 days (${noShowRate}%). Consider SMS reminders.", "Review no-show patients")
+        if (cancelRate > 10)
+            insights += HealthInsightDTO("watch","Cancellation rate at ${cancelRate}% — check if specific slots or doctors are affected.", "Review cancellation patterns")
+        if (diagRate < 60)
+            insights += HealthInsightDTO("watch","Only ${diagRate}% of visits have a diagnosis recorded. Remind doctors to fill this.", "Share reminder with clinical team")
+        if (reviewRate > 60)
+            insights += HealthInsightDTO("good", "${reviewRate}% of visits have a follow-up date set — good continuity of care.", null)
+        if (reviewRate < 30)
+            insights += HealthInsightDTO("watch","Only ${reviewRate}% of visits schedule a follow-up. Consider adding review reminders.", "Discuss with clinical leads")
+        if (collectionRate < 70)
+            insights += HealthInsightDTO("act",  "Payment collection at ${collectionRate}%. ${unpaid.size} appointments have outstanding dues.", "Run dues collection report")
+        if (collectionRate > 90)
+            insights += HealthInsightDTO("good", "Excellent payment collection — ${collectionRate}% of billed appointments paid.", null)
+        if (insights.isEmpty())
+            insights += HealthInsightDTO("good", "Clinic is running smoothly. No critical issues detected in the last 30 days.", null)
+
+        return HealthStatsDTO(overallScore = overallScore, subscores = subscores, insights = insights)
+    }
+
+    // ── Overdue reviews ───────────────────────────────────────────────────────
+
+    @GetMapping("/overdue")
+    fun overdueReviews(): List<OverdueReviewDTO> {
+        val clinicId = currentUser.clinicId()
+        val today = LocalDate.now()
+
+        val overdueVisits = visitRepository.findOverdueReviews(clinicId, today)
+
+        // De-duplicate: for each patient keep only their most-overdue visit
+        return overdueVisits
+            .groupBy { it.patient?.id }
+            .filterKeys { it != null }
+            .map { (_, visits) -> visits.minByOrNull { it.reviewDate!! }!! }
+            .sortedBy { it.reviewDate }
+            .take(10)
+            .map { v ->
+                val daysSince = today.toEpochDay() - v.reviewDate!!.toEpochDay()
+                OverdueReviewDTO(
+                    patientName = v.patient?.name ?: "Unknown",
+                    doctorName  = v.createdByDoctor?.let { it.name ?: it.email } ?: "—",
+                    reviewDate  = v.reviewDate.toString(),
+                    daysSince   = daysSince,
+                )
+            }
+    }
+
+    // ── Complaints trend ──────────────────────────────────────────────────────
+
+    @GetMapping("/complaints/trend")
+    fun complaintsTrend(): List<ComplaintTrendDTO> {
+        val clinicId = currentUser.clinicId()
+        val today = LocalDate.now()
+        val sevenWeeksAgo = today.minusWeeks(7)
+
+        val visits = visitRepository.findAllByClinicIdAndVisitDateBetween(clinicId, sevenWeeksAgo, today)
+
+        // Flatten to (complaint, visitDate) pairs
+        val pairs = visits.flatMap { v ->
+            tokenize(v.complaints).map { capitalize(it) to v.visitDate }
+        }
+
+        // Top 5 complaints overall
+        val topNames = pairs.groupBy { it.first }
+            .entries.sortedByDescending { it.value.size }
+            .take(5).map { it.key }
+
+        val startMonday = today.minusWeeks(6).with(java.time.DayOfWeek.MONDAY)
+
+        return topNames.map { name ->
+            val points = (0..6).map { w ->
+                val wStart = startMonday.plusWeeks(w.toLong())
+                val wEnd   = wStart.plusDays(6)
+                pairs.count { (cName, date) -> cName == name && !date.isBefore(wStart) && !date.isAfter(wEnd) }
+            }
+            ComplaintTrendDTO(name = name, points = points)
+        }
     }
 
     // ── Weekly doctor schedule ────────────────────────────────────────────────

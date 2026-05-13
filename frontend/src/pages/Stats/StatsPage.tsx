@@ -181,6 +181,67 @@ function useFinanceStats(range: RangeId, customStart: string, customEnd: string)
   return { stats, loading };
 }
 
+// ── Health stats hook ─────────────────────────────────────────────────────────
+
+type HealthStats = {
+  overallScore: number;
+  subscores: { label: string; value: number; hint: string }[];
+  insights: { tone: string; text: string; action: string | null }[];
+};
+
+function useHealthStats() {
+  const [stats, setStats] = useState<HealthStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/stats/health`, { headers: authHeaders() })
+      .then(r => r.ok ? r.json() : null)
+      .then((d: any) => setStats(d ?? null))
+      .catch(() => setStats(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { stats, loading };
+}
+
+// ── Complaints trend hook ─────────────────────────────────────────────────────
+
+type ComplaintTrend = { name: string; points: number[] };
+
+function useComplaintsTrend() {
+  const [data, setData] = useState<ComplaintTrend[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/stats/complaints/trend`, { headers: authHeaders() })
+      .then(r => r.ok ? r.json() : [])
+      .then(setData)
+      .catch(() => setData([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { data, loading };
+}
+
+// ── Overdue reviews hook ──────────────────────────────────────────────────────
+
+type OverdueReview = { patientName: string; doctorName: string; reviewDate: string; daysSince: number };
+
+function useOverdueReviews() {
+  const [data, setData] = useState<OverdueReview[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/stats/overdue`, { headers: authHeaders() })
+      .then(r => r.ok ? r.json() : [])
+      .then(setData)
+      .catch(() => setData([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { data, loading };
+}
+
 // ── Weekly schedule hook ──────────────────────────────────────────────────────
 
 function useWeeklySchedule() {
@@ -324,19 +385,6 @@ const OVERVIEW_MOCK: Record<RangeId, RangeData> = {
   },
 };
 
-// Peak-hours heatmap: 7 days × 8 hours.
-const HEATMAP_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const HEATMAP_HOURS = ["9", "10", "11", "12", "1", "2", "3", "4"];
-const HEATMAP: number[][] = [
-  [2, 5, 7, 8, 6, 4, 5, 3],
-  [3, 6, 8, 9, 7, 5, 6, 4],
-  [4, 7, 9, 9, 7, 6, 6, 5],
-  [3, 6, 8, 8, 6, 5, 5, 3],
-  [5, 8, 10, 9, 7, 6, 7, 5],
-  [6, 9, 10, 10, 9, 8, 7, 6],
-  [1, 2, 3, 3, 2, 2, 1, 1],
-];
-
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function StatsPage() {
@@ -439,185 +487,125 @@ function OverviewTab({ range, customStart, customEnd, highlights }: {
   );
 }
 
-// ── Health tab ──────────────────────────────────────────────────────────────
-// Composite clinic-health score built from the metrics we already track,
-// plus a list of AI-style insights. The score breakdown is deterministic
-// here; a follow-up can replace `INSIGHTS` with an LLM-generated payload.
-
-type Insight = { tone: "good" | "watch" | "act"; text: string; action?: string };
-
-const HEALTH_SUBSCORES = [
-  { label: "Patient experience", value: 82, hint: "Low wait, high return rate" },
-  { label: "Operational",        value: 74, hint: "Slot fill steady; cancellations crept up Wed" },
-  { label: "Clinical quality",   value: 88, hint: "Diagnosis-filled rate 94%; review plans up" },
-  { label: "Financial",          value: 71, hint: "Revenue +12%; ₹47k dues outstanding" },
-];
-
-const INSIGHTS: Insight[] = [
-  { tone: "good",  text: "Patient retention climbed from 58% → 64% (90-day return) this month.",
-                   action: "Send a thank-you SMS to top returning patients" },
-  { tone: "act",   text: "5 patients have overdue follow-up visits.",
-                   action: "Open patient list and call to reschedule" },
-  { tone: "watch", text: "Cancellations spiked on Wednesday (6 vs avg 2). Worth checking the schedule.",
-                   action: "Review Wed roster" },
-  { tone: "watch", text: "Cough/cold cases trending +40% week-over-week — seasonal uptick likely.",
-                   action: "Stock more cetirizine and ORS" },
-  { tone: "good",  text: "Saturdays are now your busiest day. Consider opening a second consult room.",
-                   action: "Talk to clinic admin" },
-];
-
-function healthScore(): number {
-  // Weighted mean of subscores. Replace with backend computation later.
-  const sum = HEALTH_SUBSCORES.reduce((a, s) => a + s.value, 0);
-  return Math.round(sum / HEALTH_SUBSCORES.length);
-}
+// ── Health tab ───────────────────────────────────────────────────────────────
 
 function HealthTab({ range }: { range: RangeId }) {
-  const score = healthScore();
+  const { stats, loading } = useHealthStats();
+
   return (
     <div style={styles.tabBody}>
       <div style={styles.healthTopRow}>
-        <HealthScoreCard score={score} />
-        <HealthSubscoresCard />
+        <HealthScoreCard score={stats?.overallScore ?? 0} loading={loading} />
+        <HealthSubscoresCard subscores={stats?.subscores ?? []} loading={loading} />
       </div>
-
-      <InsightsCard items={INSIGHTS} />
+      <InsightsCard insights={stats?.insights ?? []} loading={loading} />
     </div>
   );
 }
 
-function HealthScoreCard({ score }: { score: number }) {
-  const band = score >= 80 ? "Strong" : score >= 65 ? "Steady" : score >= 50 ? "Needs attention" : "At risk";
+function HealthScoreCard({ score, loading }: { score: number; loading: boolean }) {
+  const band  = score >= 80 ? "Strong" : score >= 65 ? "Steady" : score >= 50 ? "Needs attention" : "At risk";
   const color = score >= 80 ? colors.secondary500 : score >= 65 ? colors.active.shade600 : colors.red200;
-  const r = 56;
-  const c = 2 * Math.PI * r;
+  const r = 56, c = 2 * Math.PI * r;
   const offset = c - (score / 100) * c;
   return (
     <section style={{ ...styles.card, alignItems: "center", justifyContent: "center", textAlign: "center" }}>
       <header style={{ ...styles.cardHeader, justifyContent: "center" }}>
         <h3 style={styles.cardTitle}>Clinic health score</h3>
+        <span style={styles.cardSub}>last 30 days</span>
       </header>
-      <div style={{ display: "flex", justifyContent: "center", padding: spacing.s }}>
-        <svg width={140} height={140} viewBox="0 0 140 140">
-          <circle cx={70} cy={70} r={r} fill="none" stroke={colors.primary100} strokeWidth={12} />
-          <circle
-            cx={70} cy={70} r={r}
-            fill="none"
-            stroke={color}
-            strokeWidth={12}
-            strokeDasharray={c}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-            transform="rotate(-90 70 70)"
-          />
-          <text
-            x={70} y={68}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fontFamily={fonts.family.secondary}
-            fontSize={36}
-            fill={colors.neutral900}
-          >{score}</text>
-          <text
-            x={70} y={92}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fontFamily={fonts.family.primary}
-            fontSize={11}
-            fill={colors.neutral500}
-          >out of 100</text>
-        </svg>
-      </div>
-      <div style={{ fontSize: fonts.size.s, color: colors.neutral700, fontWeight: fonts.weight.semibold }}>{band}</div>
+      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s, padding: 24 }}>Computing…</div> : (
+        <>
+          <div style={{ display: "flex", justifyContent: "center", padding: spacing.s }}>
+            <svg width={140} height={140} viewBox="0 0 140 140">
+              <circle cx={70} cy={70} r={r} fill="none" stroke={colors.primary100} strokeWidth={12} />
+              <circle cx={70} cy={70} r={r} fill="none" stroke={color} strokeWidth={12}
+                strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round" transform="rotate(-90 70 70)" />
+              <text x={70} y={68} textAnchor="middle" dominantBaseline="middle"
+                fontFamily={fonts.family.secondary} fontSize={36} fill={colors.neutral900}>{score}</text>
+              <text x={70} y={92} textAnchor="middle" dominantBaseline="middle"
+                fontFamily={fonts.family.primary} fontSize={11} fill={colors.neutral500}>out of 100</text>
+            </svg>
+          </div>
+          <div style={{ fontSize: fonts.size.s, color: colors.neutral700, fontWeight: fonts.weight.semibold }}>{band}</div>
+        </>
+      )}
     </section>
   );
 }
 
-function HealthSubscoresCard() {
+function HealthSubscoresCard({ subscores, loading }: {
+  subscores: { label: string; value: number; hint: string }[];
+  loading: boolean;
+}) {
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
         <h3 style={styles.cardTitle}>What's driving it</h3>
       </header>
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {HEALTH_SUBSCORES.map((s) => {
-          const fillColor = s.value >= 80 ? colors.secondary500 : s.value >= 65 ? colors.active.shade600 : colors.red200;
-          return (
-            <div key={s.label}>
-              <div style={styles.complaintRow}>
-                <span>{s.label}</span>
-                <span style={styles.complaintCount}>{s.value}</span>
+      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Computing…</div> : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {subscores.map((s) => {
+            const fillColor = s.value >= 80 ? colors.secondary500 : s.value >= 65 ? colors.active.shade600 : colors.red200;
+            return (
+              <div key={s.label}>
+                <div style={styles.complaintRow}>
+                  <span>{s.label}</span>
+                  <span style={styles.complaintCount}>{s.value}</span>
+                </div>
+                <div style={styles.barTrack}>
+                  <div style={{ ...styles.barFill, width: `${s.value}%`, backgroundColor: fillColor }} />
+                </div>
+                <div style={{ fontSize: fonts.size.xs, color: colors.neutral500, marginTop: 4 }}>{s.hint}</div>
               </div>
-              <div style={styles.barTrack}>
-                <div style={{ ...styles.barFill, width: `${s.value}%`, backgroundColor: fillColor }} />
-              </div>
-              <div style={{ fontSize: fonts.size.xs, color: colors.neutral500, marginTop: 4 }}>{s.hint}</div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }
 
-function InsightsCard({ items }: { items: Insight[] }) {
+function InsightsCard({ insights, loading }: {
+  insights: { tone: string; text: string; action: string | null }[];
+  loading: boolean;
+}) {
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
         <h3 style={styles.cardTitle}>Recommended next steps</h3>
-        <span style={styles.cardSub}>auto-generated · review and act</span>
+        <span style={styles.cardSub}>computed from your last 30 days · review and act</span>
       </header>
-      <div style={{ display: "flex", flexDirection: "column", gap: spacing.s }}>
-        {items.map((item, idx) => {
-          const color =
-            item.tone === "good"  ? colors.secondary500 :
-            item.tone === "act"   ? colors.red200 :
-                                    colors.active.shade600;
-          return (
-            <div key={idx} style={styles.insightRow}>
-              <span style={{ ...styles.insightDot, backgroundColor: color }} />
-              <div style={styles.insightBody}>
-                <div style={styles.insightText}>{item.text}</div>
-                {item.action && <div style={styles.insightAction}>→ {item.action}</div>}
+      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Computing…</div> : (
+        <div style={{ display: "flex", flexDirection: "column", gap: spacing.s }}>
+          {insights.map((item, idx) => {
+            const dotColor =
+              item.tone === "good"  ? colors.secondary500 :
+              item.tone === "act"   ? colors.red200 :
+                                      colors.active.shade600;
+            return (
+              <div key={idx} style={styles.insightRow}>
+                <span style={{ ...styles.insightDot, backgroundColor: dotColor }} />
+                <div style={styles.insightBody}>
+                  <div style={styles.insightText}>{item.text}</div>
+                  {item.action && <div style={styles.insightAction}>→ {item.action}</div>}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }
 
 // ── Patients tab ────────────────────────────────────────────────────────────
 
-const AGE_BANDS = ["0–12", "13–25", "26–40", "41–60", "61+"];
-const AGE_PYRAMID = [
-  { band: "0–12", male: 86, female: 72 },
-  { band: "13–25", male: 124, female: 138 },
-  { band: "26–40", male: 312, female: 348 },
-  { band: "41–60", male: 286, female: 264 },
-  { band: "61+",  male: 142, female: 168 },
-];
-
-const OVERDUE_REVIEWS = [
-  { name: "Aarav Iyer",       since: "21 days ago", doctor: "Dr. Anika" },
-  { name: "Meena Sharma",     since: "18 days ago", doctor: "Dr. Vikram" },
-  { name: "Ravi Kumar",       since: "16 days ago", doctor: "Dr. Anika" },
-  { name: "Sneha Pillai",     since: "12 days ago", doctor: "Dr. Priya" },
-  { name: "Karthik Menon",    since: "9 days ago",  doctor: "Dr. Anika" },
-];
-
-const COMPLAINTS_TREND = [
-  { name: "Fever",         points: [22, 26, 31, 38, 42, 35, 31] },
-  { name: "Cough / cold",  points: [18, 24, 28, 32, 27, 24, 27] },
-  { name: "Back pain",     points: [12, 14, 17, 19, 18, 16, 18] },
-  { name: "Headache",      points: [8, 10, 12, 14, 13, 11, 12] },
-  { name: "Hypertension",  points: [16, 16, 17, 18, 17, 17, 18] },
-];
-
 function PatientsTab({ range, customStart, customEnd }: { range: RangeId; customStart: string; customEnd: string }) {
   const { stats: pts, loading: ptsLoading } = usePatientsStats();
   const { stats: ov, loading: ovLoading } = useOverviewStats(range, customStart, customEnd);
+  const { data: trendData, loading: trendLoading } = useComplaintsTrend();
+  const { data: overdueData, loading: overdueLoading } = useOverdueReviews();
   const L = (ptsLoading || ovLoading) ? "…" : undefined;
 
   return (
@@ -629,9 +617,9 @@ function PatientsTab({ range, customStart, customEnd }: { range: RangeId; custom
 
       <AgeDistributionCard ageGroups={pts?.ageGroups ?? {}} genderSplit={pts?.genderSplit ?? {}} loading={ptsLoading} />
 
-      <ComplaintsTrendCard />
+      <ComplaintsTrendCard data={trendData} loading={trendLoading} />
 
-      <OverdueReviewsCard />
+      <OverdueReviewsCard data={overdueData} loading={overdueLoading} />
     </div>
   );
 }
@@ -701,64 +689,72 @@ function AgeDistributionCard({ ageGroups, genderSplit, loading }: {
   );
 }
 
-function ComplaintsTrendCard() {
+function ComplaintsTrendCard({ data, loading }: { data: ComplaintTrend[]; loading: boolean }) {
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
         <h3 style={styles.cardTitle}>Top complaints — trend</h3>
         <span style={styles.cardSub}>last 7 weeks</span>
       </header>
-      <div style={styles.complaintList}>
-        {COMPLAINTS_TREND.map((c) => {
-          const last = c.points[c.points.length - 1];
-          const first = c.points[0];
-          const delta = last - first;
-          return (
-            <div key={c.name} style={styles.complaintTrendRow}>
-              <span style={styles.complaintTrendName}>{c.name}</span>
-              <Sparkline points={c.points} />
-              <span style={styles.complaintTrendValue}>{last}</span>
-              <span style={{ ...styles.complaintTrendDelta, color: delta > 0 ? colors.red200 : colors.secondary500 }}>
-                {delta > 0 ? `+${delta}` : delta}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> :
+       data.length === 0 ? <div style={{ color: colors.neutral500, fontSize: fonts.size.s }}>No complaint data</div> : (
+        <div style={styles.complaintList}>
+          {data.map((c) => {
+            const last = c.points[c.points.length - 1] ?? 0;
+            const first = c.points[0] ?? 0;
+            const delta = last - first;
+            return (
+              <div key={c.name} style={styles.complaintTrendRow}>
+                <span style={styles.complaintTrendName}>{c.name}</span>
+                <Sparkline points={c.points} />
+                <span style={styles.complaintTrendValue}>{last}</span>
+                <span style={{ ...styles.complaintTrendDelta, color: delta > 0 ? colors.red200 : colors.secondary500 }}>
+                  {delta > 0 ? `+${delta}` : delta}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }
 
 
-function OverdueReviewsCard() {
+function OverdueReviewsCard({ data, loading }: { data: OverdueReview[]; loading: boolean }) {
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
         <h3 style={styles.cardTitle}>Patients with overdue reviews</h3>
-        <span style={styles.cardSub}>{OVERDUE_REVIEWS.length} patients · recommended follow-up not yet done</span>
+        <span style={styles.cardSub}>{loading ? "…" : `${data.length} patients`} · recommended follow-up not yet done</span>
       </header>
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            <th style={styles.th}>Patient</th>
-            <th style={styles.th}>Doctor</th>
-            <th style={{ ...styles.th, textAlign: "right" }}>Last seen</th>
-          </tr>
-        </thead>
-        <tbody>
-          {OVERDUE_REVIEWS.map((r, idx) => {
-            const isLast = idx === OVERDUE_REVIEWS.length - 1;
-            const cell = isLast ? { ...styles.td, borderBottom: "none" } : styles.td;
-            return (
-              <tr key={r.name}>
-                <td style={cell}>{r.name}</td>
-                <td style={cell}>{r.doctor}</td>
-                <td style={{ ...cell, textAlign: "right", color: colors.red200 }}>{r.since}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> :
+       data.length === 0 ? <div style={{ color: colors.neutral500, fontSize: fonts.size.s }}>No overdue reviews</div> : (
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th style={styles.th}>Patient</th>
+              <th style={styles.th}>Doctor</th>
+              <th style={{ ...styles.th, textAlign: "right" }}>Overdue</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((r, idx) => {
+              const isLast = idx === data.length - 1;
+              const cell = isLast ? { ...styles.td, borderBottom: "none" } : styles.td;
+              return (
+                <tr key={`${r.patientName}-${idx}`}>
+                  <td style={cell}>{r.patientName}</td>
+                  <td style={cell}>{r.doctorName}</td>
+                  <td style={{ ...cell, textAlign: "right", color: colors.red200 }}>
+                    {r.daysSince === 1 ? "1 day ago" : `${r.daysSince} days ago`}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
     </section>
   );
 }
@@ -932,24 +928,6 @@ function ScheduleDensityCard({ schedule, loading }: {
 
 // ── Clinical tab ────────────────────────────────────────────────────────────
 
-const DIAGNOSIS_MIX = [
-  { label: "Viral fever",        value: 124, color: colors.active.shade600 },
-  { label: "Upper resp. tract",  value: 98,  color: colors.active.shade500 },
-  { label: "Hypertension",       value: 76,  color: colors.secondary500 },
-  { label: "Diabetes follow-up", value: 64,  color: colors.active.shade400 },
-  { label: "Acid reflux",        value: 42,  color: colors.neutral300 },
-  { label: "Other",              value: 108, color: colors.neutral200 },
-];
-
-const TOP_PRESCRIPTIONS = [
-  { name: "Paracetamol 500mg",   count: 142, dosage: "tablet" },
-  { name: "Amoxicillin 500mg",   count: 98,  dosage: "capsule" },
-  { name: "Cetirizine 10mg",     count: 86,  dosage: "tablet" },
-  { name: "Pantoprazole 40mg",   count: 76,  dosage: "tablet" },
-  { name: "Vitamin D3 60K",      count: 64,  dosage: "sachet" },
-  { name: "Azithromycin 250mg",  count: 48,  dosage: "tablet" },
-];
-
 function ClinicalTab({ range, customStart, customEnd }: { range: RangeId; customStart: string; customEnd: string }) {
   const { stats, loading } = useClinicalStats(range, customStart, customEnd);
 
@@ -1048,23 +1026,11 @@ function OperationsTab({ range, customStart, customEnd }: { range: RangeId; cust
 
 // ── Finance tab ─────────────────────────────────────────────────────────────
 
-const PAYMENT_MIX = [
-  { label: "UPI",   value: 198400, color: colors.active.shade600 },
-  { label: "Card",  value: 142200, color: colors.secondary500 },
-  { label: "Cash",  value: 186400, color: colors.active.shade400 },
-  { label: "Waive", value: 43000,  color: colors.neutral300 },
-];
-
 const DUES_AGING = [
   { bucket: "0–7 days",   amount: 12400, count: 8 },
   { bucket: "8–30 days",  amount: 18600, count: 11 },
   { bucket: "31–90 days", amount: 9400,  count: 6 },
   { bucket: "90+ days",   amount: 6800,  count: 4 },
-];
-
-const REVENUE_TREND_FIN = [
-  18, 22, 19, 25, 28, 32, 12, 20, 23, 27, 29, 31, 35, 14,
-  21, 24, 26, 30, 33, 36, 15, 22, 25, 28, 31, 34, 38, 16, 27, 33,
 ];
 
 function FinanceTab({ range, customStart, customEnd }: { range: RangeId; customStart: string; customEnd: string }) {
