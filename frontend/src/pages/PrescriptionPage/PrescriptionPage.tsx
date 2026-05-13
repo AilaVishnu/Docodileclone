@@ -292,6 +292,16 @@ const fromRxDTO = (dto: RxRowDTO): RxRowDraft => ({
   thenRows: [],
 });
 
+const rewindBtnStyle = (_disabled: boolean): React.CSSProperties => ({
+  background: "none",
+  border: "none",
+  padding: 0,
+  display: "flex",
+  alignItems: "center",
+  cursor: "pointer",
+  color: "inherit",
+});
+
 // Format a yyyy-MM-dd date as "DD MMM" (or "Today" if it's today's date).
 const formatVisitLabel = (iso: string): string => {
   const d = new Date(iso);
@@ -505,6 +515,9 @@ export function PrescriptionPage() {
   const [activeTab, setActiveTab] = React.useState(0);
   const [activeAction, setActiveAction] = React.useState(0);
   const activeVisit: VisitDTO | undefined = visits[activeTab];
+  // Visit immediately before the currently-viewed tab — used by the rewind
+  // buttons to pull the previous prescription's data into the current form.
+  const prevVisit: VisitDTO | undefined = activeTab > 0 ? visits[activeTab - 1] : undefined;
   const [reviewDate, setReviewDate] = React.useState<Date | null>(null);
   const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
   const [rxRows, setRxRows] = React.useState<RxRowDraft[]>([]);
@@ -1713,7 +1726,15 @@ export function PrescriptionPage() {
                         containerStyle={NOTE_CARD_TAGBOX_STYLE}
                       />
                       <span style={styles.noteCardDictate}>
-                        <RewindIcon width={20} height={20} />
+                        <button
+                          type="button"
+                          title="Copy complaints from previous visit"
+                          disabled={!prevVisit?.complaints || !canEditForm}
+                          onClick={() => prevVisit?.complaints && setComplaintsValue(prevVisit.complaints)}
+                          style={rewindBtnStyle(!prevVisit?.complaints || !canEditForm)}
+                        >
+                          <RewindIcon width={20} height={20} />
+                        </button>
                         <MicIcon width={20} height={20} />
                       </span>
                     </div>
@@ -1736,7 +1757,15 @@ export function PrescriptionPage() {
                         containerStyle={NOTE_CARD_TAGBOX_STYLE}
                       />
                       <span style={styles.noteCardDictate}>
-                        <RewindIcon width={20} height={20} />
+                        <button
+                          type="button"
+                          title="Copy diagnosis from previous visit"
+                          disabled={!prevVisit?.diagnosis || !canEditForm}
+                          onClick={() => prevVisit?.diagnosis && setDiagnosisValue(prevVisit.diagnosis)}
+                          style={rewindBtnStyle(!prevVisit?.diagnosis || !canEditForm)}
+                        >
+                          <RewindIcon width={20} height={20} />
+                        </button>
                         <MicIcon width={20} height={20} />
                       </span>
                     </div>
@@ -1882,7 +1911,19 @@ export function PrescriptionPage() {
                           Add Medicine
                         </button>
                         <span style={styles.dictateIcons}>
-                          <RewindIcon width={20} height={20} />
+                          <button
+                            type="button"
+                            title="Copy Rx from previous visit"
+                            disabled={!prevVisit?.prescriptions?.length || !canEditForm}
+                            onClick={() => {
+                              if (prevVisit?.prescriptions?.length) {
+                                setRxRows(prevVisit.prescriptions.map((dto, i) => ({ ...fromRxDTO(dto), id: null, position: i + 1 })));
+                              }
+                            }}
+                            style={rewindBtnStyle(!prevVisit?.prescriptions?.length || !canEditForm)}
+                          >
+                            <RewindIcon width={20} height={20} />
+                          </button>
                           <MicIcon width={20} height={20} />
                         </span>
                         <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
@@ -1911,7 +1952,15 @@ export function PrescriptionPage() {
                         onChange={(e) => setNotesForPatientValue(e.target.value)}
                       />
                       <span style={styles.noteCardDictate}>
-                        <RewindIcon width={20} height={20} />
+                        <button
+                          type="button"
+                          title="Copy notes from previous visit"
+                          disabled={!prevVisit?.notesForPatient || !canEditForm}
+                          onClick={() => prevVisit?.notesForPatient && setNotesForPatientValue(prevVisit.notesForPatient)}
+                          style={rewindBtnStyle(!prevVisit?.notesForPatient || !canEditForm)}
+                        >
+                          <RewindIcon width={20} height={20} />
+                        </button>
                         <MicIcon width={20} height={20} />
                       </span>
                     </div>
@@ -1953,7 +2002,15 @@ export function PrescriptionPage() {
                         containerStyle={TESTS_TAGBOX_STYLE}
                       />
                       <span style={styles.dictateIcons}>
-                        <RewindIcon width={20} height={20} />
+                        <button
+                          type="button"
+                          title="Copy tests from previous visit"
+                          disabled={!prevVisit?.tests || !canEditForm}
+                          onClick={() => prevVisit?.tests && setTestsValue(prevVisit.tests)}
+                          style={rewindBtnStyle(!prevVisit?.tests || !canEditForm)}
+                        >
+                          <RewindIcon width={20} height={20} />
+                        </button>
                         <MicIcon width={20} height={20} />
                       </span>
                     </div>
