@@ -376,6 +376,7 @@ export function FileViewer({ file, onBack }: Props) {
                     top: `${anchor.y * 100}%`,
                   }}
                   onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
                 >
                   <div style={styles.commentMeta}>{a.author} · {labelForType(a.type)}</div>
                   <button type="button" onClick={() => deleteAnnotation(a.id)} style={styles.commentDelete}>
@@ -393,6 +394,7 @@ export function FileViewer({ file, onBack }: Props) {
                   e.stopPropagation();
                   setOpenPinId(openPinId === p.id ? null : p.id);
                 }}
+                onPointerDown={(e) => e.stopPropagation()}
                 style={{
                   ...styles.pin,
                   left: `${p.x * 100}%`,
@@ -416,6 +418,7 @@ export function FileViewer({ file, onBack }: Props) {
                     top: `${p.y * 100}%`,
                   }}
                   onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
                 >
                   <div style={styles.commentMeta}>{p.author}</div>
                   <div style={styles.commentText}>{p.comment}</div>
@@ -435,6 +438,7 @@ export function FileViewer({ file, onBack }: Props) {
                   top: `${pendingPin.y * 100}%`,
                 }}
                 onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
               >
                 <textarea
                   autoFocus
