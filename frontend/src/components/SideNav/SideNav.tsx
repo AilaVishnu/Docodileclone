@@ -23,7 +23,7 @@ export type NavTab =
   | 'Patient Files'
   | 'Services'
   | 'Billing'
-  | 'Business'
+  | 'Stats'
   | 'Pharmacy'
   | 'Design System';
 
@@ -109,7 +109,7 @@ export function SideNav({ activeTab, onTabChange, isExpanded, onToggleExpand }: 
     { label: 'Patient Files', icon: <PatientFilesIcon /> },
     { label: 'Services', icon: <ServicesIcon /> },
     { label: 'Billing', icon: <BillingIcon /> },
-    { label: 'Business', icon: <BusinessIcon /> },
+    { label: 'Stats', icon: <BusinessIcon /> },
     { label: 'Pharmacy', icon: <PharmacyIcon /> },
     { label: 'Design System', icon: <DesignSystemIcon /> },
   ];

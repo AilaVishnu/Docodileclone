@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from "react";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 
-type TabId = "overview" | "patients" | "doctors" | "clinical" | "operations" | "finance";
+type TabId = "overview" | "health" | "patients" | "doctors" | "clinical" | "operations" | "finance";
 type RangeId = "today" | "week" | "month" | "year" | "custom";
 type Tone = "up" | "down" | "flat";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "overview", label: "Overview" },
+  { id: "health", label: "Health" },
   { id: "patients", label: "Patients" },
   { id: "doctors", label: "Doctors" },
   { id: "clinical", label: "Clinical" },
@@ -145,7 +146,7 @@ export function BusinessPage() {
 
   return (
     <div style={styles.page}>
-      <h1 style={styles.title}>Business</h1>
+      <h1 style={styles.title}>Stats</h1>
 
       <div style={styles.controlsRow}>
         <div style={styles.tabStrip} role="tablist">
@@ -191,6 +192,7 @@ export function BusinessPage() {
       )}
 
       {tab === "overview"   && <OverviewTab data={data} range={range} />}
+      {tab === "health"     && <HealthTab range={range} />}
       {tab === "patients"   && <PatientsTab range={range} />}
       {tab === "doctors"    && <DoctorsTab range={range} />}
       {tab === "clinical"   && <ClinicalTab range={range} />}
@@ -223,6 +225,155 @@ function OverviewTab({ data, range }: { data: RangeData; range: RangeId }) {
         <HighlightsCard items={data.highlights} />
       </div>
     </div>
+  );
+}
+
+// ── Health tab ──────────────────────────────────────────────────────────────
+// Composite clinic-health score built from the metrics we already track,
+// plus a list of AI-style insights. The score breakdown is deterministic
+// here; a follow-up can replace `INSIGHTS` with an LLM-generated payload.
+
+type Insight = { tone: "good" | "watch" | "act"; text: string; action?: string };
+
+const HEALTH_SUBSCORES = [
+  { label: "Patient experience", value: 82, hint: "Low wait, high return rate" },
+  { label: "Operational",        value: 74, hint: "Slot fill steady; cancellations crept up Wed" },
+  { label: "Clinical quality",   value: 88, hint: "Diagnosis-filled rate 94%; review plans up" },
+  { label: "Financial",          value: 71, hint: "Revenue +12%; ₹47k dues outstanding" },
+];
+
+const INSIGHTS: Insight[] = [
+  { tone: "good",  text: "Patient retention climbed from 58% → 64% (90-day return) this month.",
+                   action: "Send a thank-you SMS to top returning patients" },
+  { tone: "act",   text: "5 patients have overdue follow-up visits.",
+                   action: "Open patient list and call to reschedule" },
+  { tone: "watch", text: "Cancellations spiked on Wednesday (6 vs avg 2). Worth checking the schedule.",
+                   action: "Review Wed roster" },
+  { tone: "watch", text: "Cough/cold cases trending +40% week-over-week — seasonal uptick likely.",
+                   action: "Stock more cetirizine and ORS" },
+  { tone: "good",  text: "Saturdays are now your busiest day. Consider opening a second consult room.",
+                   action: "Talk to clinic admin" },
+];
+
+function healthScore(): number {
+  // Weighted mean of subscores. Replace with backend computation later.
+  const sum = HEALTH_SUBSCORES.reduce((a, s) => a + s.value, 0);
+  return Math.round(sum / HEALTH_SUBSCORES.length);
+}
+
+function HealthTab({ range }: { range: RangeId }) {
+  const score = healthScore();
+  return (
+    <div style={styles.tabBody}>
+      <div style={styles.healthTopRow}>
+        <HealthScoreCard score={score} />
+        <HealthSubscoresCard />
+      </div>
+
+      <InsightsCard items={INSIGHTS} />
+    </div>
+  );
+}
+
+function HealthScoreCard({ score }: { score: number }) {
+  const band = score >= 80 ? "Strong" : score >= 65 ? "Steady" : score >= 50 ? "Needs attention" : "At risk";
+  const color = score >= 80 ? colors.secondary500 : score >= 65 ? colors.active.shade600 : colors.red200;
+  const r = 56;
+  const c = 2 * Math.PI * r;
+  const offset = c - (score / 100) * c;
+  return (
+    <section style={{ ...styles.card, alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+      <header style={{ ...styles.cardHeader, justifyContent: "center" }}>
+        <h3 style={styles.cardTitle}>Clinic health score</h3>
+      </header>
+      <div style={{ display: "flex", justifyContent: "center", padding: spacing.s }}>
+        <svg width={140} height={140} viewBox="0 0 140 140">
+          <circle cx={70} cy={70} r={r} fill="none" stroke={colors.primary100} strokeWidth={12} />
+          <circle
+            cx={70} cy={70} r={r}
+            fill="none"
+            stroke={color}
+            strokeWidth={12}
+            strokeDasharray={c}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            transform="rotate(-90 70 70)"
+          />
+          <text
+            x={70} y={68}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fontFamily={fonts.family.secondary}
+            fontSize={36}
+            fill={colors.neutral900}
+          >{score}</text>
+          <text
+            x={70} y={92}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fontFamily={fonts.family.primary}
+            fontSize={11}
+            fill={colors.neutral500}
+          >out of 100</text>
+        </svg>
+      </div>
+      <div style={{ fontSize: fonts.size.s, color: colors.neutral700, fontWeight: fonts.weight.semibold }}>{band}</div>
+    </section>
+  );
+}
+
+function HealthSubscoresCard() {
+  return (
+    <section style={styles.card}>
+      <header style={styles.cardHeader}>
+        <h3 style={styles.cardTitle}>What's driving it</h3>
+      </header>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {HEALTH_SUBSCORES.map((s) => {
+          const fillColor = s.value >= 80 ? colors.secondary500 : s.value >= 65 ? colors.active.shade600 : colors.red200;
+          return (
+            <div key={s.label}>
+              <div style={styles.complaintRow}>
+                <span>{s.label}</span>
+                <span style={styles.complaintCount}>{s.value}</span>
+              </div>
+              <div style={styles.barTrack}>
+                <div style={{ ...styles.barFill, width: `${s.value}%`, backgroundColor: fillColor }} />
+              </div>
+              <div style={{ fontSize: fonts.size.xs, color: colors.neutral500, marginTop: 4 }}>{s.hint}</div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function InsightsCard({ items }: { items: Insight[] }) {
+  return (
+    <section style={styles.card}>
+      <header style={styles.cardHeader}>
+        <h3 style={styles.cardTitle}>Recommended next steps</h3>
+        <span style={styles.cardSub}>auto-generated · review and act</span>
+      </header>
+      <div style={{ display: "flex", flexDirection: "column", gap: spacing.s }}>
+        {items.map((item, idx) => {
+          const color =
+            item.tone === "good"  ? colors.secondary500 :
+            item.tone === "act"   ? colors.red200 :
+                                    colors.active.shade600;
+          return (
+            <div key={idx} style={styles.insightRow}>
+              <span style={{ ...styles.insightDot, backgroundColor: color }} />
+              <div style={styles.insightBody}>
+                <div style={styles.insightText}>{item.text}</div>
+                {item.action && <div style={styles.insightAction}>→ {item.action}</div>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -367,11 +518,15 @@ function OverdueReviewsCard() {
 
 // ── Doctors tab ─────────────────────────────────────────────────────────────
 
+// Per-doctor stats. Revenue + daysWorked are derivable from the existing
+// schema (Appointment.fee × completed + count distinct days with ≥1 visit).
+// Composite "performance score", login hours, and idle hours need new
+// tracking — flagged with TODOs below.
 const DOCTORS = [
-  { name: "Dr. Anika Reddy" },
-  { name: "Dr. Priya Iyer" },
-  { name: "Dr. Rohan Mehta" },
-  { name: "Dr. Vikram Shah" },
+  { name: "Dr. Anika Reddy", revenue: 86400, daysWorked: 21 },
+  { name: "Dr. Priya Iyer",  revenue: 58800, daysWorked: 16 },
+  { name: "Dr. Rohan Mehta", revenue: 49500, daysWorked: 14 },
+  { name: "Dr. Vikram Shah", revenue: 71200, daysWorked: 19 },
 ];
 
 const SCHEDULE_DENSITY = [
@@ -387,12 +542,78 @@ function DoctorsTab({ range }: { range: RangeId }) {
     <div style={styles.tabBody}>
       <div style={styles.kpiGrid}>
         <KpiTile label="Avg consult duration" value="17 min" delta="−1 min" tone="up" sub="depth of care" />
+        <KpiTile label="Active doctors" value="4" delta="" tone="flat" sub="on roster this period" />
       </div>
+
+      <DoctorRevenueCard />
+
+      <DoctorDaysWorkedCard />
 
       <ScheduleDensityCard />
     </div>
   );
 }
+
+// Revenue per doctor — alphabetical (no leaderboard ranking).
+// Backed by Appointment.fee × completed appointments grouped by doctorId.
+function DoctorRevenueCard() {
+  const max = Math.max(...DOCTORS.map((d) => d.revenue));
+  return (
+    <section style={styles.card}>
+      <header style={styles.cardHeader}>
+        <h3 style={styles.cardTitle}>Revenue per doctor</h3>
+        <span style={styles.cardSub}>this period · alphabetical</span>
+      </header>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {DOCTORS.map((d) => (
+          <div key={d.name}>
+            <div style={styles.complaintRow}>
+              <span>{d.name}</span>
+              <span style={styles.complaintCount}>₹ {d.revenue.toLocaleString("en-IN")}</span>
+            </div>
+            <div style={styles.barTrack}>
+              <div style={{ ...styles.barFill, width: `${(d.revenue / max) * 100}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// Days worked per doctor — derived from "doctor had ≥1 appointment on this date".
+// This is a working-day proxy until staff schedules / login sessions are tracked.
+function DoctorDaysWorkedCard() {
+  const max = Math.max(...DOCTORS.map((d) => d.daysWorked));
+  return (
+    <section style={styles.card}>
+      <header style={styles.cardHeader}>
+        <h3 style={styles.cardTitle}>Days worked</h3>
+        <span style={styles.cardSub}>days with at least one appointment</span>
+      </header>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {DOCTORS.map((d) => (
+          <div key={d.name}>
+            <div style={styles.complaintRow}>
+              <span>{d.name}</span>
+              <span style={styles.complaintCount}>{d.daysWorked} days</span>
+            </div>
+            <div style={styles.barTrack}>
+              <div style={{ ...styles.barFill, width: `${(d.daysWorked / max) * 100}%`, backgroundColor: colors.secondary500 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// TODO: when staff session-tracking lands, add per-doctor login hours +
+// idle hours here. They need a `staff_sessions` table that records
+// start/end timestamps per shift, plus the existing appointment data to
+// compute idle = (logged-in time) − (consult time).
+// Composite "performance score" also waits on that — we want score
+// components like on-time-start rate which need an arrival timestamp.
 
 function ScheduleDensityCard() {
   const max = 4;
@@ -1186,4 +1407,12 @@ const styles: Record<string, React.CSSProperties> = {
   // Admin badge (Finance)
   adminBadgeRow: { display: "flex", justifyContent: "flex-end" },
   adminBadge: { fontSize: fonts.size.xs, fontWeight: 600, color: colors.neutral700, backgroundColor: colors.neutral200, padding: "4px 10px", borderRadius: 999 },
+
+  // Health tab
+  healthTopRow: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr)", gap: spacing.m },
+  insightRow: { display: "flex", alignItems: "flex-start", gap: spacing.s },
+  insightDot: { width: 10, height: 10, borderRadius: "50%", marginTop: 6, flexShrink: 0 },
+  insightBody: { display: "flex", flexDirection: "column", gap: 2, flex: 1 },
+  insightText: { fontSize: fonts.size.s, color: colors.neutral900, lineHeight: 1.4 },
+  insightAction: { fontSize: fonts.size.xs, color: colors.neutral500, fontWeight: fonts.weight.medium },
 };
