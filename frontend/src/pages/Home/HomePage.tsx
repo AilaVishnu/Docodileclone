@@ -5,6 +5,7 @@ import { PrescriptionView, PatientFilesView, AppointmentsView } from "./Views";
 import { ServicesView } from "../Services";
 import { HomeView } from "./HomeView";
 import { StatsPage } from "../Stats";
+import { SettingsPage } from "../Settings";
 import { DesignSystemPage } from "../DesignSystem";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
 import { confirmStyles } from "../../components/AddStaffModal/AddStaffModal.styles";
@@ -112,6 +113,8 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         return <ServicesView />;
       case "Stats":
         return <StatsPage />;
+      case "Settings":
+        return <SettingsPage />;
       case "Design System":
         return <DesignSystemPage />;
       default:

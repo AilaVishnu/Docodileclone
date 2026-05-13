@@ -59,6 +59,7 @@ import { API_BASE_URL } from "../../apiConfig";
 import { AddReportModal, AddReportRow } from "./AddReportModal";
 import { FileViewer } from "./FileViewer";
 import { EditPatientModal } from "./EditPatientModal";
+import { buildPrintHtml, openPrintWindow, getDefaultTemplate, PrintVisitData } from "../Settings";
 import { Modal } from "../../components/Modal/Modal";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1200,6 +1201,71 @@ export function PrescriptionPage() {
     }
   };
 
+  // ── Print prescription ──────────────────────────────────────────────────
+  // Assemble a PrintVisitData payload from the current patient + visit + form
+  // state and hand it to the configured print template. The template tells
+  // us whether to render header/footer (Blank A4) or text-only (pre-printed
+  // letterhead) and which patient fields to show. Auto-saves first so the
+  // print reflects the latest edits.
+  const handlePrintPrescription = async () => {
+    const template = getDefaultTemplate();
+    if (!template) {
+      showToast("No print template — set one up in Settings → Print template");
+      return;
+    }
+    if (!selectedPatient || !activeVisit) {
+      showToast("Nothing to print yet");
+      return;
+    }
+    if (canEditForm) {
+      try { await handleSave({ silent: true }); } catch {}
+    }
+    const vitalsForPrint: { label: string; value: string }[] = [];
+    const v = activeVisit;
+    if (v.bpSystolic && v.bpDiastolic) {
+      vitalsForPrint.push({ label: "BP", value: `${v.bpSystolic}/${v.bpDiastolic} ${v.bpUnit ?? "mmHg"}` });
+    }
+    if (v.pulse)       vitalsForPrint.push({ label: "Pulse", value: `${v.pulse} ${v.pulseUnit ?? ""}`.trim() });
+    if (v.spo2)        vitalsForPrint.push({ label: "SpO₂",  value: `${v.spo2} ${v.spo2Unit ?? "%"}`.trim() });
+    if (v.temperature) vitalsForPrint.push({ label: "Temp",  value: `${v.temperature} ${v.temperatureUnit ?? ""}`.trim() });
+    if (v.weight)      vitalsForPrint.push({ label: "Weight", value: `${v.weight} ${v.weightUnit ?? "kg"}` });
+    if (v.height)      vitalsForPrint.push({ label: "Height", value: `${v.height} ${v.heightUnit ?? "cm"}` });
+    if (v.bmi)         vitalsForPrint.push({ label: "BMI",   value: `${v.bmi}`.trim() });
+
+    const visitIndex = visits.findIndex((vv) => vv.id === activeVisit.id);
+    const data: PrintVisitData = {
+      patientName: selectedPatient.name,
+      patientAge: selectedPatient.age != null ? `${selectedPatient.age}y` : null,
+      patientGender: selectedPatient.gender,
+      patientPhone: selectedPatient.phone,
+      patientAddress: null, // Patient type has no address yet.
+      patientId: selectedPatient.id,
+      visitNumber: visitIndex >= 0 ? visits.length - visitIndex : null, // newest = highest #
+      visitDate: activeVisit.visitDate,
+      visitTime: new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }),
+      referredBy: referDoctorName || null,
+      doctorName: doctors.find((d) => d.id === activeVisit.createdByDoctorId)?.name ?? null,
+      doctorCredentials: null,
+      complaints: complaintsValue,
+      diagnosis: diagnosisValue,
+      vitals: vitalsForPrint,
+      tests: testsValue,
+      notesForPatient: notesForPatientValue,
+      rx: rxRows.map((r) => ({
+        medicine: r.medicine ?? null,
+        dosage: r.dosage ?? null,
+        whenToTake: r.whenToTake ?? null,
+        frequency: r.frequency ?? null,
+        duration: r.duration ?? null,
+        notes: r.notes ?? null,
+      })),
+      reviewDate: reviewDate ? `${reviewDate.getFullYear()}-${String(reviewDate.getMonth() + 1).padStart(2, "0")}-${String(reviewDate.getDate()).padStart(2, "0")}` : null,
+      reviewNotes: reviewNotesValue,
+    };
+    const html = buildPrintHtml(template, data);
+    openPrintWindow(html);
+  };
+
   if (selectedPatientId === null) {
     // Today's Queue is the new internal home for the Prescription page
     // (Figma 2282:17378) — same data source as the Appointment Queue.
@@ -2157,7 +2223,7 @@ export function PrescriptionPage() {
           storageKey={activeVisit?.id}
           readOnly={!isLatestVisit}
           recordedDurationSec={activeVisit?.sessionDurationSec ?? null}
-          onPrint={() => showToast("Print: not wired yet")}
+          onPrint={() => handlePrintPrescription()}
           onDownload={() => showToast("Download: not wired yet")}
           onShare={() => showToast("Share: not wired yet")}
           onActiveChange={setFormActive}
