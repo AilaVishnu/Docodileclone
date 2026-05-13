@@ -82,7 +82,7 @@ function suggestCategory(file: File): string {
   }
   if (/wound|skin|dental|photo|before|after|observ/.test(lower)) return "Observations";
   if (/consent|insurance|aadhaar|passport|id_proof|referral|discharge|vaccin/.test(lower)) return "Admin";
-  return "Other";
+  return "";
 }
 
 const isImageFile = (f: File): boolean => f.type.startsWith("image/");
@@ -187,7 +187,10 @@ export function AddReportModal({
   const headerSubtitle = "Upload reports, prescriptions, photos, or any patient file";
 
   const categoryOpts = useMemo(
-    () => CATEGORIES.map((c) => ({ label: c, value: c })),
+    () => [
+      { label: "Select category", value: "" },
+      ...CATEGORIES.map((c) => ({ label: c, value: c })),
+    ],
     []
   );
   const visitOpts = useMemo(
@@ -357,10 +360,10 @@ export function AddReportModal({
           <button
             type="button"
             onClick={handleSave}
-            disabled={drafts.length === 0}
+            disabled={drafts.length === 0 || drafts.some(d => !d.category)}
             style={{
               ...styles.btnPrimary,
-              ...(drafts.length === 0 ? { opacity: 0.45, cursor: "not-allowed" } : null),
+              ...(drafts.length === 0 || drafts.some(d => !d.category) ? { opacity: 0.45, cursor: "not-allowed" } : null),
             }}
           >
             Add {drafts.length > 1 ? `(${drafts.length})` : ""}
