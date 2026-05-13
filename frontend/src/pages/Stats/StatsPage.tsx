@@ -181,6 +181,23 @@ function useFinanceStats(range: RangeId, customStart: string, customEnd: string)
   return { stats, loading };
 }
 
+// ── Weekly schedule hook ──────────────────────────────────────────────────────
+
+function useWeeklySchedule() {
+  const [data, setData] = useState<Record<string, Record<string, number>>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/stats/schedule`, { headers: authHeaders() })
+      .then(r => r.ok ? r.json() : {})
+      .then(setData)
+      .catch(() => setData({}))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { data, loading };
+}
+
 // ── Operations stats hook ─────────────────────────────────────────────────────
 
 type OperationsStats = {
@@ -606,7 +623,7 @@ function PatientsTab({ range, customStart, customEnd }: { range: RangeId; custom
   return (
     <div style={styles.tabBody}>
       <div style={styles.kpiGrid}>
-        <KpiTile label="Active patients"   value={L ?? String(pts?.activePatients ?? 0)} delta="" tone="flat" sub="visited in last 6 mo" />
+        <KpiTile label="Total patients"   value={L ?? String(pts?.activePatients ?? 0)} delta="" tone="flat" sub="registered in this clinic" />
         <KpiTile label="New this period"   value={L ?? String(ov?.newPatients ?? 0)}  delta="" tone="flat" sub={subFor(range)} />
       </div>
 
@@ -778,16 +795,10 @@ function useDoctorStats(range: RangeId, customStart: string, customEnd: string) 
   return { doctors, loading };
 }
 
-const SCHEDULE_DENSITY = [
-  // 7 days × 4 doctors. 0–4 booked slots / hour.
-  [3, 4, 3, 2, 2, 4, 0], // Anika
-  [2, 3, 2, 3, 1, 2, 0], // Priya
-  [2, 2, 3, 1, 3, 2, 0], // Rohan
-  [3, 3, 4, 3, 2, 3, 0], // Vikram
-];
 
 function DoctorsTab({ range, customStart, customEnd }: { range: RangeId; customStart: string; customEnd: string }) {
   const { doctors, loading } = useDoctorStats(range, customStart, customEnd);
+  const { data: schedule, loading: schedLoading } = useWeeklySchedule();
   const activeDoctors = doctors.length;
 
   return (
@@ -799,7 +810,7 @@ function DoctorsTab({ range, customStart, customEnd }: { range: RangeId; customS
 
       <DoctorRevenueCard doctors={doctors} loading={loading} />
       <DoctorDaysWorkedCard doctors={doctors} loading={loading} />
-      <ScheduleDensityCard />
+      <ScheduleDensityCard schedule={schedule} loading={schedLoading} />
     </div>
   );
 }
@@ -867,47 +878,54 @@ function DoctorDaysWorkedCard({ doctors, loading }: { doctors: DoctorStat[]; loa
 // Composite "performance score" also waits on that — we want score
 // components like on-time-start rate which need an arrival timestamp.
 
-const DENSITY_DOCTORS = [
-  { name: "Dr. Anika Reddy" },
-  { name: "Dr. Priya Iyer" },
-  { name: "Dr. Rohan Mehta" },
-  { name: "Dr. Vikram Shah" },
-];
+function ScheduleDensityCard({ schedule, loading }: {
+  schedule: Record<string, Record<string, number>>;
+  loading: boolean;
+}) {
+  const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const doctors = Object.keys(schedule);
+  const allVals = doctors.flatMap(d => DAYS.map(day => schedule[d]?.[day] ?? 0));
+  const max = Math.max(...allVals, 1);
 
-function ScheduleDensityCard() {
-  const max = 4;
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
         <h3 style={styles.cardTitle}>This week's schedule density</h3>
-        <span style={styles.cardSub}>bookings per day · sample</span>
+        <span style={styles.cardSub}>appointments per day · current week</span>
       </header>
-      <div style={styles.densityGrid}>
-        <div />
-        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-          <div key={d} style={styles.densityHeader}>{d}</div>
-        ))}
-        {DENSITY_DOCTORS.map((doc, dIdx) => (
-          <React.Fragment key={doc.name}>
-            <div style={styles.densityRowLabel}>{doc.name.replace("Dr. ", "")}</div>
-            {SCHEDULE_DENSITY[dIdx].map((v, hIdx) => {
-              const intensity = v / max;
-              return (
-                <div
-                  key={hIdx}
-                  title={`${doc.name} · ${v} appts`}
-                  style={{
-                    ...styles.densityCell,
-                    backgroundColor: intensity === 0 ? colors.neutral100 : `rgba(207, 111, 47, ${0.15 + intensity * 0.7})`,
-                  }}
-                >
-                  {v > 0 ? v : ""}
-                </div>
-              );
-            })}
-          </React.Fragment>
-        ))}
-      </div>
+      {loading ? (
+        <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div>
+      ) : doctors.length === 0 ? (
+        <div style={{ color: colors.neutral500, fontSize: fonts.size.s }}>No appointments scheduled this week</div>
+      ) : (
+        <div style={{ ...styles.densityGrid, gridTemplateColumns: `120px repeat(7, 1fr)` }}>
+          <div />
+          {DAYS.map((d) => (
+            <div key={d} style={styles.densityHeader}>{d}</div>
+          ))}
+          {doctors.map((doc) => (
+            <React.Fragment key={doc}>
+              <div style={{ ...styles.densityRowLabel, fontSize: fonts.size.xs }}>{doc}</div>
+              {DAYS.map((day) => {
+                const v = schedule[doc]?.[day] ?? 0;
+                const intensity = v / max;
+                return (
+                  <div
+                    key={day}
+                    title={`${doc} · ${day} · ${v} apts`}
+                    style={{
+                      ...styles.densityCell,
+                      backgroundColor: intensity === 0 ? colors.neutral100 : `rgba(207, 111, 47, ${0.15 + intensity * 0.7})`,
+                    }}
+                  >
+                    {v > 0 ? v : ""}
+                  </div>
+                );
+              })}
+            </React.Fragment>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

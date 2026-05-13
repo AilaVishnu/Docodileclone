@@ -243,27 +243,22 @@ class StatsController(
         val clinicId = currentUser.clinicId()
         val today = LocalDate.now()
 
-        val sixMonthsAgo = today.minusMonths(6).atStartOfDay()
-        val recentApts = appointmentRepository.findAllByClinicIdAndScheduledTimeBetween(
-            clinicId, sixMonthsAgo, today.atTime(23, 59, 59)
-        )
-        val activeIds = recentApts.mapNotNull { it.patient?.id }.toSet()
+        // All patients registered to this clinic
         val allPatients = patientRepository.findAllByClinicId(clinicId)
-        val activePts = allPatients.filter { it.id in activeIds }
 
         val ageGroups = mutableMapOf("0–12" to 0, "13–25" to 0, "26–40" to 0, "41–60" to 0, "61+" to 0)
-        activePts.forEach { p ->
+        allPatients.forEach { p ->
             val age = p.age ?: p.dob?.let { today.year - it.year } ?: return@forEach
             when {
                 age <= 12 -> ageGroups["0–12"] = ageGroups["0–12"]!! + 1
                 age <= 25 -> ageGroups["13–25"] = ageGroups["13–25"]!! + 1
                 age <= 40 -> ageGroups["26–40"] = ageGroups["26–40"]!! + 1
                 age <= 60 -> ageGroups["41–60"] = ageGroups["41–60"]!! + 1
-                else      -> ageGroups["61+"]  = ageGroups["61+"]!! + 1
+                else      -> ageGroups["61+"]   = ageGroups["61+"]!! + 1
             }
         }
 
-        val genderSplit = activePts
+        val genderSplit = allPatients
             .groupBy {
                 when {
                     it.gender?.lowercase()?.trim()?.startsWith("m") == true -> "male"
@@ -274,10 +269,33 @@ class StatsController(
             .mapValues { (_, list) -> list.size }
 
         return PatientsStatsDTO(
-            activePatients = activeIds.size,
+            activePatients = allPatients.size,
             ageGroups = ageGroups,
             genderSplit = genderSplit,
         )
+    }
+
+    // ── Weekly doctor schedule ────────────────────────────────────────────────
+
+    @GetMapping("/schedule")
+    fun weeklySchedule(): Map<String, Map<String, Int>> {
+        val clinicId = currentUser.clinicId()
+        val today = LocalDate.now()
+        val startOfWeek = today.with(java.time.DayOfWeek.MONDAY)
+        val endOfWeek   = today.with(java.time.DayOfWeek.SUNDAY)
+
+        val appointments = appointmentRepository.findAllByClinicIdAndScheduledTimeBetween(
+            clinicId, startOfWeek.atStartOfDay(), endOfWeek.atTime(23, 59, 59)
+        )
+        val dayNames = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+        return appointments
+            .filter { it.doctor != null && it.scheduledTime != null }
+            .groupBy { it.doctor!!.name ?: it.doctor!!.email }
+            .mapValues { (_, apts) ->
+                apts.groupBy { dayNames[it.scheduledTime!!.dayOfWeek.value - 1] }
+                    .mapValues { (_, dayApts) -> dayApts.size }
+            }
     }
 
     // ── Clinical ─────────────────────────────────────────────────────────────
