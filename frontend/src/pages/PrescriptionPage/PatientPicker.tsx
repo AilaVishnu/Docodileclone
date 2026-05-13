@@ -11,10 +11,11 @@ import { pickAvatar } from "../../utils/avatar";
 
 type PatientPickerProps = {
   onSelect: (patient: Patient) => void;
+  refreshKey?: number;
 };
 
-export function PatientPicker({ onSelect }: PatientPickerProps) {
-  const { data: patients, loading, error } = usePatients();
+export function PatientPicker({ onSelect, refreshKey }: PatientPickerProps) {
+  const { data: patients, loading, error } = usePatients(refreshKey);
   const [query, setQuery] = React.useState<string>("");
 
   const filtered = React.useMemo(() => {

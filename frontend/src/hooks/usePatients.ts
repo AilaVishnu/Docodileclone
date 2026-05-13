@@ -27,7 +27,7 @@ type UsePatientsResult = {
   error: string | null;
 };
 
-export function usePatients(): UsePatientsResult {
+export function usePatients(refreshKey?: number): UsePatientsResult {
   const [data, setData] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +54,7 @@ export function usePatients(): UsePatientsResult {
       }
     })();
     return () => controller.abort();
-  }, []);
+  }, [refreshKey]);
 
   return { data, loading, error };
 }

@@ -58,6 +58,7 @@ import { markStarted, unmarkStarted } from "../../utils/sessionStarted";
 import { API_BASE_URL } from "../../apiConfig";
 import { AddReportModal, AddReportRow } from "./AddReportModal";
 import { FileViewer } from "./FileViewer";
+import { EditPatientModal } from "./EditPatientModal";
 import { Modal } from "../../components/Modal/Modal";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -890,6 +891,7 @@ export function PrescriptionPage() {
   }, [selectedPatientId]);
 
   const [showAddModal, setShowAddModal] = React.useState(false);
+  const [showEditPatient, setShowEditPatient] = React.useState(false);
   // The currently-open file row. null = list view.
   const [viewerOpen, setViewerOpen] = React.useState<ListRow | null>(null);
   const handleAddRows = (rows: AddReportRow[]) => {
@@ -1325,7 +1327,14 @@ export function PrescriptionPage() {
 
           <div style={styles.shareCard}>
             {CONTACT_ACTIONS.map((a) => (
-              <div key={a.label} style={styles.actionRow}>
+              <div
+                key={a.label}
+                style={{ ...styles.actionRow, cursor: a.label === "Edit Patient Info" ? "pointer" : "default" }}
+                onClick={a.label === "Edit Patient Info" ? () => setShowEditPatient(true) : undefined}
+                role={a.label === "Edit Patient Info" ? "button" : undefined}
+                tabIndex={a.label === "Edit Patient Info" ? 0 : undefined}
+                onKeyDown={a.label === "Edit Patient Info" ? (e) => { if (e.key === "Enter" || e.key === " ") setShowEditPatient(true); } : undefined}
+              >
                 {a.icon}
                 <span style={styles.actionLabel}>{a.label}</span>
               </div>
@@ -2110,6 +2119,17 @@ export function PrescriptionPage() {
         patientId={selectedPatientId}
         onClose={() => setShowAddModal(false)}
         onAdd={handleAddRows}
+      />
+
+      <EditPatientModal
+        isOpen={showEditPatient}
+        patient={selectedPatient}
+        onClose={() => setShowEditPatient(false)}
+        onSave={(updated) => {
+          if (selectedPatient) setSelectedPatient({ ...selectedPatient, ...updated });
+        }}
+        onSaved={() => showToast("Patient info saved")}
+        onError={(msg) => showToast(msg)}
       />
 
       {/* File viewer modal — opens when a row in the Files list is clicked.
