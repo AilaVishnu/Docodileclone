@@ -189,7 +189,7 @@ const HEATMAP: number[][] = [
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function BusinessPage() {
+export function StatsPage() {
   const [tab, setTab] = useState<TabId>("overview");
   const [range, setRange] = useState<RangeId>("today");
   const [customStart, setCustomStart] = useState("");

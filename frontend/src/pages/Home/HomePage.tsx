@@ -4,7 +4,7 @@ import { TopNav } from "../../components/TopNav";
 import { PrescriptionView, PatientFilesView, AppointmentsView } from "./Views";
 import { ServicesView } from "../Services";
 import { HomeView } from "./HomeView";
-import { BusinessPage } from "../Business";
+import { StatsPage } from "../Stats";
 import { DesignSystemPage } from "../DesignSystem";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
 import { confirmStyles } from "../../components/AddStaffModal/AddStaffModal.styles";
@@ -110,7 +110,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       case "Services":
         return <ServicesView />;
       case "Stats":
-        return <BusinessPage />;
+        return <StatsPage />;
       case "Design System":
         return <DesignSystemPage />;
       default:
