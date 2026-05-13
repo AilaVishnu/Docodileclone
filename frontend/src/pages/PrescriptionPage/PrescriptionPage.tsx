@@ -449,6 +449,28 @@ function BpInput({
   );
 }
 
+// Renders an image thumbnail for files — handles both local blob URLs and
+// auth-protected API download URLs by fetching with the JWT when needed.
+function AuthThumb({ fileUrl, mimeType, style }: { fileUrl: string | null | undefined; mimeType: string | null | undefined; style?: React.CSSProperties }) {
+  const isImage = (mimeType ?? "").startsWith("image/");
+  const [src, setSrc] = React.useState<string | null>(fileUrl && !fileUrl.startsWith(API_BASE_URL) ? fileUrl : null);
+
+  React.useEffect(() => {
+    if (!fileUrl || !isImage) { setSrc(null); return; }
+    if (!fileUrl.startsWith(API_BASE_URL)) { setSrc(fileUrl); return; }
+    let objectUrl: string | null = null;
+    const token = localStorage.getItem("docodile_token");
+    fetch(fileUrl, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.ok ? r.blob() : null)
+      .then((blob) => { if (blob) { objectUrl = URL.createObjectURL(blob); setSrc(objectUrl); } })
+      .catch(() => {});
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [fileUrl, isImage]);
+
+  if (!src) return null;
+  return <img src={src} alt="" style={style} />;
+}
+
 export function PrescriptionPage() {
   // null → renders <PatientPicker>; otherwise renders the prescription form
   // scoped to that patient. Clicking "← back to patients" clears it.
@@ -830,30 +852,61 @@ export function PrescriptionPage() {
   // - Timeline / Bills: "coming soon" placeholder
   const listViewConfig = LIST_VIEWS[activeAction] ?? null;
 
-  // Client-side uploads for the Reports / Files list views, keyed by
-  // activeAction (1 = Reports, 2 = Files). Clicking the "+ Add" pill opens
-  // AddReportModal; the modal collects file + name + category + date + visit
-  // tie + notes per file, then emits an array of rows that we append here.
-  // TODO(backend): on save, also POST the files (multipart) and metadata to
-  // /reports or /files endpoints — handle inside AddReportModal once the
-  // endpoint exists, then drop the local row insert.
   type ListRow = {
     id?: string;
+    fileId?: string;      // backend UUID — present for server-persisted files
     name: string;
     category: string;
     date: string;
     fileUrl?: string | null;
     mimeType?: string | null;
   };
-  const [uploadedItems, setUploadedItems] = React.useState<Record<number, ListRow[]>>({});
+
+  // Server-persisted files for action 1 (Files tab). Populated on patient
+  // select and extended optimistically when the user uploads new files.
+  const [serverFiles, setServerFiles] = React.useState<ListRow[]>([]);
+
+  React.useEffect(() => {
+    if (!selectedPatientId) { setServerFiles([]); return; }
+    const token = localStorage.getItem("docodile_token");
+    fetch(`${API_BASE_URL}/api/patients/${selectedPatientId}/files`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.ok ? r.json() : [])
+      .then((dtos: Array<{ id: string; name: string; category: string | null; investigationDate: string | null; mimeType: string | null; createdAt: string }>) => {
+        setServerFiles(dtos.map((d) => ({
+          id: d.id,
+          fileId: d.id,
+          name: d.name,
+          category: d.category ?? "Other",
+          date: d.investigationDate
+            ? new Date(d.investigationDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })
+            : new Date(d.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }),
+          fileUrl: null,
+          mimeType: d.mimeType ?? null,
+        })));
+      })
+      .catch(() => setServerFiles([]));
+  }, [selectedPatientId]);
+
   const [showAddModal, setShowAddModal] = React.useState(false);
-  // The currently-open file row, by activeAction and index. null = list view.
-  const [viewerOpen, setViewerOpen] = React.useState<{ action: number; index: number } | null>(null);
+  // The currently-open file row. null = list view.
+  const [viewerOpen, setViewerOpen] = React.useState<ListRow | null>(null);
   const handleAddRows = (rows: AddReportRow[]) => {
-    setUploadedItems((prev) => ({
+    // Always show every row immediately. fileId present = persisted on server.
+    // fileId absent = backend upload failed; still visible via local blob URL.
+    setServerFiles((prev) => [
+      ...rows.map((r) => ({
+        id: r.id,
+        fileId: r.fileId,
+        name: r.name,
+        category: r.category,
+        date: r.date,
+        fileUrl: r.fileUrl,
+        mimeType: r.mimeType,
+      })),
       ...prev,
-      [activeAction]: [...(prev[activeAction] ?? []), ...rows],
-    }));
+    ]);
   };
   const removeRxRow = (rowIdx: number) =>
     setRxRows((prev) => prev.filter((_, ri) => ri !== rowIdx));
@@ -864,11 +917,10 @@ export function PrescriptionPage() {
   const updateThenField = (rowIdx: number, thenIdx: number, key: keyof ThenRow, value: string) =>
     setRxRows((prev) => prev.map((r, ri) => ri !== rowIdx ? r : { ...r, thenRows: r.thenRows.map((t, ti) => ti !== thenIdx ? t : { ...t, [key]: value }) }));
 
-  // Display rows = backend rows (empty for now) + client-side uploads.
-  // displayRows: all uploads merged, then filtered by the active category
-  // chip. Chip 0 ("All") is the pass-through.
+  // Display rows for the Files tab (action 1) come from serverFiles (backend).
+  // Other list-view actions use their config's static rows array.
   const allRows: ListRow[] = listViewConfig
-    ? [...listViewConfig.rows, ...(uploadedItems[activeAction] ?? [])]
+    ? (activeAction === 1 ? serverFiles : listViewConfig.rows)
     : [];
   const activeChipLabel = listViewConfig?.tabs[activeListTab] ?? "All";
   const displayRows: ListRow[] = activeChipLabel === "All"
@@ -879,10 +931,9 @@ export function PrescriptionPage() {
   // pane reads from. Timeline + Bills have no data layer yet so they show 0
   // until those features are built.
   const countFor = (actionIndex: number): number => {
+    if (actionIndex === 1) return serverFiles.length;
     const config = LIST_VIEWS[actionIndex];
-    if (config) {
-      return config.rows.length + (uploadedItems[actionIndex]?.length ?? 0);
-    }
+    if (config) return config.rows.length;
     if (actionIndex === 0) return visits.length; // Visits
     return 0; // Timeline (2), Bills (3) — placeholders, post-merge indexes.
   };
@@ -894,8 +945,9 @@ export function PrescriptionPage() {
   // Subtitle is derived from the displayed row count for list views (backend
   // data + client uploads), defaults to a placeholder for Coming Soon, and
   // stays static for the default Visits view.
+  const fileCount = activeAction === 1 ? serverFiles.length : (listViewConfig?.rows.length ?? 0);
   const headerSubtitle = listViewConfig
-    ? `${listViewConfig.rows.length + (uploadedItems[activeAction]?.length ?? 0)} ${listViewConfig.title.toLowerCase()} on file`
+    ? `${fileCount} ${listViewConfig.title.toLowerCase()} on file`
     : comingSoonLabel
       ? "Coming soon"
       : "Patient visit history and prescription";
@@ -1364,15 +1416,15 @@ export function PrescriptionPage() {
                   </div>
                   {displayRows.map((r, i) => (
                     <div
-                      key={i}
+                      key={r.id ?? i}
                       style={{ ...styles.reportRow, cursor: "pointer" }}
-                      onClick={() => setViewerOpen({ action: activeAction, index: i })}
+                      onClick={() => setViewerOpen(r)}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          setViewerOpen({ action: activeAction, index: i });
+                          setViewerOpen(r);
                         }
                       }}
                     >
@@ -1397,34 +1449,25 @@ export function PrescriptionPage() {
                 <div style={styles.reportsGrid}>
                   {displayRows.map((r, i) => (
                     <div
-                      key={i}
+                      key={r.id ?? i}
                       style={{ ...styles.reportCard, cursor: "pointer" }}
-                      onClick={() => setViewerOpen({ action: activeAction, index: i })}
+                      onClick={() => setViewerOpen(r)}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          setViewerOpen({ action: activeAction, index: i });
+                          setViewerOpen(r);
                         }
                       }}
                     >
                       <div style={styles.reportCardThumb}>
-                        {r.fileUrl && (r.mimeType ?? "").startsWith("image/") ? (
-                          <img
-                            src={r.fileUrl}
-                            alt=""
-                            style={{
-                              position: "absolute",
-                              inset: 0,
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                            }}
-                          />
-                        ) : (
-                          <FileIcon style={styles.reportCardThumbIcon} />
-                        )}
+                        <AuthThumb
+                          fileUrl={r.fileUrl ?? (r.fileId && selectedPatientId ? `${API_BASE_URL}/api/patients/${selectedPatientId}/files/${r.fileId}/download` : null)}
+                          mimeType={r.mimeType}
+                          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                        {!(r.mimeType ?? "").startsWith("image/") && <FileIcon style={styles.reportCardThumbIcon} />}
                         <span style={styles.reportCardMic}>
                           <MicIcon width={20} height={20} />
                         </span>
@@ -2064,29 +2107,31 @@ export function PrescriptionPage() {
         isOpen={showAddModal}
         visits={visits}
         defaultVisitId={activeVisit?.id ?? null}
+        patientId={selectedPatientId}
         onClose={() => setShowAddModal(false)}
         onAdd={handleAddRows}
       />
 
       {/* File viewer modal — opens when a row in the Files list is clicked.
-          Shows the file with the annotation toolbar; close × dismisses. */}
+          Shows the file with the annotation toolbar; close × dismisses.
+          For server-only files (fileUrl null, fileId set) the viewer shows
+          a download button; FileViewer fetches bytes lazily if needed. */}
       <Modal isOpen={viewerOpen !== null} onClose={() => setViewerOpen(null)}>
-        {(() => {
-          if (!viewerOpen) return null;
-          const row = (uploadedItems[viewerOpen.action] ?? [])[viewerOpen.index];
-          if (!row) return null;
-          return (
-            <FileViewer
-              file={{
-                id: row.id ?? `${viewerOpen.action}-${viewerOpen.index}`,
-                name: row.name,
-                fileUrl: row.fileUrl ?? null,
-                mimeType: row.mimeType ?? null,
-              }}
-              onBack={() => setViewerOpen(null)}
-            />
-          );
-        })()}
+        {viewerOpen && (
+          <FileViewer
+            file={{
+              id: viewerOpen.id ?? viewerOpen.fileId ?? "file",
+              name: viewerOpen.name,
+              fileUrl: viewerOpen.fileUrl
+                ? viewerOpen.fileUrl
+                : viewerOpen.fileId && selectedPatientId
+                  ? `${API_BASE_URL}/api/patients/${selectedPatientId}/files/${viewerOpen.fileId}/download`
+                  : null,
+              mimeType: viewerOpen.mimeType ?? null,
+            }}
+            onBack={() => setViewerOpen(null)}
+          />
+        )}
       </Modal>
     </div>
   );

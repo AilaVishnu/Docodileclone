@@ -4,17 +4,14 @@ import { Select } from "../../components/Input/Select/Select";
 import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import type { VisitDTO } from "../../api/visits";
+import { API_BASE_URL } from "../../apiConfig";
 
-// Row shape consumed by PrescriptionPage's uploadedItems map. Includes the
-// raw file blob + a previewable object URL so the FileViewer can render the
-// uploaded asset without a backend round-trip yet. `id` is generated here so
-// annotations and any future server row can key off it.
-//
-// Backend follow-up: once /reports POST exists, this modal POSTs the
-// multipart file + metadata and the response gives an authoritative id +
-// signed URL — drop `file` and replace `fileUrl` with the server URL.
+// Row shape consumed by PrescriptionPage's file list. `fileId` is set when
+// the file was successfully persisted to the backend; `fileUrl` is a local
+// blob URL used for immediate preview without a backend round-trip.
 export type AddReportRow = {
   id: string;
+  fileId?: string;       // backend UUID, present after a successful upload
   name: string;
   category: string;
   date: string;
@@ -40,6 +37,7 @@ type Props = {
   isOpen: boolean;
   visits: VisitDTO[];
   defaultVisitId?: string | null;
+  patientId: string | null;
   onClose: () => void;
   onAdd: (rows: AddReportRow[]) => void;
 };
@@ -101,6 +99,7 @@ export function AddReportModal({
   isOpen,
   visits,
   defaultVisitId,
+  patientId,
   onClose,
   onAdd,
 }: Props) {
@@ -160,27 +159,70 @@ export function AddReportModal({
     if (e.dataTransfer.files) addFiles(e.dataTransfer.files);
   };
 
-  const handleSave = () => {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleSave = async () => {
     if (drafts.length === 0) return;
-    const rows: AddReportRow[] = drafts.map((d) => ({
-      id: d.id,
-      name: d.name.trim() || d.file.name,
-      category: d.category,
-      date: fmtDateForRow(d.date),
-      // Reuse the same blob URL we already created for the thumbnail so the
-      // viewer doesn't need to re-create it. Caller owns lifecycle from here
-      // — the modal resets its `drafts` state but does NOT revoke this URL
-      // on close (unlike the thumbnail revoke path).
-      fileUrl: d.previewUrl ?? (d.file ? URL.createObjectURL(d.file) : null),
-      mimeType: d.file.type || null,
-      visitId: d.visitId,
-      notes: d.notes,
-    }));
-    // Mark drafts as "ownership transferred" so the close-handler skips
-    // revoke for these URLs. We use a side-effect on the draft objects.
-    drafts.forEach((d) => { (d as DraftEntry & { _kept?: boolean })._kept = true; });
+    setUploading(true);
+    setUploadError(null);
+    let anyFailed = false;
+
+    const rows: AddReportRow[] = await Promise.all(
+      drafts.map(async (d) => {
+        const name = d.name.trim() || d.file.name;
+        // Reuse existing blob URL for immediate preview; caller owns lifecycle.
+        const fileUrl = d.previewUrl ?? URL.createObjectURL(d.file);
+        (d as DraftEntry & { _kept?: boolean })._kept = true;
+
+        let fileId: string | undefined;
+        if (patientId) {
+          try {
+            const token = localStorage.getItem("docodile_token");
+            const form = new FormData();
+            form.append("file", d.file, name);
+            if (d.category) form.append("category", d.category);
+            form.append("investigationDate", d.date.toISOString().split("T")[0]);
+            if (d.notes) form.append("notes", d.notes);
+            const res = await fetch(`${API_BASE_URL}/api/patients/${patientId}/files`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+              body: form,
+            });
+            if (res.ok) {
+              const dto = await res.json();
+              fileId = dto.id as string;
+            } else {
+              const errText = await res.text().catch(() => res.status.toString());
+              console.error(`File upload failed (${res.status}):`, errText);
+              anyFailed = true;
+            }
+          } catch (err) {
+            console.error("File upload error:", err);
+            anyFailed = true;
+          }
+        }
+
+        return {
+          id: fileId ?? d.id,
+          fileId,
+          name,
+          category: d.category,
+          date: fmtDateForRow(d.date),
+          fileUrl,
+          mimeType: d.file.type || null,
+          visitId: d.visitId,
+          notes: d.notes,
+        };
+      })
+    );
+
+    setUploading(false);
+    if (anyFailed) {
+      setUploadError("File saved locally but could not be persisted to server. It will be lost on refresh.");
+    }
     onAdd(rows);
-    onClose();
+    if (!anyFailed) onClose();
   };
 
   const titleCopy = "Add File";
@@ -353,20 +395,23 @@ export function AddReportModal({
           </div>
         )}
 
+        {uploadError && (
+          <p style={styles.uploadError}>{uploadError}</p>
+        )}
         <footer style={styles.footer}>
           <button type="button" onClick={onClose} style={styles.btnGhost}>
-            Cancel
+            {uploadError ? "Close anyway" : "Cancel"}
           </button>
           <button
             type="button"
             onClick={handleSave}
-            disabled={drafts.length === 0 || drafts.some(d => !d.category)}
+            disabled={uploading || drafts.length === 0 || drafts.some(d => !d.category)}
             style={{
               ...styles.btnPrimary,
-              ...(drafts.length === 0 || drafts.some(d => !d.category) ? { opacity: 0.45, cursor: "not-allowed" } : null),
+              ...(uploading || drafts.length === 0 || drafts.some(d => !d.category) ? { opacity: 0.45, cursor: "not-allowed" } : null),
             }}
           >
-            Add {drafts.length > 1 ? `(${drafts.length})` : ""}
+            {uploading ? "Uploading…" : `Add${drafts.length > 1 ? ` (${drafts.length})` : ""}`}
           </button>
         </footer>
       </div>
@@ -604,6 +649,16 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     padding: 0,
     flexShrink: 0,
+  },
+  uploadError: {
+    margin: 0,
+    padding: `${spacing.s} ${spacing.m}`,
+    backgroundColor: "#FFF3CD",
+    border: `1px solid #FFEAA7`,
+    borderRadius: radii.m,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: "#856404",
   },
   footer: {
     display: "flex",
