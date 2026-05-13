@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { API_BASE_URL } from "../../apiConfig";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 
 type TabId = "overview" | "health" | "patients" | "doctors" | "clinical" | "operations" | "finance";
@@ -194,7 +195,7 @@ export function BusinessPage() {
       {tab === "overview"   && <OverviewTab data={data} range={range} />}
       {tab === "health"     && <HealthTab range={range} />}
       {tab === "patients"   && <PatientsTab range={range} />}
-      {tab === "doctors"    && <DoctorsTab range={range} />}
+      {tab === "doctors"    && <DoctorsTab range={range} customStart={customStart} customEnd={customEnd} />}
       {tab === "clinical"   && <ClinicalTab range={range} />}
       {tab === "operations" && <OperationsTab range={range} />}
       {tab === "finance"    && <FinanceTab range={range} />}
@@ -518,16 +519,35 @@ function OverdueReviewsCard() {
 
 // ── Doctors tab ─────────────────────────────────────────────────────────────
 
-// Per-doctor stats. Revenue + daysWorked are derivable from the existing
-// schema (Appointment.fee × completed + count distinct days with ≥1 visit).
-// Composite "performance score", login hours, and idle hours need new
-// tracking — flagged with TODOs below.
-const DOCTORS = [
-  { name: "Dr. Anika Reddy", revenue: 86400, daysWorked: 21 },
-  { name: "Dr. Priya Iyer",  revenue: 58800, daysWorked: 16 },
-  { name: "Dr. Rohan Mehta", revenue: 49500, daysWorked: 14 },
-  { name: "Dr. Vikram Shah", revenue: 71200, daysWorked: 19 },
-];
+type DoctorStat = { doctorId: string; name: string; revenue: number; daysWorked: number; appointmentCount: number };
+
+function useDoctorStats(range: RangeId, customStart: string, customEnd: string) {
+  const [doctors, setDoctors] = useState<DoctorStat[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem("docodile_token") ?? "";
+    const today = new Date().toISOString().slice(0, 10);
+    const weekAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+    const monthAgo = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
+    const yearAgo = new Date(Date.now() - 364 * 86400000).toISOString().slice(0, 10);
+    const startMap: Record<RangeId, string> = { today, week: weekAgo, month: monthAgo, year: yearAgo, custom: customStart };
+    const endMap: Record<RangeId, string>   = { today, week: today,   month: today,    year: today,    custom: customEnd  };
+    const start = startMap[range];
+    const end   = endMap[range];
+    if (!start || !end) { setDoctors([]); setLoading(false); return; }
+    setLoading(true);
+    fetch(`${API_BASE_URL}/api/stats/doctors?startDate=${start}&endDate=${end}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : [])
+      .then(setDoctors)
+      .catch(() => setDoctors([]))
+      .finally(() => setLoading(false));
+  }, [range, customStart, customEnd]);
+
+  return { doctors, loading };
+}
 
 const SCHEDULE_DENSITY = [
   // 7 days × 4 doctors. 0–4 booked slots / hour.
@@ -537,73 +557,76 @@ const SCHEDULE_DENSITY = [
   [3, 3, 4, 3, 2, 3, 0], // Vikram
 ];
 
-function DoctorsTab({ range }: { range: RangeId }) {
+function DoctorsTab({ range, customStart, customEnd }: { range: RangeId; customStart: string; customEnd: string }) {
+  const { doctors, loading } = useDoctorStats(range, customStart, customEnd);
+  const activeDoctors = doctors.length;
+
   return (
     <div style={styles.tabBody}>
       <div style={styles.kpiGrid}>
-        <KpiTile label="Avg consult duration" value="17 min" delta="−1 min" tone="up" sub="depth of care" />
-        <KpiTile label="Active doctors" value="4" delta="" tone="flat" sub="on roster this period" />
+        <KpiTile label="Active doctors" value={loading ? "…" : String(activeDoctors)} delta="" tone="flat" sub="with appointments this period" />
+        <KpiTile label="Total appointments" value={loading ? "…" : String(doctors.reduce((s, d) => s + d.appointmentCount, 0))} delta="" tone="flat" sub="across all doctors" />
       </div>
 
-      <DoctorRevenueCard />
-
-      <DoctorDaysWorkedCard />
-
+      <DoctorRevenueCard doctors={doctors} loading={loading} />
+      <DoctorDaysWorkedCard doctors={doctors} loading={loading} />
       <ScheduleDensityCard />
     </div>
   );
 }
 
-// Revenue per doctor — alphabetical (no leaderboard ranking).
-// Backed by Appointment.fee × completed appointments grouped by doctorId.
-function DoctorRevenueCard() {
-  const max = Math.max(...DOCTORS.map((d) => d.revenue));
+function DoctorRevenueCard({ doctors, loading }: { doctors: DoctorStat[]; loading: boolean }) {
+  const max = Math.max(...doctors.map(d => d.revenue), 1);
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
         <h3 style={styles.cardTitle}>Revenue per doctor</h3>
-        <span style={styles.cardSub}>this period · alphabetical</span>
+        <span style={styles.cardSub}>paid appointments · this period</span>
       </header>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {DOCTORS.map((d) => (
-          <div key={d.name}>
-            <div style={styles.complaintRow}>
-              <span>{d.name}</span>
-              <span style={styles.complaintCount}>₹ {d.revenue.toLocaleString("en-IN")}</span>
+      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {doctors.length === 0 && <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>No data for this period</div>}
+          {doctors.map((d) => (
+            <div key={d.doctorId}>
+              <div style={styles.complaintRow}>
+                <span>{d.name}</span>
+                <span style={styles.complaintCount}>₹ {d.revenue.toLocaleString("en-IN")}</span>
+              </div>
+              <div style={styles.barTrack}>
+                <div style={{ ...styles.barFill, width: `${(d.revenue / max) * 100}%` }} />
+              </div>
             </div>
-            <div style={styles.barTrack}>
-              <div style={{ ...styles.barFill, width: `${(d.revenue / max) * 100}%` }} />
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
 
-// Days worked per doctor — derived from "doctor had ≥1 appointment on this date".
-// This is a working-day proxy until staff schedules / login sessions are tracked.
-function DoctorDaysWorkedCard() {
-  const max = Math.max(...DOCTORS.map((d) => d.daysWorked));
+function DoctorDaysWorkedCard({ doctors, loading }: { doctors: DoctorStat[]; loading: boolean }) {
+  const max = Math.max(...doctors.map(d => d.daysWorked), 1);
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
         <h3 style={styles.cardTitle}>Days worked</h3>
         <span style={styles.cardSub}>days with at least one appointment</span>
       </header>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {DOCTORS.map((d) => (
-          <div key={d.name}>
-            <div style={styles.complaintRow}>
-              <span>{d.name}</span>
-              <span style={styles.complaintCount}>{d.daysWorked} days</span>
+      {loading ? <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>Loading…</div> : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {doctors.length === 0 && <div style={{ color: colors.neutral400, fontSize: fonts.size.s }}>No data for this period</div>}
+          {doctors.map((d) => (
+            <div key={d.doctorId}>
+              <div style={styles.complaintRow}>
+                <span>{d.name}</span>
+                <span style={styles.complaintCount}>{d.daysWorked} days</span>
+              </div>
+              <div style={styles.barTrack}>
+                <div style={{ ...styles.barFill, width: `${(d.daysWorked / max) * 100}%`, backgroundColor: colors.secondary500 }} />
+              </div>
             </div>
-            <div style={styles.barTrack}>
-              <div style={{ ...styles.barFill, width: `${(d.daysWorked / max) * 100}%`, backgroundColor: colors.secondary500 }} />
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -615,20 +638,27 @@ function DoctorDaysWorkedCard() {
 // Composite "performance score" also waits on that — we want score
 // components like on-time-start rate which need an arrival timestamp.
 
+const DENSITY_DOCTORS = [
+  { name: "Dr. Anika Reddy" },
+  { name: "Dr. Priya Iyer" },
+  { name: "Dr. Rohan Mehta" },
+  { name: "Dr. Vikram Shah" },
+];
+
 function ScheduleDensityCard() {
   const max = 4;
   return (
     <section style={styles.card}>
       <header style={styles.cardHeader}>
         <h3 style={styles.cardTitle}>This week's schedule density</h3>
-        <span style={styles.cardSub}>bookings per day</span>
+        <span style={styles.cardSub}>bookings per day · sample</span>
       </header>
       <div style={styles.densityGrid}>
         <div />
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
           <div key={d} style={styles.densityHeader}>{d}</div>
         ))}
-        {DOCTORS.map((doc, dIdx) => (
+        {DENSITY_DOCTORS.map((doc, dIdx) => (
           <React.Fragment key={doc.name}>
             <div style={styles.densityRowLabel}>{doc.name.replace("Dr. ", "")}</div>
             {SCHEDULE_DENSITY[dIdx].map((v, hIdx) => {
