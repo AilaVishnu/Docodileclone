@@ -59,7 +59,7 @@ import { API_BASE_URL } from "../../apiConfig";
 import { AddReportModal, AddReportRow } from "./AddReportModal";
 import { FileViewer } from "./FileViewer";
 import { EditPatientModal } from "./EditPatientModal";
-import { buildPrintHtml, openPrintWindow, getDefaultTemplate, PrintVisitData } from "../Settings";
+import { buildPrintHtml, openPrintWindow, getDefaultTemplate, loadTemplates, PrintVisitData } from "../Settings";
 import { Modal } from "../../components/Modal/Modal";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1239,7 +1239,19 @@ export function PrescriptionPage() {
   // letterhead) and which patient fields to show. Auto-saves first so the
   // print reflects the latest edits.
   const handlePrintPrescription = async () => {
-    const template = getDefaultTemplate();
+    // The default-template cache is primed by the editor (Settings → Print
+    // template). If the user prints without visiting Settings first this
+    // session, fetch lazily so we never miss a configured template.
+    let template = getDefaultTemplate();
+    if (!template) {
+      try {
+        await loadTemplates();
+        template = getDefaultTemplate();
+      } catch (e) {
+        showToast(`Couldn't load print template: ${(e as Error).message}`);
+        return;
+      }
+    }
     if (!template) {
       showToast("No print template — set one up in Settings → Print template");
       return;

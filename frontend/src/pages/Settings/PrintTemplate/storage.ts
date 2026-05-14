@@ -1,91 +1,107 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// localStorage adapter for print templates. Per-clinic so a doctor working
-// across multiple clinics has independent templates. Replace the four
-// public functions with API calls when the backend lands — the rest of the
-// UI doesn't care where the JSON lives.
-//
-// Image fields on PrintTemplate are base64 data URLs. localStorage's ~5 MB
-// per-origin budget is plenty for a few PNG letterheads (typically < 500 KB
-// each); if a user uploads bigger they'll hit QuotaExceededError, which is
-// surfaced to them as a toast in the editor.
+// Backend-backed print template storage. Templates live in the `print_template`
+// table (server-side, per clinic). A small in-memory cache backs the sync
+// `getDefaultTemplate()` helper used inside the print handler — the editor
+// calls `loadTemplates()` first, which both fetches from the API and primes
+// the cache for the subsequent print action.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import {
+  listPrintTemplates,
+  createPrintTemplate,
+  updatePrintTemplate,
+  deletePrintTemplate,
+  PrintTemplateDTO,
+} from "../../../api/printTemplates";
 import { DEFAULT_TEMPLATE, PrintTemplate } from "./types";
 
-const KEY = (clinicId: string) => `docodile_print_templates_${clinicId}`;
-
-function clinicId(): string {
-  return localStorage.getItem("docodile_clinic_id") ?? "default";
-}
-
-function genId(): string {
-  return `tpl_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-export function loadTemplates(): PrintTemplate[] {
-  try {
-    const raw = localStorage.getItem(KEY(clinicId()));
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr.map(migrate) : [];
-  } catch {
-    return [];
-  }
-}
-
-// Forward-compatible migration: templates persisted before a new field was
-// added come back without that key. Backfill from DEFAULT_TEMPLATE so the
+// Forward-compatible decoder: rows persisted before a new template field
+// existed come back without that key. Backfill from DEFAULT_TEMPLATE so the
 // editor + renderer can rely on every field being present.
-function migrate(t: any): PrintTemplate {
+function fromDto(dto: PrintTemplateDTO): PrintTemplate {
+  let cfg: any = {};
+  try { cfg = JSON.parse(dto.config || "{}"); } catch { /* corrupt config → fall back to default */ }
   return {
     ...DEFAULT_TEMPLATE,
-    ...t,
-    show: { ...DEFAULT_TEMPLATE.show, ...(t?.show ?? {}) },
-    margins: { ...DEFAULT_TEMPLATE.margins, ...(t?.margins ?? {}) },
+    ...cfg,
+    show: { ...DEFAULT_TEMPLATE.show, ...(cfg?.show ?? {}) },
+    margins: { ...DEFAULT_TEMPLATE.margins, ...(cfg?.margins ?? {}) },
+    id: dto.id,
+    name: dto.name,
+    isDefault: dto.isDefault,
   } as PrintTemplate;
 }
 
-export function saveTemplates(templates: PrintTemplate[]): void {
-  localStorage.setItem(KEY(clinicId()), JSON.stringify(templates));
+// Strip out the columns that live as their own DB fields so we don't double
+// store name/isDefault inside the JSON blob.
+function toConfigJson(t: PrintTemplate): string {
+  const { id, name, isDefault, ...rest } = t;
+  void id; void name; void isDefault;
+  return JSON.stringify(rest);
 }
 
-export function ensureSeed(): PrintTemplate[] {
-  const existing = loadTemplates();
+// Last-seen list, primed by every successful load/create/update/delete.
+// Used by the synchronous `getDefaultTemplate()` so the print handler
+// doesn't need to await.
+let cache: PrintTemplate[] = [];
+
+export async function loadTemplates(): Promise<PrintTemplate[]> {
+  const dtos = await listPrintTemplates();
+  cache = dtos.map(fromDto);
+  return cache;
+}
+
+export async function ensureSeed(): Promise<PrintTemplate[]> {
+  const existing = await loadTemplates();
   if (existing.length > 0) return existing;
-  const seeded: PrintTemplate[] = [{ id: genId(), ...DEFAULT_TEMPLATE }];
-  saveTemplates(seeded);
-  return seeded;
+  // First load for this clinic — create the default template server-side so
+  // there's always at least one row.
+  const seed: PrintTemplate = {
+    id: "",
+    ...DEFAULT_TEMPLATE,
+  };
+  const created = await createPrintTemplate({
+    name: seed.name,
+    isDefault: true,
+    config: toConfigJson(seed),
+  });
+  cache = [fromDto(created)];
+  return cache;
 }
 
-export function createTemplate(name = "New template"): PrintTemplate {
-  const all = loadTemplates();
-  const tpl: PrintTemplate = { id: genId(), ...DEFAULT_TEMPLATE, name, isDefault: all.length === 0 };
-  saveTemplates([...all, tpl]);
+export async function createTemplate(name = "New template"): Promise<PrintTemplate> {
+  const seed: PrintTemplate = { id: "", ...DEFAULT_TEMPLATE, name, isDefault: cache.length === 0 };
+  const created = await createPrintTemplate({
+    name: seed.name,
+    isDefault: seed.isDefault,
+    config: toConfigJson(seed),
+  });
+  const tpl = fromDto(created);
+  cache = [...cache, tpl];
   return tpl;
 }
 
-export function updateTemplate(updated: PrintTemplate): void {
-  const all = loadTemplates();
-  let nextAll = all.map((t) => (t.id === updated.id ? updated : t));
-  if (updated.isDefault) {
-    // Only one default per clinic.
-    nextAll = nextAll.map((t) => (t.id === updated.id ? t : { ...t, isDefault: false }));
-  }
-  saveTemplates(nextAll);
+export async function updateTemplate(updated: PrintTemplate): Promise<void> {
+  const saved = await updatePrintTemplate(updated.id, {
+    name: updated.name,
+    isDefault: updated.isDefault,
+    config: toConfigJson(updated),
+  });
+  const replaced = fromDto(saved);
+  cache = cache.map((t) => (t.id === replaced.id ? replaced : (replaced.isDefault ? { ...t, isDefault: false } : t)));
 }
 
-export function deleteTemplate(id: string): PrintTemplate[] {
-  const all = loadTemplates().filter((t) => t.id !== id);
-  // If we deleted the default, promote the first remaining template.
-  if (all.length > 0 && !all.some((t) => t.isDefault)) {
-    all[0].isDefault = true;
-  }
-  saveTemplates(all);
-  return all;
+export async function deleteTemplate(id: string): Promise<PrintTemplate[]> {
+  await deletePrintTemplate(id);
+  // Re-fetch so we pick up the server-side "promote next as default" rule.
+  return loadTemplates();
 }
 
+// Sync read against the cache populated by the most recent loadTemplates()
+// (or any of the create/update/delete helpers). Returns null if nothing's
+// been loaded yet — the caller (PrescriptionPage's print handler) shows a
+// toast asking the user to open Settings → Print template first.
 export function getDefaultTemplate(): PrintTemplate | null {
-  const all = loadTemplates();
-  if (all.length === 0) return null;
-  return all.find((t) => t.isDefault) ?? all[0];
+  if (cache.length === 0) return null;
+  return cache.find((t) => t.isDefault) ?? cache[0];
 }

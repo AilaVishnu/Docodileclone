@@ -72,9 +72,30 @@ const SAMPLE: PrintVisitData = {
 };
 
 export function PrintTemplateEditor() {
-  const [templates, setTemplates] = useState<PrintTemplate[]>(() => ensureSeed());
-  const [activeId, setActiveId] = useState<string>(() => templates[0]?.id ?? "");
+  const [templates, setTemplates] = useState<PrintTemplate[]>([]);
+  const [activeId, setActiveId] = useState<string>("");
   const [toast, setToast] = useState<{ visible: boolean; message: string }>({ visible: false, message: "" });
+  const [loading, setLoading] = useState(true);
+
+  // Initial fetch — seeds a default template server-side if the clinic has
+  // none yet, then loads the list.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await ensureSeed();
+        if (cancelled) return;
+        setTemplates(list);
+        setActiveId(list[0]?.id ?? "");
+      } catch (e) {
+        if (!cancelled) setToast({ visible: true, message: `Couldn't load templates: ${(e as Error).message}` });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Right-click context menu over a template tab. {tabId, x, y} positioned
   // at the click coordinates. Closed on outside click or Escape.
   const [tabMenu, setTabMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
@@ -97,55 +118,64 @@ export function PrintTemplateEditor() {
     setTimeout(() => setToast({ visible: false, message: "" }), 2500);
   };
 
-  // Persist every edit. localStorage writes are cheap; no need to debounce.
+  // Persist every edit. Server round-trips on each change — debounce-worthy
+  // if it becomes chatty, but template edits are infrequent today.
   const persist = (next: PrintTemplate) => {
     setTemplates((all) => {
       const updated = all.map((t) => (t.id === next.id ? next : t));
-      // Single-default invariant.
-      const final = next.isDefault ? updated.map((t) => (t.id === next.id ? t : { ...t, isDefault: false })) : updated;
-      try {
-        updateTemplate(next);
-      } catch (e: any) {
-        showToast(e?.name === "QuotaExceededError" ? "Storage full — try a smaller image" : "Couldn't save");
-      }
-      return final;
+      // Single-default invariant (reflected immediately in local state; the
+      // server enforces it too via the partial-unique index).
+      return next.isDefault ? updated.map((t) => (t.id === next.id ? t : { ...t, isDefault: false })) : updated;
     });
+    updateTemplate(next).catch((e: Error) => showToast(`Couldn't save: ${e.message}`));
   };
 
-  const onNew = () => {
-    const created = createTemplate(`Template ${templates.length + 1}`);
-    setTemplates([...templates, created]);
-    setActiveId(created.id);
+  const onNew = async () => {
+    try {
+      const created = await createTemplate(`Template ${templates.length + 1}`);
+      setTemplates([...templates, created]);
+      setActiveId(created.id);
+    } catch (e) {
+      showToast(`Couldn't create template: ${(e as Error).message}`);
+    }
   };
 
-  const onDuplicate = (sourceId?: string) => {
+  const onDuplicate = async (sourceId?: string) => {
     const source = sourceId ? templates.find((t) => t.id === sourceId) : active;
     if (!source) return;
-    const copy: PrintTemplate = {
-      ...source,
-      id: `tpl_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
-      name: `${source.name} (copy)`,
-      isDefault: false,
-    };
-    const next = [...templates, copy];
-    setTemplates(next);
-    setActiveId(copy.id);
-    // Persist via update API by writing the whole list.
-    localStorage.setItem(`docodile_print_templates_${localStorage.getItem("docodile_clinic_id") ?? "default"}`, JSON.stringify(next));
+    try {
+      // Duplicate = create a fresh row with the same config but a tweaked
+      // name. The server assigns the new id; isDefault stays false.
+      const created = await createTemplate(`${source.name} (copy)`);
+      const copy: PrintTemplate = { ...source, id: created.id, name: created.name, isDefault: false };
+      // Push the full config to the new row.
+      await updateTemplate(copy);
+      setTemplates((all) => [...all, copy]);
+      setActiveId(created.id);
+    } catch (e) {
+      showToast(`Couldn't duplicate: ${(e as Error).message}`);
+    }
   };
 
-  const onDelete = () => {
+  const onDelete = async () => {
     if (!active) return;
     if (templates.length === 1) {
       showToast("At least one template must exist");
       return;
     }
     if (!window.confirm(`Delete "${active.name}"?`)) return;
-    const remaining = deleteTemplate(active.id);
-    setTemplates(remaining);
-    setActiveId(remaining[0]?.id ?? "");
+    try {
+      const remaining = await deleteTemplate(active.id);
+      setTemplates(remaining);
+      setActiveId(remaining[0]?.id ?? "");
+    } catch (e) {
+      showToast(`Couldn't delete: ${(e as Error).message}`);
+    }
   };
 
+  if (loading) {
+    return <div style={{ padding: spacing.l, color: colors.neutral500 }}>Loading templates…</div>;
+  }
   if (!active) {
     return <div style={{ padding: spacing.l, color: colors.neutral500 }}>No templates available.</div>;
   }

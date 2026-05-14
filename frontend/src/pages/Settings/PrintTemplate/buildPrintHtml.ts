@@ -431,45 +431,13 @@ export function buildPrintHtml(template: PrintTemplate, data: PrintVisitData): s
 </html>`;
 }
 
-// Open a new window, write the HTML, wait for images, print, close. Used by
-// the Prescription page Print button.
+// Triggers the browser print dialog with the prescription HTML. Uses an
+// off-screen iframe so the dialog appears in the current tab — no popup, no
+// blank "about:blank" window opened in the background. Chrome's window.open
+// flow tended to flash a blank new tab then print from the parent, which
+// confused users; iframe printing avoids that entirely.
 export function openPrintWindow(html: string): void {
-  const w = window.open("", "_blank", "noopener,noreferrer");
-  if (!w) {
-    // Pop-up blocked — fall back to an off-screen iframe and trigger print
-    // from there. Caller can warn the user, but we still try.
-    fallbackIframePrint(html);
-    return;
-  }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-
-  const triggerPrint = () => {
-    try {
-      w.focus();
-      w.print();
-    } catch {}
-  };
-
-  // Wait for images to load so the print dialog shows a complete page.
-  const imgs = Array.from(w.document.images);
-  if (imgs.length === 0) {
-    setTimeout(triggerPrint, 100);
-    return;
-  }
-  let pending = imgs.length;
-  const done = () => {
-    pending -= 1;
-    if (pending <= 0) setTimeout(triggerPrint, 50);
-  };
-  imgs.forEach((img) => {
-    if (img.complete) done();
-    else {
-      img.addEventListener("load", done);
-      img.addEventListener("error", done);
-    }
-  });
+  fallbackIframePrint(html);
 }
 
 function fallbackIframePrint(html: string): void {
