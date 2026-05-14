@@ -363,8 +363,13 @@ function EditorForm({
           <Field label="Signature image" wide>
             <ImagePicker value={template.signatureImage} onPick={async (f) => set("signatureImage", f ? await readImage(f) : undefined)} aspect="signature" />
           </Field>
-          <Field label="Signature height (mm)">
-            <NumberInput value={template.signatureHeightMm} onChange={(v) => set("signatureHeightMm", v)} />
+          <Field label="Signature height">
+            <LengthInput
+              valueMm={template.signatureHeightMm}
+              unit={template.marginsUnit}
+              onValueMm={(v) => set("signatureHeightMm", v)}
+              onUnitChange={(u) => set("marginsUnit", u)}
+            />
           </Field>
         </Row>
         <Row>
