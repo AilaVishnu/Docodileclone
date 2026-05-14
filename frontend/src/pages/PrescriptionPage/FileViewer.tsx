@@ -259,7 +259,14 @@ export function FileViewer({ file, onBack }: Props) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(img, 0, 0);
-    drawAnnotationsOnCanvas(ctx, annotations, canvas.width, canvas.height);
+    // Pin annotations exist only to anchor a comment — they aren't drawing
+    // markup on the image itself, so exclude them from the exported PNG.
+    drawAnnotationsOnCanvas(
+      ctx,
+      annotations.filter((a) => a.type !== "pin"),
+      canvas.width,
+      canvas.height,
+    );
     canvas.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
