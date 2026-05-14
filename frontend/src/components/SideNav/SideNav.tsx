@@ -199,17 +199,20 @@ export function SideNav({
                             alignItems: 'center',
                             justifyContent: 'space-between',
                             gap: 6,
-                            // Indent to line up with parent label.
-                            marginLeft: 12 + 24 + 12 + 12, // padding + icon + gap + indent
+                            // Left-align the sub-item TEXT with the parent's
+                            // "Settings" label. Parent text starts at:
+                            //   marginLeft(12) + padding-x(16) + icon(24) + gap(12) = 64px.
+                            // Sub button: marginLeft(52) + padding-x(12) = 64px to text.
+                            marginLeft: 52,
                             marginRight: 12,
-                            padding: '6px 10px',
+                            padding: '8px 12px',
                             borderRadius: 8,
                             border: 'none',
                             background: childActive ? colors.active.shade200 : 'transparent',
                             color: s.ready ? colors.neutral900 : colors.neutral500,
                             fontFamily: 'Inter, sans-serif',
-                            fontSize: fonts.size.xs,
-                            fontWeight: childActive ? 600 : 500,
+                            fontSize: fonts.size.s,
+                            fontWeight: 500,
                             textAlign: 'left',
                             cursor: s.ready ? 'pointer' : 'not-allowed',
                           }}

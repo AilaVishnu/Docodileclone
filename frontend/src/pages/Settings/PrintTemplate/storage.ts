@@ -27,10 +27,22 @@ export function loadTemplates(): PrintTemplate[] {
     const raw = localStorage.getItem(KEY(clinicId()));
     if (!raw) return [];
     const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr : [];
+    return Array.isArray(arr) ? arr.map(migrate) : [];
   } catch {
     return [];
   }
+}
+
+// Forward-compatible migration: templates persisted before a new field was
+// added come back without that key. Backfill from DEFAULT_TEMPLATE so the
+// editor + renderer can rely on every field being present.
+function migrate(t: any): PrintTemplate {
+  return {
+    ...DEFAULT_TEMPLATE,
+    ...t,
+    show: { ...DEFAULT_TEMPLATE.show, ...(t?.show ?? {}) },
+    margins: { ...DEFAULT_TEMPLATE.margins, ...(t?.margins ?? {}) },
+  } as PrintTemplate;
 }
 
 export function saveTemplates(templates: PrintTemplate[]): void {

@@ -1253,6 +1253,7 @@ export function PrescriptionPage() {
       notesForPatient: notesForPatientValue,
       rx: rxRows.map((r) => ({
         medicine: r.medicine ?? null,
+        genericName: r.genericName ?? null,
         dosage: r.dosage ?? null,
         whenToTake: r.whenToTake ?? null,
         frequency: r.frequency ?? null,

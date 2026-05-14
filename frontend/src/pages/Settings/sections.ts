@@ -22,10 +22,10 @@ export type SettingsSectionMeta = {
 
 export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
   { id: "print-template", label: "Print template", ready: true,  group: "Workflow" },
-  { id: "profile",         label: "My profile",     ready: false, group: "Account" },
-  { id: "clinic",          label: "Clinic info",    ready: false, group: "Account" },
-  { id: "users",           label: "Users & roles",  ready: false, group: "Account" },
-  { id: "billing",         label: "Billing & plan", ready: false, group: "Account" },
+  { id: "profile",         label: "Profile",        ready: false, group: "Account" },
+  { id: "clinic",          label: "Clinic",         ready: false, group: "Account" },
+  { id: "users",           label: "Users",          ready: false, group: "Account" },
+  { id: "billing",         label: "Billing",        ready: false, group: "Account" },
 ];
 
 export const DEFAULT_SETTINGS_SECTION: SettingsSection = "print-template";

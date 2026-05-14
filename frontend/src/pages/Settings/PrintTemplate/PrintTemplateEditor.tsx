@@ -24,14 +24,17 @@ import { buildPrintHtml, openPrintWindow, PrintVisitData } from "./buildPrintHtm
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PATIENT_FIELDS: { key: PatientFieldKey; label: string }[] = [
+  { key: "patientId",   label: "Patient ID" },
   { key: "phone",       label: "Phone number" },
   { key: "address",     label: "Address" },
   { key: "referredBy",  label: "Referred by" },
   { key: "age",         label: "Age" },
   { key: "gender",      label: "Gender" },
+  { key: "doctorName",  label: "Doctor name" },
   { key: "visitNumber", label: "Visit number" },
   { key: "visitDate",   label: "Visit date" },
   { key: "visitTime",   label: "Visit time" },
+  { key: "validTill",   label: "Valid till" },
 ];
 
 // ── Preview sample data — what the right pane renders before a real visit ──
@@ -59,8 +62,8 @@ const SAMPLE: PrintVisitData = {
   tests: "CBC, RBS",
   notesForPatient: "Maintain hydration: 3 L water / day. Avoid screen time before sleep.",
   rx: [
-    { medicine: "Paracetamol 500mg", dosage: "1 tab", whenToTake: "After food", frequency: "TID",  duration: "5 days", notes: "Take only if pain >5/10" },
-    { medicine: "Cetirizine 10mg",   dosage: "1 tab", whenToTake: "Bedtime",     frequency: "HS",   duration: "7 days", notes: null },
+    { medicine: "Crocin 500mg",  genericName: "Paracetamol", dosage: "1 tab", whenToTake: "After food", frequency: "TID",  duration: "5 days", notes: "Take only if pain >5/10" },
+    { medicine: "Cetzine 10mg",  genericName: "Cetirizine",  dosage: "1 tab", whenToTake: "Bedtime",     frequency: "HS",   duration: "7 days", notes: null },
   ],
   reviewDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
   reviewNotes: "Return if headache worsens or persists beyond 7 days.",
@@ -360,6 +363,16 @@ function EditorForm({
               hint="aarav iyer → Aarav Iyer"
             />
           </Field>
+          {template.show.validTill && (
+            <Field label="Prescription validity (days)" hint="Printed as 'Valid till' = visit date + this many days.">
+              <NumberInput
+                value={template.validityDays ?? 7}
+                min={1}
+                max={365}
+                onChange={(v) => set("validityDays", v)}
+              />
+            </Field>
+          )}
         </Row>
       </Section>
 

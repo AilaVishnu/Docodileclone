@@ -19,14 +19,17 @@ export type PaperMode = "preprinted" | "blank";
 export type RxLayout = "list" | "tabular";
 
 export type PatientFieldKey =
+  | "patientId"
   | "phone"
   | "address"
   | "referredBy"
   | "age"
   | "gender"
+  | "doctorName"
   | "visitNumber"
   | "visitDate"
-  | "visitTime";
+  | "visitTime"
+  | "validTill";
 
 export type PrintTemplate = {
   id: string;
@@ -61,6 +64,11 @@ export type PrintTemplate = {
   show: Record<PatientFieldKey, boolean>;
 
   capitalizePatientName: boolean;
+
+  // Number of days the prescription is valid for — printed as "Valid till
+  // <date>" when show.validTill is on. Computed against the visit date at
+  // print time. 0 / undefined hides the row regardless of the toggle.
+  validityDays?: number;
 };
 
 export const DEFAULT_TEMPLATE: Omit<PrintTemplate, "id"> = {
@@ -79,16 +87,20 @@ export const DEFAULT_TEMPLATE: Omit<PrintTemplate, "id"> = {
   showGenericName: true,
   rxLayout: "list",
   show: {
+    patientId: false,
     phone: true,
     address: false,
     referredBy: true,
     age: true,
     gender: true,
+    doctorName: false,
     visitNumber: false,
     visitDate: true,
     visitTime: true,
+    validTill: false,
   },
   capitalizePatientName: true,
+  validityDays: 7,
 };
 
 export const FONT_FAMILIES: { label: string; value: string }[] = [

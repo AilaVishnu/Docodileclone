@@ -22,6 +22,9 @@ import { PrintTemplate } from "./types";
 
 export type PrintRxRow = {
   medicine?: string | null;
+  // Generic / molecule name — printed in parentheses next to the brand
+  // name when the template has `showGenericName` enabled.
+  genericName?: string | null;
   dosage?: string | null;
   whenToTake?: string | null;
   frequency?: string | null;
@@ -92,20 +95,34 @@ function fmtDate(iso?: string | null): string {
 function renderBody(t: PrintTemplate, data: PrintVisitData): string {
   const name = t.capitalizePatientName ? capitalize(data.patientName) : data.patientName;
 
+  // Compute "Valid till" if configured: visit date + validityDays. Falls
+  // back to today if no visit date.
+  let validTillStr: string | null = null;
+  if (t.show.validTill && t.validityDays && t.validityDays > 0) {
+    const base = data.visitDate ? new Date(data.visitDate) : new Date();
+    if (!Number.isNaN(base.getTime())) {
+      base.setDate(base.getDate() + t.validityDays);
+      validTillStr = base.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    }
+  }
+
   // Patient meta row: name on the left, configurable fields on the right.
   const metaRight: string[] = [];
-  if (t.show.visitDate && data.visitDate) metaRight.push(`<strong>Date:</strong> ${esc(fmtDate(data.visitDate))}`);
-  if (t.show.visitTime && data.visitTime) metaRight.push(`<strong>Time:</strong> ${esc(data.visitTime)}`);
+  if (t.show.visitDate && data.visitDate)        metaRight.push(`<strong>Date:</strong> ${esc(fmtDate(data.visitDate))}`);
+  if (t.show.visitTime && data.visitTime)        metaRight.push(`<strong>Time:</strong> ${esc(data.visitTime)}`);
   if (t.show.visitNumber && data.visitNumber != null) metaRight.push(`<strong>Visit #:</strong> ${esc(data.visitNumber)}`);
-  if (t.show.referredBy && data.referredBy) metaRight.push(`<strong>Ref. by:</strong> ${esc(data.referredBy)}`);
+  if (t.show.referredBy && data.referredBy)      metaRight.push(`<strong>Ref. by:</strong> ${esc(data.referredBy)}`);
+  if (t.show.doctorName && data.doctorName)      metaRight.push(`<strong>Doctor:</strong> ${esc(data.doctorName)}`);
+  if (validTillStr)                              metaRight.push(`<strong>Valid till:</strong> ${esc(validTillStr)}`);
 
   const metaLeft: string[] = [];
   const ageGender: string[] = [];
-  if (t.show.age && data.patientAge) ageGender.push(esc(data.patientAge));
-  if (t.show.gender && data.patientGender) ageGender.push(esc(data.patientGender));
-  if (ageGender.length) metaLeft.push(`<span class="ag">(${ageGender.join(", ")})</span>`);
-  if (t.show.phone && data.patientPhone) metaLeft.push(`<span class="phone">${esc(data.patientPhone)}</span>`);
-  if (t.show.address && data.patientAddress) metaLeft.push(`<span class="addr">${esc(data.patientAddress)}</span>`);
+  if (t.show.age && data.patientAge)             ageGender.push(esc(data.patientAge));
+  if (t.show.gender && data.patientGender)       ageGender.push(esc(data.patientGender));
+  if (ageGender.length)                          metaLeft.push(`<span class="ag">(${ageGender.join(", ")})</span>`);
+  if (t.show.patientId && data.patientId)        metaLeft.push(`<span class="pid">ID: ${esc(data.patientId)}</span>`);
+  if (t.show.phone && data.patientPhone)         metaLeft.push(`<span class="phone">${esc(data.patientPhone)}</span>`);
+  if (t.show.address && data.patientAddress)     metaLeft.push(`<span class="addr">${esc(data.patientAddress)}</span>`);
 
   const patientBlock = `
     <div class="patient-row">
@@ -153,6 +170,16 @@ function renderBody(t: PrintTemplate, data: PrintVisitData): string {
   if (data.rx && data.rx.length) {
     const filtered = data.rx.filter((r) => (r.medicine ?? "").trim() !== "");
     if (filtered.length) {
+      // medicineLabel includes generic name in parens when the toggle is on
+      // and a generic was captured for that row.
+      const medicineLabel = (r: PrintRxRow): string => {
+        const med = esc(r.medicine ?? "");
+        if (t.showGenericName && r.genericName && r.genericName.trim() !== "") {
+          return `${med} <span class="rx-generic">(${esc(r.genericName)})</span>`;
+        }
+        return med;
+      };
+
       if (t.rxLayout === "tabular") {
         sections.push(`
           <section class="block rx">
@@ -169,7 +196,7 @@ function renderBody(t: PrintTemplate, data: PrintVisitData): string {
                     (r, i) => `
                   <tr>
                     <td>${i + 1}</td>
-                    <td>${esc(r.medicine)}</td>
+                    <td>${medicineLabel(r)}</td>
                     <td>${esc(r.dosage)}</td>
                     <td>${esc(r.whenToTake)}</td>
                     <td>${esc(r.frequency)}</td>
@@ -191,7 +218,7 @@ function renderBody(t: PrintTemplate, data: PrintVisitData): string {
                 .map(
                   (r) => `
                 <li>
-                  <div class="rx-line-1"><strong>${esc(r.medicine)}</strong>${r.dosage ? ` — ${esc(r.dosage)}` : ""}</div>
+                  <div class="rx-line-1"><strong>${medicineLabel(r)}</strong>${r.dosage ? ` — ${esc(r.dosage)}` : ""}</div>
                   <div class="rx-line-2">
                     ${[r.whenToTake, r.frequency, r.duration].filter(Boolean).map((p) => `<span>${esc(p as string)}</span>`).join(" · ")}
                   </div>
@@ -340,6 +367,7 @@ export function buildPrintHtml(template: PrintTemplate, data: PrintVisitData): s
   .rx-line-1 { font-size: ${template.fontSizePt}pt; }
   .rx-line-2 { color: #444; font-size: ${template.fontSizePt - 1}pt; }
   .rx-notes { color: #555; font-style: italic; font-size: ${template.fontSizePt - 1}pt; }
+  .rx-generic { font-weight: 400; color: #555; font-size: ${template.fontSizePt - 1}pt; }
 
   .rx-table {
     width: 100%; border-collapse: collapse;
