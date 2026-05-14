@@ -872,6 +872,7 @@ const styles: Record<string, React.CSSProperties> = {
   openFile: {
     position: "relative",
     width: "100%",
+    maxWidth: 880,
   },
   openFolderShape: {
     position: "absolute",
