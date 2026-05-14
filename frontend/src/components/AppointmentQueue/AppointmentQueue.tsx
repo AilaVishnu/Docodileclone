@@ -356,9 +356,6 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               { label: "Bill Medicines", onClick: (apt) => {
                 setMedsBillingApt(apt);
               } },
-              { label: "Generate Bill", onClick: (apt) => {
-                setToastMessage(`Bill generated for ${apt.patientName}`);
-              } },
             ]}
             onStatusChange={async (aptId, newStatus) => {
               if (newStatus === "CANCELLED") {

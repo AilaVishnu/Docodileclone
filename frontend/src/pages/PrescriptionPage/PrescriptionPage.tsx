@@ -555,15 +555,13 @@ export function PrescriptionPage() {
   const [formActive, setFormActive] = React.useState<boolean>(false);
   // Visits are loaded ASC by visit_date, so the latest one sits at the
   // tail of the array — that's "today's visit", the one whose SessionBar
-  // controls the form's editable state. Older tabs are historic records
-  // and stay read-only forever, regardless of whether today's session
-  // is running.
+  // Editability is purely a function of the visit's session lifecycle, not
+  // the calendar date or tab order: a visit is editable as long as its
+  // session hasn't been ended. Once the doctor ends the session the visit
+  // is locked permanently (read-only history). This intentionally covers
+  // past visits the doctor left open — they stay editable until ended.
   const isLatestVisit = visits.length === 0 || activeTab === visits.length - 1;
-  // A visit whose session was started but never ended is still "in progress"
-  // even if it's no longer the latest tab (e.g. doctor left yesterday without
-  // ending the session). Allow editing those too so the doctor can complete them.
-  const hasUnfinishedSession = !!(activeVisit?.sessionStartedAt && !activeVisit?.sessionEndedAt);
-  const isEditable = isLatestVisit || hasUnfinishedSession;
+  const isEditable = !activeVisit?.sessionEndedAt;
   // Edit flag used by every gate below.
   const canEditForm = formActive && isEditable;
   // On initial open of a patient, jump to the latest (today's) visit
@@ -726,9 +724,27 @@ export function PrescriptionPage() {
   // form always has a row to write into. The ref-guard keeps React
   // StrictMode (which double-invokes effects in dev) from creating a
   // duplicate today-visit.
+  //
+  // Two short-circuits before we create anything:
+  //   1. If any existing visit has an unfinished session (started, never
+  //      ended), the doctor is returning to that work — jump to its tab
+  //      and align queueDate with its date, no new visit needed.
+  //   2. If no appointment id is in scope, the doctor opened the page
+  //      ambiently (e.g. browsing patient files) — visits should only
+  //      come from booked appointments, so don't fabricate one.
   const autoCreatedForPatientRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     const hasTodayVisit = visits.some((v) => v.visitDate === queueDate);
+    const unfinishedIdx = visits.findIndex(
+      (v) => v.sessionStartedAt && !v.sessionEndedAt
+    );
+    if (unfinishedIdx >= 0) {
+      const v = visits[unfinishedIdx];
+      if (activeTab !== unfinishedIdx) setActiveTab(unfinishedIdx);
+      if (v.visitDate && queueDate !== v.visitDate) setQueueDate(v.visitDate);
+      autoCreatedForPatientRef.current = selectedPatientId;
+      return;
+    }
     if (
       selectedPatientId &&
       !visitsLoading &&
@@ -736,6 +752,9 @@ export function PrescriptionPage() {
       // creating a duplicate on every reopen.
       visitsLoadedFor === selectedPatientId &&
       !hasTodayVisit &&
+      // Visits only exist for booked appointments — no appointment id means
+      // we have no business creating one.
+      !!selectedAppointmentId &&
       autoCreatedForPatientRef.current !== selectedPatientId
     ) {
       autoCreatedForPatientRef.current = selectedPatientId;
@@ -762,7 +781,7 @@ export function PrescriptionPage() {
         showToast(err.message || "Failed to create visit");
       });
     }
-  }, [selectedPatientId, visitsLoading, visitsLoadedFor, visits.length, refetchVisits, queueDate]);
+  }, [selectedPatientId, visitsLoading, visitsLoadedFor, visits, refetchVisits, queueDate, activeTab, selectedAppointmentId]);
   // Reset the auto-create guard whenever the user picks a different patient
   // (or leaves and comes back to the same one).
   React.useEffect(() => {
