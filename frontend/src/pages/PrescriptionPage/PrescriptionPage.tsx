@@ -2272,7 +2272,10 @@ export function PrescriptionPage() {
           readOnly={!isEditable}
           recordedDurationSec={activeVisit?.sessionDurationSec ?? null}
           onPrint={() => handlePrintPrescription()}
-          onDownload={() => showToast("Download: not wired yet")}
+          // Reuses the same render pipeline as Print — browser print preview
+          // pops up and the user picks "Save as PDF" as the destination. Same
+          // template, same patient/visit data, same layout.
+          onDownload={() => handlePrintPrescription()}
           onShare={() => showToast("Share: not wired yet")}
           onActiveChange={setFormActive}
           onStart={handleSessionStart}
