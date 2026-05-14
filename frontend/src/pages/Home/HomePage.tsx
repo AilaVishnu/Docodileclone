@@ -11,6 +11,7 @@ import { colors, fonts, ThemeMode } from "../../styles/theme";
 import { confirmStyles } from "../../components/AddStaffModal/AddStaffModal.styles";
 import { Button } from "../../components/Button";
 import { ChatBubble } from "../../components/Chat/ChatBubble";
+import { setPendingSessionNav } from "../../components/TopNav/SessionTrayButton";
 
 type HomePageProps = {
   onLogout: () => void;
@@ -114,7 +115,13 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       case "Home":
         return <HomeView />;
       case "Appointments":
-        return <AppointmentsView isBooking={isBooking} bookingKey={bookingKey} onBack={() => { setIsBooking(false); setIsEditing(false); }} onEditStart={() => setIsEditing(true)} onViewPatientFile={(patientId) => { setPatientFileNavId(patientId); setActiveTab("Patient Files"); }} />;
+        return <AppointmentsView isBooking={isBooking} bookingKey={bookingKey} onBack={() => { setIsBooking(false); setIsEditing(false); }} onEditStart={() => setIsEditing(true)} onViewPatientFile={(patient, appointmentId) => {
+          // Open the patient's prescription/visit directly — same path
+          // PrescriptionQueue's View Pad uses, so the doctor lands inside
+          // the file instead of on the Patient Files index summary.
+          setPendingSessionNav({ patient, appointmentId });
+          setActiveTab("Prescription");
+        }} />;
       case "Prescription":
         return <PrescriptionView />;
       case "Patient Files":

@@ -31,7 +31,7 @@ type AppointmentQueueProps = {
   bookingKey?: number;
   onBack?: () => void;
   onEditStart?: () => void;
-  onViewPatientFile?: (patientId: string) => void;
+  onViewPatientFile?: (patient: import("../../hooks/usePatients").Patient, appointmentId: string, doctorId: string) => void;
 };
 
 export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, onViewPatientFile }: AppointmentQueueProps) {
@@ -349,8 +349,23 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                 onEditStart?.();
               } },
               { label: "View Patient File", onClick: (apt) => {
+                // Pass the full patient + appointment context so the host can
+                // route directly into the patient's prescription/visit view
+                // (same as PrescriptionQueue's View Pad path) instead of just
+                // highlighting the row in the Patient Files index.
                 if (apt.patientId && onViewPatientFile) {
-                  onViewPatientFile(apt.patientId);
+                  onViewPatientFile({
+                    id: apt.patientId,
+                    name: apt.patientName,
+                    phone: apt.patientPhone ?? null,
+                    email: apt.patientEmail ?? null,
+                    gender: apt.patientGender ?? null,
+                    dob: apt.patientDob ?? null,
+                    age: apt.patientAge ?? null,
+                    lastVisitDate: null,
+                    treatingDoctorIds: [],
+                    treatingDepartments: [],
+                  }, apt.id, apt.doctorId || activeDoctorId);
                 }
               } },
               { label: "Bill Medicines", onClick: (apt) => {
