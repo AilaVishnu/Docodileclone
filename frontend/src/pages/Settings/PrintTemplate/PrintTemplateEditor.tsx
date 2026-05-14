@@ -858,11 +858,16 @@ const S: Record<string, React.CSSProperties> = {
     borderRadius: radii.m,
     padding: spacing.m,
     border: `${strokes.xs} solid ${colors.neutral200}`,
-    maxHeight: "78vh",
-    overflowY: "auto",
+    display: "flex",
+    justifyContent: "center",
   },
+  // Cap the iframe so the whole A4 page is always visible at once — no
+  // vertical scroll on the preview. We cap width such that the derived
+  // height (width * 297/210) stays under ~78vh; if the column is narrower
+  // than that, the iframe just fills the column width.
   previewIframe: {
     width: "100%",
+    maxWidth: "calc(78vh * 210 / 297)",
     aspectRatio: "210 / 297", // A4
     border: `${strokes.xs} solid ${colors.neutral300}`,
     backgroundColor: colors.neutral100,
