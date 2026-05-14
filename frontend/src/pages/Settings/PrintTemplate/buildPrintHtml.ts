@@ -301,6 +301,10 @@ export function buildPrintHtml(template: PrintTemplate, data: PrintVisitData): s
     color: #111;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    /* No scrollbar on the iframe — the screen preview is a fit-to-view
+       snapshot. A small JS snippet below scales .sheet down so the whole
+       prescription fits in the iframe's visible area. */
+    overflow: hidden;
   }
   /* Screen preview fits whatever iframe width is available (the iframe
      enforces A4 aspect-ratio externally). For print the sheet expands to
@@ -313,9 +317,11 @@ export function buildPrintHtml(template: PrintTemplate, data: PrintVisitData): s
     display: flex;
     flex-direction: column;
     position: relative;
+    transform-origin: top center;
   }
   @media print {
-    .sheet { width: auto; min-height: 0; margin: 0; }
+    html, body { overflow: visible; }
+    .sheet { width: auto; min-height: 0; margin: 0; transform: none !important; }
   }
 
   /* Header / footer are edge-to-edge: full page width, no horizontal
@@ -394,6 +400,33 @@ export function buildPrintHtml(template: PrintTemplate, data: PrintVisitData): s
   <div class="sheet">
     ${sheet}
   </div>
+  <script>
+    // Fit-to-view for the SCREEN preview only. The print stylesheet
+    // disables the transform via @media print, so actual prints land on a
+    // full A4 page at the configured size.
+    (function () {
+      if (window.matchMedia && window.matchMedia('print').matches) return;
+      var sheet = document.querySelector('.sheet');
+      if (!sheet) return;
+      function fit() {
+        // Reset before measuring so we read the un-scaled height.
+        sheet.style.transform = '';
+        var vh = document.documentElement.clientHeight;
+        var ch = sheet.scrollHeight;
+        if (ch > vh) {
+          var s = vh / ch;
+          sheet.style.transform = 'scale(' + s + ')';
+        }
+      }
+      fit();
+      window.addEventListener('resize', fit);
+      // Re-fit once images load (header/footer/signature/seal) since they
+      // change the content height.
+      Array.prototype.forEach.call(document.images, function (img) {
+        if (!img.complete) img.addEventListener('load', fit);
+      });
+    })();
+  </script>
 </body>
 </html>`;
 }
