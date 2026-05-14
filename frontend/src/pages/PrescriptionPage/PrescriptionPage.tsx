@@ -492,6 +492,10 @@ export function PrescriptionPage() {
   // Start Session / End Session actions can update the appointment's
   // backend status without bouncing back to the queue.
   const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(null);
+  // The date the queue was showing when the doctor clicked View Pad.
+  // Used as the visit date for auto-create so past-date queues don't
+  // create a visit stamped today.
+  const [queueDate, setQueueDate] = React.useState<string>(todayIso());
 
   // If the doctor clicked an entry in the header session-tray, route them
   // straight back to that patient's prescription form. Handled both on mount
@@ -555,10 +559,13 @@ export function PrescriptionPage() {
   // and stay read-only forever, regardless of whether today's session
   // is running.
   const isLatestVisit = visits.length === 0 || activeTab === visits.length - 1;
-  // Edit flag used by every gate below. Past visits are permanently
-  // locked, so a session running on today's tab does NOT unlock them —
-  // the doctor can read every field but can't change historic data.
-  const canEditForm = formActive && isLatestVisit;
+  // A visit whose session was started but never ended is still "in progress"
+  // even if it's no longer the latest tab (e.g. doctor left yesterday without
+  // ending the session). Allow editing those too so the doctor can complete them.
+  const hasUnfinishedSession = !!(activeVisit?.sessionStartedAt && !activeVisit?.sessionEndedAt);
+  const isEditable = isLatestVisit || hasUnfinishedSession;
+  // Edit flag used by every gate below.
+  const canEditForm = formActive && isEditable;
   // On initial open of a patient, jump to the latest (today's) visit
   // tab. Without this the tabs default to index 0, which is the OLDEST
   // visit — confusing when the doctor expects to land on today.
@@ -721,7 +728,7 @@ export function PrescriptionPage() {
   // duplicate today-visit.
   const autoCreatedForPatientRef = React.useRef<string | null>(null);
   React.useEffect(() => {
-    const hasTodayVisit = visits.some((v) => v.visitDate === todayIso());
+    const hasTodayVisit = visits.some((v) => v.visitDate === queueDate);
     if (
       selectedPatientId &&
       !visitsLoading &&
@@ -734,7 +741,7 @@ export function PrescriptionPage() {
       autoCreatedForPatientRef.current = selectedPatientId;
       const existingCount = visits.length;
       const draft: SaveVisitRequest = {
-        visitDate: todayIso(),
+        visitDate: queueDate,
         bpSystolic: null, bpDiastolic: null, bpUnit: null,
         bmi: null, bmiUnit: null, height: null, heightUnit: null,
         weight: null, weightUnit: null, temperature: null, temperatureUnit: null,
@@ -755,7 +762,7 @@ export function PrescriptionPage() {
         showToast(err.message || "Failed to create visit");
       });
     }
-  }, [selectedPatientId, visitsLoading, visitsLoadedFor, visits.length, refetchVisits]);
+  }, [selectedPatientId, visitsLoading, visitsLoadedFor, visits.length, refetchVisits, queueDate]);
   // Reset the auto-create guard whenever the user picks a different patient
   // (or leaves and comes back to the same one).
   React.useEffect(() => {
@@ -1273,7 +1280,8 @@ export function PrescriptionPage() {
     return (
       <div ref={pageRootRef}>
         <PrescriptionQueue
-          onSelect={(patient, appointmentId) => {
+          onSelect={(patient, appointmentId, date) => {
+            setQueueDate(date);
             setSelectedPatient(patient);
             setSelectedAppointmentId(appointmentId);
           }}
@@ -1290,7 +1298,8 @@ export function PrescriptionPage() {
     return (
       <div ref={pageRootRef}>
         <PrescriptionQueue
-          onSelect={(patient, appointmentId) => {
+          onSelect={(patient, appointmentId, date) => {
+            setQueueDate(date);
             setSelectedPatient(patient);
             setSelectedAppointmentId(appointmentId);
           }}
@@ -2222,7 +2231,7 @@ export function PrescriptionPage() {
           // active visit rather than carrying state across visit switches.
           key={activeVisit?.id ?? "no-visit"}
           storageKey={activeVisit?.id}
-          readOnly={!isLatestVisit}
+          readOnly={!isEditable}
           recordedDurationSec={activeVisit?.sessionDurationSec ?? null}
           onPrint={() => handlePrintPrescription()}
           onDownload={() => showToast("Download: not wired yet")}
