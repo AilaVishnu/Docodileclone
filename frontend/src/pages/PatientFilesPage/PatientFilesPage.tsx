@@ -3,6 +3,7 @@ import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { usePatients, Patient } from "../../hooks/usePatients";
 import { useDoctors } from "../../hooks/useDoctors";
 import { API_BASE_URL } from "../../apiConfig";
+import { fetchPatientSummary, parsePatientSummary, PatientSummary } from "../../api/ai";
 import { ReactComponent as SearchIcon } from "../../assets/search.svg";
 import { ReactComponent as PrescriptionIconSVG } from "../../assets/prescription.svg";
 import { Select } from "../../components/Input/Select/Select";
@@ -540,6 +541,7 @@ function OpenFile({ patient, onOpenChart }: { patient: Patient; onOpenChart: () 
                 </span>
               )}
             </div>
+            <AIPatientSummary patientId={patient.id} />
           </div>
         </div>
       </div>
@@ -567,6 +569,80 @@ function OpenFile({ patient, onOpenChart }: { patient: Patient; onOpenChart: () 
           tone="secondary"
           icon={<BillingIconSVG style={styles.iconActionGlyph} />}
         />
+      </div>
+    </div>
+  );
+}
+
+// AI-backed patient summary card. Fetches once per patient open, parses the
+// model's JSON content into typed fields, surfaces clinician-friendly cards
+// for active conditions / allergies / risk flags. A small Refresh action
+// lets the doctor force a regeneration after they edit a visit.
+function AIPatientSummary({ patientId }: { patientId: string }) {
+  const [data, setData] = useState<PatientSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+
+  const load = (refresh = false) => {
+    setLoading(true);
+    setError(null);
+    fetchPatientSummary(patientId, refresh)
+      .then((r) => {
+        const parsed = parsePatientSummary(r.content);
+        setData(parsed);
+        setUpdatedAt(r.updatedAt);
+        if (parsed.error) setError(parsed.error);
+      })
+      .catch((e) => setError((e as Error).message))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    load(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patientId]);
+
+  if (loading) {
+    return <p style={{ ...styles.summaryBody, fontStyle: "italic", color: colors.neutral500 }}>Generating summary…</p>;
+  }
+  if (error && !data?.summary) {
+    return <p style={{ ...styles.summaryBody, color: colors.red200 }}>AI unavailable: {error}</p>;
+  }
+  if (!data || (!data.summary && data.activeConditions.length === 0 && data.allergies.length === 0)) {
+    return <p style={{ ...styles.summaryBody, color: colors.neutral500 }}>Not enough visit data yet.</p>;
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {data.summary && <p style={styles.summaryBody}>{data.summary}</p>}
+      {data.activeConditions.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {data.activeConditions.map((c, i) => (
+            <span key={`c-${i}`} style={{ fontSize: fonts.control.xs, padding: "2px 8px", borderRadius: 999, backgroundColor: colors.primary200, color: colors.neutral900 }}>{c}</span>
+          ))}
+        </div>
+      )}
+      {data.allergies.length > 0 && (
+        <p style={{ ...styles.summaryBody, fontSize: fonts.control.xs }}>
+          <strong>Allergies:</strong> {data.allergies.join(", ")}
+        </p>
+      )}
+      {data.riskFlags.length > 0 && (
+        <ul style={{ margin: 0, paddingLeft: 16 }}>
+          {data.riskFlags.map((r, i) => (
+            <li key={`r-${i}`} style={{ ...styles.summaryBody, color: "#9a4a1c" }}>{r}</li>
+          ))}
+        </ul>
+      )}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: colors.neutral500 }}>
+        <span>AI-generated — verify before clinical decisions.</span>
+        <button
+          type="button"
+          onClick={() => load(true)}
+          style={{ background: "none", border: "none", color: colors.secondary700, cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 11 }}
+        >
+          Refresh{updatedAt ? ` · ${new Date(updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}
+        </button>
       </div>
     </div>
   );
