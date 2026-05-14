@@ -456,17 +456,15 @@ function EditorForm({
         </Row>
       </Section>
 
-      <div style={S.actionsRow}>
+      {/* Footer row: destructive text link on the left, primary test-print
+          action on the right. Deliberately not a card — keeps the page tail
+          quiet and avoids ringing the destructive action with chrome. */}
+      <div style={S.footerRow}>
+        <button type="button" onClick={onDelete} style={S.deleteLink}>
+          Delete template
+        </button>
         <Button variant="light" size="md" onClick={onPrintTest}>Print test page</Button>
       </div>
-
-      {/* Destructive action — kept at the end of the form so it sits past
-          the print-test step. */}
-      <Section title="Danger zone" sub="Deleting a template is permanent.">
-        <Row>
-          <Button variant="dangerLight" size="md" onClick={onDelete}>Delete this template</Button>
-        </Row>
-      </Section>
     </div>
   );
 }
@@ -1081,4 +1079,23 @@ const S: Record<string, React.CSSProperties> = {
   },
 
   actionsRow: { display: "flex", gap: spacing.s, justifyContent: "flex-end" },
+  footerRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.m,
+    paddingTop: spacing.xs,
+  },
+  // Plain underlined text link — destructive variant. Sits in the page
+  // chrome rather than in a card so it stays unobtrusive.
+  deleteLink: {
+    border: "none",
+    background: "transparent",
+    padding: 0,
+    fontFamily: "inherit",
+    fontSize: fonts.size.s,
+    color: colors.red200,
+    textDecoration: "underline",
+    cursor: "pointer",
+  },
 };
