@@ -298,103 +298,46 @@ function useOperationsStats(range: RangeId, customStart: string, customEnd: stri
   return { stats, loading };
 }
 
-// ── Mock data per range (Overview) ───────────────────────────────────────────
+// Insight blurbs for the Overview tab's Highlights card. Computed from the
+// same OverviewStats payload the page already renders — no separate
+// "insights" endpoint needed, and the copy reflects actual numbers.
+function deriveHighlights(s: OverviewStats | null, range: RangeId): { tone: "good" | "warn" | "info"; text: string }[] {
+  if (!s) return [];
+  const out: { tone: "good" | "warn" | "info"; text: string }[] = [];
+  const total = s.totalAppointments;
+  if (total === 0) {
+    out.push({ tone: "info", text: range === "today" ? "Quiet so far — no appointments booked yet." : "No appointments in this range." });
+    return out;
+  }
+  if (s.newPatients > 0) {
+    const pct = Math.round((s.newPatients / Math.max(1, total)) * 100);
+    out.push({ tone: s.newPatients >= 5 ? "good" : "info", text: `${s.newPatients} new patient${s.newPatients === 1 ? "" : "s"} (${pct}% of footfall).` });
+  }
+  if (s.noShowRate >= 15) {
+    out.push({ tone: "warn", text: `No-show / cancellation rate is ${s.noShowRate.toFixed(1)}% — consider sending reminders.` });
+  } else if (s.noShowRate > 0 && s.noShowRate < 5) {
+    out.push({ tone: "good", text: `Low no-show rate at ${s.noShowRate.toFixed(1)}%.` });
+  }
+  const walkinShare = total > 0 ? s.composition.walkin / total : 0;
+  if (walkinShare > 0.3) {
+    out.push({ tone: "warn", text: `Walk-ins are ${Math.round(walkinShare * 100)}% of footfall — heavier than usual.` });
+  }
+  if (s.topComplaints.length > 0) {
+    const top = s.topComplaints[0];
+    out.push({ tone: "info", text: `Most common complaint: ${top.name} (${top.count} visit${top.count === 1 ? "" : "s"}).` });
+  }
+  if (range === "today" && s.inClinic.waiting >= 5) {
+    out.push({ tone: "warn", text: `${s.inClinic.waiting} patient${s.inClinic.waiting === 1 ? "" : "s"} currently waiting.` });
+  }
+  if (out.length === 0) {
+    out.push({ tone: "info", text: "Nothing notable yet — check back as the day progresses." });
+  }
+  return out;
+}
 
-type RangeData = {
-  footfall: { value: number; delta: string; tone: Tone; sub: string };
-  inClinic: { waiting: number; inConsult: number; done: number };
-  noShow: { value: string; delta: string; tone: Tone; sub: string };
-  newPatients: { value: number; delta: string; tone: Tone; sub: string };
-  composition: { consultation: number; review: number; procedure: number; walkin: number };
-  topComplaints: { name: string; count: number }[];
-  highlights: { tone: "good" | "warn" | "info"; text: string }[];
-  footfallTrend: { labels: string[]; values: number[] };
-};
-
-const OVERVIEW_MOCK: Record<RangeId, RangeData> = {
-  today: {
-    footfall:    { value: 24,         delta: "+3",       tone: "up",   sub: "vs yesterday" },
-    inClinic:    { waiting: 4, inConsult: 2, done: 18 },
-    noShow:      { value: "8%",       delta: "+1%",      tone: "down", sub: "vs last week" },
-    newPatients: { value: 7,          delta: "+2",       tone: "up",   sub: "vs yesterday" },
-    composition: { consultation: 14, review: 6, procedure: 2, walkin: 2 },
-    topComplaints: [
-      { name: "Fever", count: 6 },
-      { name: "Cough / cold", count: 5 },
-      { name: "Back pain", count: 3 },
-    ],
-    highlights: [
-      { tone: "good", text: "Footfall is up 14% vs the average Monday." },
-      { tone: "warn", text: "Walk-in volume is double the usual Monday." },
-      { tone: "info", text: "Cough/cold cases up — 5 visits today." },
-    ],
-    footfallTrend: { labels: ["8a", "9a", "10a", "11a", "12p", "1p", "2p", "3p", "4p", "5p", "6p"], values: [0, 1, 3, 5, 4, 2, 3, 3, 2, 1, 0] },
-  },
-  week: {
-    footfall:    { value: 168,        delta: "+12%",     tone: "up",   sub: "vs prior week" },
-    inClinic:    { waiting: 4, inConsult: 2, done: 18 },
-    noShow:      { value: "9%",       delta: "+0.5%",    tone: "down", sub: "vs prior week" },
-    newPatients: { value: 38,         delta: "+6",       tone: "up",   sub: "vs prior week" },
-    composition: { consultation: 92, review: 41, procedure: 18, walkin: 17 },
-    topComplaints: [
-      { name: "Fever", count: 31 },
-      { name: "Cough / cold", count: 27 },
-      { name: "Back pain", count: 18 },
-    ],
-    highlights: [
-      { tone: "good", text: "Reviews scheduled rate hit 84% — your best week this month." },
-      { tone: "warn", text: "Cancellations spiked on Wednesday (6 vs avg 2)." },
-      { tone: "info", text: "Cough/cold cases trending up — +40% week-over-week." },
-    ],
-    footfallTrend: { labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], values: [28, 31, 22, 26, 30, 24, 7] },
-  },
-  month: {
-    footfall:    { value: 712,        delta: "+8%",      tone: "up",   sub: "vs prior 30 days" },
-    inClinic:    { waiting: 4, inConsult: 2, done: 18 },
-    noShow:      { value: "10%",      delta: "−1%",      tone: "up",   sub: "vs prior 30 days" },
-    newPatients: { value: 156,        delta: "+22",      tone: "up",   sub: "vs prior 30 days" },
-    composition: { consultation: 386, review: 188, procedure: 76, walkin: 62 },
-    topComplaints: [
-      { name: "Fever", count: 124 },
-      { name: "Cough / cold", count: 98 },
-      { name: "Back pain", count: 67 },
-    ],
-    highlights: [
-      { tone: "good", text: "Patient retention (90-day return) climbed from 58% to 64%." },
-      { tone: "warn", text: "5 reviews are overdue — patients recommended to return but didn't." },
-      { tone: "info", text: "Saturdays are now your busiest day, up from Friday last month." },
-    ],
-    footfallTrend: { labels: Array.from({ length: 30 }, (_, i) => `${i + 1}`), values: [18, 22, 19, 25, 28, 32, 12, 20, 23, 27, 29, 31, 35, 14, 21, 24, 26, 30, 33, 36, 15, 22, 25, 28, 31, 34, 38, 16, 27, 33] },
-  },
-  year: {
-    footfall:    { value: 8420,       delta: "+18%",     tone: "up",   sub: "vs prior 12 months" },
-    inClinic:    { waiting: 4, inConsult: 2, done: 18 },
-    noShow:      { value: "11%",      delta: "−2%",      tone: "up",   sub: "vs prior year" },
-    newPatients: { value: 1840,       delta: "+312",     tone: "up",   sub: "vs prior year" },
-    composition: { consultation: 4580, review: 2280, procedure: 920, walkin: 640 },
-    topComplaints: [
-      { name: "Fever", count: 1420 },
-      { name: "Cough / cold", count: 1180 },
-      { name: "Back pain", count: 820 },
-    ],
-    highlights: [
-      { tone: "good", text: "Active patient base grew by 34% over the last year." },
-      { tone: "info", text: "Walk-ins now make up 7% of footfall, down from 12% a year ago." },
-      { tone: "info", text: "Procedure volume doubled — strongest growth area this year." },
-    ],
-    footfallTrend: { labels: ["Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"], values: [540, 580, 612, 668, 692, 740, 712, 688, 654, 712, 745, 776] },
-  },
-  custom: {
-    footfall:    { value: 0,          delta: "—",        tone: "flat", sub: "pick a range" },
-    inClinic:    { waiting: 0, inConsult: 0, done: 0 },
-    noShow:      { value: "—",        delta: "—",        tone: "flat", sub: "" },
-    newPatients: { value: 0,          delta: "—",        tone: "flat", sub: "" },
-    composition: { consultation: 0, review: 0, procedure: 0, walkin: 0 },
-    topComplaints: [],
-    highlights: [{ tone: "info", text: "Pick a start and end date to see stats for that range." }],
-    footfallTrend: { labels: [], values: [] },
-  },
-};
+// (Overview mock data removed — every Overview card is now driven by
+// useOverviewStats + deriveHighlights against the real /api/stats/overview
+// payload.)
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -404,7 +347,6 @@ export function StatsPage() {
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
 
-  const highlights = useMemo(() => OVERVIEW_MOCK[range].highlights, [range]);
 
   return (
     <div style={styles.page}>
@@ -453,7 +395,7 @@ export function StatsPage() {
         </div>
       )}
 
-      {tab === "overview"   && <OverviewTab range={range} customStart={customStart} customEnd={customEnd} highlights={highlights} />}
+      {tab === "overview"   && <OverviewTab range={range} customStart={customStart} customEnd={customEnd} />}
       {tab === "health"     && <HealthTab range={range} />}
       {tab === "patients"   && <PatientsTab range={range} customStart={customStart} customEnd={customEnd} />}
       {tab === "doctors"    && <DoctorsTab range={range} customStart={customStart} customEnd={customEnd} />}
@@ -466,14 +408,17 @@ export function StatsPage() {
 
 // ── Overview tab ─────────────────────────────────────────────────────────────
 
-function OverviewTab({ range, customStart, customEnd, highlights }: {
+function OverviewTab({ range, customStart, customEnd }: {
   range: RangeId;
   customStart: string;
   customEnd: string;
-  highlights: { tone: "good" | "warn" | "info"; text: string }[];
 }) {
   const { stats: s, loading } = useOverviewStats(range, customStart, customEnd);
   const L = loading ? "…" : undefined;
+  // Derive insight blurbs from the real overview numbers instead of seeding
+  // them with mock copy. Keeps the section feeling alive without a separate
+  // backend "insights" service.
+  const highlights = useMemo(() => deriveHighlights(s, range), [s, range]);
 
   return (
     <div style={styles.tabBody}>
