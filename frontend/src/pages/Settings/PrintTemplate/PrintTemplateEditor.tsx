@@ -5,7 +5,8 @@ import { Toast } from "../../../components/Toast";
 import { TextInput } from "../../../components/Input/TextInput/TextInput";
 import { Select } from "../../../components/Input/Select/Select";
 import { Switch } from "../../../components/Switch";
-import { FONT_FAMILIES, PaperMode, PatientFieldKey, PrintTemplate, RxLayout } from "./types";
+import { Tabs, TabItem } from "../../../components/Tabs";
+import { FONT_FAMILIES, LengthUnit, PaperMode, PatientFieldKey, PrintTemplate, RxLayout } from "./types";
 import {
   createTemplate,
   deleteTemplate,
@@ -74,6 +75,20 @@ export function PrintTemplateEditor() {
   const [templates, setTemplates] = useState<PrintTemplate[]>(() => ensureSeed());
   const [activeId, setActiveId] = useState<string>(() => templates[0]?.id ?? "");
   const [toast, setToast] = useState<{ visible: boolean; message: string }>({ visible: false, message: "" });
+  // Right-click context menu over a template tab. {tabId, x, y} positioned
+  // at the click coordinates. Closed on outside click or Escape.
+  const [tabMenu, setTabMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
+  React.useEffect(() => {
+    if (!tabMenu) return;
+    const close = () => setTabMenu(null);
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+    window.addEventListener("mousedown", close);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", close);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [tabMenu]);
 
   const active = useMemo(() => templates.find((t) => t.id === activeId) ?? templates[0], [templates, activeId]);
 
@@ -103,12 +118,13 @@ export function PrintTemplateEditor() {
     setActiveId(created.id);
   };
 
-  const onDuplicate = () => {
-    if (!active) return;
+  const onDuplicate = (sourceId?: string) => {
+    const source = sourceId ? templates.find((t) => t.id === sourceId) : active;
+    if (!source) return;
     const copy: PrintTemplate = {
-      ...active,
+      ...source,
       id: `tpl_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
-      name: `${active.name} (copy)`,
+      name: `${source.name} (copy)`,
       isDefault: false,
     };
     const next = [...templates, copy];
@@ -134,40 +150,44 @@ export function PrintTemplateEditor() {
     return <div style={{ padding: spacing.l, color: colors.neutral500 }}>No templates available.</div>;
   }
 
+  // Build TabItems from the template list. Right-click on a tab opens the
+  // tab context menu (currently just "Duplicate"). The "Default" pill is
+  // rendered as the tab's rightSlot so it lives inside the tab bubble.
+  const tabItems: TabItem[] = templates.map((t) => ({
+    id: t.id,
+    label: t.name,
+    rightSlot: t.isDefault ? <span style={S.defaultBadge}>Default</span> : null,
+    onContextMenu: (e) => {
+      e.preventDefault();
+      setTabMenu({ tabId: t.id, x: e.clientX, y: e.clientY });
+    },
+  }));
+
   return (
     <div style={S.container}>
-      {/* ── Top bar: template list + actions ──────────────────────────── */}
-      <div style={S.topBar}>
-        <div style={S.tplStrip}>
-          {templates.map((t) => {
-            const isActive = t.id === active.id;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                style={{ ...S.tplPill, ...(isActive ? S.tplPillActive : null) }}
-                onClick={() => setActiveId(t.id)}
-              >
-                <span>{t.name}</span>
-                {t.isDefault && <span style={S.defaultBadge}>Default</span>}
-              </button>
-            );
-          })}
-        </div>
-        <div style={{ display: "flex", gap: spacing.xs }}>
-          <Button variant="light" size="sm" onClick={onDuplicate}>Duplicate</Button>
-          <Button variant="dangerLight" size="sm" onClick={onDelete}>Delete</Button>
-          <Button variant="dark" size="sm" onClick={onNew}>+ New template</Button>
-        </div>
-      </div>
+      {/* ── Template tabs — same component as ClinicTabs. The trailing
+            action acts as the "+ Add template" pseudo-tab. Right-click on
+            any tab opens a context menu with Duplicate. Delete lives at
+            the bottom of the editor (destructive, end of flow). ───── */}
+      <Tabs
+        items={tabItems}
+        activeId={active.id}
+        onSelect={setActiveId}
+        actions={[{ label: "+ Add template", onClick: () => onNew() }]}
+      />
 
       <div style={S.split}>
         {/* ── Left: form ───────────────────────────────────────────── */}
         <div style={S.formCol}>
-          <EditorForm template={active} onChange={persist} onPrintTest={() => {
-            const html = buildPrintHtml(active, SAMPLE);
-            openPrintWindow(html);
-          }} />
+          <EditorForm
+            template={active}
+            onChange={persist}
+            onPrintTest={() => {
+              const html = buildPrintHtml(active, SAMPLE);
+              openPrintWindow(html);
+            }}
+            onDelete={onDelete}
+          />
         </div>
 
         {/* ── Right: live preview ─────────────────────────────────── */}
@@ -179,6 +199,29 @@ export function PrintTemplateEditor() {
           <PreviewFrame template={active} data={SAMPLE} />
         </div>
       </div>
+
+      {tabMenu && (() => {
+        const t = templates.find((x) => x.id === tabMenu.tabId);
+        if (!t) return null;
+        const W = 200;
+        const x = Math.min(tabMenu.x, window.innerWidth - W - 8);
+        return (
+          <div
+            // Stop propagation so the global mousedown listener doesn't close
+            // the menu while the user is still clicking inside it.
+            onMouseDown={(e) => e.stopPropagation()}
+            style={{ ...S.tabMenu, top: tabMenu.y, left: x, width: W }}
+          >
+            <button
+              type="button"
+              style={S.tabMenuItem}
+              onClick={() => { onDuplicate(t.id); setTabMenu(null); }}
+            >
+              Duplicate "{t.name}"
+            </button>
+          </div>
+        );
+      })()}
 
       <Toast message={toast.message} isVisible={toast.visible} onClose={() => setToast({ visible: false, message: "" })} />
     </div>
@@ -195,10 +238,12 @@ function EditorForm({
   template,
   onChange,
   onPrintTest,
+  onDelete,
 }: {
   template: PrintTemplate;
   onChange: (t: PrintTemplate) => void;
   onPrintTest: () => void;
+  onDelete: () => void;
 }) {
   const set = <K extends keyof PrintTemplate>(key: K, value: PrintTemplate[K]) =>
     onChange({ ...template, [key]: value });
@@ -258,12 +303,40 @@ function EditorForm({
       </Section>
 
       {/* Margins */}
-      <Section title="Margins (mm)" sub="Set top & bottom large enough to clear the printed letterhead's design in pre-printed mode.">
+      <Section title="Margins" sub="Set top & bottom large enough to clear the printed letterhead's design in pre-printed mode.">
         <Row>
-          <Field label="Top"><NumberInput value={template.margins.top}    onChange={(v) => setMargin("top", v)} /></Field>
-          <Field label="Right"><NumberInput value={template.margins.right} onChange={(v) => setMargin("right", v)} /></Field>
-          <Field label="Bottom"><NumberInput value={template.margins.bottom} onChange={(v) => setMargin("bottom", v)} /></Field>
-          <Field label="Left"><NumberInput value={template.margins.left}    onChange={(v) => setMargin("left", v)} /></Field>
+          <Field label="Top">
+            <LengthInput
+              valueMm={template.margins.top}
+              unit={template.marginsUnit}
+              onValueMm={(v) => setMargin("top", v)}
+              onUnitChange={(u) => set("marginsUnit", u)}
+            />
+          </Field>
+          <Field label="Right">
+            <LengthInput
+              valueMm={template.margins.right}
+              unit={template.marginsUnit}
+              onValueMm={(v) => setMargin("right", v)}
+              onUnitChange={(u) => set("marginsUnit", u)}
+            />
+          </Field>
+          <Field label="Bottom">
+            <LengthInput
+              valueMm={template.margins.bottom}
+              unit={template.marginsUnit}
+              onValueMm={(v) => setMargin("bottom", v)}
+              onUnitChange={(u) => set("marginsUnit", u)}
+            />
+          </Field>
+          <Field label="Left">
+            <LengthInput
+              valueMm={template.margins.left}
+              unit={template.marginsUnit}
+              onValueMm={(v) => setMargin("left", v)}
+              onUnitChange={(u) => set("marginsUnit", u)}
+            />
+          </Field>
         </Row>
       </Section>
 
@@ -380,6 +453,14 @@ function EditorForm({
       <div style={S.actionsRow}>
         <Button variant="light" size="md" onClick={onPrintTest}>Print test page</Button>
       </div>
+
+      {/* Destructive action — kept at the end of the form so it sits past
+          the print-test step. */}
+      <Section title="Danger zone" sub="Deleting a template is permanent.">
+        <Row>
+          <Button variant="dangerLight" size="md" onClick={onDelete}>Delete this template</Button>
+        </Row>
+      </Section>
     </div>
   );
 }
@@ -491,6 +572,83 @@ function SegmentedControl<T extends string>({
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// LengthInput — input + unit pill, mirroring the vitals cell pattern from the
+// PrescriptionPage. Internally the value is always millimeters; the pill
+// cycles mm → cm → in → mm and converts the displayed number. Changing the
+// unit on one input flips it for all margins because callers share the same
+// `unit` + `onUnitChange`.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const UNIT_CYCLE: LengthUnit[] = ["mm", "cm", "in"];
+
+function mmTo(unit: LengthUnit, mm: number): number {
+  if (unit === "cm") return mm / 10;
+  if (unit === "in") return mm / 25.4;
+  return mm;
+}
+function toMm(unit: LengthUnit, n: number): number {
+  if (unit === "cm") return n * 10;
+  if (unit === "in") return n * 25.4;
+  return n;
+}
+// 0–1 decimals so cm/in don't show jittery long fractions.
+function fmt(unit: LengthUnit, mm: number): string {
+  const v = mmTo(unit, mm);
+  if (unit === "mm") return Math.round(v).toString();
+  return (Math.round(v * 10) / 10).toString();
+}
+
+function LengthInput({
+  valueMm,
+  unit,
+  onValueMm,
+  onUnitChange,
+}: {
+  valueMm: number;
+  unit: LengthUnit;
+  onValueMm: (mm: number) => void;
+  onUnitChange: (u: LengthUnit) => void;
+}) {
+  const [draft, setDraft] = React.useState<string>(fmt(unit, valueMm));
+  // Keep the input in sync when the unit changes externally (e.g. user
+  // clicked the pill on a sibling input).
+  React.useEffect(() => { setDraft(fmt(unit, valueMm)); }, [unit, valueMm]);
+  const cycleUnit = () => {
+    const i = UNIT_CYCLE.indexOf(unit);
+    onUnitChange(UNIT_CYCLE[(i + 1) % UNIT_CYCLE.length]);
+  };
+  const commit = () => {
+    const n = parseFloat(draft);
+    if (!Number.isFinite(n)) {
+      setDraft(fmt(unit, valueMm));
+      return;
+    }
+    onValueMm(toMm(unit, n));
+  };
+  return (
+    <div style={S.lengthRow}>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === "Enter") commit(); }}
+        style={S.lengthValue}
+      />
+      <button
+        type="button"
+        onClick={cycleUnit}
+        style={S.lengthUnit}
+        title="Click to change unit"
+      >
+        {unit}
+      </button>
+    </div>
+  );
+}
+
 function NumberInput({
   value,
   onChange,
@@ -525,6 +683,27 @@ function NumberInput({
   );
 }
 
+// Inline upload glyph used inside the empty dropzone — a 22×22 arrow into
+// a tray. Kept inline so the picker stays self-contained.
+function UploadGlyph() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={colors.active.shade700} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ImagePicker — the dropzone IS the affordance. No separate upload button.
+//   • Empty: dashed dropzone with an upload icon + "Click to upload" / "or
+//     drag & drop". Hover deepens the border + tints the background.
+//   • Filled: image is shown as the dropzone's background; a small "Replace"
+//     overlay appears on hover and a small Clear pill in the corner removes
+//     the image.
+// Drag-and-drop is wired so users can drop a file directly into the zone.
+// ─────────────────────────────────────────────────────────────────────────────
 function ImagePicker({
   value,
   onPick,
@@ -535,32 +714,65 @@ function ImagePicker({
   aspect: "header" | "footer" | "signature" | "seal";
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const heights: Record<typeof aspect, number> = { header: 70, footer: 70, signature: 60, seal: 60 } as any;
+  const [hover, setHover] = React.useState(false);
+  const [drag, setDrag] = React.useState(false);
+  const heights: Record<typeof aspect, number> = { header: 90, footer: 90, signature: 80, seal: 80 } as any;
+
+  const open = () => inputRef.current?.click();
+  const handleFiles = (files: FileList | null) => {
+    const f = files?.[0] ?? null;
+    if (f) onPick(f);
+  };
+
+  // Visual state — empty zone tints on hover/drag; filled zone shows the
+  // image with a hover overlay.
+  const tinted = (hover || drag) && !value;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
+    <div>
       <div
+        role="button"
+        tabIndex={0}
+        onClick={open}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } }}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+        onDragLeave={() => setDrag(false)}
+        onDrop={(e) => { e.preventDefault(); setDrag(false); handleFiles(e.dataTransfer.files); }}
         style={{
           ...S.imageDrop,
           height: heights[aspect],
-          backgroundColor: colors.neutral100,
+          backgroundColor: tinted ? colors.primary100 : colors.neutral100,
+          borderColor: tinted || drag ? colors.primary600 : colors.primary400,
           backgroundImage: value ? `url(${value})` : undefined,
           backgroundSize: "contain",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
           borderStyle: value ? "solid" : "dashed",
+          position: "relative",
         }}
-        onClick={() => inputRef.current?.click()}
       >
-        {!value && <span style={S.imageDropHint}>Click to upload</span>}
-      </div>
-      <div style={{ display: "flex", gap: spacing.xs }}>
-        <Button variant="light" size="sm" onClick={() => inputRef.current?.click()}>
-          {value ? "Replace" : "Upload"}
-        </Button>
+        {!value && (
+          <div style={S.imageDropEmpty}>
+            <UploadGlyph />
+            <span style={S.imageDropHint}>Click to upload</span>
+            <span style={S.imageDropSubHint}>or drag &amp; drop</span>
+          </div>
+        )}
+        {value && hover && (
+          <div style={S.imageDropOverlay}>
+            <span style={S.imageDropOverlayText}>Click to replace</span>
+          </div>
+        )}
         {value && (
-          <Button variant="dangerLight" size="sm" onClick={() => onPick(null)}>
-            Clear
-          </Button>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onPick(null); }}
+            style={S.imageDropClear}
+            aria-label="Remove image"
+          >
+            ×
+          </button>
         )}
       </div>
       <input
@@ -584,38 +796,7 @@ function ImagePicker({
 const S: Record<string, React.CSSProperties> = {
   container: { display: "flex", flexDirection: "column", gap: spacing.l, minWidth: 0 },
 
-  topBar: {
-    display: "flex",
-    alignItems: "center",
-    gap: spacing.s,
-    flexWrap: "wrap",
-    backgroundColor: colors.neutral100,
-    borderRadius: radii.m,
-    padding: spacing.s,
-  },
-  tplStrip: { display: "flex", gap: spacing.xs, flexWrap: "wrap", flex: 1, minWidth: 0 },
-  tplPill: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: spacing.xs,
-    height: 36,
-    padding: `0 ${spacing.m}`,
-    borderRadius: radii.full,
-    borderWidth: strokes.xs,
-    borderStyle: "solid",
-    borderColor: colors.neutral200,
-    background: "transparent",
-    color: colors.neutral700,
-    cursor: "pointer",
-    fontFamily: "inherit",
-    fontSize: fonts.control.sm,
-    fontWeight: 500,
-  },
-  tplPillActive: {
-    backgroundColor: colors.active.shade700,
-    color: colors.neutral100,
-    borderColor: colors.active.shade700,
-  },
+  // "Default" chip that lives inside the active template tab.
   defaultBadge: {
     fontSize: 10,
     fontWeight: 600,
@@ -623,6 +804,30 @@ const S: Record<string, React.CSSProperties> = {
     color: colors.active.shade700,
     padding: "2px 6px",
     borderRadius: radii.full,
+  },
+
+  // Floating context menu shown on right-click of a template tab.
+  tabMenu: {
+    position: "fixed",
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.m,
+    border: `${strokes.xs} solid ${colors.neutral200}`,
+    boxShadow: "0 8px 24px rgba(0,0,0,0.10)",
+    padding: 4,
+    zIndex: 4000,
+    display: "flex",
+    flexDirection: "column",
+  },
+  tabMenuItem: {
+    border: "none",
+    background: "transparent",
+    padding: "8px 10px",
+    borderRadius: radii.s,
+    cursor: "pointer",
+    color: colors.neutral900,
+    fontFamily: "inherit",
+    fontSize: fonts.size.s,
+    textAlign: "left",
   },
 
   split: {
@@ -761,8 +966,55 @@ const S: Record<string, React.CSSProperties> = {
     backgroundColor: colors.neutral100,
   },
 
-  // Image picker — matches the dropzone style used in AddReportModal so
-  // upload affordances feel native across the app.
+  // Length input — mirrors the vitals cell from PrescriptionPage: a cream
+  // input cell with a bordered unit pill on the right.
+  lengthRow: {
+    display: "flex",
+    alignItems: "center",
+    height: 40,
+    width: "100%",
+  },
+  lengthValue: {
+    flex: 1,
+    height: "100%",
+    border: "none",
+    outline: "none",
+    padding: `0 ${spacing.s}`,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.md,
+    color: colors.neutral900,
+    backgroundColor: colors.primary100,
+    borderTopLeftRadius: radii.s,
+    borderBottomLeftRadius: radii.s,
+    textAlign: "center",
+    minWidth: 0,
+  },
+  lengthUnit: {
+    height: "100%",
+    minWidth: 48,
+    padding: `0 ${spacing.s}`,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    color: colors.neutral700,
+    backgroundColor: colors.neutral100,
+    borderTopWidth: strokes.xs,
+    borderBottomWidth: strokes.xs,
+    borderRightWidth: strokes.xs,
+    borderLeftWidth: strokes.xs,
+    borderStyle: "solid",
+    borderColor: colors.primary300,
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+    borderTopRightRadius: radii.s,
+    borderBottomRightRadius: radii.s,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    boxSizing: "border-box",
+  },
+
+  // Image picker — dropzone IS the upload affordance. No separate button.
+  // Hover/drag deepens the border + tints the background, mirroring the
+  // AddReportModal dropzone for cross-app consistency.
   imageDrop: {
     width: "100%",
     borderWidth: "1.5px",
@@ -772,11 +1024,53 @@ const S: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: colors.neutral500,
     cursor: "pointer",
     transition: "background-color 0.15s ease, border-color 0.15s ease",
+    outline: "none",
   },
-  imageDropHint: { fontSize: fonts.control.md, color: colors.neutral700, fontWeight: fonts.weight.medium },
+  imageDropEmpty: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 4,
+    color: colors.neutral700,
+  },
+  imageDropHint: { fontSize: fonts.control.md, color: colors.neutral900, fontWeight: fonts.weight.medium },
+  imageDropSubHint: { fontSize: fonts.size.xs, color: colors.neutral500 },
+  imageDropOverlay: {
+    position: "absolute",
+    inset: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    borderRadius: radii.l,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    pointerEvents: "none",
+    color: colors.neutral100,
+    fontWeight: fonts.weight.semibold,
+  },
+  imageDropOverlayText: {
+    fontSize: fonts.size.s,
+    letterSpacing: 0.3,
+  },
+  imageDropClear: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 999,
+    border: "none",
+    backgroundColor: "rgba(0, 0, 0, 0.55)",
+    color: colors.neutral100,
+    cursor: "pointer",
+    fontSize: 16,
+    lineHeight: 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 0,
+  },
 
   actionsRow: { display: "flex", gap: spacing.s, justifyContent: "flex-end" },
 };

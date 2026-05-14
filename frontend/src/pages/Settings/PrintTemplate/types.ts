@@ -18,6 +18,8 @@ export type PaperMode = "preprinted" | "blank";
 
 export type RxLayout = "list" | "tabular";
 
+export type LengthUnit = "mm" | "cm" | "in";
+
 export type PatientFieldKey =
   | "patientId"
   | "phone"
@@ -38,8 +40,11 @@ export type PrintTemplate = {
 
   paperMode: PaperMode;
 
-  // Page margins in millimeters.
+  // Page margins. Always stored in millimeters — the editor lets users
+  // view/enter in their preferred unit but converts to mm on the way in.
   margins: { top: number; right: number; bottom: number; left: number };
+  // User's preferred unit for entering margins. Purely a display setting.
+  marginsUnit: LengthUnit;
 
   // Header / footer images — base64 data URLs. Only used in "blank" mode;
   // ignored when paperMode === "preprinted".
@@ -76,6 +81,7 @@ export const DEFAULT_TEMPLATE: Omit<PrintTemplate, "id"> = {
   isDefault: true,
   paperMode: "blank",
   margins: { top: 25, right: 15, bottom: 25, left: 15 },
+  marginsUnit: "mm",
   headerImage: undefined,
   footerImage: undefined,
   signatureImage: undefined,
