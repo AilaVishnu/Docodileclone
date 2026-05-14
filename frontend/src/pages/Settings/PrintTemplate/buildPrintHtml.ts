@@ -250,16 +250,22 @@ export function buildPrintHtml(template: PrintTemplate, data: PrintVisitData): s
   const m = template.margins;
   const body = renderBody(template, data);
 
+  // Body wrapped in .body-pad so the user-configured margins apply only to
+  // the body — never to header/footer (which sit flush at page edges).
+  const sheet = blank
+    ? `${headerImg}<div class="body-pad">${body}</div>${footerImg}`
+    : `<div class="body-pad">${body}</div>`;
+
   return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8" />
 <title>Prescription — ${esc(data.patientName)}</title>
 <style>
-  @page {
-    size: A4;
-    margin: ${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm;
-  }
+  /* Browser margins set to 0 so the header/footer images can sit flush at
+     the page edges in blank-A4 mode. The body's user-configured margins
+     are applied to .body-pad inside the sheet instead. */
+  @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
@@ -269,23 +275,36 @@ export function buildPrintHtml(template: PrintTemplate, data: PrintVisitData): s
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  /* Screen preview wraps the page in an A4-ish frame. Print resets it. */
+  /* Screen preview fits whatever iframe width is available (the iframe
+     enforces A4 aspect-ratio externally). For print the sheet expands to
+     the real A4 page. */
   .sheet {
-    width: 210mm;
-    min-height: 297mm;
-    padding: ${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm;
+    width: 100%;
+    min-height: 100%;
     margin: 0 auto;
     background: white;
+    display: flex;
+    flex-direction: column;
     position: relative;
   }
   @media print {
-    .sheet { width: auto; min-height: 0; padding: 0; margin: 0; }
+    .sheet { width: auto; min-height: 0; margin: 0; }
   }
 
-  .hdr, .ftr { width: 100%; }
+  /* Header / footer are edge-to-edge: full page width, no horizontal
+     padding, sitting flush at the top and bottom of the sheet. They render
+     only in blank-A4 mode (in preprinted mode the letterhead's printed
+     design covers the same physical area, so we emit nothing). */
+  .hdr, .ftr { width: 100%; flex-shrink: 0; display: block; }
   .hdr img, .ftr img { width: 100%; height: auto; display: block; }
-  .hdr { margin-bottom: 6mm; }
-  .ftr { margin-top: 6mm; }
+  .ftr { margin-top: auto; } /* pin footer to bottom when body is short */
+
+  /* Body padding = the user-configured margins. This is the only place
+     they apply — header/footer ignore them by design. */
+  .body-pad {
+    padding: ${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm;
+    flex: 1 0 auto;
+  }
 
   .patient-row {
     display: flex; justify-content: space-between; gap: 8mm;
@@ -345,9 +364,7 @@ export function buildPrintHtml(template: PrintTemplate, data: PrintVisitData): s
 </head>
 <body>
   <div class="sheet">
-    ${headerImg}
-    ${body}
-    ${footerImg}
+    ${sheet}
   </div>
 </body>
 </html>`;
