@@ -5,7 +5,6 @@ import { styles } from "./ClinicInfoCard.styles";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 import { ReactComponent as BuildingIcon } from "../../assets/Buildings.svg";
 import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
-import { ReactComponent as SpecialtyIcon } from "../../assets/Stethoscope.svg";
 import { ReactComponent as LocationIcon } from "../../assets/Map Point.svg";
 import { Clinic } from "../ClinicTabs";
 import { API_BASE_URL } from "../../apiConfig";
@@ -247,7 +246,7 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
       {/* Departments — icon + tag list + autocomplete dropdown */}
       <div ref={deptWrapRef} style={{ position: "relative" }}>
         <div style={{ ...styles.specialtyRow, ...(fieldsLocked ? styles.locked : {}) }}>
-          <span style={styles.fieldIcon}><SpecialtyIcon width={20} height={20} /></span>
+          <span style={styles.fieldIcon}><BuildingIcon width={20} height={20} /></span>
           <div style={styles.tagRow}>
             {departments.map((s, i) => (
               <Tag

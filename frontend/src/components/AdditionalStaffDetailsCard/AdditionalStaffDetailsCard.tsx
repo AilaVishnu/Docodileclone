@@ -6,6 +6,7 @@ import { styles } from "./AdditionalStaffDetailsCard.styles";
 
 // Icons
 import { ReactComponent as StethoIcon } from "../../assets/Stethoscope.svg";
+import { ReactComponent as BuildingIcon } from "../../assets/Buildings.svg";
 import { ReactComponent as RegIcon } from "../../assets/Document Medicine.svg";
 
 // Static department list plus the specialties that belong to each. Picking a
@@ -154,7 +155,7 @@ export function AdditionalStaffDetailsCard({
                 }}
                 options={clinicDepartments}
                 placeholder={clinicDepartments.length === 0 ? "Add departments in clinic info first" : "Choose Department"}
-                iconLeft={<StethoIcon />}
+                iconLeft={<BuildingIcon />}
                 error={errors.department}
               />
             </div>
@@ -199,7 +200,7 @@ export function AdditionalStaffDetailsCard({
               onChange={setDepartment}
               options={clinicDepartments}
               placeholder={clinicDepartments.length === 0 ? "Add departments in clinic info first" : "Choose Department"}
-              iconLeft={<StethoIcon />}
+              iconLeft={<BuildingIcon />}
               error={errors.department}
             />
           </div>

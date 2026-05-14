@@ -129,16 +129,61 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
     ));
   };
 
-  const handleOpenAddStaff = () => {
+  // Push the active clinic's current state (name, address, departments, etc.)
+  // to the backend before opening the staff modal. Otherwise the user can add
+  // a department locally without clicking Save on the clinic, then assign a
+  // staff member to it — and the staff POST fails server-side validation with
+  // "Department '<X>' is not configured for this clinic". Returns true on
+  // success (or when clinic isn't saved yet, in which case caller already
+  // handled it earlier).
+  const syncClinicToBackend = async (): Promise<boolean> => {
+    if (!activeClinic) return false;
+    const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+    if (!isUuid(activeClinic.id)) {
+      // Clinic hasn't been saved yet — staff save itself will surface the
+      // "save clinic first" toast.
+      return true;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/tenant/clinic`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
+        },
+        body: JSON.stringify({
+          id: activeClinic.id,
+          name: activeClinic.name,
+          address: activeClinic.address,
+          phone: activeClinic.phone,
+          domain: activeClinic.domain,
+          speciality: activeClinic.departments.join(","),
+        }),
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        setToastMessage(errorData.error || "Couldn't sync clinic details");
+        return false;
+      }
+      return true;
+    } catch {
+      setToastMessage("Couldn't sync clinic details");
+      return false;
+    }
+  };
+
+  const handleOpenAddStaff = async () => {
     if (activeClinic && activeClinic.staff.length >= 10) {
       setToastMessage("Maximum of 10 staff members reached");
       return;
     }
+    if (!(await syncClinicToBackend())) return;
     setEditingStaff(undefined);
     setIsAddStaffOpen(true);
   };
 
-  const handleEditStaff = (staff: Staff) => {
+  const handleEditStaff = async (staff: Staff) => {
+    if (!(await syncClinicToBackend())) return;
     setEditingStaff(staff);
     setIsAddStaffOpen(true);
   };
