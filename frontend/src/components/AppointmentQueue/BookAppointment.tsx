@@ -20,6 +20,7 @@ import { UnderlineSelect } from "../Input/UnderlineSelect/UnderlineSelect";
 import { Select } from "../Input/Select/Select";
 import { Toast } from "../Toast";
 import { API_BASE_URL } from "../../apiConfig";
+import { listServices, ServiceDTO } from "../../api/services";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
 import { ReactComponent as EditPencilIcon } from "../../assets/icons/edit-pencil.svg";
 import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check.svg";
@@ -74,14 +75,25 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     return { date: d, timeStr: `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")} ${period}` };
   };
 
-  const SERVICE_PRICES: Record<string, number> = {
-    "Consultation": 500,
-    "PRP": 1500,
-    "Hydrafacial": 2000,
-    "Laser Hair Removal": 2500,
-    "Skin Tag Removal": 1000,
-    "Acne Scar Treatment": 3000,
-  };
+  // Services + prices come from the clinic's services catalog. Mounted-once
+  // fetch; the bill totals recompute reactively as the map fills in.
+  const [serviceCatalog, setServiceCatalog] = useState<ServiceDTO[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    listServices()
+      .then((list) => { if (!cancelled) setServiceCatalog(list); })
+      .catch(() => { /* leave empty — the dropdown will just have no options */ });
+    return () => { cancelled = true; };
+  }, []);
+  const SERVICE_PRICES: Record<string, number> = React.useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const s of serviceCatalog) map[s.name] = Number(s.price);
+    return map;
+  }, [serviceCatalog]);
+  const SERVICE_OPTIONS = React.useMemo(
+    () => serviceCatalog.map((s) => s.name),
+    [serviceCatalog]
+  );
 
   const initTime = editingAppointment ? parseScheduledTime(editingAppointment.scheduledTime) : null;
 
@@ -853,7 +865,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", pointerEvents: servicesLocked ? "none" : "auto", opacity: servicesLocked ? 0.6 : 1 }}>
                     <div style={{ flex: 1 }}>
                       <Select
-                        options={["Consultation", "PRP", "Hydrafacial", "Laser Hair Removal", "Skin Tag Removal", "Acne Scar Treatment"]}
+                        options={SERVICE_OPTIONS}
                         value={svc}
                         onChange={(val: string) => {
                           const updated = [...form.services];
@@ -890,7 +902,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px" }}>
                     <div style={{ flex: 1 }}>
                       <Select
-                        options={["Consultation", "PRP", "Hydrafacial", "Laser Hair Removal", "Skin Tag Removal", "Acne Scar Treatment"]}
+                        options={SERVICE_OPTIONS}
                         value=""
                         onChange={(val: string) => setForm({ ...form, services: [...form.services, val] })}
                         placeholder="+ Add Service"

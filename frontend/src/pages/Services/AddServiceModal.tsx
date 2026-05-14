@@ -19,7 +19,9 @@ if (typeof document !== "undefined" && !document.getElementById("services-modal-
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (service: Omit<Service, "id">) => void;
+  // May return a promise — if it rejects, we show the error inline so the
+  // user isn't left wondering why nothing happened.
+  onSave: (service: Omit<Service, "id">) => void | Promise<void>;
   initial?: Service | null;
 };
 
@@ -36,6 +38,8 @@ const empty = {
 export function AddServiceModal({ isOpen, onClose, onSave, initial }: Props) {
   const [form, setForm] = useState(empty);
   const [touched, setTouched] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -53,6 +57,8 @@ export function AddServiceModal({ isOpen, onClose, onSave, initial }: Props) {
       setForm(empty);
     }
     setTouched(false);
+    setSaveError(null);
+    setSaving(false);
   }, [isOpen, initial]);
 
   const trimmedName = form.name.trim();
@@ -65,18 +71,26 @@ export function AddServiceModal({ isOpen, onClose, onSave, initial }: Props) {
   const durationError = form.duration !== "" && (!Number.isFinite(durationNum) || durationNum < 0);
   const canSave = !nameError && !codeError && !priceError && !durationError;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setTouched(true);
     if (!canSave) return;
-    onSave({
-      name: trimmedName,
-      code: trimmedCode,
-      price: priceNum,
-      duration: Number.isFinite(durationNum) ? durationNum : 0,
-      discount: parseFloat(form.discount) || 0,
-      discountMode: form.discountMode,
-      gst: parseFloat(form.gst) || 0,
-    });
+    setSaveError(null);
+    setSaving(true);
+    try {
+      await onSave({
+        name: trimmedName,
+        code: trimmedCode,
+        price: priceNum,
+        duration: Number.isFinite(durationNum) ? durationNum : 0,
+        discount: parseFloat(form.discount) || 0,
+        discountMode: form.discountMode,
+        gst: parseFloat(form.gst) || 0,
+      });
+    } catch (e) {
+      setSaveError((e as Error).message || "Couldn't save service");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -205,13 +219,20 @@ export function AddServiceModal({ isOpen, onClose, onSave, initial }: Props) {
           </div>
         </div>
 
+        {saveError && (
+          <div style={{ padding: "0 24px", color: "#b54040", fontSize: 13 }}>
+            {saveError}
+          </div>
+        )}
+
         <div style={styles.footer}>
-          <button style={styles.cancelBtn} onClick={onClose}>Cancel</button>
+          <button style={styles.cancelBtn} onClick={onClose} disabled={saving}>Cancel</button>
           <button
-            style={{ ...styles.saveBtn, ...(canSave ? {} : styles.saveBtnDisabled) }}
+            style={{ ...styles.saveBtn, ...(canSave && !saving ? {} : styles.saveBtnDisabled) }}
             onClick={handleSave}
+            disabled={saving}
           >
-            {initial ? "Save Changes" : "Add Service"}
+            {saving ? "Saving…" : initial ? "Save Changes" : "Add Service"}
           </button>
         </div>
       </div>

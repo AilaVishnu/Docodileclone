@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { styles } from "./ServicesView.styles";
 import { Service } from "./types";
 import { AddServiceModal } from "./AddServiceModal";
@@ -7,6 +7,13 @@ import { PlusIcon } from "../../iconsUtil";
 import { ReactComponent as SearchIcon } from "../../assets/search.svg";
 import { ReactComponent as EditPencilIcon } from "../../assets/icons/edit-pencil.svg";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
+import {
+  listServices,
+  createService,
+  updateService,
+  deleteService,
+  ServiceDTO,
+} from "../../api/services";
 
 const formatPrice = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 const formatDuration = (m: number) => (m > 0 ? `${m} min` : "—");
@@ -16,19 +23,52 @@ const formatDiscount = (s: Service) => {
 };
 const formatGst = (n: number) => (n > 0 ? `${n}%` : "—");
 
-const SEED: Service[] = [
-  { id: "s1", name: "General Consultation", code: "GC", price: 500, duration: 15, discount: 0, discountMode: "%", gst: 0 },
-  { id: "s2", name: "Follow-up Visit", code: "FV", price: 300, duration: 10, discount: 10, discountMode: "%", gst: 0 },
-  { id: "s3", name: "Dental Cleaning", code: "DC", price: 1500, duration: 45, discount: 0, discountMode: "%", gst: 18 },
-];
+// Backend stores duration as `durationMin`; the UI Service shape uses
+// `duration`. Map both ways here so the rest of the view (and the modal)
+// can keep using the friendlier name.
+const fromDto = (d: ServiceDTO): Service => ({
+  id: d.id,
+  name: d.name,
+  code: d.code,
+  price: Number(d.price),
+  duration: d.durationMin,
+  discount: Number(d.discount),
+  discountMode: d.discountMode,
+  gst: Number(d.gst),
+});
 
-const newId = () => `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+const toRequest = (s: Omit<Service, "id">) => ({
+  name: s.name,
+  code: s.code,
+  price: s.price,
+  durationMin: s.duration,
+  discount: s.discount,
+  discountMode: s.discountMode,
+  gst: s.gst,
+});
 
 export function ServicesView() {
-  const [services, setServices] = useState<Service[]>(SEED);
+  const [services, setServices] = useState<Service[]>([]);
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Service | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await listServices();
+        if (!cancelled) setServices(data.map(fromDto));
+      } catch (e) {
+        if (!cancelled) setError((e as Error).message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -42,18 +82,27 @@ export function ServicesView() {
   const openEdit = (s: Service) => { setEditing(s); setModalOpen(true); };
   const closeModal = () => { setModalOpen(false); setEditing(null); };
 
-  const handleSave = (data: Omit<Service, "id">) => {
+  const handleSave = async (data: Omit<Service, "id">) => {
+    // Let errors propagate so the modal can show them inline. The modal also
+    // tracks its own saving state, so we don't close on failure.
     if (editing) {
-      setServices((prev) => prev.map((s) => (s.id === editing.id ? { ...data, id: editing.id } : s)));
+      const updated = await updateService(editing.id, toRequest(data));
+      setServices((prev) => prev.map((s) => (s.id === editing.id ? fromDto(updated) : s)));
     } else {
-      setServices((prev) => [...prev, { ...data, id: newId() }]);
+      const created = await createService(toRequest(data));
+      setServices((prev) => [...prev, fromDto(created)]);
     }
     closeModal();
   };
 
-  const handleDelete = (s: Service) => {
+  const handleDelete = async (s: Service) => {
     if (!window.confirm(`Delete "${s.name}"?`)) return;
-    setServices((prev) => prev.filter((x) => x.id !== s.id));
+    try {
+      await deleteService(s.id);
+      setServices((prev) => prev.filter((x) => x.id !== s.id));
+    } catch (e) {
+      setError((e as Error).message);
+    }
   };
 
   return (
@@ -107,10 +156,14 @@ export function ServicesView() {
               <tr>
                 <td colSpan={7} style={styles.empty}>
                   <div style={styles.emptyTitle}>
-                    {services.length === 0 ? "No services yet" : "No matches"}
+                    {loading ? "Loading…" : error ? "Couldn't load services" : services.length === 0 ? "No services yet" : "No matches"}
                   </div>
                   <div>
-                    {services.length === 0
+                    {loading
+                      ? "Fetching your clinic's services."
+                      : error
+                      ? error
+                      : services.length === 0
                       ? "Add the services your clinic offers — consultation, procedures, packages."
                       : `Nothing matches "${search}". Try a different term.`}
                   </div>
