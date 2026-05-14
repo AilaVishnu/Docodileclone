@@ -5,6 +5,7 @@ import { PrescriptionView, PatientFilesView, AppointmentsView } from "./Views";
 import { ServicesView } from "../Services";
 import { HomeView } from "./HomeView";
 import { StatsPage } from "../Stats";
+import { PharmacyView } from "../Pharmacy";
 import { SettingsPage, DEFAULT_SETTINGS_SECTION, SettingsSection } from "../Settings";
 import { DesignSystemPage } from "../DesignSystem";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
@@ -139,6 +140,8 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         return <ServicesView />;
       case "Stats":
         return <StatsPage />;
+      case "Pharmacy":
+        return <PharmacyView />;
       case "Settings":
         return <SettingsPage section={settingsSection} />;
       case "Design System":

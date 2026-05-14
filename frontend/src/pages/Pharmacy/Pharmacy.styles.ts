@@ -1,0 +1,366 @@
+import { CSSProperties } from "react";
+import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+
+export const styles: Record<string, CSSProperties> = {
+  page: {
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.m,
+    width: "100%",
+    minWidth: 0,
+  },
+
+  // Centered serif title — matches Services / PatientFiles / Prescription.
+  header: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    margin: 0,
+    textAlign: "center",
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h5,
+    lineHeight: fonts.lineHeight.h5,
+    fontWeight: fonts.weight.regular,
+    color: colors.neutral900,
+  },
+
+  toolbar: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.m,
+    justifyContent: "space-between",
+  },
+  toolbarLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.m,
+    flex: 1,
+    minWidth: 0,
+  },
+  toolbarRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.m,
+  },
+  // Pill-shaped, borderless — matches Services / PatientFiles search.
+  searchWrap: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.s,
+    width: "100%",
+    maxWidth: 360,
+    height: 40,
+    padding: `0 ${spacing.m}`,
+    backgroundColor: colors.neutral100,
+    borderRadius: 55,
+    boxSizing: "border-box",
+  },
+  searchIcon: {
+    width: 20,
+    height: 20,
+    color: colors.neutral400,
+    flexShrink: 0,
+  },
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.md,
+    color: colors.neutral900,
+  },
+  filterChip: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: spacing.xs,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.neutral700,
+    cursor: "pointer",
+  },
+
+  // View toggle: gap-only group, matches PrescriptionQueue pattern.
+  viewToggle: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: spacing["2xs"],
+  },
+  viewBtn: {
+    width: 40,
+    height: 40,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radii.s,
+    border: "none",
+    backgroundColor: "transparent",
+    color: colors.neutral600,
+    cursor: "pointer",
+  },
+  viewBtnActive: {
+    backgroundColor: colors.neutral100,
+    color: colors.neutral900,
+  },
+
+  // ─── List view ───────────────────────────────────────────────────────────
+  // Matches Services tableContainer — cream bg, large radius, generous pad.
+  listCard: {
+    backgroundColor: colors.primary100,
+    borderRadius: 24,
+    padding: spacing.xl,
+    overflow: "hidden",
+  },
+  tableScroll: {
+    overflowX: "auto",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.neutral900,
+  },
+  thead: {
+    backgroundColor: "transparent",
+  },
+  th: {
+    textAlign: "left",
+    padding: `${spacing.s} ${spacing.m}`,
+    fontSize: fonts.control.xs,
+    color: colors.alphaBlack3,
+    fontWeight: fonts.weight.regular,
+    whiteSpace: "nowrap",
+    borderBottom: `${strokes.xs} solid ${colors.primary300}`,
+  },
+  thNumeric: {
+    textAlign: "right",
+  },
+  tr: {
+    borderBottom: `${strokes.xs} solid ${colors.primary300}`,
+  },
+  trAlt: {
+    backgroundColor: "transparent",
+  },
+  td: {
+    padding: `${spacing.s} ${spacing.m}`,
+    whiteSpace: "nowrap",
+  },
+  tdNumeric: {
+    textAlign: "right",
+    fontVariantNumeric: "tabular-nums",
+  },
+  invoiceLink: {
+    color: colors.primary700,
+    textDecoration: "none",
+    cursor: "pointer",
+  },
+  actionBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 28,
+    height: 28,
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    color: colors.neutral600,
+    borderRadius: radii.xs,
+  },
+
+  // ─── Shelf view ──────────────────────────────────────────────────────────
+  shelfContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.xl,
+  },
+  shelf: {
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.s,
+  },
+  shelfHeader: {
+    display: "flex",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    paddingLeft: spacing["2xs"],
+  },
+  shelfTitle: {
+    margin: 0,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.md,
+    color: colors.neutral900,
+    fontWeight: fonts.weight.medium,
+  },
+  shelfCount: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.xs,
+    color: colors.neutral500,
+  },
+  shelfPlank: {
+    position: "relative",
+    backgroundColor: colors.primary100,
+    border: `${strokes.xs} solid ${colors.primary300}`,
+    borderRadius: radii.m,
+    padding: spacing.m,
+    paddingBottom: spacing.l,
+  },
+  shelfRow: {
+    display: "flex",
+    flexDirection: "row",
+    gap: spacing.m,
+    overflowX: "auto",
+    overflowY: "hidden",
+    paddingBottom: spacing.xs,
+    scrollSnapType: "x mandatory",
+  },
+  // wooden plank base under the row
+  shelfBase: {
+    position: "absolute",
+    left: spacing.s,
+    right: spacing.s,
+    bottom: spacing["3xs"],
+    height: 4,
+    borderRadius: radii.xs,
+    backgroundColor: colors.primary400,
+    opacity: 0.6,
+  },
+
+  tile: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: spacing["2xs"],
+    cursor: "pointer",
+    background: "transparent",
+    border: "none",
+    padding: 0,
+    width: 120,
+    flexShrink: 0,
+    scrollSnapAlign: "start",
+  },
+  tileIllustration: {
+    width: 64,
+    height: 80,
+    display: "flex",
+    alignItems: "flex-end",
+    justifyContent: "center",
+    position: "relative",
+  },
+  tileName: {
+    width: "100%",
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.xs,
+    color: colors.neutral900,
+    textAlign: "center",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    padding: `0 ${spacing["2xs"]}`,
+  },
+  tileMeta: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing["2xs"],
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.caption,
+    lineHeight: fonts.lineHeight.caption,
+    color: colors.neutral500,
+  },
+  tileStockOut: {
+    color: colors.red200,
+  },
+
+  expiryChip: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: `1px ${spacing["2xs"]}`,
+    borderRadius: radii.full,
+    fontSize: fonts.size.caption,
+    lineHeight: fonts.lineHeight.caption,
+    fontFamily: fonts.family.primary,
+    fontWeight: fonts.weight.medium,
+  },
+  expiryGood: {
+    backgroundColor: colors.greenAlpha10,
+    color: colors.green200,
+  },
+  expiryWarn: {
+    backgroundColor: colors.yellowAlpha10,
+    color: colors.yellow200,
+  },
+  expiryBad: {
+    backgroundColor: colors.redAlpha10,
+    color: colors.red200,
+  },
+
+  // ─── Drill-in modal body (uses shared Modal component) ───────────────────
+  detailModal: {
+    width: 520,
+    maxWidth: "90vw",
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.l,
+  },
+  detailHeader: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: spacing.s,
+  },
+  detailName: {
+    margin: 0,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.h6,
+    lineHeight: fonts.lineHeight.h6,
+    color: colors.neutral900,
+    fontWeight: fonts.weight.medium,
+  },
+  detailCategory: {
+    marginTop: spacing["3xs"],
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.xs,
+    color: colors.neutral500,
+  },
+  detailClose: {
+    width: 32,
+    height: 32,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    color: colors.neutral700,
+    fontSize: 22,
+    borderRadius: radii.xs,
+  },
+  detailGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    rowGap: spacing.m,
+    columnGap: spacing.m,
+  },
+  detailLabel: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.xs,
+    color: colors.neutral500,
+  },
+  detailValue: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.neutral900,
+    marginTop: 2,
+  },
+
+  emptyState: {
+    padding: `${spacing.xl} ${spacing.l}`,
+    textAlign: "center",
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.neutral500,
+  },
+};
