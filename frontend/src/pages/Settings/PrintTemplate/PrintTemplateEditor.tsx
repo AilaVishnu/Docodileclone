@@ -170,6 +170,7 @@ export function PrintTemplateEditor() {
             any tab opens a context menu with Duplicate. Delete lives at
             the bottom of the editor (destructive, end of flow). ───── */}
       <Tabs
+        variant="block"
         items={tabItems}
         activeId={active.id}
         onSelect={setActiveId}
@@ -796,12 +797,14 @@ function ImagePicker({
 const S: Record<string, React.CSSProperties> = {
   container: { display: "flex", flexDirection: "column", gap: spacing.l, minWidth: 0 },
 
-  // "Default" chip that lives inside the active template tab.
+  // "Default" chip that lives inside the active template tab. Uses a light
+  // tint of the active palette so it stays legible on the white background
+  // the block-variant tab uses when selected.
   defaultBadge: {
     fontSize: 10,
     fontWeight: 600,
-    backgroundColor: colors.neutral100,
-    color: colors.active.shade700,
+    backgroundColor: colors.active.shade200,
+    color: colors.active.shade800,
     padding: "2px 6px",
     borderRadius: radii.full,
   },
