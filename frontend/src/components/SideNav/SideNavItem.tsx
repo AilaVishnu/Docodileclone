@@ -7,9 +7,12 @@ type SideNavItemProps = {
   active?: boolean;
   onClick: () => void;
   isExpanded: boolean;
+  // Optional trailing slot — used to render the expander chevron on the
+  // Settings item when the sidebar is expanded.
+  trailing?: React.ReactNode;
 };
 
-export function SideNavItem({ label, icon, active, onClick, isExpanded }: SideNavItemProps) {
+export function SideNavItem({ label, icon, active, onClick, isExpanded, trailing }: SideNavItemProps) {
   const [hovered, setHovered] = useState(false);
 
   const getBackgroundColor = () => {
@@ -57,8 +60,8 @@ export function SideNavItem({ label, icon, active, onClick, isExpanded }: SideNa
       onMouseLeave={() => setHovered(false)}
       title={!isExpanded ? label : undefined}
     >
-      <div style={{ 
-        display: 'flex', 
+      <div style={{
+        display: 'flex',
         flexShrink: 0,
         transition: 'transform 0.3s ease',
         transform: !isExpanded && hovered ? 'scale(1.1)' : 'scale(1)'
@@ -66,6 +69,11 @@ export function SideNavItem({ label, icon, active, onClick, isExpanded }: SideNa
         {icon}
       </div>
       <span style={styles.label}>{label}</span>
+      {trailing && isExpanded && (
+        <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0, color: colors.neutral700 }}>
+          {trailing}
+        </span>
+      )}
     </div>
   );
 }

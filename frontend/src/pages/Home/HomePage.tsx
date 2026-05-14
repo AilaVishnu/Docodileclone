@@ -5,7 +5,7 @@ import { PrescriptionView, PatientFilesView, AppointmentsView } from "./Views";
 import { ServicesView } from "../Services";
 import { HomeView } from "./HomeView";
 import { StatsPage } from "../Stats";
-import { SettingsPage } from "../Settings";
+import { SettingsPage, DEFAULT_SETTINGS_SECTION, SettingsSection } from "../Settings";
 import { DesignSystemPage } from "../DesignSystem";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
 import { confirmStyles } from "../../components/AddStaffModal/AddStaffModal.styles";
@@ -37,6 +37,16 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   const [isEditing, setIsEditing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [patientFileNavId, setPatientFileNavId] = useState<string | null>(null);
+  // Which Settings sub-section is open. Persisted so a reload returns to the
+  // user's last view inside Settings. Owned at this level because the SideNav
+  // (left of the main content) needs it to highlight the active child.
+  const [settingsSection, setSettingsSectionState] = useState<SettingsSection>(() => {
+    return (localStorage.getItem("docodile_settings_section") as SettingsSection) || DEFAULT_SETTINGS_SECTION;
+  });
+  const setSettingsSection = (section: SettingsSection) => {
+    localStorage.setItem("docodile_settings_section", section);
+    setSettingsSectionState(section);
+  };
 
   const handleNewAppointment = () => {
     if (isBooking || isEditing) {
@@ -114,7 +124,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       case "Stats":
         return <StatsPage />;
       case "Settings":
-        return <SettingsPage />;
+        return <SettingsPage section={settingsSection} />;
       case "Design System":
         return <DesignSystemPage />;
       default:
@@ -130,11 +140,13 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   return (
     <>
     <div style={styles.container} data-theme={themeMode}>
-      <SideNav 
-        activeTab={activeTab} 
-        onTabChange={setActiveTab} 
+      <SideNav
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
         isExpanded={isSidebarExpanded}
         onToggleExpand={() => setIsSidebarExpanded(!isSidebarExpanded)}
+        settingsSection={settingsSection}
+        onSettingsSection={setSettingsSection}
       />
       <div style={styles.contentArea}>
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
