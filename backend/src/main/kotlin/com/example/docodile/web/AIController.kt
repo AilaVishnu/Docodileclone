@@ -47,11 +47,6 @@ class AIController(
         return StatsHighlightsResponse(content = raw)
     }
 
-    @PostMapping("/drug-interactions/explain")
-    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','PHARMACY','NURSE')")
-    fun explainInteractions(@RequestBody body: ExplainInteractionsRequest): ExplainInteractionsResponse =
-        ExplainInteractionsResponse(content = aiService.explainInteractions(body.medicines))
-
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgument(e: IllegalArgumentException): ResponseEntity<Map<String, String>> {
         return ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
@@ -61,5 +56,3 @@ class AIController(
 data class PatientSummaryResponse(val content: String, val updatedAt: Instant, val cached: Boolean)
 data class SoapDraftResponse(val content: String)
 data class StatsHighlightsResponse(val content: String)
-data class ExplainInteractionsRequest(val medicines: List<String> = emptyList())
-data class ExplainInteractionsResponse(val content: String)

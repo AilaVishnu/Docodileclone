@@ -123,35 +123,7 @@ export async function fetchStatsHighlights(overviewPayload: unknown): Promise<AI
   }
 }
 
-// ── Drug interaction explanations ───────────────────────────────────────────
-
-export type InteractionExplanation = {
-  drug: string;
-  interactsWith: string;
-  severity: "low" | "moderate" | "high";
-  clinical: string;
-  patientTip: string;
-};
-
-export async function explainDrugInteractions(medicines: string[]): Promise<InteractionExplanation[]> {
-  const res = await fetch(`${API_BASE_URL}/api/ai/drug-interactions/explain`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify({ medicines }),
-  });
-  if (!res.ok) throw new Error(await readError(res));
-  const body = await res.json();
-  try {
-    const j = JSON.parse(body.content || "{}");
-    const items = Array.isArray(j.items) ? j.items : [];
-    return items.map((it: any) => ({
-      drug: String(it?.drug ?? ""),
-      interactsWith: String(it?.interactsWith ?? ""),
-      severity: (it?.severity === "high" || it?.severity === "low" ? it.severity : "moderate") as InteractionExplanation["severity"],
-      clinical: String(it?.clinical ?? ""),
-      patientTip: String(it?.patientTip ?? ""),
-    }));
-  } catch {
-    return [];
-  }
-}
+// Drug interactions intentionally NOT routed through AI — Eka Care's
+// pharmacology API already returns clinician-grade interaction text
+// (drug + interactsWith + comment) which the prescription page surfaces
+// directly. Wrapping it with an LLM only adds latency and cost.

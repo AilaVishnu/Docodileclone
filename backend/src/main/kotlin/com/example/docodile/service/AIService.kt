@@ -31,7 +31,6 @@ class AIService(
     private val visitRepository: VisitRepository,
     private val rxRowRepository: RxRowRepository,
     private val patientAISummaryRepo: PatientAISummaryRepository,
-    private val ekaCareClient: EkaCareClient,
     private val currentUser: CurrentUser,
 ) {
     private val log = LoggerFactory.getLogger(AIService::class.java)
@@ -209,44 +208,6 @@ class AIService(
         }
     }
 
-    // ── Drug interaction explanations ───────────────────────────────────────
-
-    /**
-     * Plain-English explanation of a single drug-drug interaction (or set
-     * of interactions). Calls the structured Eka data first to ground the
-     * model on real interaction text, then asks for patient-friendly copy.
-     */
-    fun explainInteractions(medicines: List<String>): String {
-        if (medicines.size < 2) {
-            return """{"items":[]}"""
-        }
-        val interactions = ekaCareClient.checkInteractionsByName(medicines)
-        if (interactions.isEmpty()) return """{"items":[]}"""
-        val ctx = interactions.joinToString("\n") { i ->
-            "${i.drug} + ${i.interactsWith}: ${i.comment}"
-        }
-        val systemPrompt = """
-            For each drug-drug interaction below, write one short, clinician-
-            facing explanation (why it matters) and one short patient-facing
-            tip (what to watch for). Respond ONLY with JSON:
-            {
-              "items": [
-                {
-                  "drug": string,
-                  "interactsWith": string,
-                  "severity": "low" | "moderate" | "high",
-                  "clinical": string,
-                  "patientTip": string
-                }
-              ]
-            }
-        """.trimIndent()
-        return try {
-            openAI.complete(systemPrompt, ctx)
-        } catch (e: AIClientException) {
-            """{"items":[],"error":"${e.message?.replace("\"","'") ?: "AI unavailable"}"}"""
-        }
-    }
 }
 
 data class PatientSummaryResult(
