@@ -4,10 +4,10 @@ import { colors, spacing, fonts, radii } from "../../styles/theme";
 export const styles: Record<string, CSSProperties> = {
   container: {
     position: "fixed",
-    // Positioned bottom-left so the toast doesn't overlap the chat FAB
-    // pinned at bottom-right (see ChatBubble in HomePage).
-    bottom: spacing.xl,
-    left: spacing.xl,
+    // Top-right is the conventional spot for transient notifications and
+    // sits clear of the bottom-right chat FAB.
+    top: spacing.xl,
+    right: spacing.xl,
     display: "flex",
     alignItems: "center",
     gap: spacing.s,
