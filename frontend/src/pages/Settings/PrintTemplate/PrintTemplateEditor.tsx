@@ -912,6 +912,10 @@ const S: Record<string, React.CSSProperties> = {
 
   // Segmented control
   seg: { display: "flex", gap: spacing.s, flexWrap: "wrap" },
+  // Large card-style choice. Active state matches the established
+  // "selected item" treatment used by the SideNav and the Settings sub-nav
+  // (active.shade200 fill, no extra ring). Inactive cards stay white with
+  // a neutral border so they read as clickable options.
   segItem: {
     display: "flex",
     flexDirection: "column",
@@ -929,10 +933,10 @@ const S: Record<string, React.CSSProperties> = {
     fontFamily: "inherit",
     color: colors.neutral900,
     textAlign: "left",
+    transition: "background-color 160ms",
   },
   segItemActive: {
-    borderColor: colors.active.shade600,
-    boxShadow: `0 0 0 2px ${colors.active.shade300} inset`,
+    backgroundColor: colors.active.shade200,
   },
   segItemLabel: { fontSize: fonts.control.md, fontWeight: 600 },
   segItemSub: { fontSize: fonts.size.xs, color: colors.neutral500 },
