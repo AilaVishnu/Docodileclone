@@ -46,6 +46,7 @@ import { colors } from "../../styles/theme";
 import { PrescriptionQueue } from "./PrescriptionQueue";
 import { Patient } from "../../hooks/usePatients";
 import { SessionBar } from "../../components/SessionBar/SessionBar";
+import { PrintPreviewModal } from "../../components/PrintPreviewModal";
 import {
   recordActiveSession,
   clearActiveSession,
@@ -59,7 +60,7 @@ import { API_BASE_URL } from "../../apiConfig";
 import { AddReportModal, AddReportRow } from "./AddReportModal";
 import { FileViewer } from "./FileViewer";
 import { EditPatientModal } from "./EditPatientModal";
-import { buildPrintHtml, openPrintWindow, getDefaultTemplate, loadTemplates, PrintVisitData } from "../Settings";
+import { buildPrintHtml, getDefaultTemplate, loadTemplates, PrintVisitData } from "../Settings";
 import { Modal } from "../../components/Modal/Modal";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -530,6 +531,7 @@ export function PrescriptionPage() {
   const [reviewDate, setReviewDate] = React.useState<Date | null>(null);
   const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
   const [rxRows, setRxRows] = React.useState<RxRowDraft[]>([]);
+  const [printPreviewHtml, setPrintPreviewHtml] = React.useState<string | null>(null);
   const [rxInteractions, setRxInteractions] = React.useState<Array<{ drug: string; interactsWith: string; comment: string }>>([]);
   const [reviewDays, setReviewDays] = React.useState<string>("");
   // Vital values + units (units are clickable to toggle between alternates
@@ -1307,7 +1309,7 @@ export function PrescriptionPage() {
       reviewNotes: reviewNotesValue,
     };
     const html = buildPrintHtml(template, data);
-    openPrintWindow(html);
+    setPrintPreviewHtml(html);
   };
 
   if (selectedPatientId === null) {
@@ -1925,20 +1927,6 @@ export function PrescriptionPage() {
                           ))}
                         </div>
                       )}
-                      <div style={styles.rxHeaderRow}>
-                        <div style={styles.rxHeaderLeft}>
-                          <span style={styles.rxHeaderNum}>#</span>
-                          <span>Medicine</span>
-                        </div>
-                        <div style={styles.rxHeaderRight}>
-                          <span style={styles.rxHeaderCol}>Dosage</span>
-                          <span style={styles.rxHeaderCol}>When</span>
-                          <span style={styles.rxHeaderCol}>Frequency</span>
-                          <span style={styles.rxHeaderCol}>Duration</span>
-                          <span style={{ flex: 1, minWidth: 0, textAlign: "center" as const }}>Notes</span>
-                          <span style={{ width: 28, flexShrink: 0 }} />
-                        </div>
-                      </div>
                       {rxRows.map((row, i) => {
                         const updateField = (key: keyof RxRowDraft, value: string) =>
                           setRxRows((prev) => prev.map((r, ix) => (ix === i ? { ...r, [key]: value } : r)));
@@ -1986,7 +1974,7 @@ export function PrescriptionPage() {
                                 <div style={styles.rxDataCell}><DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} /></div>
                                 <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={row.notes} onChange={(e) => updateField("notes", e.target.value)} />
                                 <button type="button" style={styles.rxDeleteBtn} onClick={() => removeRxRow(i)} title="Remove medicine">
-                                  <TrashIcon style={{ width: 16, height: 16, opacity: 0.45 }} />
+                                  <TrashIcon style={{ width: 16, height: 16 }} />
                                 </button>
                               </div>
                               {row.thenRows.map((thenRow, ti) => (
@@ -1997,7 +1985,7 @@ export function PrescriptionPage() {
                                   <div style={styles.rxDataCell}><DurationPicker value={thenRow.duration} onChange={(v) => updateThenField(i, ti, "duration", v)} /></div>
                                   <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={thenRow.notes} onChange={(e) => updateThenField(i, ti, "notes", e.target.value)} />
                                   <button type="button" style={styles.rxDeleteBtn} onClick={() => removeThenRow(i, ti)} title="Remove tapering row">
-                                    <TrashIcon style={{ width: 16, height: 16, opacity: 0.45 }} />
+                                    <TrashIcon style={{ width: 16, height: 16 }} />
                                   </button>
                                 </div>
                               ))}
@@ -2015,7 +2003,10 @@ export function PrescriptionPage() {
                           onClick={() => setRxRows((rows) => [...rows, blankRxRow(rows.length + 1)])}
                           aria-label="Add medicine row"
                         >
-                          +
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                            <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                          </svg>
                         </button>
                         <button
                           type="button"
@@ -2153,7 +2144,7 @@ export function PrescriptionPage() {
                             ...(referDoctorName ? { color: colors.neutral900 } : {}),
                           }}
                         >
-                          {referDoctorName || "select doctor"}
+                          {referDoctorName || "Select doctor"}
                         </span>
                         <span style={styles.referChevron}>
                           <ChevronIcon
@@ -2282,6 +2273,12 @@ export function PrescriptionPage() {
           onEnd={handleSessionEnd}
         />
       )}
+
+      <PrintPreviewModal
+        isOpen={printPreviewHtml !== null}
+        html={printPreviewHtml}
+        onClose={() => setPrintPreviewHtml(null)}
+      />
 
       {/* Add File modal. Drag-drop or click-to-choose, multi-file, per-file
           metadata (name, category, investigation date, tie-to-visit, notes).
