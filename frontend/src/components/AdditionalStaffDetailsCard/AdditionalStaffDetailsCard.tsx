@@ -277,7 +277,7 @@ export function AdditionalStaffDetailsCard({
               errorMessage="Please enter registration number"
             />
             <div style={styles.hint}>
-              Issued by the council above
+              Issued by the selected council
             </div>
           </div>
         </div>
