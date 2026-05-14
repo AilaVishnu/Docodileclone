@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { colors, fonts, spacing, radii } from "../../styles/theme";
 import { Button } from "../Button";
+import { Select } from "../Input/Select/Select";
 
 type Medicine = {
   id: string;
@@ -159,26 +160,21 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
                 {isAdding && (
                   <tr>
                     <td colSpan={4} style={{ ...styles.td, borderBottom: "none", padding: "10px 8px" }}>
-                      <select
-                        autoFocus
-                        style={styles.catalogSelect}
-                        defaultValue=""
-                        onChange={(e) => {
-                          if (e.target.value) handleCatalogPick(e.target.value);
+                      <Select
+                        value=""
+                        onChange={(value) => {
+                          if (value) handleCatalogPick(value);
                           else setIsAdding(false);
                         }}
-                        onBlur={(e) => { if (!e.target.value) setIsAdding(false); }}
-                      >
-                        <option value="" disabled>Select a medicine…</option>
-                        {availableCatalog.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name} — ₹{c.unitPrice}
-                          </option>
-                        ))}
-                        {availableCatalog.length === 0 && (
-                          <option value="" disabled>All catalog items already added</option>
-                        )}
-                      </select>
+                        options={availableCatalog.map((c) => ({
+                          label: `${c.name} — ₹${c.unitPrice}`,
+                          value: c.id,
+                        }))}
+                        placeholder={availableCatalog.length === 0
+                          ? "All catalog items already added"
+                          : "Select a medicine…"}
+                        disabled={availableCatalog.length === 0}
+                      />
                     </td>
                   </tr>
                 )}

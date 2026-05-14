@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { styles } from "./Select.styles";
 
 type SelectOption = {
@@ -29,16 +30,41 @@ export function Select({
   const [isHovered, setIsHovered] = useState(false);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  // Trigger position drives the portaled menu's screen coordinates. Recomputed
+  // on open + on scroll/resize so the menu stays anchored as the page moves.
+  const [menuRect, setMenuRect] = useState<{ top: number; left: number; width: number } | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const t = event.target as Node;
+      if (containerRef.current && !containerRef.current.contains(t) &&
+          menuRef.current && !menuRef.current.contains(t)) {
         setIsOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Recompute the portaled menu's position whenever it opens, the container
+  // moves (scroll/resize), or the parent's layout shifts.
+  useEffect(() => {
+    if (!isOpen) return;
+    const updateRect = () => {
+      const el = containerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setMenuRect({ top: r.bottom + 4, left: r.left, width: r.width });
+    };
+    updateRect();
+    window.addEventListener("scroll", updateRect, true);
+    window.addEventListener("resize", updateRect);
+    return () => {
+      window.removeEventListener("scroll", updateRect, true);
+      window.removeEventListener("resize", updateRect);
+    };
+  }, [isOpen]);
 
   const normalizedOptions: SelectOption[] = options.map((opt) =>
     typeof opt === "string" ? { label: opt, value: opt } : opt
@@ -91,10 +117,22 @@ export function Select({
         </svg>
       </div>
 
-      {isOpen && !disabled && (
+      {isOpen && !disabled && menuRect && createPortal(
         <div
+          ref={menuRef}
           className="select-dropdown-scroll"
-          style={styles.menu}
+          style={{
+            ...styles.menu,
+            // Fixed positioning anchored to the trigger's current rect lets
+            // the menu escape any clipping ancestor (modal body, scroll
+            // container, table cell, etc.).
+            position: "fixed",
+            top: menuRect.top,
+            left: menuRect.left,
+            width: menuRect.width,
+            right: "auto",
+            zIndex: 2000,
+          }}
           onClick={(e) => e.stopPropagation()}
         >
           <style>{`
@@ -122,7 +160,8 @@ export function Select({
               </div>
             );
           })}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
