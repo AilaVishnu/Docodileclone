@@ -12,6 +12,7 @@ import { confirmStyles } from "../../components/AddStaffModal/AddStaffModal.styl
 import { Button } from "../../components/Button";
 import { ChatBubble } from "../../components/Chat/ChatBubble";
 import { setPendingSessionNav } from "../../components/TopNav/SessionTrayButton";
+import { hydrateScheduleFromBackend } from "../../components/DoctorSchedule/scheduleStorage";
 
 type HomePageProps = {
   onLogout: () => void;
@@ -30,6 +31,14 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   };
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isBooking, setIsBooking] = useState(false);
+
+  // Pull the canonical clinic schedule from the backend on mount and seed the
+  // local cache. Without this, the schedule-aware widgets (AnalogClock,
+  // HeatmapCard, DoctorScheduleStrip) would read stale localStorage from a
+  // previous clinic / device.
+  useEffect(() => {
+    void hydrateScheduleFromBackend();
+  }, []);
   
   // Selected theme mode
   const [themeMode] = useState<ThemeMode>("primary");
