@@ -36,10 +36,34 @@ class ServiceController(
         serviceRepository.findAllByClinicIdOrderByCreatedAtAsc(currentUser.clinicId())
             .map(::toDto)
 
+    private fun validate(request: ServiceRequest, existingId: UUID?) {
+        if (request.name.isBlank()) throw IllegalArgumentException("Service name is required")
+        if (request.code.isBlank()) throw IllegalArgumentException("Short form is required")
+        if (request.code.trim().length > 8) throw IllegalArgumentException("Short form too long (max 8 chars)")
+        if (request.price.signum() < 0) throw IllegalArgumentException("Price cannot be negative")
+        if (request.durationMin < 0) throw IllegalArgumentException("Duration cannot be negative")
+        if (request.discount.signum() < 0) throw IllegalArgumentException("Discount cannot be negative")
+        if (request.discountMode == "%" && request.discount.toDouble() > 100.0) {
+            throw IllegalArgumentException("Percentage discount cannot exceed 100")
+        }
+        if (request.gst.signum() < 0 || request.gst.toDouble() > 100.0) {
+            throw IllegalArgumentException("GST must be between 0 and 100")
+        }
+        // Enforce per-clinic uniqueness of (name, code) — two services with
+        // the same short form would be ambiguous on the printed bill.
+        val clinicId = currentUser.clinicId()
+        val all = serviceRepository.findAllByClinicIdOrderByCreatedAtAsc(clinicId)
+        val nameClash = all.any { it.id != existingId && it.name.equals(request.name.trim(), ignoreCase = true) }
+        if (nameClash) throw IllegalArgumentException("A service with this name already exists")
+        val codeClash = all.any { it.id != existingId && it.code.equals(request.code.trim(), ignoreCase = true) }
+        if (codeClash) throw IllegalArgumentException("Short form '${request.code.trim()}' is already used")
+    }
+
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Transactional
     fun create(@RequestBody request: ServiceRequest): ResponseEntity<ServiceDTO> {
+        validate(request, existingId = null)
         val clinicId = currentUser.clinicId()
         val clinic = clinicEntityRepository.findById(clinicId)
             .orElseThrow { IllegalArgumentException("Clinic not found") }
@@ -67,6 +91,7 @@ class ServiceController(
         val clinicId = currentUser.clinicId()
         val existing = serviceRepository.findByIdAndClinicId(id, clinicId)
             ?: return ResponseEntity.notFound().build()
+        validate(request, existingId = id)
         existing.apply {
             name = request.name.trim()
             code = request.code.trim()

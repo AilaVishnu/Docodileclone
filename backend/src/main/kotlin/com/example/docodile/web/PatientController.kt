@@ -42,14 +42,49 @@ class PatientController(
         val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
             ?: return ResponseEntity.notFound().build()
 
+        // Validate inputs to match the rigour ClinicStatusService.saveStaff
+        // applies — bad data here ends up on patient cards and printouts.
+        if (!req.name.isNullOrBlank() && req.name.trim().length < 2) {
+            throw IllegalArgumentException("Name must be at least 2 characters")
+        }
+        if (!req.phone.isNullOrBlank()) {
+            val digits = req.phone.filter { it.isDigit() }
+            if (digits.length < 10) throw IllegalArgumentException("Phone number must have at least 10 digits")
+        }
+        if (!req.email.isNullOrBlank()) {
+            val emailRegex = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
+            if (!emailRegex.matches(req.email.trim())) {
+                throw IllegalArgumentException("Invalid email format")
+            }
+        }
+        val parsedDob: LocalDate? = req.dob?.takeIf { it.isNotBlank() }?.let {
+            try { LocalDate.parse(it) } catch (e: Exception) {
+                throw IllegalArgumentException("Date of birth must be in yyyy-MM-dd format")
+            }
+        }
+        if (parsedDob != null && parsedDob.isAfter(LocalDate.now())) {
+            throw IllegalArgumentException("Date of birth cannot be in the future")
+        }
+        if (req.age != null && (req.age < 0 || req.age > 200 * 12)) {
+            throw IllegalArgumentException("Age (in months) is out of range")
+        }
+        if (!req.gender.isNullOrBlank() && req.gender.lowercase() !in setOf("male", "female", "other")) {
+            throw IllegalArgumentException("Gender must be male, female, or other")
+        }
+
         if (!req.name.isNullOrBlank()) patient.name = req.name.trim()
         patient.phone  = req.phone?.takeIf { it.isNotBlank() }
-        patient.email  = req.email?.takeIf { it.isNotBlank() }
-        patient.gender = req.gender?.takeIf { it.isNotBlank() }
-        patient.dob    = req.dob?.takeIf { it.isNotBlank() }?.let { LocalDate.parse(it) }
+        patient.email  = req.email?.takeIf { it.isNotBlank() }?.lowercase()
+        patient.gender = req.gender?.takeIf { it.isNotBlank() }?.lowercase()
+        patient.dob    = parsedDob
         patient.age    = req.age
 
         patientRepository.save(patient)
         return ResponseEntity.noContent().build()
+    }
+
+    @ExceptionHandler(IllegalArgumentException::class)
+    fun handleIllegalArgument(e: IllegalArgumentException): ResponseEntity<Map<String, String>> {
+        return ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
     }
 }
