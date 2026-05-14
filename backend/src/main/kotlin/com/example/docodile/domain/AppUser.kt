@@ -40,7 +40,11 @@ class AppUser(
 
     var gender: String? = null,
 
-    var speciality: String? = null,
+    @Column(columnDefinition = "TEXT")
+    var department: String? = null,
+
+    @Column(columnDefinition = "TEXT")
+    var specialty: String? = null,
 
     @Column(name = "registration_no")
     var registrationNo: String? = null,

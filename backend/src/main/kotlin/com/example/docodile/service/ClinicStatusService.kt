@@ -116,6 +116,30 @@ class ClinicStatusService(
              throw IllegalArgumentException("Phone number must have at least 10 digits")
         }
 
+        // Department + specialty rules tied to role:
+        //   Doctor                              → department + specialty both required
+        //   Nurse                               → department required, specialty ignored
+        //   Pharmacy / Lab / Front Desk / Other → both optional (clinic-wide roles)
+        // Department, when set, must belong to the clinic's configured list.
+        val deptRequiredRoles = setOf("DOCTOR", "NURSE")
+        val normalizedRole = request.role.uppercase().replace(" ", "_")
+        if (normalizedRole in deptRequiredRoles && request.department.isNullOrBlank()) {
+            throw IllegalArgumentException("Department is required for ${request.role}")
+        }
+        if (normalizedRole == "DOCTOR" && request.specialty.isNullOrBlank()) {
+            throw IllegalArgumentException("Specialty is required for Doctor")
+        }
+        if (!request.department.isNullOrBlank()) {
+            val clinicDepartments = clinic.speciality
+                ?.split(",")
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() }
+                .orEmpty()
+            if (request.department !in clinicDepartments) {
+                throw IllegalArgumentException("Department '${request.department}' is not configured for this clinic")
+            }
+        }
+
         // Check email uniqueness
         val existingByEmail = appUserRepository.findByEmail(request.email.trim().lowercase())
         if (existingByEmail.isPresent && existingByEmail.get().id != request.id) {
@@ -148,7 +172,8 @@ class ClinicStatusService(
             }.getOrNull()
             role = resolved ?: Role.OTHER
             customRole = if (resolved == null) request.role.trim() else null
-            speciality = request.speciality
+            department = request.department
+            specialty = request.specialty
             registrationNo = request.registrationNo
             passwordHash = null // As requested
         }

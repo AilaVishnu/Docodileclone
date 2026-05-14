@@ -26,7 +26,8 @@ class DoctorService(
                 DoctorDTO(
                     id = user.id,
                     name = user.name ?: "",
-                    speciality = user.speciality,
+                    department = user.department,
+                    specialty = user.specialty,
                     registrationNo = user.registrationNo
                 )
             }

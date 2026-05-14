@@ -9,6 +9,7 @@ data class StaffRequest(
     val phone: String,
     val gender: String,
     val role: String,
-    val speciality: String? = null,
+    val department: String? = null,
+    val specialty: String? = null,
     val registrationNo: String? = null
 )
