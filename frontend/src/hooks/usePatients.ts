@@ -16,6 +16,11 @@ export type Patient = {
   dob: string | null;          // ISO yyyy-MM-dd
   age: number | null;
   lastVisitDate: string | null;
+  // Distinct doctors this patient has been seen by (from visits). Drives
+  // the doctor/department filter in Patient Files without per-row fetches.
+  treatingDoctorIds: string[];
+  // Department names of those treating doctors, resolved server-side.
+  treatingDepartments: string[];
   // Backend follow-up: add `photo_url` column on the patients table and
   // return it here. Used by the avatar in PatientFilesPage right pane.
   photoUrl?: string | null;

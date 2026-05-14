@@ -46,9 +46,29 @@ interface VisitRepository : JpaRepository<Visit, UUID> {
         """
     )
     fun findLastVisitDatesByClinic(@Param("clinicId") clinicId: UUID): List<LastVisitProjection>
+
+    /**
+     * Every (patient, doctor) pair appearing in this clinic's visits, so the
+     * frontend can filter patients by treating doctor / department without
+     * having to fetch each patient's visit history individually.
+     */
+    @Query(
+        """
+        SELECT DISTINCT v.patient.id AS patientId, v.createdByDoctor.id AS doctorId
+        FROM Visit v
+        WHERE v.clinic.id = :clinicId
+          AND v.createdByDoctor IS NOT NULL
+        """
+    )
+    fun findPatientDoctorPairsByClinic(@Param("clinicId") clinicId: UUID): List<PatientDoctorProjection>
 }
 
 interface LastVisitProjection {
     fun getPatientId(): UUID
     fun getLastVisitDate(): LocalDate?
+}
+
+interface PatientDoctorProjection {
+    fun getPatientId(): UUID
+    fun getDoctorId(): UUID?
 }

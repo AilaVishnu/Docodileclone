@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { usePatients, Patient } from "../../hooks/usePatients";
 import { useDoctors } from "../../hooks/useDoctors";
+import { API_BASE_URL } from "../../apiConfig";
 import { ReactComponent as SearchIcon } from "../../assets/search.svg";
 import { ReactComponent as PrescriptionIconSVG } from "../../assets/prescription.svg";
 import { Select } from "../../components/Input/Select/Select";
@@ -53,13 +54,34 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
   useEffect(() => {
     if (initialSelectedId) setSelectedId(initialSelectedId);
   }, [initialSelectedId]);
-  // Departments are derived from doctor specialities. When a department is
-  // picked, the doctor dropdown narrows to that department.
-  const departments = useMemo(() => {
-    const set = new Set<string>();
-    doctors.forEach((d) => d.department && set.add(d.department));
-    return Array.from(set).sort();
-  }, [doctors]);
+  // Departments come from the clinic's configured list (set in Build Your
+  // Clinic), not from staff data. That way the filter shows every
+  // department the clinic supports even before a doctor has been added to
+  // it. Picking a department then narrows the doctor dropdown to staff
+  // tagged with that department.
+  const [clinicDepartments, setClinicDepartments] = useState<string[]>([]);
+  useEffect(() => {
+    const token = localStorage.getItem("docodile_token");
+    const clinicId = localStorage.getItem("docodile_clinic_id");
+    if (!token) return;
+    let cancelled = false;
+    fetch(`${API_BASE_URL}/api/tenant/clinics`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((all: Array<{ id: string; speciality?: string }>) => {
+        if (cancelled) return;
+        const active = clinicId ? all.find((c) => c.id === clinicId) : all[0];
+        const list = (active?.speciality || "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        setClinicDepartments(list);
+      })
+      .catch(() => { /* fall back to empty list */ });
+    return () => { cancelled = true; };
+  }, []);
+  const departments = clinicDepartments;
 
   const doctorOptions = useMemo(() => {
     return department === ANY
@@ -68,6 +90,10 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
   }, [doctors, department]);
 
   const visible = useMemo(() => {
+    // A patient file only makes sense in the context of a treating doctor.
+    // If the clinic has no doctors yet, hide everything so the empty state
+    // can prompt the admin to add staff first.
+    if (doctors.length === 0) return [] as Patient[];
     const q = search.trim().toLowerCase();
     // Match across every fielded scalar we have on the patient record.
     // Diagnosis / prescription / treatment / service search needs a backend
@@ -87,11 +113,21 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
       });
     }
 
+    // Doctor / department filter — match against fields the backend resolved
+    // from the patient's visits and bookings. `?? []` guards against an
+    // older backend response that hasn't been restarted to include the
+    // new fields yet.
+    if (doctorId !== ANY) {
+      list = list.filter((p) => (p.treatingDoctorIds ?? []).includes(doctorId));
+    } else if (department !== ANY) {
+      list = list.filter((p) => (p.treatingDepartments ?? []).includes(department));
+    }
+
     if (sort === "recent") list.sort(byLastVisit(true));
     else if (sort === "stale") list.sort(byLastVisit(false));
     else list.sort((a, b) => a.name.localeCompare(b.name));
     return list;
-  }, [patients, search, sort, dateFrom, dateTo]);
+  }, [patients, search, sort, dateFrom, dateTo, doctors, department, doctorId]);
 
   // Keep selection valid as filters change. If the current selection vanishes
   // from `visible`, fall back to the first item.

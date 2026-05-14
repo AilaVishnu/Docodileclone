@@ -496,6 +496,10 @@ export function PrescriptionPage() {
   // Used as the visit date for auto-create so past-date queues don't
   // create a visit stamped today.
   const [queueDate, setQueueDate] = React.useState<string>(todayIso());
+  // Doctor who owns the queue entry the user just clicked View Pad on.
+  // Threaded into the visit's createdByDoctorId so the Patient Files filter
+  // (which scopes by treating doctor / department) can find this patient.
+  const [appointmentDoctorId, setAppointmentDoctorId] = React.useState<string | null>(null);
 
   // If the doctor clicked an entry in the header session-tray, route them
   // straight back to that patient's prescription form. Handled both on mount
@@ -768,6 +772,7 @@ export function PrescriptionPage() {
         hip: null, hipUnit: null, spo2: null, spo2Unit: null,
         familyHistory: null, allergies: null, personalHistory: null, pastMedicalHistory: null,
         complaints: null, diagnosis: null, notesForPatient: null, privateNotes: null, tests: null,
+        createdByDoctorId: appointmentDoctorId,
         referDoctorId: null,
         reviewDate: null, reviewDays: null, reviewNotes: null,
         sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
@@ -1299,10 +1304,11 @@ export function PrescriptionPage() {
     return (
       <div ref={pageRootRef}>
         <PrescriptionQueue
-          onSelect={(patient, appointmentId, date) => {
+          onSelect={(patient, appointmentId, date, doctorId) => {
             setQueueDate(date);
             setSelectedPatient(patient);
             setSelectedAppointmentId(appointmentId);
+            setAppointmentDoctorId(doctorId);
           }}
         />
       </div>
@@ -1317,10 +1323,11 @@ export function PrescriptionPage() {
     return (
       <div ref={pageRootRef}>
         <PrescriptionQueue
-          onSelect={(patient, appointmentId, date) => {
+          onSelect={(patient, appointmentId, date, doctorId) => {
             setQueueDate(date);
             setSelectedPatient(patient);
             setSelectedAppointmentId(appointmentId);
+            setAppointmentDoctorId(doctorId);
           }}
         />
       </div>

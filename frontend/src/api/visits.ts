@@ -63,10 +63,15 @@ export type VisitDTO = {
 
 // Same shape as VisitDTO minus server-generated fields. Used for both POST
 // and PUT — full-replacement semantics on update (Rx rows wholesale-replaced).
+// `createdByDoctorId` is server-set today (current user) but accepted in the
+// payload too so the frontend can tag visits with the appointment's owning
+// doctor when a receptionist/admin opens View Pad on the doctor's behalf.
 export type SaveVisitRequest = Omit<
   VisitDTO,
   "id" | "patientId" | "clinicId" | "createdByDoctorId" | "referDoctorName"
->;
+> & {
+  createdByDoctorId?: string | null;
+};
 
 const authHeaders = (): HeadersInit => {
   const token = localStorage.getItem("docodile_token");

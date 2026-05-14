@@ -31,13 +31,14 @@ type AppointmentRow = {
   type: string | null;
   status: string | null;
   scheduledTime: string | null;
+  doctorId: string;
 };
 
 type StatusFilter = "all" | "AT_DOC" | "IN_PROGRESS" | "WAITING" | "COMPLETED";
 type ViewMode = "grid" | "list";
 
 type PrescriptionQueueProps = {
-  onSelect: (patient: Patient, appointmentId: string, queueDate: string) => void;
+  onSelect: (patient: Patient, appointmentId: string, queueDate: string, doctorId: string) => void;
 };
 
 const TAB_ITEMS: { id: StatusFilter; label: string }[] = [
@@ -145,9 +146,11 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
       dob: apt.patientDob,
       age: apt.patientAge,
       lastVisitDate: null,
+      treatingDoctorIds: [],
+      treatingDepartments: [],
     };
     const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
-    onSelect(patient, apt.id, dateStr);
+    onSelect(patient, apt.id, dateStr, apt.doctorId);
   };
 
   const renderCards = () => {
