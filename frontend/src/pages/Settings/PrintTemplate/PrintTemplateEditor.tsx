@@ -4,6 +4,7 @@ import { Button } from "../../../components/Button";
 import { Toast } from "../../../components/Toast";
 import { TextInput } from "../../../components/Input/TextInput/TextInput";
 import { Select } from "../../../components/Input/Select/Select";
+import { Switch } from "../../../components/Switch";
 import { FONT_FAMILIES, PaperMode, PatientFieldKey, PrintTemplate, RxLayout } from "./types";
 import {
   createTemplate,
@@ -450,37 +451,6 @@ function Field({
   );
 }
 
-function Switch({ checked, onChange, hint }: { checked: boolean; onChange: (v: boolean) => void; hint?: string }) {
-  return (
-    <label style={S.switchWrap}>
-      <span
-        style={{
-          ...S.switchTrack,
-          backgroundColor: checked ? colors.active.shade600 : colors.neutral300,
-        }}
-        onClick={() => onChange(!checked)}
-        role="switch"
-        aria-checked={checked}
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === " " || e.key === "Enter") {
-            e.preventDefault();
-            onChange(!checked);
-          }
-        }}
-      >
-        <span
-          style={{
-            ...S.switchThumb,
-            transform: checked ? "translateX(16px)" : "translateX(2px)",
-          }}
-        />
-      </span>
-      {hint && <span style={S.switchHint}>{hint}</span>}
-    </label>
-  );
-}
-
 function SegmentedControl<T extends string>({
   value,
   options,
@@ -502,12 +472,18 @@ function SegmentedControl<T extends string>({
             type="button"
             style={{
               ...(compact ? S.segCompactItem : S.segItem),
-              ...(active ? S.segItemActive : null),
+              ...(active ? (compact ? S.segCompactItemActive : S.segItemActive) : null),
             }}
             onClick={() => onChange(o.value)}
           >
-            <span style={S.segItemLabel}>{o.label}</span>
-            {o.sub && !compact && <span style={S.segItemSub}>{o.sub}</span>}
+            {compact ? (
+              o.label
+            ) : (
+              <>
+                <span style={S.segItemLabel}>{o.label}</span>
+                {o.sub && <span style={S.segItemSub}>{o.sub}</span>}
+              </>
+            )}
           </button>
         );
       })}
@@ -708,7 +684,7 @@ const S: Record<string, React.CSSProperties> = {
 
   row: { display: "flex", gap: spacing.m, flexWrap: "wrap" },
   field: { display: "flex", flexDirection: "column", gap: 6, minWidth: 120 },
-  fieldLabel: { fontSize: fonts.size.xs, fontWeight: 500, color: colors.neutral700 },
+  fieldLabel: { fontSize: fonts.size.s, fontWeight: fonts.weight.medium, color: colors.neutral700 },
   fieldHint: { fontSize: fonts.size.xs, color: colors.neutral500 },
 
   toggleGrid: {
@@ -717,29 +693,6 @@ const S: Record<string, React.CSSProperties> = {
     gap: spacing.s,
   },
   toggleRow: { display: "flex", alignItems: "center", gap: spacing.s, cursor: "pointer" },
-
-  // Switch
-  switchWrap: { display: "inline-flex", alignItems: "center", gap: spacing.s },
-  switchTrack: {
-    width: 36,
-    height: 20,
-    borderRadius: 999,
-    position: "relative",
-    cursor: "pointer",
-    transition: "background-color 160ms",
-    flexShrink: 0,
-  },
-  switchThumb: {
-    position: "absolute",
-    top: 2,
-    width: 16,
-    height: 16,
-    borderRadius: "50%",
-    backgroundColor: colors.neutral100,
-    boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
-    transition: "transform 160ms",
-  },
-  switchHint: { fontSize: fonts.size.xs, color: colors.neutral500 },
 
   // Segmented control
   seg: { display: "flex", gap: spacing.s, flexWrap: "wrap" },
@@ -768,13 +721,14 @@ const S: Record<string, React.CSSProperties> = {
   segItemLabel: { fontSize: fonts.control.md, fontWeight: 600 },
   segItemSub: { fontSize: fonts.size.xs, color: colors.neutral500 },
 
+  // Compact pill segmented — mirrors the Stats range-pill styling so it
+  // reads as a familiar control across the app.
   segCompact: {
     display: "inline-flex",
+    gap: 4,
     backgroundColor: colors.neutral100,
     padding: 4,
     borderRadius: radii.full,
-    gap: 2,
-    border: `${strokes.xs} solid ${colors.neutral200}`,
   },
   segCompactItem: {
     border: "none",
@@ -783,8 +737,13 @@ const S: Record<string, React.CSSProperties> = {
     borderRadius: radii.full,
     cursor: "pointer",
     fontFamily: "inherit",
-    fontSize: fonts.control.sm,
+    fontSize: fonts.size.xs,
+    fontWeight: 500,
     color: colors.neutral700,
+  },
+  segCompactItemActive: {
+    backgroundColor: colors.active.shade700,
+    color: colors.neutral100,
   },
 
   // Inputs
@@ -802,20 +761,22 @@ const S: Record<string, React.CSSProperties> = {
     backgroundColor: colors.neutral100,
   },
 
-  // Image picker
+  // Image picker — matches the dropzone style used in AddReportModal so
+  // upload affordances feel native across the app.
   imageDrop: {
     width: "100%",
-    borderWidth: strokes.s,
+    borderWidth: "1.5px",
     borderStyle: "dashed",
-    borderColor: colors.neutral300,
-    borderRadius: radii.s,
+    borderColor: colors.primary400,
+    borderRadius: radii.l,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     color: colors.neutral500,
     cursor: "pointer",
+    transition: "background-color 0.15s ease, border-color 0.15s ease",
   },
-  imageDropHint: { fontSize: fonts.size.xs, color: colors.neutral500 },
+  imageDropHint: { fontSize: fonts.control.md, color: colors.neutral700, fontWeight: fonts.weight.medium },
 
   actionsRow: { display: "flex", gap: spacing.s, justifyContent: "flex-end" },
 };
