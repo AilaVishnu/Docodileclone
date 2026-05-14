@@ -2142,8 +2142,8 @@ export function PrescriptionPage() {
                                 }}
                               >
                                 <span style={styles.referMenuItemName}>{d.name}</span>
-                                {d.speciality && (
-                                  <span style={styles.referMenuItemMeta}>{d.speciality}</span>
+                                {(d.specialty || d.department) && (
+                                  <span style={styles.referMenuItemMeta}>{d.specialty || d.department}</span>
                                 )}
                               </button>
                             ))

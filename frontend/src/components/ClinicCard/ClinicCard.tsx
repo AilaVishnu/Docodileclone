@@ -50,9 +50,9 @@ export function ClinicCard({
         <div style={styles.specialtyRow}>
           <span style={styles.fieldIcon}><SpecialtyIcon width={20} height={20} /></span>
           <div style={styles.tagRow}>
-            {departments.map((s, i) => (
+            {departments.map((d, i) => (
               <span key={i} style={styles.tag}>
-                {s} <span style={styles.tagX}>✕</span>
+                {d} <span style={styles.tagX}>✕</span>
               </span>
             ))}
           </div>

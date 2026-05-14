@@ -52,9 +52,9 @@ export function ClinicDisplayCard({ clinic, onSelect }: ClinicDisplayCardProps) 
           </div>
           <div style={styles.tagList}>
             {departments.length > 0 ? (
-              departments.map((spec, index) => (
+              departments.map((d, index) => (
                 <span key={index} style={styles.tag}>
-                  {spec}
+                  {d}
                 </span>
               ))
             ) : (

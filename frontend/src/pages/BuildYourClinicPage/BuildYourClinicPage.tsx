@@ -55,7 +55,8 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                     gender: s.gender || "",
                     email: s.email || "",
                     phone: s.phone || "",
-                    department: s.speciality || "",
+                    department: s.department || "",
+                    specialty: s.specialty || "",
                     registrationNo: s.registrationNo || ""
                   }));
                 }
@@ -69,7 +70,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                 domain: c.domain || "",
                 phone: c.phone || "",
                 address: c.address || "",
-                departments: c.speciality ? c.speciality.split(",") : [],
+                departments: c.speciality ? c.speciality.split(",").map((s: string) => s.trim()).filter(Boolean) : [],
                 staff: staffList
               };
             }));
@@ -194,7 +195,8 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           phone: data.phone,
           gender: data.gender,
           role: data.role,
-          speciality: data.department,
+          department: data.department,
+          specialty: data.specialty,
           registrationNo: data.registrationNo
         }),
       });
@@ -210,7 +212,8 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           gender: savedStaffData.gender || "",
           email: savedStaffData.email || "",
           phone: savedStaffData.phone || "",
-          department: savedStaffData.speciality || "",
+          department: savedStaffData.department || "",
+          specialty: savedStaffData.specialty || "",
           registrationNo: savedStaffData.registrationNo || ""
         };
 
@@ -320,6 +323,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           onDelete={handleDeleteStaff}
           initialData={editingStaff}
           onShowToast={setToastMessage}
+          clinicDepartments={activeClinic?.departments || []}
         />
 
         {/* Footer actions */}

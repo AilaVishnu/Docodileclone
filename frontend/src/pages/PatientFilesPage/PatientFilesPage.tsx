@@ -57,14 +57,14 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
   // picked, the doctor dropdown narrows to that department.
   const departments = useMemo(() => {
     const set = new Set<string>();
-    doctors.forEach((d) => d.speciality && set.add(d.speciality));
+    doctors.forEach((d) => d.department && set.add(d.department));
     return Array.from(set).sort();
   }, [doctors]);
 
   const doctorOptions = useMemo(() => {
     return department === ANY
       ? doctors
-      : doctors.filter((d) => d.speciality === department);
+      : doctors.filter((d) => d.department === department);
   }, [doctors, department]);
 
   const visible = useMemo(() => {

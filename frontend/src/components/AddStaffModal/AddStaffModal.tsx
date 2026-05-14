@@ -13,6 +13,10 @@ import { ReactComponent as RoleIcon } from "../../assets/Mask Happly.svg";
 // that reveals a free-text input for custom roles.
 const STANDARD_ROLES = ["Front Desk", "Doctor", "Nurse", "Pharmacy", "Lab"];
 
+// Clinical roles tied to a clinical department. Pharmacy/Lab are clinic-wide
+// services (no department), Front Desk and custom Other are admin/varied.
+const DEPARTMENT_REQUIRED_ROLES = ["Doctor", "Nurse"];
+
 
 export type StaffData = {
   name: string;
@@ -21,6 +25,7 @@ export type StaffData = {
   gender: "male" | "female" | "other" | "";
   role: string;
   department: string;
+  specialty: string;
   registrationNo: string;
 };
 
@@ -31,6 +36,9 @@ type AddStaffModalProps = {
   onDelete?: () => void;
   initialData?: StaffData;
   onShowToast?: (message: string) => void;
+  // Department names configured on the active clinic. Staff must pick one of
+  // these — they can't be assigned to a department the clinic doesn't offer.
+  clinicDepartments: string[];
 };
 
 export function AddStaffModal({
@@ -40,6 +48,7 @@ export function AddStaffModal({
   onDelete,
   initialData,
   onShowToast,
+  clinicDepartments,
 }: AddStaffModalProps) {
   // Local state for all fields
   const [name, setName] = useState("");
@@ -52,6 +61,7 @@ export function AddStaffModal({
   // custom text the user types (or "" while input is empty).
   const [isOtherRole, setIsOtherRole] = useState(false);
   const [department, setDepartment] = useState("");
+  const [specialty, setSpecialty] = useState("");
   const [registrationNo, setRegistrationNo] = useState("");
 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
@@ -73,6 +83,7 @@ export function AddStaffModal({
         // custom text already in the input.
         setIsOtherRole(!!initialData.role && !STANDARD_ROLES.includes(initialData.role));
         setDepartment(initialData.department);
+        setSpecialty(initialData.specialty);
         setRegistrationNo(initialData.registrationNo);
       } else {
         // Reset form for "Add New"
@@ -83,6 +94,7 @@ export function AddStaffModal({
         setRole("Doctor");
         setIsOtherRole(false);
         setDepartment("");
+        setSpecialty("");
         setRegistrationNo("");
       }
     }
@@ -122,8 +134,13 @@ export function AddStaffModal({
       role: roleInvalid,
     };
 
-    if (role === "Doctor") {
+    // Department required for any clinical role; specialty + registration
+    // number are doctor-only.
+    if (DEPARTMENT_REQUIRED_ROLES.includes(role)) {
       newErrors.department = !department;
+    }
+    if (role === "Doctor") {
+      newErrors.specialty = !specialty.trim();
       newErrors.registrationNo = !registrationNo.trim();
     }
 
@@ -138,6 +155,7 @@ export function AddStaffModal({
       if (newErrors.gender) messages.push("gender");
       if (newErrors.role) messages.push("role");
       if (newErrors.department) messages.push("department");
+      if (newErrors.specialty) messages.push("specialty");
       if (newErrors.registrationNo) messages.push("registration number");
       onShowToast?.(`Please enter ${messages[0]}`);
       return;
@@ -149,7 +167,8 @@ export function AddStaffModal({
       phone,
       gender,
       role,
-      department: role === "Doctor" ? department : "",
+      department: DEPARTMENT_REQUIRED_ROLES.includes(role) ? department : "",
+      specialty: role === "Doctor" ? specialty : "",
       registrationNo: role === "Doctor" ? registrationNo : "",
     });
   };
@@ -240,13 +259,18 @@ export function AddStaffModal({
         />
       </div>
 
-      {/* Doctor-specific fields — only shown when role is Doctor. */}
-      {role === "Doctor" && (
+      {/* Clinical-role fields. Department shows for Doctor/Nurse/Pharmacy/Lab;
+          specialty and Reg. No. are doctor-only (handled inside the card). */}
+      {DEPARTMENT_REQUIRED_ROLES.includes(role) && (
         <AdditionalStaffDetailsCard
+          role={role}
           department={department}
           setDepartment={setDepartment}
+          specialty={specialty}
+          setSpecialty={setSpecialty}
           registrationNo={registrationNo}
           setRegistrationNo={setRegistrationNo}
+          clinicDepartments={clinicDepartments}
           errors={errors}
         />
       )}

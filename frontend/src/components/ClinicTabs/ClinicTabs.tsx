@@ -1,7 +1,6 @@
 import React from "react";
 import { Tabs, TabItem } from "../Tabs";
 import { colors } from "../../styles/theme";
-
 export type Staff = {
   id: string;
   name: string;
@@ -10,6 +9,7 @@ export type Staff = {
   gender: "male" | "female" | "other" | "";
   role: string;
   department: string;
+  specialty: string;
   registrationNo: string;
 };
 

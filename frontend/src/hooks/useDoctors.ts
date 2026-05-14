@@ -10,7 +10,8 @@ import { API_BASE_URL } from "../apiConfig";
 export type Doctor = {
   id: string;
   name: string;
-  speciality: string | null;
+  department: string | null;
+  specialty: string | null;
   registrationNo: string | null;
 };
 

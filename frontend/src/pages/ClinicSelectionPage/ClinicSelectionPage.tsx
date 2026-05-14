@@ -60,7 +60,7 @@ export function ClinicSelectionPage({ onSelectClinic, onGoToBuild, onLogout }: C
             domain: c.domain || "",
             phone: c.phone || "",
             address: c.address || "",
-            departments: c.speciality ? c.speciality.split(",") : [],
+            departments: c.speciality ? c.speciality.split(",").map((s: string) => s.trim()).filter(Boolean) : [],
           }));
           setClinics(mapped);
         }

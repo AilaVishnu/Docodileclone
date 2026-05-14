@@ -82,16 +82,19 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
     };
   }, [domain, isSaved]);
 
-  const addDept = () => {
-    const trimmed = deptInput.trim();
-    if (trimmed && !departments.includes(trimmed)) {
+  const deptExists = (name: string) =>
+    departments.some((d) => d.toLowerCase() === name.toLowerCase());
+
+  const addDept = (name?: string) => {
+    const trimmed = (name ?? deptInput).trim();
+    if (trimmed && !deptExists(trimmed)) {
       onUpdate({ departments: [...departments, trimmed] });
     }
     setDeptInput("");
   };
 
   const removeDept = (index: number) => {
-    onUpdate({ departments: departments.filter((_: string, i: number) => i !== index) });
+    onUpdate({ departments: departments.filter((_, i) => i !== index) });
   };
 
   useEffect(() => {
@@ -106,7 +109,7 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
   }, [deptDropdownOpen]);
 
   const filteredDepts = (() => {
-    const unselected = DEPARTMENTS.filter((d) => !departments.includes(d));
+    const unselected = DEPARTMENTS.filter((d) => !deptExists(d));
     if (!deptInput.trim()) return unselected.slice(0, 6);
     return unselected.filter((d) => d.toLowerCase().includes(deptInput.toLowerCase()));
   })();
@@ -246,7 +249,7 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
         <div style={{ ...styles.specialtyRow, ...(fieldsLocked ? styles.locked : {}) }}>
           <span style={styles.fieldIcon}><SpecialtyIcon width={20} height={20} /></span>
           <div style={styles.tagRow}>
-            {departments.map((s: string, i: number) => (
+            {departments.map((s, i) => (
               <Tag
                 key={i}
                 variant="filled"
@@ -268,17 +271,18 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
             />
           </div>
         </div>
-        {deptDropdownOpen && !fieldsLocked && filteredDepts.length > 0 && (
+        {deptDropdownOpen && !fieldsLocked && deptInput.trim().length > 0 && filteredDepts.length > 0 && (
           <div style={deptMenuStyle}>
             {filteredDepts.map((d) => (
               <button
                 key={d}
                 type="button"
                 style={deptItemStyle}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.active.shade100)}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  onUpdate({ departments: [...departments, d] });
-                  setDeptInput("");
+                  addDept(d);
                   setDeptDropdownOpen(false);
                 }}
               >
