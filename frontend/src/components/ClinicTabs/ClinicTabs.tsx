@@ -11,6 +11,9 @@ export type Staff = {
   department: string;
   specialty: string;
   registrationNo: string;
+  qualification: string;
+  medicalCouncil: string;
+  experienceYears: string;
 };
 
 export type Clinic = {

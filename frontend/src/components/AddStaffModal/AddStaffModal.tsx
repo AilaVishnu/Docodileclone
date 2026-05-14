@@ -27,6 +27,9 @@ export type StaffData = {
   department: string;
   specialty: string;
   registrationNo: string;
+  qualification: string;
+  medicalCouncil: string;
+  experienceYears: string;
 };
 
 type AddStaffModalProps = {
@@ -63,6 +66,9 @@ export function AddStaffModal({
   const [department, setDepartment] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [registrationNo, setRegistrationNo] = useState("");
+  const [qualification, setQualification] = useState("");
+  const [medicalCouncil, setMedicalCouncil] = useState("");
+  const [experienceYears, setExperienceYears] = useState("");
 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -85,6 +91,9 @@ export function AddStaffModal({
         setDepartment(initialData.department);
         setSpecialty(initialData.specialty);
         setRegistrationNo(initialData.registrationNo);
+        setQualification(initialData.qualification);
+        setMedicalCouncil(initialData.medicalCouncil);
+        setExperienceYears(initialData.experienceYears);
       } else {
         // Reset form for "Add New"
         setName("Dr. ");
@@ -96,6 +105,9 @@ export function AddStaffModal({
         setDepartment("");
         setSpecialty("");
         setRegistrationNo("");
+        setQualification("");
+        setMedicalCouncil("");
+        setExperienceYears("");
       }
     }
   }, [isOpen, initialData]);
@@ -170,6 +182,9 @@ export function AddStaffModal({
       department: DEPARTMENT_REQUIRED_ROLES.includes(role) ? department : "",
       specialty: role === "Doctor" ? specialty : "",
       registrationNo: role === "Doctor" ? registrationNo : "",
+      qualification: role === "Doctor" ? qualification : "",
+      medicalCouncil: role === "Doctor" ? medicalCouncil : "",
+      experienceYears: role === "Doctor" ? experienceYears : "",
     });
   };
 
@@ -270,6 +285,12 @@ export function AddStaffModal({
           setSpecialty={setSpecialty}
           registrationNo={registrationNo}
           setRegistrationNo={setRegistrationNo}
+          qualification={qualification}
+          setQualification={setQualification}
+          medicalCouncil={medicalCouncil}
+          setMedicalCouncil={setMedicalCouncil}
+          experienceYears={experienceYears}
+          setExperienceYears={setExperienceYears}
           clinicDepartments={clinicDepartments}
           errors={errors}
         />

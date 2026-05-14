@@ -28,7 +28,10 @@ class DoctorService(
                     name = user.name ?: "",
                     department = user.department,
                     specialty = user.specialty,
-                    registrationNo = user.registrationNo
+                    registrationNo = user.registrationNo,
+                    qualification = user.qualification,
+                    medicalCouncil = user.medicalCouncil,
+                    experienceYears = user.experienceYears
                 )
             }
 }

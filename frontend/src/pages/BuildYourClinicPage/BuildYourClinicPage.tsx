@@ -57,7 +57,10 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                     phone: s.phone || "",
                     department: s.department || "",
                     specialty: s.specialty || "",
-                    registrationNo: s.registrationNo || ""
+                    registrationNo: s.registrationNo || "",
+                    qualification: s.qualification || "",
+                    medicalCouncil: s.medicalCouncil || "",
+                    experienceYears: s.experienceYears != null ? String(s.experienceYears) : ""
                   }));
                 }
               } catch (e) {
@@ -197,7 +200,10 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           role: data.role,
           department: data.department,
           specialty: data.specialty,
-          registrationNo: data.registrationNo
+          registrationNo: data.registrationNo,
+          qualification: data.qualification,
+          medicalCouncil: data.medicalCouncil,
+          experienceYears: data.experienceYears ? Number(data.experienceYears) : null
         }),
       });
 
@@ -214,7 +220,10 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           phone: savedStaffData.phone || "",
           department: savedStaffData.department || "",
           specialty: savedStaffData.specialty || "",
-          registrationNo: savedStaffData.registrationNo || ""
+          registrationNo: savedStaffData.registrationNo || "",
+          qualification: savedStaffData.qualification || "",
+          medicalCouncil: savedStaffData.medicalCouncil || "",
+          experienceYears: savedStaffData.experienceYears != null ? String(savedStaffData.experienceYears) : ""
         };
 
         if (editingStaff) {

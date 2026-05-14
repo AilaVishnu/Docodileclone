@@ -175,6 +175,9 @@ class ClinicStatusService(
             department = request.department
             specialty = request.specialty
             registrationNo = request.registrationNo
+            qualification = request.qualification
+            medicalCouncil = request.medicalCouncil
+            experienceYears = request.experienceYears
             passwordHash = null // As requested
         }
 

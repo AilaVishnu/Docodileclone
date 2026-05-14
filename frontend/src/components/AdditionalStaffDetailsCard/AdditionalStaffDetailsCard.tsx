@@ -39,6 +39,37 @@ export const SPECIALTIES_BY_DEPARTMENT: Record<string, string[]> = {
   "Emergency Medicine": ["General Emergency Medicine", "Trauma", "Pediatric Emergency", "Critical Care", "Toxicology"],
 };
 
+// Bodies a doctor can be registered with. NMC is the national regulator
+// (took over from MCI); the rest are state councils. "Other" reveals a
+// free-text input for anything outside this list.
+const MEDICAL_COUNCILS = [
+  "National Medical Commission (NMC)",
+  "Andhra Pradesh Medical Council",
+  "Telangana State Medical Council",
+  "Karnataka Medical Council",
+  "Tamil Nadu Medical Council",
+  "Kerala Medical Council",
+  "Maharashtra Medical Council",
+  "Gujarat Medical Council",
+  "Delhi Medical Council",
+  "Punjab Medical Council",
+  "Haryana Medical Council",
+  "Rajasthan Medical Council",
+  "Madhya Pradesh Medical Council",
+  "Uttar Pradesh Medical Council",
+  "Bihar Medical Council",
+  "West Bengal Medical Council",
+  "Odisha Council of Medical Registration",
+  "Assam Medical Council",
+  "Chhattisgarh Medical Council",
+  "Jharkhand Medical Council",
+  "Uttarakhand Medical Council",
+  "Himachal Pradesh Medical Council",
+  "Jammu & Kashmir Medical Council",
+  "Goa Medical Council",
+  "Tripura State Medical Council",
+];
+
 // Doctor-specific fields only. The Role selector now lives at the top of the
 // staff modal (see AddStaffModal.tsx) since it determines everything else.
 type AdditionalStaffDetailsCardProps = {
@@ -51,6 +82,13 @@ type AdditionalStaffDetailsCardProps = {
   setSpecialty: (val: string) => void;
   registrationNo: string;
   setRegistrationNo: (val: string) => void;
+  qualification: string;
+  setQualification: (val: string) => void;
+  medicalCouncil: string;
+  setMedicalCouncil: (val: string) => void;
+  // Years of experience. Empty string while unset; integer >= 0 otherwise.
+  experienceYears: string;
+  setExperienceYears: (val: string) => void;
   // Staff can only be assigned to a department the clinic actually offers —
   // the dropdown is scoped to these names (set up in ClinicInfoCard).
   clinicDepartments: string[];
@@ -65,6 +103,12 @@ export function AdditionalStaffDetailsCard({
   setSpecialty,
   registrationNo,
   setRegistrationNo,
+  qualification,
+  setQualification,
+  medicalCouncil,
+  setMedicalCouncil,
+  experienceYears,
+  setExperienceYears,
   clinicDepartments,
   errors = {},
 }: AdditionalStaffDetailsCardProps) {
@@ -73,6 +117,13 @@ export function AdditionalStaffDetailsCard({
   // appears and the actual specialty stored is whatever the user types.
   const OTHER = "Other";
   const specOptions = presetSpecs.length > 0 ? [...presetSpecs, OTHER] : [];
+
+  // Council list with Other fallback, mirroring specialty's pattern.
+  const councilOptions = [...MEDICAL_COUNCILS, OTHER];
+  const [isCouncilOther, setIsCouncilOther] = useState(
+    !!medicalCouncil && !MEDICAL_COUNCILS.includes(medicalCouncil)
+  );
+  const councilSelectValue = isCouncilOther ? OTHER : medicalCouncil;
 
   // If the saved specialty isn't in the preset list, treat it as a custom
   // value entered via "Other". Sync this when the department changes.
@@ -88,77 +139,148 @@ export function AdditionalStaffDetailsCard({
 
   return (
     <Card style={styles.card}>
-      {/* Department */}
-      <div style={styles.section}>
-        <div style={styles.label}>Department</div>
-        <div style={styles.fieldRow}>
-          <Select
-            value={department}
-            onChange={(val) => {
-              setDepartment(val);
-              // Reset specialty when department changes — the previous specialty
-              // belongs to a different department's list.
-              setSpecialty("");
-            }}
-            options={clinicDepartments}
-            placeholder={clinicDepartments.length === 0 ? "Add departments in clinic info first" : "Choose Department"}
-            iconLeft={<StethoIcon />}
-            error={errors.department}
-          />
-        </div>
-      </div>
-
-      {/* Specialty — doctors only. Narrowed to the chosen department's list;
-          "Other" reveals a free-text input for anything not in the preset list. */}
-      {role === "Doctor" && department && specOptions.length > 0 && (
-        <div style={styles.section}>
-          <div style={styles.label}>Specialty</div>
-          <div style={styles.fieldRow}>
-            <Select
-              value={selectValue}
-              onChange={(val) => {
-                if (val === OTHER) {
-                  setIsOther(true);
+      {/* Department + Specialty row. Doctors get both columns; other clinical
+          roles (Nurse) get Department alone — rendered full-width below. */}
+      {role === "Doctor" ? (
+        <div style={{ ...styles.section, flexDirection: "row", gap: 12 }}>
+          <div style={{ ...styles.section, flex: 1, minWidth: 0 }}>
+            <div style={styles.label}>Department</div>
+            <div style={styles.fieldRow}>
+              <Select
+                value={department}
+                onChange={(val) => {
+                  setDepartment(val);
                   setSpecialty("");
-                } else {
-                  setIsOther(false);
-                  setSpecialty(val);
-                }
-              }}
-              options={specOptions}
-              placeholder="Choose Specialty"
-              iconLeft={<StethoIcon />}
-            />
+                }}
+                options={clinicDepartments}
+                placeholder={clinicDepartments.length === 0 ? "Add departments in clinic info first" : "Choose Department"}
+                iconLeft={<StethoIcon />}
+                error={errors.department}
+              />
+            </div>
           </div>
-          {isOther && (
-            <div style={{ marginTop: 8 }}>
-              <TextInput
-                value={specialty}
-                onChange={setSpecialty}
-                placeholder="Enter specialty"
+          <div style={{ ...styles.section, flex: 1, minWidth: 0 }}>
+            <div style={styles.label}>Specialty</div>
+            <div style={styles.fieldRow}>
+              <Select
+                value={selectValue}
+                onChange={(val) => {
+                  if (val === OTHER) {
+                    setIsOther(true);
+                    setSpecialty("");
+                  } else {
+                    setIsOther(false);
+                    setSpecialty(val);
+                  }
+                }}
+                options={specOptions}
+                placeholder={!department ? "Choose department first" : "Choose Specialty"}
                 iconLeft={<StethoIcon />}
               />
             </div>
-          )}
+            {isOther && (
+              <div style={{ marginTop: 8 }}>
+                <TextInput
+                  value={specialty}
+                  onChange={setSpecialty}
+                  placeholder="Enter specialty"
+                  iconLeft={<StethoIcon />}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div style={styles.section}>
+          <div style={styles.label}>Department</div>
+          <div style={styles.fieldRow}>
+            <Select
+              value={department}
+              onChange={setDepartment}
+              options={clinicDepartments}
+              placeholder={clinicDepartments.length === 0 ? "Add departments in clinic info first" : "Choose Department"}
+              iconLeft={<StethoIcon />}
+              error={errors.department}
+            />
+          </div>
         </div>
       )}
 
-      {/* Registration Number — doctors only. */}
+      {/* Qualification + Experience side-by-side, doctor-only. Background
+          row — what they studied and how long they've practiced. */}
       {role === "Doctor" && (
-      <div style={styles.section}>
-        <div style={styles.label}>Reg. No.</div>
-        <TextInput
-          value={registrationNo}
-          onChange={setRegistrationNo}
-          placeholder="ABCDEF"
-          iconLeft={<RegIcon />}
-          error={errors.registrationNo}
-          errorMessage="Please enter registration number"
-        />
-        <div style={styles.hint}>
-          Enter registration number issued by authority
+        <div style={{ ...styles.section, flexDirection: "row", gap: 12 }}>
+          <div style={{ ...styles.section, flex: 1, minWidth: 0 }}>
+            <div style={styles.label}>Qualification</div>
+            <TextInput
+              value={qualification}
+              onChange={setQualification}
+              placeholder="MBBS, MD (Dermatology)"
+              iconLeft={<RegIcon />}
+            />
+          </div>
+          <div style={{ ...styles.section, flex: 1, minWidth: 0 }}>
+            <div style={styles.label}>Experience (years)</div>
+            <TextInput
+              value={experienceYears}
+              onChange={(val) => setExperienceYears(val.replace(/\D/g, "").slice(0, 2))}
+              placeholder="10"
+              iconLeft={<RegIcon />}
+            />
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Medical Council + Reg. No. side-by-side, doctor-only. Naturally
+          paired — Reg. No. is the number issued by that council. Council
+          takes the wider column since its names are long. */}
+      {role === "Doctor" && (
+        <div style={{ ...styles.section, flexDirection: "row", gap: 12 }}>
+          <div style={{ ...styles.section, flex: 2, minWidth: 0 }}>
+            <div style={styles.label}>Medical Council</div>
+            <div style={styles.fieldRow}>
+              <Select
+                value={councilSelectValue}
+                onChange={(val) => {
+                  if (val === OTHER) {
+                    setIsCouncilOther(true);
+                    setMedicalCouncil("");
+                  } else {
+                    setIsCouncilOther(false);
+                    setMedicalCouncil(val);
+                  }
+                }}
+                options={councilOptions}
+                placeholder="Choose Council"
+                iconLeft={<RegIcon />}
+              />
+            </div>
+            {isCouncilOther && (
+              <div style={{ marginTop: 8 }}>
+                <TextInput
+                  value={medicalCouncil}
+                  onChange={setMedicalCouncil}
+                  placeholder="Enter council name"
+                  iconLeft={<RegIcon />}
+                />
+              </div>
+            )}
+          </div>
+          <div style={{ ...styles.section, flex: 1, minWidth: 0 }}>
+            <div style={styles.label}>Reg. No.</div>
+            <TextInput
+              value={registrationNo}
+              onChange={setRegistrationNo}
+              placeholder="ABCDEF"
+              iconLeft={<RegIcon />}
+              error={errors.registrationNo}
+              errorMessage="Please enter registration number"
+            />
+            <div style={styles.hint}>
+              Issued by the council above
+            </div>
+          </div>
+        </div>
       )}
     </Card>
   );

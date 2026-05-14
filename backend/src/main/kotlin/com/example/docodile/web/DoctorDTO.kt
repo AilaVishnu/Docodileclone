@@ -10,5 +10,8 @@ data class DoctorDTO(
     val name: String,
     val department: String?,
     val specialty: String?,
-    val registrationNo: String?
+    val registrationNo: String?,
+    val qualification: String?,
+    val medicalCouncil: String?,
+    val experienceYears: Int?
 )

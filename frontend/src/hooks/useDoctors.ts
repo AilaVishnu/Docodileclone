@@ -13,6 +13,9 @@ export type Doctor = {
   department: string | null;
   specialty: string | null;
   registrationNo: string | null;
+  qualification: string | null;
+  medicalCouncil: string | null;
+  experienceYears: number | null;
 };
 
 type UseDoctorsResult = {
