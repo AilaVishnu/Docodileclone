@@ -54,7 +54,7 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
     if (initialSelectedId) setSelectedId(initialSelectedId);
   }, [initialSelectedId]);
   // Departments are derived from doctor specialities. When a department is
-  // picked, the doctor dropdown narrows to that speciality.
+  // picked, the doctor dropdown narrows to that department.
   const departments = useMemo(() => {
     const set = new Set<string>();
     doctors.forEach((d) => d.speciality && set.add(d.speciality));
