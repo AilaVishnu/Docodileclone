@@ -39,28 +39,41 @@ class AIService(
     // ── Patient summary ─────────────────────────────────────────────────────
 
     /**
-     * AI-generated rolling summary of a patient's history. Returns the raw
-     * JSON string the model produced (shape owned by the prompt below) so the
-     * frontend can render fields it cares about without us re-validating
-     * every key here.
+     * Read-only fetch — returns the cached summary only if it matches the
+     * patient's current visit fingerprint. Never calls OpenAI. This is what
+     * the patient-file card hits on open; nothing happens until the doctor
+     * clicks "Generate".
+     */
+    fun getCachedPatientSummary(patientId: UUID): PatientSummaryResult {
+        val clinicId = currentUser.clinicId()
+        val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
+            ?: throw IllegalArgumentException("Patient not found")
+        val visits = visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAsc(clinicId, patientId)
+        val currentHash = visitsHash(visits)
+        val cached = patientAISummaryRepo.findById(patientId).orElse(null)
+        val isFresh = cached != null && cached.visitsHash == currentHash
+        return PatientSummaryResult(
+            content = if (isFresh) cached!!.content else "",
+            updatedAt = cached?.updatedAt ?: Instant.EPOCH,
+            cached = isFresh,
+            generated = isFresh,
+        )
+    }
+
+    /**
+     * Generate a fresh AI summary and cache it. Force-call: the caller is
+     * responsible for deciding when to spend tokens (Generate button click,
+     * Refresh action, etc.). Returns the same shape getCachedPatientSummary
+     * does so callers can swap in the new result without reshaping state.
      */
     @Transactional
-    fun getPatientSummary(patientId: UUID, forceRefresh: Boolean = false): PatientSummaryResult {
+    fun generatePatientSummary(patientId: UUID): PatientSummaryResult {
         val clinicId = currentUser.clinicId()
         val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
             ?: throw IllegalArgumentException("Patient not found")
 
         val visits = visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAsc(clinicId, patientId)
-        val hash = hashVisits(visits.map { v ->
-            "${v.id}|${v.updatedAt}|${v.diagnosis ?: ""}|${v.complaints ?: ""}"
-        })
-
-        if (!forceRefresh) {
-            val cached = patientAISummaryRepo.findById(patientId).orElse(null)
-            if (cached != null && cached.visitsHash == hash) {
-                return PatientSummaryResult(cached.content, cached.updatedAt, cached = true)
-            }
-        }
+        val hash = visitsHash(visits)
 
         // Build the prompt. Compact JSON-y blob of patient context — gives
         // the model structure without spending tokens on pretty-printing.
@@ -83,7 +96,12 @@ class AIService(
             openAI.complete(systemPrompt, ctx)
         } catch (e: AIClientException) {
             log.warn("Patient summary AI call failed: ${e.message}")
-            return PatientSummaryResult("""{"summary":"","activeConditions":[],"allergies":[],"riskFlags":[],"lastVisitGist":"","error":"${e.message?.replace("\"","'") ?: "AI unavailable"}"}""", Instant.now(), cached = false)
+            return PatientSummaryResult(
+                content = """{"summary":"","activeConditions":[],"allergies":[],"riskFlags":[],"lastVisitGist":"","error":"${e.message?.replace("\"","'") ?: "AI unavailable"}"}""",
+                updatedAt = Instant.now(),
+                cached = false,
+                generated = false,
+            )
         }
 
         val row = patientAISummaryRepo.findById(patientId).orElseGet {
@@ -94,8 +112,12 @@ class AIService(
         row.visitsHash = hash
         row.updatedAt = Instant.now()
         patientAISummaryRepo.save(row)
-        return PatientSummaryResult(raw, row.updatedAt, cached = false)
+        return PatientSummaryResult(raw, row.updatedAt, cached = false, generated = true)
     }
+
+    private fun visitsHash(visits: List<com.example.docodile.domain.Visit>): String = hashVisits(visits.map { v ->
+        "${v.id}|${v.updatedAt}|${v.diagnosis ?: ""}|${v.complaints ?: ""}"
+    })
 
     private fun buildPatientContext(
         name: String,
@@ -214,4 +236,8 @@ data class PatientSummaryResult(
     val content: String,
     val updatedAt: Instant,
     val cached: Boolean,
+    // True when the row currently in the DB matches the patient's present
+    // visit fingerprint — i.e. nothing's gone stale. False when no row yet,
+    // OR when visits have changed since the last generation (button reappears).
+    val generated: Boolean,
 )

@@ -41,14 +41,29 @@ export type PatientSummary = {
 
 export type PatientSummaryResponse = {
   // Model-generated JSON as a string — parse with parsePatientSummary().
+  // Empty string when nothing has been generated yet for the current visit set.
   content: string;
   updatedAt: string;
   cached: boolean;
+  // True when the DB row matches the patient's current visit fingerprint.
+  // False = no summary exists yet, OR new visits invalidated the cache.
+  // The UI shows a "Generate" button when this is false.
+  generated: boolean;
 };
 
-export async function fetchPatientSummary(patientId: string, refresh = false): Promise<PatientSummaryResponse> {
-  const url = `${API_BASE_URL}/api/ai/patients/${patientId}/summary${refresh ? "?refresh=true" : ""}`;
-  const res = await fetch(url, { headers: authHeaders() });
+/** Cached-only read. Never calls OpenAI. Safe to invoke on every page open. */
+export async function fetchPatientSummary(patientId: string): Promise<PatientSummaryResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/ai/patients/${patientId}/summary`, { headers: authHeaders() });
+  if (!res.ok) throw new Error(await readError(res));
+  return res.json();
+}
+
+/** Explicit generation — costs tokens. Wire to Generate/Refresh buttons. */
+export async function generatePatientSummary(patientId: string): Promise<PatientSummaryResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/ai/patients/${patientId}/summary`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
   if (!res.ok) throw new Error(await readError(res));
   return res.json();
 }
@@ -127,3 +142,18 @@ export async function fetchStatsHighlights(overviewPayload: unknown): Promise<AI
 // pharmacology API already returns clinician-grade interaction text
 // (drug + interactsWith + comment) which the prescription page surfaces
 // directly. Wrapping it with an LLM only adds latency and cost.
+
+// ── Clinic AI chat assistant ────────────────────────────────────────────────
+
+export type AIChatTurn = { role: "user" | "assistant"; content: string };
+
+export async function chatWithAssistant(messages: AIChatTurn[]): Promise<string> {
+  const res = await fetch(`${API_BASE_URL}/api/ai/chat`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ messages }),
+  });
+  if (!res.ok) throw new Error(await readError(res));
+  const body = await res.json();
+  return String(body.reply ?? "");
+}

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 import { ChatMessage, useChat } from "../../hooks/useChat";
+import { chatWithAssistant, AIChatTurn } from "../../api/ai";
 
 type Props = {
   clinicId: string;
@@ -10,7 +11,7 @@ type Props = {
   onClose: () => void;
 };
 
-type Conversation = { type: "group" } | { type: "dm"; partnerId: string; partnerName: string };
+type Conversation = { type: "group" } | { type: "dm"; partnerId: string; partnerName: string } | { type: "ai" };
 
 export function ChatPanel({ clinicId, currentUserId, currentUserName, onUnreadChange, onClose }: Props) {
   const { messages, staff: realStaff, unread, connected, sendGroup, sendDirect, loadDmHistory, markSeen, dmKey } =
@@ -26,6 +27,11 @@ export function ChatPanel({ clinicId, currentUserId, currentUserName, onUnreadCh
   // or thread view (one conversation open at a time).
   const [viewMode, setViewMode] = useState<"list" | "thread">("list");
   const [input, setInput] = useState("");
+  // AI assistant lives in this panel as another "conversation". Its messages
+  // are kept in local state (not persisted server-side) and routed through
+  // the /api/ai/chat tool-using endpoint when the user sends.
+  const [aiMessages, setAiMessages] = useState<AIChatTurn[]>([]);
+  const [aiThinking, setAiThinking] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -72,7 +78,8 @@ export function ChatPanel({ clinicId, currentUserId, currentUserName, onUnreadCh
           const seconds = Math.max(1, Math.round(recordingMs / 1000));
           const placeholder = `🎤 Voice note · ${seconds}s`;
           if (active.type === "group") sendGroup(placeholder);
-          else sendDirect(active.partnerId, placeholder);
+          else if (active.type === "dm") sendDirect(active.partnerId, placeholder);
+          // Voice notes intentionally not supported in the AI thread.
         }
       };
       mr.stop();
@@ -89,7 +96,8 @@ export function ChatPanel({ clinicId, currentUserId, currentUserName, onUnreadCh
     // TODO: upload file to backend and send as an attachment message.
     const placeholder = `📎 ${file.name} · ${formatFileSize(file.size)}`;
     if (active.type === "group") sendGroup(placeholder);
-    else sendDirect(active.partnerId, placeholder);
+    else if (active.type === "dm") sendDirect(active.partnerId, placeholder);
+    // Attachments not supported in the AI thread.
     e.target.value = "";
   };
 
@@ -103,10 +111,14 @@ export function ChatPanel({ clinicId, currentUserId, currentUserName, onUnreadCh
   }, [messages]);
 
   useEffect(() => {
+    if (active.type === "ai") {
+      // AI thread has no server-side history to load or seen-state to mark.
+      inputRef.current?.focus();
+      return;
+    }
     const key = active.type === "group" ? "group" : dmKey(currentUserId, active.partnerId);
     markSeen(key);
     if (active.type === "dm") loadDmHistory(active.partnerId);
-    // Focus the input when conversation changes (and on mount).
     inputRef.current?.focus();
   }, [active]);
 
@@ -121,6 +133,22 @@ export function ChatPanel({ clinicId, currentUserId, currentUserName, onUnreadCh
   const handleSend = () => {
     const text = input.trim();
     if (!text) return;
+    if (active.type === "ai") {
+      // Append user message immediately, fire backend, append assistant when done.
+      const next: AIChatTurn[] = [...aiMessages, { role: "user", content: text }];
+      setAiMessages(next);
+      setInput("");
+      setAiThinking(true);
+      chatWithAssistant(next)
+        .then((reply) => {
+          setAiMessages((cur) => [...cur, { role: "assistant", content: reply || "(no response)" }]);
+        })
+        .catch((e) => {
+          setAiMessages((cur) => [...cur, { role: "assistant", content: `Error: ${(e as Error).message}` }]);
+        })
+        .finally(() => setAiThinking(false));
+      return;
+    }
     if (active.type === "group") sendGroup(text);
     else sendDirect(active.partnerId, text);
     setInput("");
@@ -150,6 +178,14 @@ export function ChatPanel({ clinicId, currentUserId, currentUserName, onUnreadCh
       {viewMode === "list" && (
       <div style={styles.sidebar}>
         <div style={styles.listHeader}>Chats</div>
+        <ConvItem
+          label="✨ AI Assistant"
+          subtitle="Ask about patients, queue, reviews…"
+          active={active.type === "ai"}
+          unread={0}
+          isGroup
+          onClick={() => { setActive({ type: "ai" }); setViewMode("thread"); }}
+        />
         <ConvItem
           label="# Clinic"
           subtitle={groupLast ? previewText(groupLast, currentUserId) : "Group chat"}
@@ -198,6 +234,8 @@ export function ChatPanel({ clinicId, currentUserId, currentUserName, onUnreadCh
           <div style={styles.threadTitleRow}>
             {active.type === "dm" ? (
               <Avatar name={active.partnerName} size={28} online={onlineIds.has(active.partnerId)} />
+            ) : active.type === "ai" ? (
+              <div style={{ ...styles.avatar, width: 28, height: 28, fontSize: 15, backgroundColor: colors.active.shade600 }}>✨</div>
             ) : (
               <div style={{ ...styles.avatar, width: 28, height: 28, fontSize: 13, backgroundColor: colors.active.shade400 }}>
                 #
@@ -205,19 +243,55 @@ export function ChatPanel({ clinicId, currentUserId, currentUserName, onUnreadCh
             )}
             <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
               <span style={styles.threadTitle}>
-                {active.type === "group" ? "Clinic" : active.partnerName}
+                {active.type === "group" ? "Clinic" : active.type === "ai" ? "AI Assistant" : active.partnerName}
               </span>
               {active.type === "dm" && (
                 <span style={styles.threadStatus}>
                   {onlineIds.has(active.partnerId) ? "Online" : "Offline"}
                 </span>
               )}
+              {active.type === "ai" && (
+                <span style={styles.threadStatus}>Clinic-scoped, read-only</span>
+              )}
             </div>
           </div>
         </div>
 
         <div style={styles.messages}>
-          {groupedMessages.length === 0 && (
+          {active.type === "ai" && (
+            <>
+              {aiMessages.length === 0 && (
+                <div style={styles.empty}>
+                  <div style={styles.emptyIcon} aria-hidden>✨</div>
+                  <div style={styles.emptyTitle}>Ask about your clinic</div>
+                  <div style={styles.emptySub}>
+                    Try: "How many patients are waiting?", "Show overdue reviews", "Find patients with diabetes".
+                  </div>
+                </div>
+              )}
+              {aiMessages.map((m, i) => {
+                const isMe = m.role === "user";
+                return (
+                  <div key={`ai-${i}`} style={{ ...styles.msgRow, justifyContent: isMe ? "flex-end" : "flex-start" }}>
+                    <div style={{ maxWidth: "82%" }}>
+                      <div style={{ ...styles.bubble, ...(isMe ? styles.bubbleMe : styles.bubbleThem), whiteSpace: "pre-wrap" }}>
+                        {m.content}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {aiThinking && (
+                <div style={{ ...styles.msgRow, justifyContent: "flex-start" }}>
+                  <div style={{ ...styles.bubble, ...styles.bubbleThem, fontStyle: "italic", color: colors.neutral500 }}>
+                    Thinking…
+                  </div>
+                </div>
+              )}
+              <div ref={bottomRef} />
+            </>
+          )}
+          {active.type !== "ai" && groupedMessages.length === 0 && (
             <div style={styles.empty}>
               <div style={styles.emptyIcon} aria-hidden>💬</div>
               <div style={styles.emptyTitle}>
@@ -230,7 +304,7 @@ export function ChatPanel({ clinicId, currentUserId, currentUserName, onUnreadCh
               </div>
             </div>
           )}
-          {groupedMessages.map((group, gIdx) => (
+          {active.type !== "ai" && groupedMessages.map((group, gIdx) => (
             <React.Fragment key={group.label + gIdx}>
               <div style={styles.dateSeparator}>
                 <span style={styles.dateSeparatorPill}>{group.label}</span>

@@ -3,7 +3,7 @@ import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { usePatients, Patient } from "../../hooks/usePatients";
 import { useDoctors } from "../../hooks/useDoctors";
 import { API_BASE_URL } from "../../apiConfig";
-import { fetchPatientSummary, parsePatientSummary, PatientSummary } from "../../api/ai";
+import { fetchPatientSummary, generatePatientSummary, parsePatientSummary, PatientSummary } from "../../api/ai";
 import { ReactComponent as SearchIcon } from "../../assets/search.svg";
 import { ReactComponent as PrescriptionIconSVG } from "../../assets/prescription.svg";
 import { Select } from "../../components/Input/Select/Select";
@@ -574,40 +574,85 @@ function OpenFile({ patient, onOpenChart }: { patient: Patient; onOpenChart: () 
   );
 }
 
-// AI-backed patient summary card. Fetches once per patient open, parses the
-// model's JSON content into typed fields, surfaces clinician-friendly cards
-// for active conditions / allergies / risk flags. A small Refresh action
-// lets the doctor force a regeneration after they edit a visit.
+// AI-backed patient summary card. On open we only do a cache lookup — no
+// OpenAI call. If a fresh cached summary exists (visit fingerprint matches)
+// we render it; otherwise we show a Generate button so the doctor decides
+// when to spend tokens. Adding/editing a visit invalidates the cache and
+// the Generate button reappears on next open.
 function AIPatientSummary({ patientId }: { patientId: string }) {
   const [data, setData] = useState<PatientSummary | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [generated, setGenerated] = useState(false);
+  const [loading, setLoading] = useState(true);     // initial cache check
+  const [busy, setBusy] = useState(false);          // explicit generation in flight
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
-  const load = (refresh = false) => {
+  // Cache-only read on mount / patient switch. Never costs tokens.
+  useEffect(() => {
     setLoading(true);
     setError(null);
-    fetchPatientSummary(patientId, refresh)
+    fetchPatientSummary(patientId)
       .then((r) => {
-        const parsed = parsePatientSummary(r.content);
-        setData(parsed);
+        setGenerated(r.generated);
         setUpdatedAt(r.updatedAt);
-        if (parsed.error) setError(parsed.error);
+        if (r.generated && r.content) {
+          const parsed = parsePatientSummary(r.content);
+          setData(parsed);
+          if (parsed.error) setError(parsed.error);
+        } else {
+          setData(null);
+        }
       })
       .catch((e) => setError((e as Error).message))
       .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    load(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientId]);
 
+  const generate = () => {
+    setBusy(true);
+    setError(null);
+    generatePatientSummary(patientId)
+      .then((r) => {
+        setGenerated(r.generated);
+        setUpdatedAt(r.updatedAt);
+        const parsed = parsePatientSummary(r.content);
+        setData(parsed);
+        if (parsed.error) setError(parsed.error);
+      })
+      .catch((e) => setError((e as Error).message))
+      .finally(() => setBusy(false));
+  };
+
   if (loading) {
-    return <p style={{ ...styles.summaryBody, fontStyle: "italic", color: colors.neutral500 }}>Generating summary…</p>;
+    return <p style={{ ...styles.summaryBody, color: colors.neutral500 }}>Checking…</p>;
   }
-  if (error && !data?.summary) {
-    return <p style={{ ...styles.summaryBody, color: colors.red200 }}>AI unavailable: {error}</p>;
+  // No fresh cached summary → show Generate button.
+  if (!generated) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <p style={{ ...styles.summaryBody, color: colors.neutral500 }}>
+          {data ? "Visit data has changed since the last summary." : "No AI summary yet for this patient."}
+        </p>
+        <button
+          type="button"
+          onClick={generate}
+          disabled={busy}
+          style={{
+            alignSelf: "flex-start",
+            background: colors.secondary700,
+            color: colors.neutral100,
+            border: "none",
+            padding: "6px 14px",
+            borderRadius: 999,
+            cursor: busy ? "default" : "pointer",
+            fontSize: fonts.control.xs,
+            opacity: busy ? 0.6 : 1,
+          }}
+        >
+          {busy ? "Generating…" : "Generate AI summary"}
+        </button>
+        {error && <span style={{ fontSize: 11, color: colors.red200 }}>{error}</span>}
+      </div>
+    );
   }
   if (!data || (!data.summary && data.activeConditions.length === 0 && data.allergies.length === 0)) {
     return <p style={{ ...styles.summaryBody, color: colors.neutral500 }}>Not enough visit data yet.</p>;
@@ -638,10 +683,11 @@ function AIPatientSummary({ patientId }: { patientId: string }) {
         <span>AI-generated — verify before clinical decisions.</span>
         <button
           type="button"
-          onClick={() => load(true)}
-          style={{ background: "none", border: "none", color: colors.secondary700, cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 11 }}
+          onClick={generate}
+          disabled={busy}
+          style={{ background: "none", border: "none", color: colors.secondary700, cursor: busy ? "default" : "pointer", textDecoration: "underline", padding: 0, fontSize: 11, opacity: busy ? 0.6 : 1 }}
         >
-          Refresh{updatedAt ? ` · ${new Date(updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}
+          {busy ? "Regenerating…" : `Regenerate${updatedAt ? ` · ${new Date(updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}`}
         </button>
       </div>
     </div>

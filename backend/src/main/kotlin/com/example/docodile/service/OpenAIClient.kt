@@ -43,6 +43,49 @@ class OpenAIClient(
      * AIClientException on transport / parse failure so callers can decide
      * whether to surface or fall back.
      */
+    /**
+     * Free-form chat with optional OpenAI tool calling. Caller passes raw
+     * messages (system / user / assistant / tool) and an optional `tools`
+     * array. Returns the raw JSON of the assistant's last message so the
+     * caller can inspect tool_calls vs. final content.
+     */
+    fun chat(
+        messages: List<Map<String, Any?>>,
+        tools: List<Map<String, Any?>>? = null,
+        temperature: Double = 0.2,
+        model: String = defaultModel,
+    ): Map<String, Any?> {
+        if (apiKey.isBlank()) throw AIClientException("OPENAI_API_KEY is not configured")
+        val body = buildMap<String, Any> {
+            put("model", model)
+            put("temperature", temperature)
+            put("messages", messages)
+            if (!tools.isNullOrEmpty()) put("tools", tools)
+        }
+        val req = HttpRequest.newBuilder()
+            .uri(URI.create(ENDPOINT))
+            .timeout(Duration.ofSeconds(60))
+            .header("Authorization", "Bearer $apiKey")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)))
+            .build()
+        val resp = try {
+            http.send(req, HttpResponse.BodyHandlers.ofString())
+        } catch (e: Exception) {
+            throw AIClientException("OpenAI request failed: ${e.message}", e)
+        }
+        if (resp.statusCode() !in 200..299) {
+            log.warn("OpenAI returned ${resp.statusCode()}: ${resp.body().take(500)}")
+            throw AIClientException("OpenAI returned HTTP ${resp.statusCode()}")
+        }
+        @Suppress("UNCHECKED_CAST")
+        val parsed = mapper.readValue(resp.body(), Map::class.java) as Map<String, Any?>
+        @Suppress("UNCHECKED_CAST")
+        val choices = parsed["choices"] as? List<Map<String, Any?>> ?: emptyList()
+        @Suppress("UNCHECKED_CAST")
+        return (choices.firstOrNull()?.get("message") as? Map<String, Any?>) ?: emptyMap()
+    }
+
     fun complete(
         systemPrompt: String,
         userContent: String,

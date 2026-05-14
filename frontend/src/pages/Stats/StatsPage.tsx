@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "../../apiConfig";
+import { fetchStatsHighlights } from "../../api/ai";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 import {
   AgePyramid,
@@ -415,10 +416,32 @@ function OverviewTab({ range, customStart, customEnd }: {
 }) {
   const { stats: s, loading } = useOverviewStats(range, customStart, customEnd);
   const L = loading ? "…" : undefined;
-  // Derive insight blurbs from the real overview numbers instead of seeding
-  // them with mock copy. Keeps the section feeling alive without a separate
-  // backend "insights" service.
-  const highlights = useMemo(() => deriveHighlights(s, range), [s, range]);
+  // Heuristic highlights derived from the OverviewStats numbers. Free,
+  // instant, no tokens spent. The "Use AI" button replaces them with
+  // model-generated insights when the doctor explicitly asks.
+  const heuristicHighlights = useMemo(() => deriveHighlights(s, range), [s, range]);
+  const [aiHighlights, setAiHighlights] = useState<{ tone: "good" | "warn" | "info"; text: string }[] | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  // When the underlying stats change (different range / fresh data), the
+  // current AI bullets are stale. Reset so the user re-triggers if wanted.
+  useEffect(() => { setAiHighlights(null); setAiError(null); }, [range, customStart, customEnd, s]);
+
+  const generateAi = () => {
+    if (!s) return;
+    setAiBusy(true);
+    setAiError(null);
+    fetchStatsHighlights(s)
+      .then((items) => {
+        if (items.length === 0) setAiError("No insights returned");
+        else setAiHighlights(items);
+      })
+      .catch((e) => setAiError((e as Error).message))
+      .finally(() => setAiBusy(false));
+  };
+
+  const highlights = aiHighlights ?? heuristicHighlights;
 
   return (
     <div style={styles.tabBody}>
@@ -437,7 +460,13 @@ function OverviewTab({ range, customStart, customEnd }: {
 
       <div style={styles.bottomRow}>
         <FootfallTrendCard hourly={s?.hourlyTrend ?? []} daily={s?.dailyTrend ?? []} range={range} loading={loading} />
-        <HighlightsCard items={highlights} />
+        <HighlightsCard
+          items={highlights}
+          onGenerateAI={generateAi}
+          aiBusy={aiBusy}
+          aiActive={aiHighlights !== null}
+          aiError={aiError}
+        />
       </div>
     </div>
   );
@@ -1279,11 +1308,40 @@ function FootfallTrendCard({ hourly, daily, range, loading }: {
   );
 }
 
-function HighlightsCard({ items }: { items: { tone: "good" | "warn" | "info"; text: string }[] }) {
+function HighlightsCard({
+  items,
+  onGenerateAI,
+  aiBusy,
+  aiActive,
+  aiError,
+}: {
+  items: { tone: "good" | "warn" | "info"; text: string }[];
+  onGenerateAI: () => void;
+  aiBusy: boolean;
+  aiActive: boolean;
+  aiError: string | null;
+}) {
   return (
     <section style={styles.card}>
-      <header style={styles.cardHeader}>
-        <h3 style={styles.cardTitle}>Highlights</h3>
+      <header style={{ ...styles.cardHeader, justifyContent: "space-between" }}>
+        <h3 style={styles.cardTitle}>{aiActive ? "AI Highlights" : "Highlights"}</h3>
+        <button
+          type="button"
+          onClick={onGenerateAI}
+          disabled={aiBusy}
+          style={{
+            background: "none",
+            border: "none",
+            color: colors.secondary700,
+            cursor: aiBusy ? "default" : "pointer",
+            textDecoration: "underline",
+            padding: 0,
+            fontSize: fonts.size.xs,
+            opacity: aiBusy ? 0.6 : 1,
+          }}
+        >
+          {aiBusy ? "Generating…" : aiActive ? "Refresh AI" : "Use AI"}
+        </button>
       </header>
       <div style={{ display: "flex", flexDirection: "column", gap: spacing.s }}>
         {items.map((item, idx) => {
@@ -1303,6 +1361,9 @@ function HighlightsCard({ items }: { items: { tone: "good" | "warn" | "info"; te
           );
         })}
       </div>
+      {aiError && (
+        <div style={{ fontSize: fonts.size.xs, color: colors.red200, marginTop: 4 }}>{aiError}</div>
+      )}
     </section>
   );
 }
