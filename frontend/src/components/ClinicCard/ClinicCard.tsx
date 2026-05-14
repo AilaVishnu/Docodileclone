@@ -11,7 +11,7 @@ type ClinicCardProps = {
   domain: string;
   phone: string;
   address: string;
-  specialties: string[];
+  departments: string[];
   onGoToDashboard?: () => void;
   onEditDetails?: () => void;
 };
@@ -21,7 +21,7 @@ export function ClinicCard({
   domain,
   phone,
   address,
-  specialties,
+  departments,
   onGoToDashboard,
   onEditDetails,
 }: ClinicCardProps) {
@@ -46,11 +46,11 @@ export function ClinicCard({
         <span style={styles.fieldText}>{phone || "—"}</span>
       </div>
 
-      {specialties.length > 0 && (
+      {departments.length > 0 && (
         <div style={styles.specialtyRow}>
           <span style={styles.fieldIcon}><SpecialtyIcon width={20} height={20} /></span>
           <div style={styles.tagRow}>
-            {specialties.map((s, i) => (
+            {departments.map((s, i) => (
               <span key={i} style={styles.tag}>
                 {s} <span style={styles.tagX}>✕</span>
               </span>

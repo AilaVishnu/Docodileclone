@@ -8,42 +8,45 @@ import { styles } from "./AdditionalStaffDetailsCard.styles";
 import { ReactComponent as StethoIcon } from "../../assets/Stethoscope.svg";
 import { ReactComponent as RegIcon } from "../../assets/Document Medicine.svg";
 
-const SPECIALITIES = [
-  "Dermatology",
-  "Cardiology",
-  "Orthopedics", "Gynecology", "Neurology", "Pediatrics", "Ophthalmology", "ENT", "Urology"
+const DEPARTMENTS = [
+  "Cardiology", "Dermatology", "ENT", "Gynecology", "Neurology",
+  "Ophthalmology", "Orthopedics", "Pediatrics", "Urology",
+  "General Medicine", "General Surgery", "Psychiatry", "Radiology",
+  "Oncology", "Endocrinology", "Nephrology", "Pulmonology",
+  "Gastroenterology", "Rheumatology", "Anesthesiology", "Dentistry",
+  "Physiotherapy", "Dietetics", "Pathology", "Emergency Medicine",
 ];
 
 // Doctor-specific fields only. The Role selector now lives at the top of the
 // staff modal (see AddStaffModal.tsx) since it determines everything else.
 type AdditionalStaffDetailsCardProps = {
-  speciality: string;
-  setSpeciality: (val: string) => void;
+  department: string;
+  setDepartment: (val: string) => void;
   registrationNo: string;
   setRegistrationNo: (val: string) => void;
   errors?: Record<string, boolean>;
 };
 
 export function AdditionalStaffDetailsCard({
-  speciality,
-  setSpeciality,
+  department,
+  setDepartment,
   registrationNo,
   setRegistrationNo,
   errors = {},
 }: AdditionalStaffDetailsCardProps) {
   return (
     <Card style={styles.card}>
-      {/* Speciality */}
+      {/* Department */}
       <div style={styles.section}>
-        <div style={styles.label}>Speciality</div>
+        <div style={styles.label}>Department</div>
         <div style={styles.fieldRow}>
           <Select
-            value={speciality}
-            onChange={setSpeciality}
-            options={SPECIALITIES}
-            placeholder="Choose Speciality"
+            value={department}
+            onChange={setDepartment}
+            options={DEPARTMENTS}
+            placeholder="Choose Department"
             iconLeft={<StethoIcon />}
-            error={errors.speciality}
+            error={errors.department}
           />
         </div>
       </div>

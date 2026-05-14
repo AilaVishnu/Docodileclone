@@ -20,7 +20,7 @@ export type StaffData = {
   phone: string;
   gender: "male" | "female" | "other" | "";
   role: string;
-  speciality: string;
+  department: string;
   registrationNo: string;
 };
 
@@ -51,7 +51,7 @@ export function AddStaffModal({
   // "Other" radio is selected → free text input shown. Role value holds the
   // custom text the user types (or "" while input is empty).
   const [isOtherRole, setIsOtherRole] = useState(false);
-  const [speciality, setSpeciality] = useState("");
+  const [department, setDepartment] = useState("");
   const [registrationNo, setRegistrationNo] = useState("");
 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
@@ -72,7 +72,7 @@ export function AddStaffModal({
         // and isn't empty, the "Other" radio should be pre-selected with the
         // custom text already in the input.
         setIsOtherRole(!!initialData.role && !STANDARD_ROLES.includes(initialData.role));
-        setSpeciality(initialData.speciality);
+        setDepartment(initialData.department);
         setRegistrationNo(initialData.registrationNo);
       } else {
         // Reset form for "Add New"
@@ -82,7 +82,7 @@ export function AddStaffModal({
         setGender("");
         setRole("Doctor");
         setIsOtherRole(false);
-        setSpeciality("");
+        setDepartment("");
         setRegistrationNo("");
       }
     }
@@ -123,7 +123,7 @@ export function AddStaffModal({
     };
 
     if (role === "Doctor") {
-      newErrors.speciality = !speciality;
+      newErrors.department = !department;
       newErrors.registrationNo = !registrationNo.trim();
     }
 
@@ -137,7 +137,7 @@ export function AddStaffModal({
       if (newErrors.phone) messages.push("valid phone number");
       if (newErrors.gender) messages.push("gender");
       if (newErrors.role) messages.push("role");
-      if (newErrors.speciality) messages.push("speciality");
+      if (newErrors.department) messages.push("department");
       if (newErrors.registrationNo) messages.push("registration number");
       onShowToast?.(`Please enter ${messages[0]}`);
       return;
@@ -149,7 +149,7 @@ export function AddStaffModal({
       phone,
       gender,
       role,
-      speciality: role === "Doctor" ? speciality : "",
+      department: role === "Doctor" ? department : "",
       registrationNo: role === "Doctor" ? registrationNo : "",
     });
   };
@@ -243,8 +243,8 @@ export function AddStaffModal({
       {/* Doctor-specific fields — only shown when role is Doctor. */}
       {role === "Doctor" && (
         <AdditionalStaffDetailsCard
-          speciality={speciality}
-          setSpeciality={setSpeciality}
+          department={department}
+          setDepartment={setDepartment}
           registrationNo={registrationNo}
           setRegistrationNo={setRegistrationNo}
           errors={errors}

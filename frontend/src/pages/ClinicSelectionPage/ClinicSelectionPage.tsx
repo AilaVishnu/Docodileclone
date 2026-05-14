@@ -9,7 +9,7 @@ type ClinicData = {
   domain: string;
   phone: string;
   address: string;
-  specialties: string[];
+  departments: string[];
 };
 
 type ClinicSelectionPageProps = {
@@ -60,7 +60,7 @@ export function ClinicSelectionPage({ onSelectClinic, onGoToBuild, onLogout }: C
             domain: c.domain || "",
             phone: c.phone || "",
             address: c.address || "",
-            specialties: c.speciality ? c.speciality.split(",") : [],
+            departments: c.speciality ? c.speciality.split(",") : [],
           }));
           setClinics(mapped);
         }
@@ -82,7 +82,7 @@ export function ClinicSelectionPage({ onSelectClinic, onGoToBuild, onLogout }: C
             domain={clinic.domain}
             phone={clinic.phone}
             address={clinic.address}
-            specialties={clinic.specialties}
+            departments={clinic.departments}
             onGoToDashboard={() => handleSelectClinic(clinic.id, clinic.name)}
           />
         ))}

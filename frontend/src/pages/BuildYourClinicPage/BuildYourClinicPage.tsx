@@ -55,7 +55,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                     gender: s.gender || "",
                     email: s.email || "",
                     phone: s.phone || "",
-                    speciality: s.speciality || "",
+                    department: s.speciality || "",
                     registrationNo: s.registrationNo || ""
                   }));
                 }
@@ -69,7 +69,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                 domain: c.domain || "",
                 phone: c.phone || "",
                 address: c.address || "",
-                specialties: c.speciality ? c.speciality.split(",") : [],
+                departments: c.speciality ? c.speciality.split(",") : [],
                 staff: staffList
               };
             }));
@@ -83,7 +83,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
               domain: "",
               phone: "",
               address: "",
-              specialties: [],
+              departments: [],
               staff: []
             };
             setClinics([defaultClinic]);
@@ -112,7 +112,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
       domain: "",
       phone: "",
       address: "",
-      specialties: [],
+      departments: [],
       staff: []
     };
     setClinics([...clinics, newClinic]);
@@ -194,7 +194,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           phone: data.phone,
           gender: data.gender,
           role: data.role,
-          speciality: data.speciality,
+          speciality: data.department,
           registrationNo: data.registrationNo
         }),
       });
@@ -210,7 +210,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           gender: savedStaffData.gender || "",
           email: savedStaffData.email || "",
           phone: savedStaffData.phone || "",
-          speciality: savedStaffData.speciality || "",
+          department: savedStaffData.speciality || "",
           registrationNo: savedStaffData.registrationNo || ""
         };
 
@@ -351,7 +351,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                     address: c.address,
                     phone: c.phone,
                     domain: c.domain,
-                    speciality: c.specialties.join(","),
+                    speciality: c.departments.join(","),
                   }),
                 });
                 if (!res.ok) {

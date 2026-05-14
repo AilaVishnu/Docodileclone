@@ -9,7 +9,7 @@ export type Staff = {
   phone: string;
   gender: "male" | "female" | "other" | "";
   role: string;
-  speciality: string;
+  department: string;
   registrationNo: string;
 };
 
@@ -19,7 +19,7 @@ export type Clinic = {
   domain: string;
   phone: string;
   address: string;
-  specialties: string[];
+  departments: string[];
   staff: Staff[];
 };
 
