@@ -229,17 +229,25 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
         }
         setIsAddStaffOpen(false);
       } else {
-        const errorData = await response.json();
-        const msg = errorData.error || "";
+        // Surface the backend's error message verbatim when possible; fall
+        // back to the HTTP status so 500s without a JSON body still tell us
+        // something useful (e.g. schema mismatch before a migration runs).
+        const raw = await response.text();
+        let msg = "";
+        try {
+          msg = raw ? (JSON.parse(raw).error || "") : "";
+        } catch {
+          msg = raw;
+        }
         if (msg.toLowerCase().includes("email") && msg.toLowerCase().includes("exist")) {
           setToastMessage("A staff member with this email already exists");
         } else {
-          setToastMessage(msg || "Failed to save staff member");
+          setToastMessage(msg || `Failed to save staff member (HTTP ${response.status})`);
         }
       }
     } catch (error) {
       console.error("Failed to save staff", error);
-      setToastMessage("An error occurred while saving staff member");
+      setToastMessage(`An error occurred while saving staff member: ${(error as Error).message}`);
     }
   };
 
