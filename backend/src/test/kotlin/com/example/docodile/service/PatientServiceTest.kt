@@ -1,6 +1,8 @@
 package com.example.docodile.service
 
 import com.example.docodile.domain.Patient
+import com.example.docodile.repo.AppointmentRepository
+import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.repo.VisitRepository
 import com.example.docodile.security.CurrentUser
@@ -21,6 +23,12 @@ class PatientServiceTest {
 
     @Mock
     private lateinit var visitRepository: VisitRepository
+
+    @Mock
+    private lateinit var appointmentRepository: AppointmentRepository
+
+    @Mock
+    private lateinit var appUserRepository: AppUserRepository
 
     @Mock
     private lateinit var currentUser: CurrentUser
