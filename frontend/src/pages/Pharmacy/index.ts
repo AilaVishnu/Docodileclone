@@ -1,0 +1,1 @@
+export { PharmacyView } from "./PharmacyView";

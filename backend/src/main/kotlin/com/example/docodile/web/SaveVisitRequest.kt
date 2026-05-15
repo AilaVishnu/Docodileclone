@@ -45,6 +45,11 @@ data class SaveVisitRequest(
     val privateNotes: String? = null,
     val tests: String? = null,
 
+    // Treating doctor (the one whose pad this visit belongs to). Carried
+    // through from the appointment when the doctor opens View Pad, so the
+    // visit gets correctly attributed even when the caller is a receptionist.
+    val createdByDoctorId: UUID? = null,
+
     // Referral + next review
     val referDoctorId: UUID? = null,
     val reviewDate: LocalDate? = null,

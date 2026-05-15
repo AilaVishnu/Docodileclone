@@ -55,8 +55,12 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                     gender: s.gender || "",
                     email: s.email || "",
                     phone: s.phone || "",
-                    speciality: s.speciality || "",
-                    registrationNo: s.registrationNo || ""
+                    department: s.department || "",
+                    specialty: s.specialty || "",
+                    registrationNo: s.registrationNo || "",
+                    qualification: s.qualification || "",
+                    medicalCouncil: s.medicalCouncil || "",
+                    experienceYears: s.experienceYears != null ? String(s.experienceYears) : ""
                   }));
                 }
               } catch (e) {
@@ -69,7 +73,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                 domain: c.domain || "",
                 phone: c.phone || "",
                 address: c.address || "",
-                specialties: c.speciality ? c.speciality.split(",") : [],
+                departments: c.speciality ? c.speciality.split(",").map((s: string) => s.trim()).filter(Boolean) : [],
                 staff: staffList
               };
             }));
@@ -83,7 +87,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
               domain: "",
               phone: "",
               address: "",
-              specialties: [],
+              departments: [],
               staff: []
             };
             setClinics([defaultClinic]);
@@ -112,7 +116,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
       domain: "",
       phone: "",
       address: "",
-      specialties: [],
+      departments: [],
       staff: []
     };
     setClinics([...clinics, newClinic]);
@@ -125,16 +129,61 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
     ));
   };
 
-  const handleOpenAddStaff = () => {
+  // Push the active clinic's current state (name, address, departments, etc.)
+  // to the backend before opening the staff modal. Otherwise the user can add
+  // a department locally without clicking Save on the clinic, then assign a
+  // staff member to it — and the staff POST fails server-side validation with
+  // "Department '<X>' is not configured for this clinic". Returns true on
+  // success (or when clinic isn't saved yet, in which case caller already
+  // handled it earlier).
+  const syncClinicToBackend = async (): Promise<boolean> => {
+    if (!activeClinic) return false;
+    const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+    if (!isUuid(activeClinic.id)) {
+      // Clinic hasn't been saved yet — staff save itself will surface the
+      // "save clinic first" toast.
+      return true;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/tenant/clinic`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
+        },
+        body: JSON.stringify({
+          id: activeClinic.id,
+          name: activeClinic.name,
+          address: activeClinic.address,
+          phone: activeClinic.phone,
+          domain: activeClinic.domain,
+          speciality: activeClinic.departments.join(","),
+        }),
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        setToastMessage(errorData.error || "Couldn't sync clinic details");
+        return false;
+      }
+      return true;
+    } catch {
+      setToastMessage("Couldn't sync clinic details");
+      return false;
+    }
+  };
+
+  const handleOpenAddStaff = async () => {
     if (activeClinic && activeClinic.staff.length >= 10) {
       setToastMessage("Maximum of 10 staff members reached");
       return;
     }
+    if (!(await syncClinicToBackend())) return;
     setEditingStaff(undefined);
     setIsAddStaffOpen(true);
   };
 
-  const handleEditStaff = (staff: Staff) => {
+  const handleEditStaff = async (staff: Staff) => {
+    if (!(await syncClinicToBackend())) return;
     setEditingStaff(staff);
     setIsAddStaffOpen(true);
   };
@@ -194,8 +243,12 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           phone: data.phone,
           gender: data.gender,
           role: data.role,
-          speciality: data.speciality,
-          registrationNo: data.registrationNo
+          department: data.department,
+          specialty: data.specialty,
+          registrationNo: data.registrationNo,
+          qualification: data.qualification,
+          medicalCouncil: data.medicalCouncil,
+          experienceYears: data.experienceYears ? Number(data.experienceYears) : null
         }),
       });
 
@@ -210,8 +263,12 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           gender: savedStaffData.gender || "",
           email: savedStaffData.email || "",
           phone: savedStaffData.phone || "",
-          speciality: savedStaffData.speciality || "",
-          registrationNo: savedStaffData.registrationNo || ""
+          department: savedStaffData.department || "",
+          specialty: savedStaffData.specialty || "",
+          registrationNo: savedStaffData.registrationNo || "",
+          qualification: savedStaffData.qualification || "",
+          medicalCouncil: savedStaffData.medicalCouncil || "",
+          experienceYears: savedStaffData.experienceYears != null ? String(savedStaffData.experienceYears) : ""
         };
 
         if (editingStaff) {
@@ -226,17 +283,25 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
         }
         setIsAddStaffOpen(false);
       } else {
-        const errorData = await response.json();
-        const msg = errorData.error || "";
+        // Surface the backend's error message verbatim when possible; fall
+        // back to the HTTP status so 500s without a JSON body still tell us
+        // something useful (e.g. schema mismatch before a migration runs).
+        const raw = await response.text();
+        let msg = "";
+        try {
+          msg = raw ? (JSON.parse(raw).error || "") : "";
+        } catch {
+          msg = raw;
+        }
         if (msg.toLowerCase().includes("email") && msg.toLowerCase().includes("exist")) {
           setToastMessage("A staff member with this email already exists");
         } else {
-          setToastMessage(msg || "Failed to save staff member");
+          setToastMessage(msg || `Failed to save staff member (HTTP ${response.status})`);
         }
       }
     } catch (error) {
       console.error("Failed to save staff", error);
-      setToastMessage("An error occurred while saving staff member");
+      setToastMessage(`An error occurred while saving staff member: ${(error as Error).message}`);
     }
   };
 
@@ -320,6 +385,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           onDelete={handleDeleteStaff}
           initialData={editingStaff}
           onShowToast={setToastMessage}
+          clinicDepartments={activeClinic?.departments || []}
         />
 
         {/* Footer actions */}
@@ -351,7 +417,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                     address: c.address,
                     phone: c.phone,
                     domain: c.domain,
-                    speciality: c.specialties.join(","),
+                    speciality: c.departments.join(","),
                   }),
                 });
                 if (!res.ok) {

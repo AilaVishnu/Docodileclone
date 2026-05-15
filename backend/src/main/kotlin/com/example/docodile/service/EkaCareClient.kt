@@ -50,9 +50,14 @@ private data class RawInteraction(val interactsWith: String, val comment: String
 
 @Component
 class EkaCareClient(
-    @Value("\${eka.client-id:}") private val clientId: String,
-    @Value("\${eka.client-secret:}") private val clientSecret: String,
+    @Value("\${eka.client-id:}") rawClientId: String,
+    @Value("\${eka.client-secret:}") rawClientSecret: String,
 ) {
+    // Trim because a stray newline/space in application-local.properties
+    // would otherwise be sent verbatim to Eka's auth endpoint and silently
+    // 401, with no clear signal at the UI layer.
+    private val clientId = rawClientId.trim()
+    private val clientSecret = rawClientSecret.trim()
     private val http = HttpClient.newHttpClient()
     private val mapper = ObjectMapper()
     private val AUTH_URL = "https://api.eka.care/connect-auth/v1/account/login"

@@ -4,6 +4,7 @@ import com.example.docodile.service.AuthService
 import com.example.docodile.web.StaffLoginRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.PostMapping
@@ -22,6 +23,12 @@ class AuthenticationController(private val authService: AuthService) {
     @PostMapping("/staff/login")
     fun staffLogin(@RequestBody request: StaffLoginRequest): ResponseEntity<LoginResponse> {
         return ResponseEntity.ok(authService.loginStaff(request))
+    }
+
+    @PostMapping("/switch-clinic")
+    @PreAuthorize("hasRole('ADMIN')")
+    fun switchClinic(@RequestBody request: SwitchClinicRequest): ResponseEntity<LoginResponse> {
+        return ResponseEntity.ok(authService.switchClinic(request.clinicId))
     }
 
     @ExceptionHandler(BadCredentialsException::class)

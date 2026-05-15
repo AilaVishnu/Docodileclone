@@ -46,6 +46,7 @@ import { colors } from "../../styles/theme";
 import { PrescriptionQueue } from "./PrescriptionQueue";
 import { Patient } from "../../hooks/usePatients";
 import { SessionBar } from "../../components/SessionBar/SessionBar";
+import { PrintPreviewModal } from "../../components/PrintPreviewModal";
 import {
   recordActiveSession,
   clearActiveSession,
@@ -58,6 +59,8 @@ import { markStarted, unmarkStarted } from "../../utils/sessionStarted";
 import { API_BASE_URL } from "../../apiConfig";
 import { AddReportModal, AddReportRow } from "./AddReportModal";
 import { FileViewer } from "./FileViewer";
+import { EditPatientModal } from "./EditPatientModal";
+import { buildPrintHtml, getDefaultTemplate, loadTemplates, PrintVisitData } from "../Settings";
 import { Modal } from "../../components/Modal/Modal";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -291,6 +294,16 @@ const fromRxDTO = (dto: RxRowDTO): RxRowDraft => ({
   thenRows: [],
 });
 
+const rewindBtnStyle = (_disabled: boolean): React.CSSProperties => ({
+  background: "none",
+  border: "none",
+  padding: 0,
+  display: "flex",
+  alignItems: "center",
+  cursor: "pointer",
+  color: "inherit",
+});
+
 // Format a yyyy-MM-dd date as "DD MMM" (or "Today" if it's today's date).
 const formatVisitLabel = (iso: string): string => {
   const d = new Date(iso);
@@ -449,6 +462,28 @@ function BpInput({
   );
 }
 
+// Renders an image thumbnail for files — handles both local blob URLs and
+// auth-protected API download URLs by fetching with the JWT when needed.
+function AuthThumb({ fileUrl, mimeType, style }: { fileUrl: string | null | undefined; mimeType: string | null | undefined; style?: React.CSSProperties }) {
+  const isImage = (mimeType ?? "").startsWith("image/");
+  const [src, setSrc] = React.useState<string | null>(fileUrl && !fileUrl.startsWith(API_BASE_URL) ? fileUrl : null);
+
+  React.useEffect(() => {
+    if (!fileUrl || !isImage) { setSrc(null); return; }
+    if (!fileUrl.startsWith(API_BASE_URL)) { setSrc(fileUrl); return; }
+    let objectUrl: string | null = null;
+    const token = localStorage.getItem("docodile_token");
+    fetch(fileUrl, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.ok ? r.blob() : null)
+      .then((blob) => { if (blob) { objectUrl = URL.createObjectURL(blob); setSrc(objectUrl); } })
+      .catch(() => {});
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [fileUrl, isImage]);
+
+  if (!src) return null;
+  return <img src={src} alt="" style={style} />;
+}
+
 export function PrescriptionPage() {
   // null → renders <PatientPicker>; otherwise renders the prescription form
   // scoped to that patient. Clicking "← back to patients" clears it.
@@ -458,6 +493,14 @@ export function PrescriptionPage() {
   // Start Session / End Session actions can update the appointment's
   // backend status without bouncing back to the queue.
   const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(null);
+  // The date the queue was showing when the doctor clicked View Pad.
+  // Used as the visit date for auto-create so past-date queues don't
+  // create a visit stamped today.
+  const [queueDate, setQueueDate] = React.useState<string>(todayIso());
+  // Doctor who owns the queue entry the user just clicked View Pad on.
+  // Threaded into the visit's createdByDoctorId so the Patient Files filter
+  // (which scopes by treating doctor / department) can find this patient.
+  const [appointmentDoctorId, setAppointmentDoctorId] = React.useState<string | null>(null);
 
   // If the doctor clicked an entry in the header session-tray, route them
   // straight back to that patient's prescription form. Handled both on mount
@@ -482,9 +525,13 @@ export function PrescriptionPage() {
   const [activeTab, setActiveTab] = React.useState(0);
   const [activeAction, setActiveAction] = React.useState(0);
   const activeVisit: VisitDTO | undefined = visits[activeTab];
+  // Visit immediately before the currently-viewed tab — used by the rewind
+  // buttons to pull the previous prescription's data into the current form.
+  const prevVisit: VisitDTO | undefined = activeTab > 0 ? visits[activeTab - 1] : undefined;
   const [reviewDate, setReviewDate] = React.useState<Date | null>(null);
   const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
   const [rxRows, setRxRows] = React.useState<RxRowDraft[]>([]);
+  const [printPreviewHtml, setPrintPreviewHtml] = React.useState<string | null>(null);
   const [rxInteractions, setRxInteractions] = React.useState<Array<{ drug: string; interactsWith: string; comment: string }>>([]);
   const [reviewDays, setReviewDays] = React.useState<string>("");
   // Vital values + units (units are clickable to toggle between alternates
@@ -508,20 +555,24 @@ export function PrescriptionPage() {
   const [privateNotesValue, setPrivateNotesValue] = React.useState<string>("");
   const [reviewNotesValue, setReviewNotesValue] = React.useState<string>("");
   const [saving, setSaving] = React.useState<boolean>(false);
+  // AI SOAP draft modal — opens on the ✨ AI draft button next to the
+  // Complaints/Diagnosis row. Fetched on open; applies per-field on demand.
+  const [aiSoapOpen, setAiSoapOpen] = React.useState<boolean>(false);
   // Form is non-interactive until the user clicks Start Session on the
   // floating SessionBar. Pausing / ending re-locks. Visually unchanged
   // while locked — only pointer-events are blocked.
   const [formActive, setFormActive] = React.useState<boolean>(false);
   // Visits are loaded ASC by visit_date, so the latest one sits at the
   // tail of the array — that's "today's visit", the one whose SessionBar
-  // controls the form's editable state. Older tabs are historic records
-  // and stay read-only forever, regardless of whether today's session
-  // is running.
+  // Editability is purely a function of the visit's session lifecycle, not
+  // the calendar date or tab order: a visit is editable as long as its
+  // session hasn't been ended. Once the doctor ends the session the visit
+  // is locked permanently (read-only history). This intentionally covers
+  // past visits the doctor left open — they stay editable until ended.
   const isLatestVisit = visits.length === 0 || activeTab === visits.length - 1;
-  // Edit flag used by every gate below. Past visits are permanently
-  // locked, so a session running on today's tab does NOT unlock them —
-  // the doctor can read every field but can't change historic data.
-  const canEditForm = formActive && isLatestVisit;
+  const isEditable = !activeVisit?.sessionEndedAt;
+  // Edit flag used by every gate below.
+  const canEditForm = formActive && isEditable;
   // On initial open of a patient, jump to the latest (today's) visit
   // tab. Without this the tabs default to index 0, which is the OLDEST
   // visit — confusing when the doctor expects to land on today.
@@ -682,9 +733,27 @@ export function PrescriptionPage() {
   // form always has a row to write into. The ref-guard keeps React
   // StrictMode (which double-invokes effects in dev) from creating a
   // duplicate today-visit.
+  //
+  // Two short-circuits before we create anything:
+  //   1. If any existing visit has an unfinished session (started, never
+  //      ended), the doctor is returning to that work — jump to its tab
+  //      and align queueDate with its date, no new visit needed.
+  //   2. If no appointment id is in scope, the doctor opened the page
+  //      ambiently (e.g. browsing patient files) — visits should only
+  //      come from booked appointments, so don't fabricate one.
   const autoCreatedForPatientRef = React.useRef<string | null>(null);
   React.useEffect(() => {
-    const hasTodayVisit = visits.some((v) => v.visitDate === todayIso());
+    const hasTodayVisit = visits.some((v) => v.visitDate === queueDate);
+    const unfinishedIdx = visits.findIndex(
+      (v) => v.sessionStartedAt && !v.sessionEndedAt
+    );
+    if (unfinishedIdx >= 0) {
+      const v = visits[unfinishedIdx];
+      if (activeTab !== unfinishedIdx) setActiveTab(unfinishedIdx);
+      if (v.visitDate && queueDate !== v.visitDate) setQueueDate(v.visitDate);
+      autoCreatedForPatientRef.current = selectedPatientId;
+      return;
+    }
     if (
       selectedPatientId &&
       !visitsLoading &&
@@ -692,12 +761,15 @@ export function PrescriptionPage() {
       // creating a duplicate on every reopen.
       visitsLoadedFor === selectedPatientId &&
       !hasTodayVisit &&
+      // Visits only exist for booked appointments — no appointment id means
+      // we have no business creating one.
+      !!selectedAppointmentId &&
       autoCreatedForPatientRef.current !== selectedPatientId
     ) {
       autoCreatedForPatientRef.current = selectedPatientId;
       const existingCount = visits.length;
       const draft: SaveVisitRequest = {
-        visitDate: todayIso(),
+        visitDate: queueDate,
         bpSystolic: null, bpDiastolic: null, bpUnit: null,
         bmi: null, bmiUnit: null, height: null, heightUnit: null,
         weight: null, weightUnit: null, temperature: null, temperatureUnit: null,
@@ -705,6 +777,7 @@ export function PrescriptionPage() {
         hip: null, hipUnit: null, spo2: null, spo2Unit: null,
         familyHistory: null, allergies: null, personalHistory: null, pastMedicalHistory: null,
         complaints: null, diagnosis: null, notesForPatient: null, privateNotes: null, tests: null,
+        createdByDoctorId: appointmentDoctorId,
         referDoctorId: null,
         reviewDate: null, reviewDays: null, reviewNotes: null,
         sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
@@ -714,9 +787,11 @@ export function PrescriptionPage() {
         await refetchVisits();
         // Jump to today's visit tab (it lands at the end after sort).
         if (existingCount > 0) setActiveTab(existingCount);
+      }).catch((err: Error) => {
+        showToast(err.message || "Failed to create visit");
       });
     }
-  }, [selectedPatientId, visitsLoading, visitsLoadedFor, visits.length, refetchVisits]);
+  }, [selectedPatientId, visitsLoading, visitsLoadedFor, visits, refetchVisits, queueDate, activeTab, selectedAppointmentId]);
   // Reset the auto-create guard whenever the user picks a different patient
   // (or leaves and comes back to the same one).
   React.useEffect(() => {
@@ -828,30 +903,62 @@ export function PrescriptionPage() {
   // - Timeline / Bills: "coming soon" placeholder
   const listViewConfig = LIST_VIEWS[activeAction] ?? null;
 
-  // Client-side uploads for the Reports / Files list views, keyed by
-  // activeAction (1 = Reports, 2 = Files). Clicking the "+ Add" pill opens
-  // AddReportModal; the modal collects file + name + category + date + visit
-  // tie + notes per file, then emits an array of rows that we append here.
-  // TODO(backend): on save, also POST the files (multipart) and metadata to
-  // /reports or /files endpoints — handle inside AddReportModal once the
-  // endpoint exists, then drop the local row insert.
   type ListRow = {
     id?: string;
+    fileId?: string;      // backend UUID — present for server-persisted files
     name: string;
     category: string;
     date: string;
     fileUrl?: string | null;
     mimeType?: string | null;
   };
-  const [uploadedItems, setUploadedItems] = React.useState<Record<number, ListRow[]>>({});
+
+  // Server-persisted files for action 1 (Files tab). Populated on patient
+  // select and extended optimistically when the user uploads new files.
+  const [serverFiles, setServerFiles] = React.useState<ListRow[]>([]);
+
+  React.useEffect(() => {
+    if (!selectedPatientId) { setServerFiles([]); return; }
+    const token = localStorage.getItem("docodile_token");
+    fetch(`${API_BASE_URL}/api/patients/${selectedPatientId}/files`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.ok ? r.json() : [])
+      .then((dtos: Array<{ id: string; name: string; category: string | null; investigationDate: string | null; mimeType: string | null; createdAt: string }>) => {
+        setServerFiles(dtos.map((d) => ({
+          id: d.id,
+          fileId: d.id,
+          name: d.name,
+          category: d.category ?? "Other",
+          date: d.investigationDate
+            ? new Date(d.investigationDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })
+            : new Date(d.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }),
+          fileUrl: null,
+          mimeType: d.mimeType ?? null,
+        })));
+      })
+      .catch(() => setServerFiles([]));
+  }, [selectedPatientId]);
+
   const [showAddModal, setShowAddModal] = React.useState(false);
-  // The currently-open file row, by activeAction and index. null = list view.
-  const [viewerOpen, setViewerOpen] = React.useState<{ action: number; index: number } | null>(null);
+  const [showEditPatient, setShowEditPatient] = React.useState(false);
+  // The currently-open file row. null = list view.
+  const [viewerOpen, setViewerOpen] = React.useState<ListRow | null>(null);
   const handleAddRows = (rows: AddReportRow[]) => {
-    setUploadedItems((prev) => ({
+    // Always show every row immediately. fileId present = persisted on server.
+    // fileId absent = backend upload failed; still visible via local blob URL.
+    setServerFiles((prev) => [
+      ...rows.map((r) => ({
+        id: r.id,
+        fileId: r.fileId,
+        name: r.name,
+        category: r.category,
+        date: r.date,
+        fileUrl: r.fileUrl,
+        mimeType: r.mimeType,
+      })),
       ...prev,
-      [activeAction]: [...(prev[activeAction] ?? []), ...rows],
-    }));
+    ]);
   };
   const removeRxRow = (rowIdx: number) =>
     setRxRows((prev) => prev.filter((_, ri) => ri !== rowIdx));
@@ -862,11 +969,10 @@ export function PrescriptionPage() {
   const updateThenField = (rowIdx: number, thenIdx: number, key: keyof ThenRow, value: string) =>
     setRxRows((prev) => prev.map((r, ri) => ri !== rowIdx ? r : { ...r, thenRows: r.thenRows.map((t, ti) => ti !== thenIdx ? t : { ...t, [key]: value }) }));
 
-  // Display rows = backend rows (empty for now) + client-side uploads.
-  // displayRows: all uploads merged, then filtered by the active category
-  // chip. Chip 0 ("All") is the pass-through.
+  // Display rows for the Files tab (action 1) come from serverFiles (backend).
+  // Other list-view actions use their config's static rows array.
   const allRows: ListRow[] = listViewConfig
-    ? [...listViewConfig.rows, ...(uploadedItems[activeAction] ?? [])]
+    ? (activeAction === 1 ? serverFiles : listViewConfig.rows)
     : [];
   const activeChipLabel = listViewConfig?.tabs[activeListTab] ?? "All";
   const displayRows: ListRow[] = activeChipLabel === "All"
@@ -877,10 +983,9 @@ export function PrescriptionPage() {
   // pane reads from. Timeline + Bills have no data layer yet so they show 0
   // until those features are built.
   const countFor = (actionIndex: number): number => {
+    if (actionIndex === 1) return serverFiles.length;
     const config = LIST_VIEWS[actionIndex];
-    if (config) {
-      return config.rows.length + (uploadedItems[actionIndex]?.length ?? 0);
-    }
+    if (config) return config.rows.length;
     if (actionIndex === 0) return visits.length; // Visits
     return 0; // Timeline (2), Bills (3) — placeholders, post-merge indexes.
   };
@@ -892,8 +997,9 @@ export function PrescriptionPage() {
   // Subtitle is derived from the displayed row count for list views (backend
   // data + client uploads), defaults to a placeholder for Coming Soon, and
   // stays static for the default Visits view.
+  const fileCount = activeAction === 1 ? serverFiles.length : (listViewConfig?.rows.length ?? 0);
   const headerSubtitle = listViewConfig
-    ? `${listViewConfig.rows.length + (uploadedItems[activeAction]?.length ?? 0)} ${listViewConfig.title.toLowerCase()} on file`
+    ? `${fileCount} ${listViewConfig.title.toLowerCase()} on file`
     : comingSoonLabel
       ? "Coming soon"
       : "Patient visit history and prescription";
@@ -1131,15 +1237,95 @@ export function PrescriptionPage() {
     }
   };
 
+  // ── Print prescription ──────────────────────────────────────────────────
+  // Assemble a PrintVisitData payload from the current patient + visit + form
+  // state and hand it to the configured print template. The template tells
+  // us whether to render header/footer (Blank A4) or text-only (pre-printed
+  // letterhead) and which patient fields to show. Auto-saves first so the
+  // print reflects the latest edits.
+  const handlePrintPrescription = async () => {
+    // The default-template cache is primed by the editor (Settings → Print
+    // template). If the user prints without visiting Settings first this
+    // session, fetch lazily so we never miss a configured template.
+    let template = getDefaultTemplate();
+    if (!template) {
+      try {
+        await loadTemplates();
+        template = getDefaultTemplate();
+      } catch (e) {
+        showToast(`Couldn't load print template: ${(e as Error).message}`);
+        return;
+      }
+    }
+    if (!template) {
+      showToast("No print template — set one up in Settings → Print template");
+      return;
+    }
+    if (!selectedPatient || !activeVisit) {
+      showToast("Nothing to print yet");
+      return;
+    }
+    if (canEditForm) {
+      try { await handleSave({ silent: true }); } catch {}
+    }
+    const vitalsForPrint: { label: string; value: string }[] = [];
+    const v = activeVisit;
+    if (v.bpSystolic && v.bpDiastolic) {
+      vitalsForPrint.push({ label: "BP", value: `${v.bpSystolic}/${v.bpDiastolic} ${v.bpUnit ?? "mmHg"}` });
+    }
+    if (v.pulse)       vitalsForPrint.push({ label: "Pulse", value: `${v.pulse} ${v.pulseUnit ?? ""}`.trim() });
+    if (v.spo2)        vitalsForPrint.push({ label: "SpO₂",  value: `${v.spo2} ${v.spo2Unit ?? "%"}`.trim() });
+    if (v.temperature) vitalsForPrint.push({ label: "Temp",  value: `${v.temperature} ${v.temperatureUnit ?? ""}`.trim() });
+    if (v.weight)      vitalsForPrint.push({ label: "Weight", value: `${v.weight} ${v.weightUnit ?? "kg"}` });
+    if (v.height)      vitalsForPrint.push({ label: "Height", value: `${v.height} ${v.heightUnit ?? "cm"}` });
+    if (v.bmi)         vitalsForPrint.push({ label: "BMI",   value: `${v.bmi}`.trim() });
+
+    const visitIndex = visits.findIndex((vv) => vv.id === activeVisit.id);
+    const data: PrintVisitData = {
+      patientName: selectedPatient.name,
+      patientAge: selectedPatient.age != null ? `${selectedPatient.age}y` : null,
+      patientGender: selectedPatient.gender,
+      patientPhone: selectedPatient.phone,
+      patientAddress: null, // Patient type has no address yet.
+      patientId: selectedPatient.id,
+      visitNumber: visitIndex >= 0 ? visits.length - visitIndex : null, // newest = highest #
+      visitDate: activeVisit.visitDate,
+      visitTime: new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }),
+      referredBy: referDoctorName || null,
+      doctorName: doctors.find((d) => d.id === activeVisit.createdByDoctorId)?.name ?? null,
+      doctorCredentials: null,
+      complaints: complaintsValue,
+      diagnosis: diagnosisValue,
+      vitals: vitalsForPrint,
+      tests: testsValue,
+      notesForPatient: notesForPatientValue,
+      rx: rxRows.map((r) => ({
+        medicine: r.medicine ?? null,
+        genericName: r.genericName ?? null,
+        dosage: r.dosage ?? null,
+        whenToTake: r.whenToTake ?? null,
+        frequency: r.frequency ?? null,
+        duration: r.duration ?? null,
+        notes: r.notes ?? null,
+      })),
+      reviewDate: reviewDate ? `${reviewDate.getFullYear()}-${String(reviewDate.getMonth() + 1).padStart(2, "0")}-${String(reviewDate.getDate()).padStart(2, "0")}` : null,
+      reviewNotes: reviewNotesValue,
+    };
+    const html = buildPrintHtml(template, data);
+    setPrintPreviewHtml(html);
+  };
+
   if (selectedPatientId === null) {
     // Today's Queue is the new internal home for the Prescription page
     // (Figma 2282:17378) — same data source as the Appointment Queue.
     return (
       <div ref={pageRootRef}>
         <PrescriptionQueue
-          onSelect={(patient, appointmentId) => {
+          onSelect={(patient, appointmentId, date, doctorId) => {
+            setQueueDate(date);
             setSelectedPatient(patient);
             setSelectedAppointmentId(appointmentId);
+            setAppointmentDoctorId(doctorId);
           }}
         />
       </div>
@@ -1154,9 +1340,11 @@ export function PrescriptionPage() {
     return (
       <div ref={pageRootRef}>
         <PrescriptionQueue
-          onSelect={(patient, appointmentId) => {
+          onSelect={(patient, appointmentId, date, doctorId) => {
+            setQueueDate(date);
             setSelectedPatient(patient);
             setSelectedAppointmentId(appointmentId);
+            setAppointmentDoctorId(doctorId);
           }}
         />
       </div>
@@ -1271,7 +1459,14 @@ export function PrescriptionPage() {
 
           <div style={styles.shareCard}>
             {CONTACT_ACTIONS.map((a) => (
-              <div key={a.label} style={styles.actionRow}>
+              <div
+                key={a.label}
+                style={{ ...styles.actionRow, cursor: a.label === "Edit Patient Info" ? "pointer" : "default" }}
+                onClick={a.label === "Edit Patient Info" ? () => setShowEditPatient(true) : undefined}
+                role={a.label === "Edit Patient Info" ? "button" : undefined}
+                tabIndex={a.label === "Edit Patient Info" ? 0 : undefined}
+                onKeyDown={a.label === "Edit Patient Info" ? (e) => { if (e.key === "Enter" || e.key === " ") setShowEditPatient(true); } : undefined}
+              >
                 {a.icon}
                 <span style={styles.actionLabel}>{a.label}</span>
               </div>
@@ -1362,15 +1557,15 @@ export function PrescriptionPage() {
                   </div>
                   {displayRows.map((r, i) => (
                     <div
-                      key={i}
+                      key={r.id ?? i}
                       style={{ ...styles.reportRow, cursor: "pointer" }}
-                      onClick={() => setViewerOpen({ action: activeAction, index: i })}
+                      onClick={() => setViewerOpen(r)}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          setViewerOpen({ action: activeAction, index: i });
+                          setViewerOpen(r);
                         }
                       }}
                     >
@@ -1395,34 +1590,25 @@ export function PrescriptionPage() {
                 <div style={styles.reportsGrid}>
                   {displayRows.map((r, i) => (
                     <div
-                      key={i}
+                      key={r.id ?? i}
                       style={{ ...styles.reportCard, cursor: "pointer" }}
-                      onClick={() => setViewerOpen({ action: activeAction, index: i })}
+                      onClick={() => setViewerOpen(r)}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          setViewerOpen({ action: activeAction, index: i });
+                          setViewerOpen(r);
                         }
                       }}
                     >
                       <div style={styles.reportCardThumb}>
-                        {r.fileUrl && (r.mimeType ?? "").startsWith("image/") ? (
-                          <img
-                            src={r.fileUrl}
-                            alt=""
-                            style={{
-                              position: "absolute",
-                              inset: 0,
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                            }}
-                          />
-                        ) : (
-                          <FileIcon style={styles.reportCardThumbIcon} />
-                        )}
+                        <AuthThumb
+                          fileUrl={r.fileUrl ?? (r.fileId && selectedPatientId ? `${API_BASE_URL}/api/patients/${selectedPatientId}/files/${r.fileId}/download` : null)}
+                          mimeType={r.mimeType}
+                          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                        {!(r.mimeType ?? "").startsWith("image/") && <FileIcon style={styles.reportCardThumbIcon} />}
                         <span style={styles.reportCardMic}>
                           <MicIcon width={20} height={20} />
                         </span>
@@ -1636,6 +1822,30 @@ export function PrescriptionPage() {
                   )}
                 </div>
 
+                {/* AI Draft trigger — pulls a structured SOAP from whatever
+              the doctor's already typed (complaints/diagnosis/private notes
+              + vitals) and offers it back as suggestions to apply per-field.
+              Hidden when there's no active visit or the form is read-only. */}
+                {canEditForm && activeVisit && (
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+                    <button
+                      type="button"
+                      onClick={() => setAiSoapOpen(true)}
+                      style={{
+                        background: colors.secondary700,
+                        color: colors.neutral100,
+                        border: "none",
+                        padding: "6px 14px",
+                        borderRadius: 999,
+                        cursor: "pointer",
+                        fontSize: 12,
+                      }}
+                    >
+                      ✨ AI draft
+                    </button>
+                  </div>
+                )}
+
                 {/* Figma node 2057:6283 — Complaints + Diagnosis cards laid out
               side-by-side. Each card is a multi-line cream textarea with the
               dictate icons docked at the bottom-right corner and a kebab
@@ -1659,7 +1869,15 @@ export function PrescriptionPage() {
                         containerStyle={NOTE_CARD_TAGBOX_STYLE}
                       />
                       <span style={styles.noteCardDictate}>
-                        <RewindIcon width={20} height={20} />
+                        <button
+                          type="button"
+                          title="Copy complaints from previous visit"
+                          disabled={!prevVisit?.complaints || !canEditForm}
+                          onClick={() => prevVisit?.complaints && setComplaintsValue(prevVisit.complaints)}
+                          style={rewindBtnStyle(!prevVisit?.complaints || !canEditForm)}
+                        >
+                          <RewindIcon width={20} height={20} />
+                        </button>
                         <MicIcon width={20} height={20} />
                       </span>
                     </div>
@@ -1682,7 +1900,15 @@ export function PrescriptionPage() {
                         containerStyle={NOTE_CARD_TAGBOX_STYLE}
                       />
                       <span style={styles.noteCardDictate}>
-                        <RewindIcon width={20} height={20} />
+                        <button
+                          type="button"
+                          title="Copy diagnosis from previous visit"
+                          disabled={!prevVisit?.diagnosis || !canEditForm}
+                          onClick={() => prevVisit?.diagnosis && setDiagnosisValue(prevVisit.diagnosis)}
+                          style={rewindBtnStyle(!prevVisit?.diagnosis || !canEditForm)}
+                        >
+                          <RewindIcon width={20} height={20} />
+                        </button>
                         <MicIcon width={20} height={20} />
                       </span>
                     </div>
@@ -1728,20 +1954,6 @@ export function PrescriptionPage() {
                           ))}
                         </div>
                       )}
-                      <div style={styles.rxHeaderRow}>
-                        <div style={styles.rxHeaderLeft}>
-                          <span style={styles.rxHeaderNum}>#</span>
-                          <span>Medicine</span>
-                        </div>
-                        <div style={styles.rxHeaderRight}>
-                          <span style={styles.rxHeaderCol}>Dosage</span>
-                          <span style={styles.rxHeaderCol}>When</span>
-                          <span style={styles.rxHeaderCol}>Frequency</span>
-                          <span style={styles.rxHeaderCol}>Duration</span>
-                          <span style={{ flex: 1, minWidth: 0, textAlign: "center" as const }}>Notes</span>
-                          <span style={{ width: 28, flexShrink: 0 }} />
-                        </div>
-                      </div>
                       {rxRows.map((row, i) => {
                         const updateField = (key: keyof RxRowDraft, value: string) =>
                           setRxRows((prev) => prev.map((r, ix) => (ix === i ? { ...r, [key]: value } : r)));
@@ -1751,17 +1963,21 @@ export function PrescriptionPage() {
                             <div style={styles.rxGroupLeft}>
                               <span style={styles.rxSerial}>{i + 1}</span>
                               <div style={{ ...styles.rxMedicineCell, flex: 1 }}>
-                                <MedicineAutocomplete
-                                  inputStyle={styles.rxMedicineInput}
-                                  placeholder="Medicine"
-                                  value={row.medicine}
-                                  onChange={(v) => setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: v, genericName: "" } : r))}
-                                  onSelect={(name, genericName) => setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: name, genericName } : r))}
-                                />
+                                <div style={styles.rxMedicineInputCol}>
+                                  <MedicineAutocomplete
+                                    inputStyle={styles.rxMedicineInput}
+                                    placeholder="Medicine"
+                                    value={row.medicine}
+                                    onChange={(v) => setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: v, genericName: "" } : r))}
+                                    onSelect={(name, genericName) => setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: name, genericName } : r))}
+                                  />
+                                </div>
                                 <div style={styles.rxGenericRow}>
-                                  <span style={styles.rxGenericName}>
-                                    {row.medicine ? (row.genericName || "Unknown") : ""}
-                                  </span>
+                                  {row.medicine && (
+                                    <span style={styles.rxGenericName}>
+                                      {row.genericName || "Unknown"}
+                                    </span>
+                                  )}
                                   <button
                                     type="button"
                                     style={styles.rxAddNoteBtn}
@@ -1785,7 +2001,7 @@ export function PrescriptionPage() {
                                 <div style={styles.rxDataCell}><DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} /></div>
                                 <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={row.notes} onChange={(e) => updateField("notes", e.target.value)} />
                                 <button type="button" style={styles.rxDeleteBtn} onClick={() => removeRxRow(i)} title="Remove medicine">
-                                  <TrashIcon style={{ width: 16, height: 16, opacity: 0.45 }} />
+                                  <TrashIcon style={{ width: 16, height: 16 }} />
                                 </button>
                               </div>
                               {row.thenRows.map((thenRow, ti) => (
@@ -1796,7 +2012,7 @@ export function PrescriptionPage() {
                                   <div style={styles.rxDataCell}><DurationPicker value={thenRow.duration} onChange={(v) => updateThenField(i, ti, "duration", v)} /></div>
                                   <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={thenRow.notes} onChange={(e) => updateThenField(i, ti, "notes", e.target.value)} />
                                   <button type="button" style={styles.rxDeleteBtn} onClick={() => removeThenRow(i, ti)} title="Remove tapering row">
-                                    <TrashIcon style={{ width: 16, height: 16, opacity: 0.45 }} />
+                                    <TrashIcon style={{ width: 16, height: 16 }} />
                                   </button>
                                 </div>
                               ))}
@@ -1814,7 +2030,10 @@ export function PrescriptionPage() {
                           onClick={() => setRxRows((rows) => [...rows, blankRxRow(rows.length + 1)])}
                           aria-label="Add medicine row"
                         >
-                          +
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                            <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                          </svg>
                         </button>
                         <button
                           type="button"
@@ -1824,7 +2043,19 @@ export function PrescriptionPage() {
                           Add Medicine
                         </button>
                         <span style={styles.dictateIcons}>
-                          <RewindIcon width={20} height={20} />
+                          <button
+                            type="button"
+                            title="Copy Rx from previous visit"
+                            disabled={!prevVisit?.prescriptions?.length || !canEditForm}
+                            onClick={() => {
+                              if (prevVisit?.prescriptions?.length) {
+                                setRxRows(prevVisit.prescriptions.map((dto, i) => ({ ...fromRxDTO(dto), id: null, position: i + 1 })));
+                              }
+                            }}
+                            style={rewindBtnStyle(!prevVisit?.prescriptions?.length || !canEditForm)}
+                          >
+                            <RewindIcon width={20} height={20} />
+                          </button>
                           <MicIcon width={20} height={20} />
                         </span>
                         <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
@@ -1853,7 +2084,15 @@ export function PrescriptionPage() {
                         onChange={(e) => setNotesForPatientValue(e.target.value)}
                       />
                       <span style={styles.noteCardDictate}>
-                        <RewindIcon width={20} height={20} />
+                        <button
+                          type="button"
+                          title="Copy notes from previous visit"
+                          disabled={!prevVisit?.notesForPatient || !canEditForm}
+                          onClick={() => prevVisit?.notesForPatient && setNotesForPatientValue(prevVisit.notesForPatient)}
+                          style={rewindBtnStyle(!prevVisit?.notesForPatient || !canEditForm)}
+                        >
+                          <RewindIcon width={20} height={20} />
+                        </button>
                         <MicIcon width={20} height={20} />
                       </span>
                     </div>
@@ -1895,7 +2134,15 @@ export function PrescriptionPage() {
                         containerStyle={TESTS_TAGBOX_STYLE}
                       />
                       <span style={styles.dictateIcons}>
-                        <RewindIcon width={20} height={20} />
+                        <button
+                          type="button"
+                          title="Copy tests from previous visit"
+                          disabled={!prevVisit?.tests || !canEditForm}
+                          onClick={() => prevVisit?.tests && setTestsValue(prevVisit.tests)}
+                          style={rewindBtnStyle(!prevVisit?.tests || !canEditForm)}
+                        >
+                          <RewindIcon width={20} height={20} />
+                        </button>
                         <MicIcon width={20} height={20} />
                       </span>
                     </div>
@@ -1924,7 +2171,7 @@ export function PrescriptionPage() {
                             ...(referDoctorName ? { color: colors.neutral900 } : {}),
                           }}
                         >
-                          {referDoctorName || "select doctor"}
+                          {referDoctorName || "Select doctor"}
                         </span>
                         <span style={styles.referChevron}>
                           <ChevronIcon
@@ -1951,8 +2198,8 @@ export function PrescriptionPage() {
                                 }}
                               >
                                 <span style={styles.referMenuItemName}>{d.name}</span>
-                                {d.speciality && (
-                                  <span style={styles.referMenuItemMeta}>{d.speciality}</span>
+                                {(d.specialty || d.department) && (
+                                  <span style={styles.referMenuItemMeta}>{d.specialty || d.department}</span>
                                 )}
                               </button>
                             ))
@@ -1965,7 +2212,7 @@ export function PrescriptionPage() {
                   <div style={styles.noteRow}>
                     <div style={styles.noteLabel}>
                       <RestartIcon style={styles.sectionIcon} />
-                      <span style={styles.noteLabelText}>Next Review</span>
+                      <span style={styles.noteLabelText}>Review</span>
                     </div>
                     <div style={styles.reviewRow}>
                       <div style={{ position: "relative", flexShrink: 0 }}>
@@ -1984,15 +2231,18 @@ export function PrescriptionPage() {
                           </span>
                         </div>
                         {showReviewDatePicker && (
-                          <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, zIndex: 1100 }}>
-                            <DatePicker
-                              selectedDate={reviewDate ?? new Date()}
-                              onSelect={pickReviewDate}
-                              onClose={() => setShowReviewDatePicker(false)}
-                              style={{ top: "auto", bottom: "8px" }}
-                              disablePast
-                            />
-                          </div>
+                          <DatePicker
+                            selectedDate={reviewDate ?? new Date()}
+                            onSelect={pickReviewDate}
+                            onClose={() => setShowReviewDatePicker(false)}
+                            style={{
+                              top: "auto",
+                              bottom: "calc(100% + 8px)",
+                              left: 0,
+                              transform: "none",
+                            }}
+                            disablePast
+                          />
                         )}
                       </div>
                       <span style={styles.reviewOr}>or</span>
@@ -2037,16 +2287,25 @@ export function PrescriptionPage() {
           // active visit rather than carrying state across visit switches.
           key={activeVisit?.id ?? "no-visit"}
           storageKey={activeVisit?.id}
-          readOnly={!isLatestVisit}
+          readOnly={!isEditable}
           recordedDurationSec={activeVisit?.sessionDurationSec ?? null}
-          onPrint={() => showToast("Print: not wired yet")}
-          onDownload={() => showToast("Download: not wired yet")}
+          onPrint={() => handlePrintPrescription()}
+          // Reuses the same render pipeline as Print — browser print preview
+          // pops up and the user picks "Save as PDF" as the destination. Same
+          // template, same patient/visit data, same layout.
+          onDownload={() => handlePrintPrescription()}
           onShare={() => showToast("Share: not wired yet")}
           onActiveChange={setFormActive}
           onStart={handleSessionStart}
           onEnd={handleSessionEnd}
         />
       )}
+
+      <PrintPreviewModal
+        isOpen={printPreviewHtml !== null}
+        html={printPreviewHtml}
+        onClose={() => setPrintPreviewHtml(null)}
+      />
 
       {/* Add File modal. Drag-drop or click-to-choose, multi-file, per-file
           metadata (name, category, investigation date, tie-to-visit, notes).
@@ -2055,30 +2314,147 @@ export function PrescriptionPage() {
         isOpen={showAddModal}
         visits={visits}
         defaultVisitId={activeVisit?.id ?? null}
+        patientId={selectedPatientId}
         onClose={() => setShowAddModal(false)}
         onAdd={handleAddRows}
       />
 
+      <EditPatientModal
+        isOpen={showEditPatient}
+        patient={selectedPatient}
+        onClose={() => setShowEditPatient(false)}
+        onSave={(updated) => {
+          if (selectedPatient) setSelectedPatient({ ...selectedPatient, ...updated });
+        }}
+        onSaved={() => showToast("Patient info saved")}
+        onError={(msg) => showToast(msg)}
+      />
+
       {/* File viewer modal — opens when a row in the Files list is clicked.
-          Shows the file with the annotation toolbar; close × dismisses. */}
+          Shows the file with the annotation toolbar; close × dismisses.
+          For server-only files (fileUrl null, fileId set) the viewer shows
+          a download button; FileViewer fetches bytes lazily if needed. */}
       <Modal isOpen={viewerOpen !== null} onClose={() => setViewerOpen(null)}>
-        {(() => {
-          if (!viewerOpen) return null;
-          const row = (uploadedItems[viewerOpen.action] ?? [])[viewerOpen.index];
-          if (!row) return null;
-          return (
-            <FileViewer
-              file={{
-                id: row.id ?? `${viewerOpen.action}-${viewerOpen.index}`,
-                name: row.name,
-                fileUrl: row.fileUrl ?? null,
-                mimeType: row.mimeType ?? null,
-              }}
-              onBack={() => setViewerOpen(null)}
-            />
-          );
-        })()}
+        {viewerOpen && (
+          <FileViewer
+            file={{
+              id: viewerOpen.id ?? viewerOpen.fileId ?? "file",
+              name: viewerOpen.name,
+              fileUrl: viewerOpen.fileUrl
+                ? viewerOpen.fileUrl
+                : viewerOpen.fileId && selectedPatientId
+                  ? `${API_BASE_URL}/api/patients/${selectedPatientId}/files/${viewerOpen.fileId}/download`
+                  : null,
+              mimeType: viewerOpen.mimeType ?? null,
+            }}
+            onBack={() => setViewerOpen(null)}
+          />
+        )}
       </Modal>
+
+      {aiSoapOpen && activeVisit && (
+        <AISoapDraftModal
+          visitId={activeVisit.id}
+          onClose={() => setAiSoapOpen(false)}
+          onApplyComplaints={(v) => setComplaintsValue((prev) => prev ? `${prev}\n${v}` : v)}
+          onApplyDiagnosis={(v) => setDiagnosisValue((prev) => prev ? `${prev}\n${v}` : v)}
+          onApplyPlan={(v) => setNotesForPatientValue((prev) => prev ? `${prev}\n${v}` : v)}
+          onApplyObjective={(v) => setPrivateNotesValue((prev) => prev ? `${prev}\n${v}` : v)}
+        />
+      )}
+    </div>
+  );
+}
+
+// AI SOAP draft modal — fetches a structured Subjective/Objective/Assessment/
+// Plan from the current visit's free-text notes + vitals via the AI service.
+// Each block has an "Apply" button that appends into the matching form
+// field; the doctor stays in control of what lands on the chart.
+function AISoapDraftModal({
+  visitId,
+  onClose,
+  onApplyComplaints,
+  onApplyDiagnosis,
+  onApplyPlan,
+  onApplyObjective,
+}: {
+  visitId: string;
+  onClose: () => void;
+  onApplyComplaints: (v: string) => void;
+  onApplyDiagnosis: (v: string) => void;
+  onApplyPlan: (v: string) => void;
+  onApplyObjective: (v: string) => void;
+}) {
+  const [data, setData] = React.useState<import("../../api/ai").SoapDraft | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    import("../../api/ai").then(({ fetchVisitSoapDraft }) =>
+      fetchVisitSoapDraft(visitId)
+        .then((d) => {
+          setData(d);
+          if (d.error) setError(d.error);
+        })
+        .catch((e) => setError((e as Error).message))
+        .finally(() => setLoading(false))
+    );
+  }, [visitId]);
+
+  const Section = ({ label, value, onApply, target }: { label: string; value: string; onApply: (v: string) => void; target: string }) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <strong style={{ fontSize: 13 }}>{label}</strong>
+        <button
+          type="button"
+          disabled={!value}
+          onClick={() => { onApply(value); }}
+          style={{
+            background: "none",
+            border: "none",
+            color: value ? "#2c6e49" : "#aaa",
+            cursor: value ? "pointer" : "default",
+            textDecoration: "underline",
+            fontSize: 12,
+            padding: 0,
+          }}
+        >
+          Apply to {target}
+        </button>
+      </div>
+      <div style={{ minHeight: 32, padding: "8px 10px", background: "#fafafa", borderRadius: 6, fontSize: 13, color: value ? "#222" : "#888", whiteSpace: "pre-wrap" }}>
+        {value || "—"}
+      </div>
+    </div>
+  );
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000 }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: "#fff", borderRadius: 12, padding: 20, width: "min(560px, 92vw)", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
+          <h3 style={{ margin: 0, fontSize: 18 }}>AI SOAP draft</h3>
+          <button type="button" onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, lineHeight: 1, cursor: "pointer", color: "#666" }}>×</button>
+        </div>
+        {loading && <p style={{ color: "#666", fontStyle: "italic" }}>Drafting…</p>}
+        {!loading && error && !data?.subjective && (
+          <p style={{ color: "#b54040", fontSize: 13 }}>AI unavailable: {error}</p>
+        )}
+        {data && !loading && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <Section label="Subjective" value={data.subjective} onApply={onApplyComplaints} target="Complaints" />
+            <Section label="Objective" value={data.objective} onApply={onApplyObjective} target="Private notes" />
+            <Section label="Assessment" value={data.assessment} onApply={onApplyDiagnosis} target="Diagnosis" />
+            <Section label="Plan" value={data.plan} onApply={onApplyPlan} target="Notes for patient" />
+            <p style={{ fontSize: 11, color: "#888", margin: 0 }}>AI-generated — review before applying.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
+import { API_BASE_URL } from "../../apiConfig";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FileViewer — full-page-style image viewer with annotation overlay. Renders
@@ -62,6 +63,29 @@ function saveAnnotations(fileId: string, annotations: Annotation[]) {
 }
 
 export function FileViewer({ file, onBack }: Props) {
+  // If the fileUrl is an authenticated API endpoint, fetch it with the JWT
+  // and create a local blob URL so <img> and canvas can read it cross-origin.
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(file.fileUrl ?? null);
+  useEffect(() => {
+    const url = file.fileUrl;
+    if (!url || !url.startsWith(API_BASE_URL)) {
+      setResolvedUrl(url ?? null);
+      return;
+    }
+    let objectUrl: string | null = null;
+    const token = localStorage.getItem("docodile_token");
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.ok ? r.blob() : null)
+      .then((blob) => {
+        if (blob) {
+          objectUrl = URL.createObjectURL(blob);
+          setResolvedUrl(objectUrl);
+        }
+      })
+      .catch(() => {});
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [file.fileUrl]);
+
   const isImage = (file.mimeType ?? "").startsWith("image/");
   const [tool, setTool] = useState<Tool>("none");
   const [visible, setVisible] = useState(true);
@@ -216,15 +240,15 @@ export function FileViewer({ file, onBack }: Props) {
 
   // ── Download (flatten composer) ──────────────────────────────────────────
   const downloadOriginal = () => {
-    if (!file.fileUrl) return;
+    if (!resolvedUrl) return;
     const a = document.createElement("a");
-    a.href = file.fileUrl;
+    a.href = resolvedUrl;
     a.download = file.name || "file";
     a.click();
   };
 
   const downloadFlattened = async () => {
-    if (!isImage || !imgRef.current || !file.fileUrl) {
+    if (!isImage || !imgRef.current || !resolvedUrl) {
       downloadOriginal();
       return;
     }
@@ -235,7 +259,14 @@ export function FileViewer({ file, onBack }: Props) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(img, 0, 0);
-    drawAnnotationsOnCanvas(ctx, annotations, canvas.width, canvas.height);
+    // Pin annotations exist only to anchor a comment — they aren't drawing
+    // markup on the image itself, so exclude them from the exported PNG.
+    drawAnnotationsOnCanvas(
+      ctx,
+      annotations.filter((a) => a.type !== "pin"),
+      canvas.width,
+      canvas.height,
+    );
     canvas.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
@@ -315,7 +346,7 @@ export function FileViewer({ file, onBack }: Props) {
           uncluttered. */}
       <div style={styles.stageRow}>
       <div style={styles.stage}>
-        {!file.fileUrl ? (
+        {!resolvedUrl ? (
           <p style={styles.empty}>File not available.</p>
         ) : !isImage ? (
           <div style={styles.nonImage}>
@@ -335,11 +366,10 @@ export function FileViewer({ file, onBack }: Props) {
           >
             <img
               ref={imgRef}
-              src={file.fileUrl}
+              src={resolvedUrl ?? undefined}
               alt={file.name}
               style={styles.img}
               draggable={false}
-              crossOrigin="anonymous"
             />
 
             {visible && (
@@ -376,6 +406,7 @@ export function FileViewer({ file, onBack }: Props) {
                     top: `${anchor.y * 100}%`,
                   }}
                   onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
                 >
                   <div style={styles.commentMeta}>{a.author} · {labelForType(a.type)}</div>
                   <button type="button" onClick={() => deleteAnnotation(a.id)} style={styles.commentDelete}>
@@ -393,6 +424,7 @@ export function FileViewer({ file, onBack }: Props) {
                   e.stopPropagation();
                   setOpenPinId(openPinId === p.id ? null : p.id);
                 }}
+                onPointerDown={(e) => e.stopPropagation()}
                 style={{
                   ...styles.pin,
                   left: `${p.x * 100}%`,
@@ -416,6 +448,7 @@ export function FileViewer({ file, onBack }: Props) {
                     top: `${p.y * 100}%`,
                   }}
                   onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
                 >
                   <div style={styles.commentMeta}>{p.author}</div>
                   <div style={styles.commentText}>{p.comment}</div>
@@ -435,6 +468,7 @@ export function FileViewer({ file, onBack }: Props) {
                   top: `${pendingPin.y * 100}%`,
                 }}
                 onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
               >
                 <textarea
                   autoFocus
@@ -530,6 +564,19 @@ export function FileViewer({ file, onBack }: Props) {
                 </div>
               );
             })}
+          </div>
+          <div style={styles.railActions}>
+            <button
+              type="button"
+              onClick={() => {
+                setAnnotations([]);
+                setOpenPinId(null);
+                setSelectedShapeId(null);
+              }}
+              style={styles.clearAllBtn}
+            >
+              Clear all
+            </button>
           </div>
         </aside>
       )}
@@ -759,7 +806,9 @@ function drawAnnotationsOnCanvas(
   ctx.lineJoin = "round";
   ctx.strokeStyle = ANNOTATION_COLOR;
   ctx.fillStyle = ANNOTATION_COLOR;
-  ctx.lineWidth = Math.max(2, Math.round(W * 0.003));
+  // SVG overlay uses strokeWidth:2 in a 0–100 viewBox = 2% of image width.
+  // Match that here so the exported PNG looks identical to what the user sees.
+  ctx.lineWidth = Math.max(2, W * 0.02);
 
   let pinIndex = 0;
   for (const a of annotations) {
@@ -957,6 +1006,24 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: fonts.weight.medium,
     color: colors.neutral700,
     letterSpacing: 0.3,
+  },
+  railActions: {
+    padding: `${spacing.xs} ${spacing.s}`,
+    borderTop: `1px solid ${colors.neutral200}`,
+    display: "flex",
+    justifyContent: "flex-end",
+  },
+  clearAllBtn: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.xs,
+    fontWeight: fonts.weight.medium,
+    color: "#C53030",
+    background: "transparent",
+    border: `1px solid #FC8181`,
+    borderRadius: radii.full,
+    padding: `4px ${spacing.s}`,
+    cursor: "pointer",
+    lineHeight: 1.4,
   },
   railList: {
     flex: 1,

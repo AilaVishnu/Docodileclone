@@ -9,7 +9,7 @@ type ClinicData = {
   domain: string;
   phone: string;
   address: string;
-  specialties: string[];
+  departments: string[];
 };
 
 type ClinicSelectionPageProps = {
@@ -20,6 +20,27 @@ type ClinicSelectionPageProps = {
 
 export function ClinicSelectionPage({ onSelectClinic, onGoToBuild, onLogout }: ClinicSelectionPageProps) {
   const [clinics, setClinics] = useState<ClinicData[]>([]);
+
+  const handleSelectClinic = async (clinicId: string, clinicName: string) => {
+    try {
+      const token = localStorage.getItem("docodile_token");
+      const res = await fetch(`${API_BASE_URL}/auth/switch-clinic`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ clinicId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem("docodile_token", data.token);
+        if (data.clinicId) localStorage.setItem("docodile_clinic_id", data.clinicId);
+        if (data.clinicName) localStorage.setItem("docodile_clinic_name", data.clinicName);
+        onSelectClinic(clinicId, clinicName);
+        return;
+      }
+    } catch { /* fall through to non-admin path */ }
+    // Non-admin users (staff) go straight through — their token already has the clinic
+    onSelectClinic(clinicId, clinicName);
+  };
 
   useEffect(() => {
     document.title = "Docodile | Select Clinic";
@@ -39,7 +60,7 @@ export function ClinicSelectionPage({ onSelectClinic, onGoToBuild, onLogout }: C
             domain: c.domain || "",
             phone: c.phone || "",
             address: c.address || "",
-            specialties: c.speciality ? c.speciality.split(",") : [],
+            departments: c.speciality ? c.speciality.split(",").map((s: string) => s.trim()).filter(Boolean) : [],
           }));
           setClinics(mapped);
         }
@@ -61,8 +82,8 @@ export function ClinicSelectionPage({ onSelectClinic, onGoToBuild, onLogout }: C
             domain={clinic.domain}
             phone={clinic.phone}
             address={clinic.address}
-            specialties={clinic.specialties}
-            onGoToDashboard={() => onSelectClinic(clinic.id, clinic.name)}
+            departments={clinic.departments}
+            onGoToDashboard={() => handleSelectClinic(clinic.id, clinic.name)}
           />
         ))}
       </div>

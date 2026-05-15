@@ -31,13 +31,14 @@ type AppointmentRow = {
   type: string | null;
   status: string | null;
   scheduledTime: string | null;
+  doctorId: string;
 };
 
 type StatusFilter = "all" | "AT_DOC" | "IN_PROGRESS" | "WAITING" | "COMPLETED";
 type ViewMode = "grid" | "list";
 
 type PrescriptionQueueProps = {
-  onSelect: (patient: Patient, appointmentId: string) => void;
+  onSelect: (patient: Patient, appointmentId: string, queueDate: string, doctorId: string) => void;
 };
 
 const TAB_ITEMS: { id: StatusFilter; label: string }[] = [
@@ -145,8 +146,11 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
       dob: apt.patientDob,
       age: apt.patientAge,
       lastVisitDate: null,
+      treatingDoctorIds: [],
+      treatingDepartments: [],
     };
-    onSelect(patient, apt.id);
+    const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
+    onSelect(patient, apt.id, dateStr, apt.doctorId);
   };
 
   const renderCards = () => {
@@ -195,32 +199,48 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
 
   return (
     <div style={styles.page}>
-      <h1 style={styles.title}>
+      <h1 style={{ ...styles.title, zIndex: showDatePicker ? 1100 : "auto", position: "relative" }}>
         <span
           onClick={() => setShowDatePicker((v) => !v)}
           style={{
             textDecoration: "underline",
             cursor: "pointer",
             color: colors.neutral900,
+            position: "relative",
+            display: "inline-block",
           }}
         >
           {dateLabel}
+          {showDatePicker && (
+            <DatePicker
+              selectedDate={selectedDate}
+              onSelect={(d) => {
+                setSelectedDate(d);
+                setShowDatePicker(false);
+              }}
+              onClose={() => setShowDatePicker(false)}
+              style={{
+                top: "calc(100% + 12px)",
+                left: "50%",
+                transform: "translateX(-50%)",
+              }}
+              showDoneButton
+            />
+          )}
         </span>{" "}
         Queue
       </h1>
 
       {showDatePicker && (
-        <div style={{ position: "relative", alignSelf: "center" }}>
-          <DatePicker
-            selectedDate={selectedDate}
-            onSelect={(d) => {
-              setSelectedDate(d);
-              setShowDatePicker(false);
-            }}
-            onClose={() => setShowDatePicker(false)}
-            showDoneButton
-          />
-        </div>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 1050,
+          }}
+          onClick={() => setShowDatePicker(false)}
+        />
       )}
 
       <div style={styles.controls}>

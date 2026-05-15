@@ -317,10 +317,10 @@ export const styles: Record<string, CSSProperties> = {
   },
   sectionTitle: {
     margin: 0,
-    fontFamily: fonts.family.secondary,
+    fontFamily: fonts.family.primary,
     fontSize: fonts.size.m,
     lineHeight: fonts.lineHeight.m,
-    fontWeight: fonts.weight.semibold,
+    fontWeight: fonts.weight.regular,
     color: colors.neutral900,
   },
   // Chevron toggle — transparent button, rotates 180° when collapsed.
@@ -352,7 +352,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     justifyContent: "flex-end",
-    gap: spacing["3xl"],
+    gap: spacing["2xl"],
   },
   vitalCell: {
     position: "relative" as const,
@@ -361,7 +361,7 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing.xs,
   },
   vitalLabel: {
-    fontSize: fonts.size.xs,
+    fontSize: fonts.control.xs,
     lineHeight: fonts.lineHeight.xs,
     color: colors.neutral500,
   },
@@ -376,7 +376,7 @@ export const styles: Record<string, CSSProperties> = {
     border: "none",
     outline: "none",
     padding: spacing.xs,
-    fontSize: fonts.size.s,
+    fontSize: fonts.control.sm,
     fontFamily: fonts.family.primary,
     color: colors.neutral900,
     backgroundColor: colors.primary100,
@@ -483,13 +483,13 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing.xs,
   },
   fieldLabel: {
-    fontSize: fonts.size.xs,
+    fontSize: fonts.control.xs,
     lineHeight: fonts.lineHeight.xs,
     color: colors.neutral500,
     fontFamily: fonts.family.primary,
   },
   textField: {
-    border: `${strokes.xs} solid ${colors.neutral200}`,
+    border: `${strokes.xs} solid ${colors.primary300}`,
     borderRadius: radii.m,
     padding: `${spacing.xs} ${spacing.s}`,
     fontSize: fonts.control.sm,
@@ -547,16 +547,16 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.m,
   },
   noteLabelText: {
-    fontFamily: fonts.family.secondary,
+    fontFamily: fonts.family.primary,
     fontSize: fonts.size.m,
     lineHeight: fonts.lineHeight.m,
-    fontWeight: fonts.weight.semibold,
+    fontWeight: fonts.weight.regular,
     color: colors.neutral900,
   },
   noteField: {
     flex: 1,
     minWidth: 0,
-    border: `${strokes.xs} solid ${colors.neutral200}`,
+    border: `${strokes.xs} solid ${colors.primary300}`,
     borderRadius: radii.m,
     padding: `${spacing.xs} ${spacing.s}`,
     fontSize: fonts.control.sm,
@@ -576,7 +576,7 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: colors.primary100,
     borderRadius: radii.m,
     padding: `0 ${spacing.xs}`,
-    minHeight: 36,
+    minHeight: 40,
   },
   noteFieldInner: {
     flex: 1,
@@ -917,12 +917,12 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral700,
   },
 
-  // Refer to — split dropdown with neutral300 border, 120px text + chevron tail.
+  // Refer to — cream-filled dropdown matching the Tests dictatable row.
   referDropdown: {
     display: "inline-flex",
-    alignItems: "stretch",
-    height: 32,
-    border: `${strokes.xs} solid ${colors.neutral300}`,
+    alignItems: "center",
+    height: 40,
+    backgroundColor: colors.primary100,
     borderRadius: radii.m,
     overflow: "hidden",
     cursor: "pointer",
@@ -930,19 +930,18 @@ export const styles: Record<string, CSSProperties> = {
   referText: {
     display: "flex",
     alignItems: "center",
-    width: 120,
-    padding: spacing.xs,
-    fontSize: fonts.size.s,
+    minWidth: 160,
+    padding: `0 ${spacing.s}`,
+    fontSize: fonts.control.sm,
     lineHeight: fonts.lineHeight.s,
     fontFamily: fonts.family.primary,
-    color: colors.alphaBlack2,
-    borderRight: `${strokes.xs} solid ${colors.neutral300}`,
+    color: colors.neutral400,
   },
   referChevron: {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: `${spacing.xs} ${spacing["2xs"]}`,
+    padding: `0 ${spacing.s} 0 0`,
     color: colors.neutral700,
   },
   // Dropdown menu of clinic doctors, opens below the Refer-To pill.
@@ -1002,7 +1001,7 @@ export const styles: Record<string, CSSProperties> = {
   rxTable: {
     display: "flex",
     flexDirection: "column",
-    gap: spacing.s,
+    gap: spacing["2xs"],
   },
   rxInteractionBanner: {
     display: "flex",
@@ -1032,47 +1031,9 @@ export const styles: Record<string, CSSProperties> = {
   },
   // Figma node 2057:6381 — grid columns uniform at 120px for all five
   // right-side columns (Dosage / When / Frequency / Duration / Notes); the
-  // # column is 24px and Medicine flexes. Header captions and data cells
-  // are center-aligned to match the design (Medicine stays left).
-  // Header uses same left-padding as rxGroup and same gap as rxGroup so columns
-  // align pixel-perfect. rxHeaderLeft fixed at 220px matches rxGroupLeft.
-  rxHeaderRow: {
-    display: "flex",
-    flexDirection: "row" as const,
-    gap: spacing.s,
-    fontSize: fonts.size.xs,
-    lineHeight: fonts.lineHeight.xs,
-    color: colors.neutral500,
-    fontFamily: fonts.family.primary,
-    padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
-    alignItems: "center",
-  },
-  rxHeaderLeft: {
-    flex: "0 0 360px" as const,
-    display: "flex",
-    flexDirection: "row" as const,
-    gap: spacing["2xs"],
-    alignItems: "center",
-  },
-  rxHeaderNum: {
-    flexShrink: 0,
-    width: 24,
-    textAlign: "center" as const,
-  },
-  rxHeaderRight: {
-    flex: 1,
-    minWidth: 0,
-    display: "flex",
-    flexDirection: "row" as const,
-    gap: spacing.s,
-    alignItems: "center",
-  },
-  rxHeaderCol: {
-    width: 120,
-    flexShrink: 0,
-    textAlign: "center" as const,
-  },
-  // rxGroup is the card container — cream background spans full row width.
+  // rxGroup is the card container — white background matches the section card,
+  // letting the cream (primary100) inputs inside read as fields (consistent
+  // with the rest of the prescription form's white-card / cream-input pattern).
   rxGroup: {
     position: "relative" as const,
     display: "flex",
@@ -1080,16 +1041,16 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing.s,
     alignItems: "stretch",
     overflow: "visible" as const,
-    backgroundColor: colors.primary100,
+    backgroundColor: colors.neutral100,
     borderRadius: radii.xs,
-    padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
+    padding: `${spacing["2xs"]} ${spacing["2xs"]}`,
   },
   rxGroupLeft: {
     flex: "0 0 360px" as const,
     display: "flex",
     flexDirection: "row" as const,
     gap: spacing["2xs"],
-    alignItems: "center",
+    alignItems: "stretch",
   },
   rxGroupRight: {
     flex: 1,
@@ -1143,7 +1104,6 @@ export const styles: Record<string, CSSProperties> = {
     justifyContent: "center",
     width: 28,
     height: 28,
-    fontSize: 16,
     lineHeight: 1,
     color: colors.neutral500,
     background: "transparent",
@@ -1155,50 +1115,69 @@ export const styles: Record<string, CSSProperties> = {
   },
   rxCell: {
     border: "none",
-    borderRadius: radii.xs,
-    padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
-    fontSize: fonts.size.s,
+    borderRadius: radii.m,
+    padding: `${spacing["3xs"]} ${spacing.s}`,
+    fontSize: fonts.control.sm,
     lineHeight: fonts.lineHeight.s,
     color: colors.neutral900,
-    backgroundColor: "transparent",
+    backgroundColor: colors.primary100,
     outline: "none",
     fontFamily: fonts.family.primary,
     minWidth: 0,
+    height: 40,
+    boxSizing: "border-box",
     textAlign: "center" as const,
   },
   rxSerial: {
     flexShrink: 0,
     width: 24,
-    fontSize: fonts.size.s,
+    fontSize: fonts.control.sm,
     lineHeight: fonts.lineHeight.s,
     color: colors.neutral900,
     textAlign: "center" as const,
     padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  // Medicine cell stacks name + pen-icon note below it.
+  // Medicine cell — input + (generic-name + add-tapering) stacked horizontally.
+  // The input column centers vertically; the trailing column (generic + button)
+  // sits at the bottom of the cell. Cell keeps the full row height.
   rxMedicineCell: {
     display: "flex",
-    flexDirection: "column",
-    gap: 0,
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: spacing.xs,
+    minHeight: 40,
     minWidth: 0,
+  },
+  rxMedicineInputCol: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    alignItems: "center",
   },
   rxMedicineInput: {
     border: "none",
     outline: "none",
-    padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
-    fontSize: fonts.size.s,
+    padding: `0 ${spacing.s}`,
+    height: 40,
+    boxSizing: "border-box" as const,
+    fontSize: fonts.control.sm,
     lineHeight: fonts.lineHeight.s,
     fontFamily: fonts.family.primary,
     color: colors.neutral900,
-    backgroundColor: "transparent",
+    backgroundColor: colors.primary100,
+    borderRadius: radii.m,
     minWidth: 0,
   },
   rxGenericRow: {
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-end",
+    justifyContent: "flex-end",
     gap: spacing["2xs"],
     padding: `2px ${spacing["2xs"]}`,
-    width: "100%",
+    flexShrink: 0,
     minWidth: 0,
   },
   rxGenericName: {
@@ -1223,7 +1202,7 @@ export const styles: Record<string, CSSProperties> = {
     background: "transparent",
     border: "none",
     cursor: "pointer",
-    color: colors.alphaBlack2,
+    color: colors.neutral500,
     borderRadius: radii.xs,
   },
   rxMedicineNote: {
@@ -1258,12 +1237,11 @@ export const styles: Record<string, CSSProperties> = {
   },
   addMedicinePlus: {
     width: 24,
-    textAlign: "center" as const,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     padding: `${spacing["3xs"]} ${spacing["2xs"]}`,
-    fontSize: fonts.size.s,
-    lineHeight: fonts.lineHeight.s,
-    color: colors.neutral900,
-    fontFamily: fonts.family.primary,
+    color: colors.neutral500,
     flexShrink: 0,
     background: "transparent",
     border: "none",
@@ -1307,10 +1285,9 @@ export const styles: Record<string, CSSProperties> = {
     cursor: "pointer",
   },
   reviewDateText: {
-    fontSize: fonts.size.m,
-    lineHeight: fonts.lineHeight.m,
+    fontSize: fonts.control.sm,
     fontFamily: fonts.family.primary,
-    color: colors.neutral300,
+    color: colors.neutral400,
     whiteSpace: "nowrap" as const,
   },
   reviewLong: {

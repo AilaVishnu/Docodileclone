@@ -61,11 +61,11 @@ export function Tag({
               />
             </svg>
           ) : (
-            <svg width="6" height="6" viewBox="0 0 6 6" fill="none" aria-hidden="true">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
               <path
-                d="M1 1L5 5M5 1L1 5"
+                d="M2 2L8 8M8 2L2 8"
                 stroke="currentColor"
-                strokeWidth="1"
+                strokeWidth="1.5"
                 strokeLinecap="round"
               />
             </svg>
@@ -82,14 +82,14 @@ const styles: Record<string, CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: spacing["2xs"],
-    padding: `${spacing["3xs"]} ${spacing.xs}`,
+    gap: spacing.xs,
+    padding: `${spacing["2xs"]} ${spacing.s}`,
     backgroundColor: colors.neutral100,
     border: `${strokes.xs} solid ${colors.secondary100}`,
     borderRadius: radii.full,
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.xs,
-    lineHeight: fonts.lineHeight.xs,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
     color: colors.neutral900,
     whiteSpace: "nowrap" as const,
   },
@@ -105,8 +105,8 @@ const styles: Record<string, CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    width: 12,
-    height: 12,
+    width: 16,
+    height: 16,
     padding: 0,
     background: "transparent",
     border: "none",

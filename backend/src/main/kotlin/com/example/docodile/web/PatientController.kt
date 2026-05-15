@@ -1,16 +1,90 @@
 package com.example.docodile.web
 
+import com.example.docodile.repo.PatientRepository
+import com.example.docodile.security.CurrentUser
 import com.example.docodile.service.PatientService
+import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.bind.annotation.*
+import java.time.LocalDate
+import java.util.UUID
+
+data class UpdatePatientRequest(
+    val name: String?,
+    val phone: String?,
+    val email: String?,
+    val gender: String?,
+    val dob: String?,   // ISO yyyy-MM-dd or null
+    val age: Int?       // months, or null
+)
 
 @RestController
 @RequestMapping("/api/patients")
-class PatientController(private val patientService: PatientService) {
+class PatientController(
+    private val patientService: PatientService,
+    private val patientRepository: PatientRepository,
+    private val currentUser: CurrentUser
+) {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun list(): List<PatientWithLastVisitDTO> = patientService.listPatientsWithLastVisit()
+
+    @PatchMapping("/{patientId}")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
+    @Transactional
+    fun update(
+        @PathVariable patientId: UUID,
+        @RequestBody req: UpdatePatientRequest
+    ): ResponseEntity<Void> {
+        val clinicId = currentUser.clinicId()
+        val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
+            ?: return ResponseEntity.notFound().build()
+
+        // Validate inputs to match the rigour ClinicStatusService.saveStaff
+        // applies — bad data here ends up on patient cards and printouts.
+        if (!req.name.isNullOrBlank() && req.name.trim().length < 2) {
+            throw IllegalArgumentException("Name must be at least 2 characters")
+        }
+        if (!req.phone.isNullOrBlank()) {
+            val digits = req.phone.filter { it.isDigit() }
+            if (digits.length < 10) throw IllegalArgumentException("Phone number must have at least 10 digits")
+        }
+        if (!req.email.isNullOrBlank()) {
+            val emailRegex = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
+            if (!emailRegex.matches(req.email.trim())) {
+                throw IllegalArgumentException("Invalid email format")
+            }
+        }
+        val parsedDob: LocalDate? = req.dob?.takeIf { it.isNotBlank() }?.let {
+            try { LocalDate.parse(it) } catch (e: Exception) {
+                throw IllegalArgumentException("Date of birth must be in yyyy-MM-dd format")
+            }
+        }
+        if (parsedDob != null && parsedDob.isAfter(LocalDate.now())) {
+            throw IllegalArgumentException("Date of birth cannot be in the future")
+        }
+        if (req.age != null && (req.age < 0 || req.age > 200 * 12)) {
+            throw IllegalArgumentException("Age (in months) is out of range")
+        }
+        if (!req.gender.isNullOrBlank() && req.gender.lowercase() !in setOf("male", "female", "other")) {
+            throw IllegalArgumentException("Gender must be male, female, or other")
+        }
+
+        if (!req.name.isNullOrBlank()) patient.name = req.name.trim()
+        patient.phone  = req.phone?.takeIf { it.isNotBlank() }
+        patient.email  = req.email?.takeIf { it.isNotBlank() }?.lowercase()
+        patient.gender = req.gender?.takeIf { it.isNotBlank() }?.lowercase()
+        patient.dob    = parsedDob
+        patient.age    = req.age
+
+        patientRepository.save(patient)
+        return ResponseEntity.noContent().build()
+    }
+
+    @ExceptionHandler(IllegalArgumentException::class)
+    fun handleIllegalArgument(e: IllegalArgumentException): ResponseEntity<Map<String, String>> {
+        return ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
+    }
 }

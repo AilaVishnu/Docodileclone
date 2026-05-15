@@ -4,8 +4,10 @@ import { colors, spacing, fonts, radii } from "../../styles/theme";
 export const styles: Record<string, CSSProperties> = {
   container: {
     position: "fixed",
-    bottom: spacing.xl,
-    right: spacing.xl,
+    // Anchored at bottom-right, just to the left of the chat bubble FAB
+    // (52px bubble + 24px right offset + 12px gap ≈ 88px from the right edge).
+    bottom: 24,
+    right: 88,
     display: "flex",
     alignItems: "center",
     gap: spacing.s,

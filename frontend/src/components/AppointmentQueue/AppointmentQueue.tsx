@@ -5,6 +5,7 @@ import { styles } from "./AppointmentQueue.styles";
 import { DatePicker } from "./DatePicker";
 import { colors } from "../../styles/theme";
 import { BookAppointment, EditAppointmentData } from "./BookAppointment";
+import { BillMedicinesModal } from "./BillMedicinesModal";
 import { DoctorStatusCard } from "./DoctorStatusCard";
 import { HeatmapCard } from "./HeatmapCard";
 import { Toast } from "../Toast";
@@ -17,14 +18,23 @@ type Doctor = {
   name: string;
 };
 
+type BillingMedicine = {
+  id: string;
+  name: string;
+  dosage?: string;
+  unitPrice: number;
+  qty: number;
+};
+
 type AppointmentQueueProps = {
   isBooking?: boolean;
   bookingKey?: number;
   onBack?: () => void;
   onEditStart?: () => void;
+  onViewPatientFile?: (patient: import("../../hooks/usePatients").Patient, appointmentId: string, doctorId: string) => void;
 };
 
-export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }: AppointmentQueueProps) {
+export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, onViewPatientFile }: AppointmentQueueProps) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [activeDoctorId, setActiveDoctorId] = useState<string>("");
   const [appointments, setAppointments] = useState<Record<string, Appointment[]>>({});
@@ -35,6 +45,9 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
   const [refreshKey, setRefreshKey] = useState(0);
   const [toastMessage, setToastMessage] = useState("");
   const [pendingCancelId, setPendingCancelId] = useState<string | null>(null);
+  const [medsBillingApt, setMedsBillingApt] = useState<Appointment | null>(null);
+  const [billingMedicines, setBillingMedicines] = useState<BillingMedicine[]>([]);
+  const [billingLoading, setBillingLoading] = useState(false);
 
   const doStatusChange = async (aptId: string, newStatus: string) => {
     const token = localStorage.getItem("docodile_token");
@@ -82,6 +95,37 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
       setEditingAppointment(undefined);
     }
   }, [bookingKey]);
+
+  // Fetch real prescription Rx rows for the selected patient when Bill Medicines opens
+  useEffect(() => {
+    if (!medsBillingApt?.patientId) {
+      setBillingMedicines([]);
+      return;
+    }
+    const patientId = medsBillingApt.patientId;
+    setBillingLoading(true);
+    const token = localStorage.getItem("docodile_token");
+    fetch(`${API_BASE_URL}/api/patients/${patientId}/visits`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((visits: any[]) => {
+        // visits are sorted ASC; last entry is the most recent
+        const latest = visits[visits.length - 1];
+        const rows: BillingMedicine[] = (latest?.prescriptions ?? [])
+          .filter((p: any) => p.medicine)
+          .map((p: any, i: number) => ({
+            id: p.id ?? `rx-${i}`,
+            name: p.medicine as string,
+            dosage: [p.dosage, p.frequency, p.duration].filter(Boolean).join(" · ") || undefined,
+            unitPrice: 0,
+            qty: 1,
+          }));
+        setBillingMedicines(rows);
+      })
+      .catch(() => setBillingMedicines([]))
+      .finally(() => setBillingLoading(false));
+  }, [medsBillingApt]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -207,34 +251,52 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
     <div style={styles.container}>
       <header style={{ ...styles.header, marginBottom: "24px", position: "relative" }}>
         <div style={{ flex: 1 }} />
-        <h1 style={{ ...styles.title, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
+        <h1 style={{ ...styles.title, position: "absolute", left: "50%", transform: "translateX(-50%)", zIndex: showDatePicker ? 1100 : "auto" }}>
           <span
             onClick={() => setShowDatePicker(!showDatePicker)}
             style={{
               textDecoration: "underline",
               cursor: "pointer",
-              color: colors.neutral900
+              color: colors.neutral900,
+              position: "relative",
+              display: "inline-block",
             }}
           >
             {dateText}
+            {showDatePicker && (
+              <DatePicker
+                selectedDate={selectedDate}
+                onSelect={(date) => {
+                  setSelectedDate(date);
+                  setShowDatePicker(false);
+                }}
+                onClose={() => setShowDatePicker(false)}
+                style={{
+                  top: "calc(100% + 12px)",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                }}
+                showDoneButton
+              />
+            )}
           </span> Queue
         </h1>
+
+        {showDatePicker && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
+              zIndex: 1050,
+            }}
+            onClick={() => setShowDatePicker(false)}
+          />
+        )}
 
         <div style={{ display: "flex", gap: "12px" }}>
           {/* Internal booking trigger removed in favor of TopNav trigger */}
         </div>
-
-        {showDatePicker && (
-          <DatePicker
-            selectedDate={selectedDate}
-            onSelect={(date) => {
-              setSelectedDate(date);
-              setShowDatePicker(false);
-            }}
-            onClose={() => setShowDatePicker(false)}
-            showDoneButton
-          />
-        )}
       </header>
 
       {(isBooking || editingAppointment) && (
@@ -287,13 +349,27 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
                 onEditStart?.();
               } },
               { label: "View Patient File", onClick: (apt) => {
-                setToastMessage(`Opening ${apt.patientName}'s file...`);
+                // Pass the full patient + appointment context so the host can
+                // route directly into the patient's prescription/visit view
+                // (same as PrescriptionQueue's View Pad path) instead of just
+                // highlighting the row in the Patient Files index.
+                if (apt.patientId && onViewPatientFile) {
+                  onViewPatientFile({
+                    id: apt.patientId,
+                    name: apt.patientName,
+                    phone: apt.patientPhone ?? null,
+                    email: apt.patientEmail ?? null,
+                    gender: apt.patientGender ?? null,
+                    dob: apt.patientDob ?? null,
+                    age: apt.patientAge ?? null,
+                    lastVisitDate: null,
+                    treatingDoctorIds: [],
+                    treatingDepartments: [],
+                  }, apt.id, apt.doctorId || activeDoctorId);
+                }
               } },
               { label: "Bill Medicines", onClick: (apt) => {
-                setToastMessage(`Medicine billing for ${apt.patientName} coming soon`);
-              } },
-              { label: "Generate Bill", onClick: (apt) => {
-                setToastMessage(`Bill generated for ${apt.patientName}`);
+                setMedsBillingApt(apt);
               } },
             ]}
             onStatusChange={async (aptId, newStatus) => {
@@ -346,6 +422,22 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
           </div>
         </div>
       )}
+
+      <BillMedicinesModal
+        isOpen={!!medsBillingApt}
+        onClose={() => setMedsBillingApt(null)}
+        onBilled={(method, total) => {
+          const inr = total.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+          const msg = method === "Waive"
+            ? `Bill waived for ${medsBillingApt?.patientName}`
+            : `₹${inr} billed via ${method} for ${medsBillingApt?.patientName}`;
+          setToastMessage(msg);
+        }}
+        patientName={medsBillingApt?.patientName || ""}
+        medicines={billingMedicines}
+        loading={billingLoading}
+        pendingDue={medsBillingApt?.payStatus === "DUE" ? (medsBillingApt.fee ?? 500) : 0}
+      />
     </div>
   );
 }

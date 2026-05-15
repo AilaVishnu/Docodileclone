@@ -1,5 +1,6 @@
 import React, { CSSProperties, useEffect, useRef, useState } from "react";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { ReactComponent as ChevronIcon } from "../../assets/icons/chevron-up.svg";
 
 const OPTIONS = [
   "After food",
@@ -36,7 +37,13 @@ export function WhenPicker({ value, onChange }: Props) {
         <span style={{ ...styles.triggerText, ...(value ? { color: colors.neutral900 } : {}) }}>
           {value || "When"}
         </span>
-        <span style={{ ...styles.chevron, transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+        <span style={styles.chevron}>
+          <ChevronIcon
+            width={16}
+            height={16}
+            style={{ transform: open ? "rotate(0deg)" : "rotate(180deg)" }}
+          />
+        </span>
       </div>
 
       {open && (
@@ -72,19 +79,18 @@ const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    height: 28,
-    border: `${strokes.xs} solid ${colors.primary300}`,
+    height: 40,
     borderRadius: radii.m,
     overflow: "hidden",
     cursor: "pointer",
-    backgroundColor: colors.neutral100,
+    backgroundColor: colors.primary100,
     padding: `0 ${spacing.m}`,
   },
   triggerText: {
-    fontSize: fonts.size.s,
+    fontSize: fonts.control.sm,
     lineHeight: fonts.lineHeight.s,
     fontFamily: fonts.family.primary,
-    color: colors.alphaBlack2,
+    color: colors.neutral400,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap" as const,
@@ -92,11 +98,12 @@ const styles: Record<string, CSSProperties> = {
   },
   chevron: {
     position: "absolute" as const,
-    right: spacing["2xs"],
+    right: spacing.xs,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     flexShrink: 0,
-    fontSize: 12,
     color: colors.neutral700,
-    transition: "transform 0.15s ease",
     lineHeight: 1,
   },
   menu: {
@@ -118,7 +125,7 @@ const styles: Record<string, CSSProperties> = {
     width: "100%",
     textAlign: "left" as const,
     padding: `${spacing.xs} ${spacing.s}`,
-    fontSize: fonts.size.s,
+    fontSize: fonts.control.sm,
     lineHeight: fonts.lineHeight.s,
     fontFamily: fonts.family.primary,
     color: colors.neutral900,

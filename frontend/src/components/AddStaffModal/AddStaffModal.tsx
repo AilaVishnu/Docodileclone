@@ -13,6 +13,10 @@ import { ReactComponent as RoleIcon } from "../../assets/Mask Happly.svg";
 // that reveals a free-text input for custom roles.
 const STANDARD_ROLES = ["Front Desk", "Doctor", "Nurse", "Pharmacy", "Lab"];
 
+// Clinical roles tied to a clinical department. Pharmacy/Lab are clinic-wide
+// services (no department), Front Desk and custom Other are admin/varied.
+const DEPARTMENT_REQUIRED_ROLES = ["Doctor", "Nurse"];
+
 
 export type StaffData = {
   name: string;
@@ -20,8 +24,12 @@ export type StaffData = {
   phone: string;
   gender: "male" | "female" | "other" | "";
   role: string;
-  speciality: string;
+  department: string;
+  specialty: string;
   registrationNo: string;
+  qualification: string;
+  medicalCouncil: string;
+  experienceYears: string;
 };
 
 type AddStaffModalProps = {
@@ -31,6 +39,9 @@ type AddStaffModalProps = {
   onDelete?: () => void;
   initialData?: StaffData;
   onShowToast?: (message: string) => void;
+  // Department names configured on the active clinic. Staff must pick one of
+  // these — they can't be assigned to a department the clinic doesn't offer.
+  clinicDepartments: string[];
 };
 
 export function AddStaffModal({
@@ -40,6 +51,7 @@ export function AddStaffModal({
   onDelete,
   initialData,
   onShowToast,
+  clinicDepartments,
 }: AddStaffModalProps) {
   // Local state for all fields
   const [name, setName] = useState("");
@@ -51,8 +63,12 @@ export function AddStaffModal({
   // "Other" radio is selected → free text input shown. Role value holds the
   // custom text the user types (or "" while input is empty).
   const [isOtherRole, setIsOtherRole] = useState(false);
-  const [speciality, setSpeciality] = useState("");
+  const [department, setDepartment] = useState("");
+  const [specialty, setSpecialty] = useState("");
   const [registrationNo, setRegistrationNo] = useState("");
+  const [qualification, setQualification] = useState("");
+  const [medicalCouncil, setMedicalCouncil] = useState("");
+  const [experienceYears, setExperienceYears] = useState("");
 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -72,8 +88,12 @@ export function AddStaffModal({
         // and isn't empty, the "Other" radio should be pre-selected with the
         // custom text already in the input.
         setIsOtherRole(!!initialData.role && !STANDARD_ROLES.includes(initialData.role));
-        setSpeciality(initialData.speciality);
+        setDepartment(initialData.department);
+        setSpecialty(initialData.specialty);
         setRegistrationNo(initialData.registrationNo);
+        setQualification(initialData.qualification);
+        setMedicalCouncil(initialData.medicalCouncil);
+        setExperienceYears(initialData.experienceYears);
       } else {
         // Reset form for "Add New"
         setName("Dr. ");
@@ -82,8 +102,12 @@ export function AddStaffModal({
         setGender("");
         setRole("Doctor");
         setIsOtherRole(false);
-        setSpeciality("");
+        setDepartment("");
+        setSpecialty("");
         setRegistrationNo("");
+        setQualification("");
+        setMedicalCouncil("");
+        setExperienceYears("");
       }
     }
   }, [isOpen, initialData]);
@@ -122,8 +146,13 @@ export function AddStaffModal({
       role: roleInvalid,
     };
 
+    // Department required for any clinical role; specialty + registration
+    // number are doctor-only.
+    if (DEPARTMENT_REQUIRED_ROLES.includes(role)) {
+      newErrors.department = !department;
+    }
     if (role === "Doctor") {
-      newErrors.speciality = !speciality;
+      newErrors.specialty = !specialty.trim();
       newErrors.registrationNo = !registrationNo.trim();
     }
 
@@ -137,7 +166,8 @@ export function AddStaffModal({
       if (newErrors.phone) messages.push("valid phone number");
       if (newErrors.gender) messages.push("gender");
       if (newErrors.role) messages.push("role");
-      if (newErrors.speciality) messages.push("speciality");
+      if (newErrors.department) messages.push("department");
+      if (newErrors.specialty) messages.push("specialty");
       if (newErrors.registrationNo) messages.push("registration number");
       onShowToast?.(`Please enter ${messages[0]}`);
       return;
@@ -149,8 +179,12 @@ export function AddStaffModal({
       phone,
       gender,
       role,
-      speciality: role === "Doctor" ? speciality : "",
+      department: DEPARTMENT_REQUIRED_ROLES.includes(role) ? department : "",
+      specialty: role === "Doctor" ? specialty : "",
       registrationNo: role === "Doctor" ? registrationNo : "",
+      qualification: role === "Doctor" ? qualification : "",
+      medicalCouncil: role === "Doctor" ? medicalCouncil : "",
+      experienceYears: role === "Doctor" ? experienceYears : "",
     });
   };
 
@@ -240,13 +274,24 @@ export function AddStaffModal({
         />
       </div>
 
-      {/* Doctor-specific fields — only shown when role is Doctor. */}
-      {role === "Doctor" && (
+      {/* Clinical-role fields. Department shows for Doctor/Nurse/Pharmacy/Lab;
+          specialty and Reg. No. are doctor-only (handled inside the card). */}
+      {DEPARTMENT_REQUIRED_ROLES.includes(role) && (
         <AdditionalStaffDetailsCard
-          speciality={speciality}
-          setSpeciality={setSpeciality}
+          role={role}
+          department={department}
+          setDepartment={setDepartment}
+          specialty={specialty}
+          setSpecialty={setSpecialty}
           registrationNo={registrationNo}
           setRegistrationNo={setRegistrationNo}
+          qualification={qualification}
+          setQualification={setQualification}
+          medicalCouncil={medicalCouncil}
+          setMedicalCouncil={setMedicalCouncil}
+          experienceYears={experienceYears}
+          setExperienceYears={setExperienceYears}
+          clinicDepartments={clinicDepartments}
           errors={errors}
         />
       )}

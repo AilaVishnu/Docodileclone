@@ -119,6 +119,12 @@ class VisitService(
         visit.notesForPatient = r.notesForPatient
         visit.privateNotes = r.privateNotes
         visit.tests = r.tests
+        // Treating doctor — only set if missing or the request explicitly
+        // provides one (don't blow away an existing assignment on update
+        // when the frontend omits the field).
+        if (r.createdByDoctorId != null) {
+            visit.createdByDoctor = appUserRepository.findById(r.createdByDoctorId).orElse(null)
+        }
         // Referral
         visit.referDoctor = r.referDoctorId?.let { id ->
             val doc = appUserRepository.findById(id).orElse(null)

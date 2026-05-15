@@ -14,5 +14,13 @@ data class PatientWithLastVisitDTO(
     val gender: String?,
     val dob: LocalDate?,
     val age: Int?,
-    val lastVisitDate: LocalDate?
+    val lastVisitDate: LocalDate?,
+    // Distinct doctors this patient has been seen by, derived from visits.
+    // Used by the Patient Files filter to scope patients by doctor /
+    // department without an extra fetch per row.
+    val treatingDoctorIds: List<UUID>,
+    // Distinct department names attached to those treating doctors. Resolved
+    // server-side so the frontend doesn't have to cross-reference the doctor
+    // list (which can drift on missing/casing-different department values).
+    val treatingDepartments: List<String>
 )

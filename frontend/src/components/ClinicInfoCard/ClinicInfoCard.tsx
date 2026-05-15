@@ -2,13 +2,21 @@ import React, { useState, useEffect, useRef, KeyboardEvent } from "react";
 import { Button } from "../Button";
 import { Tag } from "../Tag";
 import { styles } from "./ClinicInfoCard.styles";
-import { colors, fonts } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 import { ReactComponent as BuildingIcon } from "../../assets/Buildings.svg";
 import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
-import { ReactComponent as SpecialtyIcon } from "../../assets/Stethoscope.svg";
 import { ReactComponent as LocationIcon } from "../../assets/Map Point.svg";
 import { Clinic } from "../ClinicTabs";
 import { API_BASE_URL } from "../../apiConfig";
+
+const DEPARTMENTS = [
+  "Cardiology", "Dermatology", "ENT", "Gynecology", "Neurology",
+  "Ophthalmology", "Orthopedics", "Pediatrics", "Urology",
+  "General Medicine", "General Surgery", "Psychiatry", "Radiology",
+  "Oncology", "Endocrinology", "Nephrology", "Pulmonology",
+  "Gastroenterology", "Rheumatology", "Anesthesiology", "Dentistry",
+  "Physiotherapy", "Dietetics", "Pathology", "Emergency Medicine",
+];
 
 type ClinicInfoCardProps = {
   clinic: Clinic;
@@ -20,7 +28,9 @@ const isUuid = (str: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
 export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCardProps) {
-  const [specialtyInput, setSpecialtyInput] = useState("");
+  const [deptInput, setDeptInput] = useState("");
+  const [deptDropdownOpen, setDeptDropdownOpen] = useState(false);
+  const deptWrapRef = useRef<HTMLDivElement>(null);
   const [isSaved, setIsSaved] = useState(isUuid(clinic.id));
   const [showErrors, setShowErrors] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -31,7 +41,7 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
     setShowErrors(false);
   }, [clinic.id]);
 
-  const { domain, name: clinicName, phone, specialties, address } = clinic;
+  const { domain, name: clinicName, phone, departments, address } = clinic;
 
   const [domainAvailability, setDomainAvailability] = useState<
     "idle" | "checking" | "available" | "taken"
@@ -71,24 +81,37 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
     };
   }, [domain, isSaved]);
 
-  const addSpecialty = () => {
-    const trimmed = specialtyInput.trim();
-    if (trimmed && !specialties.includes(trimmed)) {
-      onUpdate({ specialties: [...specialties, trimmed] });
+  const deptExists = (name: string) =>
+    departments.some((d) => d.toLowerCase() === name.toLowerCase());
+
+  const addDept = (name?: string) => {
+    const trimmed = (name ?? deptInput).trim();
+    if (trimmed && !deptExists(trimmed)) {
+      onUpdate({ departments: [...departments, trimmed] });
     }
-    setSpecialtyInput("");
+    setDeptInput("");
   };
 
-  const handleSpecialtyKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault();
-      addSpecialty();
-    }
+  const removeDept = (index: number) => {
+    onUpdate({ departments: departments.filter((_, i) => i !== index) });
   };
 
-  const removeSpecialty = (index: number) => {
-    onUpdate({ specialties: specialties.filter((_: string, i: number) => i !== index) });
-  };
+  useEffect(() => {
+    if (!deptDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (deptWrapRef.current && !deptWrapRef.current.contains(e.target as Node)) {
+        setDeptDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [deptDropdownOpen]);
+
+  const filteredDepts = (() => {
+    const unselected = DEPARTMENTS.filter((d) => !deptExists(d));
+    if (!deptInput.trim()) return unselected.slice(0, 6);
+    return unselected.filter((d) => d.toLowerCase().includes(deptInput.toLowerCase()));
+  })();
 
   const displayName = clinicName || domain || "Your Clinic";
 
@@ -136,7 +159,7 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
           address,
           phone,
           domain,
-          speciality: specialties.join(","),
+          speciality: departments.join(","),
         }),
       });
 
@@ -220,29 +243,53 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
         />
       </div>
 
-      {/* Specialties — icon + tag list + inline add input */}
-      <div style={{ ...styles.specialtyRow, ...(fieldsLocked ? styles.locked : {}) }}>
-        <span style={styles.fieldIcon}><SpecialtyIcon width={20} height={20} /></span>
-        <div style={styles.tagRow}>
-          {specialties.map((s: string, i: number) => (
-            <Tag
-              key={i}
-              variant="filled"
-              label={s}
-              onRemove={() => removeSpecialty(i)}
-              removeLabel={`Remove ${s}`}
+      {/* Departments — icon + tag list + autocomplete dropdown */}
+      <div ref={deptWrapRef} style={{ position: "relative" }}>
+        <div style={{ ...styles.specialtyRow, ...(fieldsLocked ? styles.locked : {}) }}>
+          <span style={styles.fieldIcon}><BuildingIcon width={20} height={20} /></span>
+          <div style={styles.tagRow}>
+            {departments.map((s, i) => (
+              <Tag
+                key={i}
+                variant="filled"
+                label={s}
+                onRemove={() => removeDept(i)}
+                removeLabel={`Remove ${s}`}
+              />
+            ))}
+            <input
+              style={styles.specialtyAddInput}
+              value={deptInput}
+              onChange={(e) => { setDeptInput(e.target.value); setDeptDropdownOpen(true); }}
+              onFocus={() => setDeptDropdownOpen(true)}
+              onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
+                if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addDept(); setDeptDropdownOpen(false); }
+              }}
+              placeholder={departments.length === 0 ? "Add department" : ""}
+              disabled={fieldsLocked}
             />
-          ))}
-          <input
-            style={styles.specialtyAddInput}
-            value={specialtyInput}
-            onChange={(e) => setSpecialtyInput(e.target.value)}
-            onKeyDown={handleSpecialtyKeyDown}
-            onBlur={addSpecialty}
-            placeholder={specialties.length === 0 ? "Add specialty" : ""}
-            disabled={fieldsLocked}
-          />
+          </div>
         </div>
+        {deptDropdownOpen && !fieldsLocked && deptInput.trim().length > 0 && filteredDepts.length > 0 && (
+          <div style={deptMenuStyle}>
+            {filteredDepts.map((d) => (
+              <button
+                key={d}
+                type="button"
+                style={deptItemStyle}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.active.shade100)}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  addDept(d);
+                  setDeptDropdownOpen(false);
+                }}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Address (multiline) */}
@@ -333,3 +380,36 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
     </div>
   );
 }
+
+const deptMenuStyle: React.CSSProperties = {
+  position: "absolute",
+  top: "calc(100% + 4px)",
+  left: 0,
+  right: 0,
+  minWidth: 200,
+  backgroundColor: colors.neutral100,
+  border: `${strokes.xs} solid ${colors.primary300}`,
+  borderRadius: radii.m,
+  padding: spacing["2xs"],
+  display: "flex",
+  flexDirection: "column",
+  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
+  zIndex: 1000,
+  maxHeight: "min(50vh, 480px)",
+  overflowY: "auto",
+};
+
+const deptItemStyle: React.CSSProperties = {
+  display: "block",
+  width: "100%",
+  textAlign: "left",
+  padding: `${spacing.xs} ${spacing.s}`,
+  background: "transparent",
+  border: "none",
+  cursor: "pointer",
+  fontFamily: fonts.family.primary,
+  fontSize: fonts.size.s,
+  lineHeight: fonts.lineHeight.s,
+  color: colors.neutral900,
+  borderRadius: radii.xs,
+};

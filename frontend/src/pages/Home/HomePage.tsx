@@ -2,11 +2,18 @@ import React, { useEffect, useState } from "react";
 import { SideNav, NavTab } from "../../components/SideNav";
 import { TopNav } from "../../components/TopNav";
 import { PrescriptionView, PatientFilesView, AppointmentsView } from "./Views";
+import { ServicesView } from "../Services";
 import { HomeView } from "./HomeView";
+import { StatsPage } from "../Stats";
+import { PharmacyView } from "../Pharmacy";
+import { SettingsPage, DEFAULT_SETTINGS_SECTION, SettingsSection } from "../Settings";
 import { DesignSystemPage } from "../DesignSystem";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
 import { confirmStyles } from "../../components/AddStaffModal/AddStaffModal.styles";
 import { Button } from "../../components/Button";
+import { ChatBubble } from "../../components/Chat/ChatBubble";
+import { setPendingSessionNav } from "../../components/TopNav/SessionTrayButton";
+import { hydrateScheduleFromBackend } from "../../components/DoctorSchedule/scheduleStorage";
 
 type HomePageProps = {
   onLogout: () => void;
@@ -25,6 +32,14 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   };
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isBooking, setIsBooking] = useState(false);
+
+  // Pull the canonical clinic schedule from the backend on mount and seed the
+  // local cache. Without this, the schedule-aware widgets (AnalogClock,
+  // HeatmapCard, DoctorScheduleStrip) would read stale localStorage from a
+  // previous clinic / device.
+  useEffect(() => {
+    void hydrateScheduleFromBackend();
+  }, []);
   
   // Selected theme mode
   const [themeMode] = useState<ThemeMode>("primary");
@@ -32,6 +47,17 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   const [bookingKey, setBookingKey] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [patientFileNavId, setPatientFileNavId] = useState<string | null>(null);
+  // Which Settings sub-section is open. Persisted so a reload returns to the
+  // user's last view inside Settings. Owned at this level because the SideNav
+  // (left of the main content) needs it to highlight the active child.
+  const [settingsSection, setSettingsSectionState] = useState<SettingsSection>(() => {
+    return (localStorage.getItem("docodile_settings_section") as SettingsSection) || DEFAULT_SETTINGS_SECTION;
+  });
+  const setSettingsSection = (section: SettingsSection) => {
+    localStorage.setItem("docodile_settings_section", section);
+    setSettingsSectionState(section);
+  };
 
   const handleNewAppointment = () => {
     if (isBooking || isEditing) {
@@ -71,7 +97,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       transition: "margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     },
     mainContent: {
-      padding: "24px 40px",
+      padding: "40px 40px 24px",
       display: "flex",
       flexDirection: "column" as const,
       gap: "24px",
@@ -83,12 +109,13 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       position: "relative",
     },
     title: {
+      margin: 0,
+      textAlign: "center" as const,
       fontFamily: fonts.family.secondary,
       fontSize: fonts.size.h5,
-      fontWeight: 400,
-      lineHeight: "34px",
+      lineHeight: fonts.lineHeight.h5,
+      fontWeight: fonts.weight.regular,
       color: colors.neutral900,
-      margin: 0,
     }
   } as const;
 
@@ -98,11 +125,25 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       case "Home":
         return <HomeView />;
       case "Appointments":
-        return <AppointmentsView isBooking={isBooking} bookingKey={bookingKey} onBack={() => { setIsBooking(false); setIsEditing(false); }} onEditStart={() => setIsEditing(true)} />;
+        return <AppointmentsView isBooking={isBooking} bookingKey={bookingKey} onBack={() => { setIsBooking(false); setIsEditing(false); }} onEditStart={() => setIsEditing(true)} onViewPatientFile={(patient, appointmentId) => {
+          // Open the patient's prescription/visit directly — same path
+          // PrescriptionQueue's View Pad uses, so the doctor lands inside
+          // the file instead of on the Patient Files index summary.
+          setPendingSessionNav({ patient, appointmentId });
+          setActiveTab("Prescription");
+        }} />;
       case "Prescription":
         return <PrescriptionView />;
       case "Patient Files":
-        return <PatientFilesView onNavigate={setActiveTab} />;
+        return <PatientFilesView onNavigate={setActiveTab} initialSelectedId={patientFileNavId} />;
+      case "Services":
+        return <ServicesView />;
+      case "Stats":
+        return <StatsPage />;
+      case "Pharmacy":
+        return <PharmacyView />;
+      case "Settings":
+        return <SettingsPage section={settingsSection} />;
       case "Design System":
         return <DesignSystemPage />;
       default:
@@ -118,11 +159,13 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   return (
     <>
     <div style={styles.container} data-theme={themeMode}>
-      <SideNav 
-        activeTab={activeTab} 
-        onTabChange={setActiveTab} 
+      <SideNav
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
         isExpanded={isSidebarExpanded}
         onToggleExpand={() => setIsSidebarExpanded(!isSidebarExpanded)}
+        settingsSection={settingsSection}
+        onSettingsSection={setSettingsSection}
       />
       <div style={styles.contentArea}>
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -140,6 +183,12 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         </div>
       </div>
     </div>
+
+    <ChatBubble
+      clinicId={localStorage.getItem("docodile_clinic_id") ?? ""}
+      currentUserId={localStorage.getItem("docodile_user_id") ?? ""}
+      currentUserName={localStorage.getItem("docodile_user_email") ?? ""}
+    />
 
     {showConfirm && (
       <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>

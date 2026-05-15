@@ -88,6 +88,12 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
       const data = (await response.json()) as LoginResponse;
       localStorage.setItem("docodile_token", data.token);
       localStorage.setItem("docodile_role", data.role);
+      // Decode JWT payload to extract user_id and email for chat
+      try {
+        const payload = JSON.parse(atob(data.token.split(".")[1]));
+        if (payload.user_id) localStorage.setItem("docodile_user_id", payload.user_id);
+        if (payload.email) localStorage.setItem("docodile_user_email", payload.email);
+      } catch { /* ignore decode errors */ }
       if (data.clinicId) {
         localStorage.setItem("docodile_clinic_id", data.clinicId);
       } else {

@@ -2,10 +2,34 @@ package com.example.docodile.repo
 
 import com.example.docodile.domain.Appointment
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
 import java.time.LocalDateTime
 import java.util.UUID
 
+interface AppointmentDoctorProjection {
+    fun getPatientId(): UUID
+    fun getDoctorId(): UUID?
+}
+
 interface AppointmentRepository : JpaRepository<Appointment, UUID> {
+
+    /**
+     * Every (patient, doctor) pair appearing in this clinic's appointment
+     * book — regardless of whether a visit has been started yet. Used
+     * alongside the visit-derived pairs so that a freshly booked patient
+     * shows under their doctor's Patient Files filter immediately.
+     */
+    @Query(
+        """
+        SELECT DISTINCT a.patient.id AS patientId, a.doctor.id AS doctorId
+        FROM Appointment a
+        WHERE a.clinic.id = :clinicId
+          AND a.doctor IS NOT NULL
+        """
+    )
+    fun findPatientDoctorPairsByClinic(@Param("clinicId") clinicId: UUID): List<AppointmentDoctorProjection>
+
     fun findAllByClinicId(clinicId: UUID): List<Appointment>
 
     fun findAllByClinicIdAndScheduledTimeBetween(

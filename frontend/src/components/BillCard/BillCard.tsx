@@ -71,8 +71,8 @@ export function BillCard({
         <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <h3 style={styles.title}>Bill</h3>
           <div style={{ position: "absolute", right: 0, display: "flex", alignItems: "center", gap: spacing.s }}>
-            <PrinterIcon width={15} height={15} style={{ cursor: "pointer" }} />
-            <ScaleIcon width={15} height={15} style={{ cursor: "pointer" }} />
+            <PrinterIcon width={20} height={20} style={{ cursor: "pointer" }} />
+            <ScaleIcon width={20} height={20} style={{ cursor: "pointer" }} />
           </div>
         </div>
 

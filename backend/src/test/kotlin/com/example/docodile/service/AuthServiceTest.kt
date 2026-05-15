@@ -4,6 +4,7 @@ import com.example.docodile.domain.*
 import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.ClinicStaffRepository
+import com.example.docodile.security.CurrentUser
 import com.example.docodile.security.TokenService
 import com.example.docodile.web.LoginRequest
 import com.example.docodile.web.StaffLoginRequest
@@ -36,6 +37,9 @@ class AuthServiceTest {
 
     @Mock
     private lateinit var tokenService: TokenService
+
+    @Mock
+    private lateinit var currentUser: CurrentUser
 
     @InjectMocks
     private lateinit var authService: AuthService

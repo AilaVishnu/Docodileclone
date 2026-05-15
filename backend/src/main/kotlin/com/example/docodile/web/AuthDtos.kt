@@ -20,3 +20,5 @@ data class LoginResponse(
     val clinicId: UUID?,
     val clinicName: String
 )
+
+data class SwitchClinicRequest(val clinicId: UUID)

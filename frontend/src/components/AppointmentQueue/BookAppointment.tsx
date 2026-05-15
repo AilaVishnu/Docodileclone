@@ -20,6 +20,7 @@ import { UnderlineSelect } from "../Input/UnderlineSelect/UnderlineSelect";
 import { Select } from "../Input/Select/Select";
 import { Toast } from "../Toast";
 import { API_BASE_URL } from "../../apiConfig";
+import { listServices, ServiceDTO } from "../../api/services";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
 import { ReactComponent as EditPencilIcon } from "../../assets/icons/edit-pencil.svg";
 import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check.svg";
@@ -74,14 +75,25 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     return { date: d, timeStr: `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")} ${period}` };
   };
 
-  const SERVICE_PRICES: Record<string, number> = {
-    "Consultation": 500,
-    "PRP": 1500,
-    "Hydrafacial": 2000,
-    "Laser Hair Removal": 2500,
-    "Skin Tag Removal": 1000,
-    "Acne Scar Treatment": 3000,
-  };
+  // Services + prices come from the clinic's services catalog. Mounted-once
+  // fetch; the bill totals recompute reactively as the map fills in.
+  const [serviceCatalog, setServiceCatalog] = useState<ServiceDTO[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    listServices()
+      .then((list) => { if (!cancelled) setServiceCatalog(list); })
+      .catch(() => { /* leave empty — the dropdown will just have no options */ });
+    return () => { cancelled = true; };
+  }, []);
+  const SERVICE_PRICES: Record<string, number> = React.useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const s of serviceCatalog) map[s.name] = Number(s.price);
+    return map;
+  }, [serviceCatalog]);
+  const SERVICE_OPTIONS = React.useMemo(
+    () => serviceCatalog.map((s) => s.name),
+    [serviceCatalog]
+  );
 
   const initTime = editingAppointment ? parseScheduledTime(editingAppointment.scheduledTime) : null;
 
@@ -134,6 +146,14 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const [allPatients, setAllPatients] = useState<any[]>([]);
   const [showNameSugg, setShowNameSugg] = useState(false);
   const [showPhoneSugg, setShowPhoneSugg] = useState(false);
+  // When the user picks an existing patient from the search dropdown (or is
+  // editing an existing appointment), the patient identity fields lock so
+  // staff can't accidentally rewrite a patient's name/phone/dob. The user
+  // can click "Clear" to release the lock and start a new patient entry.
+  const [lockedPatientId, setLockedPatientId] = useState<string | null>(
+    editingAppointment ? "editing" : null
+  );
+  const patientFieldsLocked = lockedPatientId !== null;
   const [isDirty, setIsDirty] = useState(false);
   const initialRenderRef = React.useRef(true);
   useEffect(() => {
@@ -248,6 +268,26 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     if (newDobDigits) setDobDigits(newDobDigits);
     setShowNameSugg(false);
     setShowPhoneSugg(false);
+    // Lock identity fields so the staff can't drift this picked patient's
+    // saved data through accidental keystrokes.
+    setLockedPatientId(p.id);
+  };
+
+  // Release the identity lock and clear the form so the user can enter a
+  // brand-new patient (the dropdown only locks; this is the explicit unlock).
+  const clearSelectedPatient = () => {
+    setLockedPatientId(null);
+    setOverridePatientNumber(null);
+    setDobDigits("");
+    setForm((prev) => ({
+      ...prev,
+      name: "",
+      email: "",
+      phone: "",
+      gender: "",
+      dob: "",
+      age: "",
+    }));
   };
 
   // Pre-fill DOB when editing
@@ -480,8 +520,19 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
         {/* Patient Details Card */}
         <Card style={{ ...styles.card, ...styles.formCard }}>
+          {patientFieldsLocked && lockedPatientId !== "editing" && (
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+              <button
+                type="button"
+                onClick={clearSelectedPatient}
+                style={{ background: "none", border: "none", color: colors.secondary700, cursor: "pointer", fontSize: fonts.size.xs, textDecoration: "underline", padding: 0 }}
+              >
+                Clear & enter new patient
+              </button>
+            </div>
+          )}
           <div style={{ position: "relative" }}>
-            <div style={{ ...styles.iconField, ...(errors.name ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
+            <div style={{ ...styles.iconField, ...(errors.name ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}), ...(patientFieldsLocked ? { opacity: 0.65 } : {}) }}>
               <UserHandsIcon style={styles.iconFieldIcon} />
               <input
                 style={styles.iconFieldInput}
@@ -490,6 +541,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 onChange={(e) => { setForm({ ...form, name: e.target.value }); setShowNameSugg(true); }}
                 onFocus={() => setShowNameSugg(true)}
                 onBlur={() => setTimeout(() => setShowNameSugg(false), 150)}
+                disabled={patientFieldsLocked}
               />
             </div>
             {showNameSugg && nameSuggestions.length > 0 && (
@@ -518,7 +570,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
           <div style={styles.row}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ ...styles.iconField, ...(errors.email ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
+              <div style={{ ...styles.iconField, ...(errors.email ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}), ...(patientFieldsLocked ? { opacity: 0.65 } : {}) }}>
                 <LetterIcon style={styles.iconFieldIcon} />
                 <input
                   style={styles.iconFieldInput}
@@ -527,6 +579,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   onBlur={() => setForm((prev) => ({ ...prev, email: prev.email.trim().toLowerCase() }))}
+                  disabled={patientFieldsLocked}
                 />
               </div>
               {errors.email && (
@@ -536,12 +589,13 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               )}
             </div>
             <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
-            <div style={{ ...styles.iconField, ...(errors.phone ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
+            <div style={{ ...styles.iconField, ...(errors.phone ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}), ...(patientFieldsLocked ? { opacity: 0.65 } : {}) }}>
               <PhoneIcon style={styles.iconFieldIcon} />
               <input
                 style={styles.iconFieldInput}
                 placeholder="+91 XXXXX XXXXX"
                 value={form.phone}
+                disabled={patientFieldsLocked}
                 onChange={(e) => {
                   const val = e.target.value.replace(/[^0-9+ ]/g, "");
                   let digits = val.replace(/\D/g, "");
@@ -591,9 +645,10 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
           </div>
 
           <div style={styles.row}>
-            <div style={{ ...styles.iconField, position: "relative", flex: 1, minWidth: 0, ...(errors.dob ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
+            <div style={{ ...styles.iconField, position: "relative", flex: 1, minWidth: 0, ...(errors.dob ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}), ...(patientFieldsLocked ? { opacity: 0.65, pointerEvents: "none" as const } : {}) }}>
               <span
                 onClick={() => {
+                  if (patientFieldsLocked) return;
                   if (hasManualAge) setForm((prev) => ({ ...prev, age: "", dob: "" }));
                   setShowDobPicker(true);
                 }}
@@ -606,6 +661,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 style={{ ...styles.iconFieldInput, opacity: hasManualAge ? 0.4 : 1 }}
                 type="text"
                 placeholder="dd mm yyyy"
+                disabled={patientFieldsLocked}
                 onFocus={() => { if (hasManualAge) setForm((prev) => ({ ...prev, age: "", dob: "" })); }}
                 value={formatDob(dobDigits)}
                 onKeyDown={(e) => {
@@ -648,6 +704,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 gap: spacing.xs,
                 justifyContent: "flex-start",
                 ...(errors.dob ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}),
+                ...(patientFieldsLocked ? { opacity: 0.65, pointerEvents: "none" as const } : {}),
               }}
             >
               <span style={{ fontSize: fonts.size.m, color: colors.neutral900, opacity: hasDob ? 0.4 : 1 }}>Age</span>
@@ -658,6 +715,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 min="0"
                 max="150"
                 placeholder="-"
+                disabled={patientFieldsLocked}
                 onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
                 value={form.age.split("/")[0]?.trim() || ""}
                 onChange={(e) => {
@@ -682,6 +740,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 min="0"
                 max="11"
                 placeholder="-"
+                disabled={patientFieldsLocked}
                 onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
                 value={form.age.split("/")[1]?.trim() || ""}
                 onChange={(e) => {
@@ -702,13 +761,14 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             </div>
           )}
 
-          <div style={{ ...styles.radioGroup, marginTop: "8px" }}>
+          <div style={{ ...styles.radioGroup, marginTop: "8px", ...(patientFieldsLocked ? { opacity: 0.65, pointerEvents: "none" as const } : {}) }}>
             {["Male", "Female", "Other"].map((g) => (
               <label key={g} style={styles.radioLabel}>
                 <input
                   type="radio"
                   name="gender"
                   checked={form.gender === g}
+                  disabled={patientFieldsLocked}
                   onChange={() => setForm({ ...form, gender: g })}
                 />
                 {g}
@@ -853,7 +913,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", pointerEvents: servicesLocked ? "none" : "auto", opacity: servicesLocked ? 0.6 : 1 }}>
                     <div style={{ flex: 1 }}>
                       <Select
-                        options={["Consultation", "PRP", "Hydrafacial", "Laser Hair Removal", "Skin Tag Removal", "Acne Scar Treatment"]}
+                        options={SERVICE_OPTIONS}
                         value={svc}
                         onChange={(val: string) => {
                           const updated = [...form.services];
@@ -890,7 +950,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px" }}>
                     <div style={{ flex: 1 }}>
                       <Select
-                        options={["Consultation", "PRP", "Hydrafacial", "Laser Hair Removal", "Skin Tag Removal", "Acne Scar Treatment"]}
+                        options={SERVICE_OPTIONS}
                         value=""
                         onChange={(val: string) => setForm({ ...form, services: [...form.services, val] })}
                         placeholder="+ Add Service"

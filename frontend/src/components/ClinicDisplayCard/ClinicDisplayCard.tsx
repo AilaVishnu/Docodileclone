@@ -13,7 +13,7 @@ type ClinicDisplayCardProps = {
 };
 
 export function ClinicDisplayCard({ clinic, onSelect }: ClinicDisplayCardProps) {
-  const { id, name, domain, phone, address, specialties } = clinic;
+  const { id, name, domain, phone, address, departments } = clinic;
 
   // Header name (shorter brand name if available, otherwise clinic name)
   const brandName = name.split(" ")[0];
@@ -45,20 +45,20 @@ export function ClinicDisplayCard({ clinic, onSelect }: ClinicDisplayCardProps) 
           <p style={styles.infoText}>{phone || "No phone added"}</p>
         </div>
 
-        {/* Specialties / Tags */}
+        {/* Departments / Tags */}
         <div style={styles.infoItem}>
           <div style={styles.iconWrapper}>
             <StethoscopeIcon width={24} height={24} />
           </div>
           <div style={styles.tagList}>
-            {specialties.length > 0 ? (
-              specialties.map((spec, index) => (
+            {departments.length > 0 ? (
+              departments.map((d, index) => (
                 <span key={index} style={styles.tag}>
-                  {spec}
+                  {d}
                 </span>
               ))
             ) : (
-              <p style={styles.infoText}>No specialties</p>
+              <p style={styles.infoText}>No departments</p>
             )}
           </div>
         </div>

@@ -2,11 +2,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { usePatients, Patient } from "../../hooks/usePatients";
 import { useDoctors } from "../../hooks/useDoctors";
+import { API_BASE_URL } from "../../apiConfig";
+import { fetchPatientSummary, generatePatientSummary, parsePatientSummary, PatientSummary } from "../../api/ai";
 import { ReactComponent as SearchIcon } from "../../assets/search.svg";
-import { ReactComponent as PhoneIconSVG } from "../../assets/Phone.svg";
-import { ReactComponent as LetterIconSVG } from "../../assets/Letter.svg";
-import { ReactComponent as CalendarIconSVG } from "../../assets/calendar.svg";
-import { ReactComponent as BillingIconSVG } from "../../assets/billing.svg";
 import { ReactComponent as PrescriptionIconSVG } from "../../assets/prescription.svg";
 import { Select } from "../../components/Input/Select/Select";
 import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
@@ -24,9 +22,10 @@ const ANY = "__any__";
 
 type Props = {
   onNavigate?: (tab: NavTab) => void;
+  initialSelectedId?: string | null;
 };
 
-export function PatientFilesPage({ onNavigate }: Props) {
+export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
   const { data: patients, loading, error } = usePatients();
   const { data: doctors } = useDoctors();
 
@@ -49,22 +48,53 @@ export function PatientFilesPage({ onNavigate }: Props) {
   // Split-pane: left index lets you scan, right pane shows the selected file
   // in full. selection auto-falls to the first visible patient when the
   // current one is filtered out.
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  // Departments are derived from doctor specialities. When a department is
-  // picked, the doctor dropdown narrows to that speciality.
-  const departments = useMemo(() => {
-    const set = new Set<string>();
-    doctors.forEach((d) => d.speciality && set.add(d.speciality));
-    return Array.from(set).sort();
-  }, [doctors]);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
+
+  // When navigated here with a specific patient (e.g. from the queue's
+  // "View Patient File"), jump straight to that patient's right-pane.
+  useEffect(() => {
+    if (initialSelectedId) setSelectedId(initialSelectedId);
+  }, [initialSelectedId]);
+  // Departments come from the clinic's configured list (set in Build Your
+  // Clinic), not from staff data. That way the filter shows every
+  // department the clinic supports even before a doctor has been added to
+  // it. Picking a department then narrows the doctor dropdown to staff
+  // tagged with that department.
+  const [clinicDepartments, setClinicDepartments] = useState<string[]>([]);
+  useEffect(() => {
+    const token = localStorage.getItem("docodile_token");
+    const clinicId = localStorage.getItem("docodile_clinic_id");
+    if (!token) return;
+    let cancelled = false;
+    fetch(`${API_BASE_URL}/api/tenant/clinics`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((all: Array<{ id: string; speciality?: string }>) => {
+        if (cancelled) return;
+        const active = clinicId ? all.find((c) => c.id === clinicId) : all[0];
+        const list = (active?.speciality || "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        setClinicDepartments(list);
+      })
+      .catch(() => { /* fall back to empty list */ });
+    return () => { cancelled = true; };
+  }, []);
+  const departments = clinicDepartments;
 
   const doctorOptions = useMemo(() => {
     return department === ANY
       ? doctors
-      : doctors.filter((d) => d.speciality === department);
+      : doctors.filter((d) => d.department === department);
   }, [doctors, department]);
 
   const visible = useMemo(() => {
+    // A patient file only makes sense in the context of a treating doctor.
+    // If the clinic has no doctors yet, hide everything so the empty state
+    // can prompt the admin to add staff first.
+    if (doctors.length === 0) return [] as Patient[];
     const q = search.trim().toLowerCase();
     // Match across every fielded scalar we have on the patient record.
     // Diagnosis / prescription / treatment / service search needs a backend
@@ -84,11 +114,21 @@ export function PatientFilesPage({ onNavigate }: Props) {
       });
     }
 
+    // Doctor / department filter — match against fields the backend resolved
+    // from the patient's visits and bookings. `?? []` guards against an
+    // older backend response that hasn't been restarted to include the
+    // new fields yet.
+    if (doctorId !== ANY) {
+      list = list.filter((p) => (p.treatingDoctorIds ?? []).includes(doctorId));
+    } else if (department !== ANY) {
+      list = list.filter((p) => (p.treatingDepartments ?? []).includes(department));
+    }
+
     if (sort === "recent") list.sort(byLastVisit(true));
     else if (sort === "stale") list.sort(byLastVisit(false));
     else list.sort((a, b) => a.name.localeCompare(b.name));
     return list;
-  }, [patients, search, sort, dateFrom, dateTo]);
+  }, [patients, search, sort, dateFrom, dateTo, doctors, department, doctorId]);
 
   // Keep selection valid as filters change. If the current selection vanishes
   // from `visible`, fall back to the first item.
@@ -295,89 +335,6 @@ function tagsFor(p: Patient): FileTag[] {
   return out;
 }
 
-// Dummy clinical-flavoured copy until a real AI endpoint is wired. Stable per
-// patient (deterministic from id) so the same patient always shows the same
-// blurb across renders. Swap this function body when the backend lands.
-const DUMMY_AI_SUMMARIES = [
-  "Stable BP trend across last 3 visits. Continue current Rx; review at next follow-up.",
-  "Recurring URI symptoms; consider allergen panel if recurrence persists past 4 weeks.",
-  "Post-procedure recovery on track. No new concerns noted.",
-  "Compliance gap — 2 missed follow-ups this quarter. Re-engagement recommended.",
-  "Lab work within normal range. Annual review due in 2 months.",
-  "Sleep complaints improving; sleep aid taper on plan. Monitor.",
-  "Chronic care: medications adherent, vitals trending normal.",
-  "Mild eczema flare; topical regimen unchanged. Reassess at 6 weeks.",
-];
-
-function aiSummaryFor(p: Patient): string {
-  let h = 0;
-  for (let i = 0; i < p.id.length; i++) h = (h * 31 + p.id.charCodeAt(i)) | 0;
-  return DUMMY_AI_SUMMARIES[Math.abs(h) % DUMMY_AI_SUMMARIES.length];
-}
-
-// Stub allergy / safety flags. Backend follow-up: a /api/patients/:id/safety
-// endpoint that returns the real list. Roughly 60% of patients get at least
-// one flag here so the banner shows up often enough to evaluate the design.
-const DUMMY_FLAG_POOL = [
-  "Penicillin allergy",
-  "On blood thinners",
-  "Latex allergy",
-  "Diabetic — Type 2",
-  "Hypertensive",
-  "Asthma",
-];
-function flagsFor(p: Patient): string[] {
-  let h = 0;
-  for (let i = 0; i < p.id.length; i++) h = (h * 31 + p.id.charCodeAt(i)) | 0;
-  if (Math.abs(h) % 5 === 0) return [];
-  const a = DUMMY_FLAG_POOL[Math.abs(h) % DUMMY_FLAG_POOL.length];
-  if (Math.abs(h) % 3 === 0) {
-    const b = DUMMY_FLAG_POOL[Math.abs(h >> 3) % DUMMY_FLAG_POOL.length];
-    return b !== a ? [a, b] : [a];
-  }
-  return [a];
-}
-
-// Stub AI "what to do next". Distinct from the summary — summary describes the
-// past, this prescribes the next action. Backend should infer from
-// last-visit-date + active-Rx + scheduled appointments + lab orders.
-const DUMMY_NEXT_STEPS = [
-  { text: "Follow-up due in 5 days.", action: "Schedule" },
-  { text: "Annual review overdue by 3 weeks.", action: "Schedule" },
-  { text: "Lab results pending review.", action: "Open results" },
-  { text: "Vaccination overdue — DPT booster.", action: "Book slot" },
-  { text: "Refill due for Atorvastatin (10mg).", action: "Send Rx" },
-  { text: "No outstanding actions.", action: "" },
-];
-function nextStepFor(p: Patient): { text: string; action: string } {
-  let h = 0;
-  for (let i = 0; i < p.id.length; i++) h = (h * 31 + p.id.charCodeAt(i)) | 0;
-  return DUMMY_NEXT_STEPS[Math.abs(h) % DUMMY_NEXT_STEPS.length];
-}
-
-// Folder section tabs — same set for every patient. Each tab swaps the
-// content shown in the open file body.
-type SectionId = "files" | "bills" | "notes";
-const SECTIONS: { id: SectionId; label: string }[] = [
-  { id: "files", label: "Files" },
-  { id: "bills", label: "Bills" },
-  { id: "notes", label: "Notes" },
-];
-
-// Dummy visits used inside the Files section until the visits endpoint feeds
-// this list. Deterministic 0–3 entries per patient.
-function visitsFor(p: Patient): { label: string }[] {
-  let h = 0;
-  for (let i = 0; i < p.id.length; i++) h = (h * 31 + p.id.charCodeAt(i)) | 0;
-  const count = Math.abs(h) % 4; // 0..3
-  const out: { label: string }[] = [];
-  for (let i = 0; i < count; i++) {
-    const daysAgo = 7 + (Math.abs(h >> (i + 2)) % 90);
-    const d = new Date(Date.now() - daysAgo * 86400000);
-    out.push({ label: d.toLocaleDateString(undefined, { day: "2-digit", month: "short" }) });
-  }
-  return out;
-}
 
 // ─── Index row (left pane) ──────────────────────────────────────────────────
 //
@@ -545,31 +502,24 @@ function OpenFile({ patient, onOpenChart }: { patient: Patient; onOpenChart: () 
   ]
     .filter(Boolean)
     .join("  ");
-  const summary = aiSummaryFor(patient);
+
+
   return (
     <div style={styles.openFile}>
       <svg
-        viewBox="0 0 1051 358"
+        viewBox="0 0 1051 426"
         preserveAspectRatio="none"
         style={styles.openFolderShape}
         aria-hidden
       >
-        <defs>
-          <linearGradient id={`openGrad-${patient.id}`} x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0%" stopColor={colors.primary100} />
-            <stop offset="100%" stopColor={colors.neutral100} />
-          </linearGradient>
-        </defs>
         <path
-          d="M290.227 0.510742C295.422 0.5108 300.099 3.66211 302.049 8.47754L313.609 37.0215C315.404 41.4516 319.706 44.3505 324.485 44.3506H1037.55C1044.6 44.3508 1050.31 50.0615 1050.31 57.1055V344.709C1050.31 351.753 1044.6 357.464 1037.55 357.464H13.2637C6.21959 357.464 0.509766 351.753 0.509766 344.709V53.543C0.509766 48.4667 4.62486 44.3506 9.70117 44.3506C13.0294 44.3504 16.025 42.3319 17.2744 39.2471L29.7363 8.47754C31.6866 3.6621 36.3632 0.510792 41.5586 0.510742H290.227Z"
-          fill={`url(#openGrad-${patient.id})`}
+          d="M290.227 0.510742C295.422 0.5108 300.099 3.66211 302.049 8.47754L313.609 37.0215C315.404 41.4516 319.706 44.3505 324.485 44.3506H1037.55C1044.6 44.3508 1050.31 50.0615 1050.31 57.1055V412C1050.31 419.044 1044.6 424.755 1037.55 424.755H13.2637C6.21959 424.755 0.509766 419.044 0.509766 412V53.543C0.509766 48.4667 4.62486 44.3506 9.70117 44.3506C13.0294 44.3504 16.025 42.3319 17.2744 39.2471L29.7363 8.47754C31.6866 3.6621 36.3632 0.510792 41.5586 0.510742H290.227Z"
+          fill={colors.neutral100}
           stroke={colors.primary300}
-          strokeWidth="1.02039"
+          strokeWidth="1"
         />
       </svg>
 
-      {/* Body content — split into a left content column and a right vertical
-          icon column. Matches Figma node 2503:5154. */}
       <div style={styles.openBody}>
         <div style={styles.openContent}>
           <div style={styles.openHeaderRow}>
@@ -583,34 +533,162 @@ function OpenFile({ patient, onOpenChart }: { patient: Patient; onOpenChart: () 
           </div>
 
           <div style={styles.summaryCard}>
-            <h3 style={styles.summaryTitle}>AI Summary</h3>
-            <p style={styles.summaryText}>{summary}</p>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+              <h3 style={styles.summaryTitle}>AI Summary</h3>
+              {patient.lastVisitDate && (
+                <span style={{ fontFamily: fonts.family.primary, fontSize: fonts.control.xs, color: colors.neutral500, flexShrink: 0 }}>
+                  Last visit: {new Date(patient.lastVisitDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                </span>
+              )}
+            </div>
+            <AIPatientSummary patientId={patient.id} />
           </div>
         </div>
+      </div>
 
-        <div style={styles.iconColumn}>
-          <IconAction
-            label="Call"
-            href={patient.phone ? `tel:${patient.phone}` : undefined}
-            icon={<PhoneIconSVG style={styles.iconActionGlyph} />}
-          />
-          <IconAction
-            label="Email"
-            href={patient.email ? `mailto:${patient.email}` : undefined}
-            icon={<LetterIconSVG style={styles.iconActionGlyph} />}
-          />
-          <IconAction
-            label="Book appointment"
-            onClick={onOpenChart}
-            tone="secondary"
-            icon={<CalendarIconSVG style={styles.iconActionGlyph} />}
-          />
-          <IconAction
-            label="Generate bill"
-            tone="secondary"
-            icon={<BillingIconSVG style={styles.iconActionGlyph} />}
-          />
+      {/* Buttons pinned to the top-right corner of the card, straddling the right edge */}
+      <div style={{ ...styles.iconColumn, position: "absolute", right: "-35px", top: "60px" }}>
+        <IconAction
+          label="Call"
+          href={patient.phone ? `tel:${patient.phone}` : undefined}
+          icon={<PhoneIconSVG style={styles.iconActionGlyph} />}
+        />
+        <IconAction
+          label="Email"
+          href={patient.email ? `mailto:${patient.email}` : undefined}
+          icon={<LetterIconSVG style={styles.iconActionGlyph} />}
+        />
+        <IconAction
+          label="Book appointment"
+          onClick={onOpenChart}
+          tone="secondary"
+          icon={<CalendarIconSVG style={styles.iconActionGlyph} />}
+        />
+        <IconAction
+          label="Generate bill"
+          tone="secondary"
+          icon={<BillingIconSVG style={styles.iconActionGlyph} />}
+        />
+      </div>
+    </div>
+  );
+}
+
+// AI-backed patient summary card. On open we only do a cache lookup — no
+// OpenAI call. If a fresh cached summary exists (visit fingerprint matches)
+// we render it; otherwise we show a Generate button so the doctor decides
+// when to spend tokens. Adding/editing a visit invalidates the cache and
+// the Generate button reappears on next open.
+function AIPatientSummary({ patientId }: { patientId: string }) {
+  const [data, setData] = useState<PatientSummary | null>(null);
+  const [generated, setGenerated] = useState(false);
+  const [loading, setLoading] = useState(true);     // initial cache check
+  const [busy, setBusy] = useState(false);          // explicit generation in flight
+  const [error, setError] = useState<string | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+
+  // Cache-only read on mount / patient switch. Never costs tokens.
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    fetchPatientSummary(patientId)
+      .then((r) => {
+        setGenerated(r.generated);
+        setUpdatedAt(r.updatedAt);
+        if (r.generated && r.content) {
+          const parsed = parsePatientSummary(r.content);
+          setData(parsed);
+          if (parsed.error) setError(parsed.error);
+        } else {
+          setData(null);
+        }
+      })
+      .catch((e) => setError((e as Error).message))
+      .finally(() => setLoading(false));
+  }, [patientId]);
+
+  const generate = () => {
+    setBusy(true);
+    setError(null);
+    generatePatientSummary(patientId)
+      .then((r) => {
+        setGenerated(r.generated);
+        setUpdatedAt(r.updatedAt);
+        const parsed = parsePatientSummary(r.content);
+        setData(parsed);
+        if (parsed.error) setError(parsed.error);
+      })
+      .catch((e) => setError((e as Error).message))
+      .finally(() => setBusy(false));
+  };
+
+  if (loading) {
+    return <p style={{ ...styles.summaryBody, color: colors.neutral500 }}>Checking…</p>;
+  }
+  // No fresh cached summary → show Generate button.
+  if (!generated) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <p style={{ ...styles.summaryBody, color: colors.neutral500 }}>
+          {data ? "Visit data has changed since the last summary." : "No AI summary yet for this patient."}
+        </p>
+        <button
+          type="button"
+          onClick={generate}
+          disabled={busy}
+          style={{
+            alignSelf: "flex-start",
+            background: colors.secondary700,
+            color: colors.neutral100,
+            border: "none",
+            padding: "6px 14px",
+            borderRadius: 999,
+            cursor: busy ? "default" : "pointer",
+            fontSize: fonts.control.xs,
+            opacity: busy ? 0.6 : 1,
+          }}
+        >
+          {busy ? "Generating…" : "Generate AI summary"}
+        </button>
+        {error && <span style={{ fontSize: 11, color: colors.red200 }}>{error}</span>}
+      </div>
+    );
+  }
+  if (!data || (!data.summary && data.activeConditions.length === 0 && data.allergies.length === 0)) {
+    return <p style={{ ...styles.summaryBody, color: colors.neutral500 }}>Not enough visit data yet.</p>;
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {data.summary && <p style={styles.summaryBody}>{data.summary}</p>}
+      {data.activeConditions.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {data.activeConditions.map((c, i) => (
+            <span key={`c-${i}`} style={{ fontSize: fonts.control.xs, padding: "2px 8px", borderRadius: 999, backgroundColor: colors.primary200, color: colors.neutral900 }}>{c}</span>
+          ))}
         </div>
+      )}
+      {data.allergies.length > 0 && (
+        <p style={{ ...styles.summaryBody, fontSize: fonts.control.xs }}>
+          <strong>Allergies:</strong> {data.allergies.join(", ")}
+        </p>
+      )}
+      {data.riskFlags.length > 0 && (
+        <ul style={{ margin: 0, paddingLeft: 16 }}>
+          {data.riskFlags.map((r, i) => (
+            <li key={`r-${i}`} style={{ ...styles.summaryBody, color: "#9a4a1c" }}>{r}</li>
+          ))}
+        </ul>
+      )}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: colors.neutral500 }}>
+        <span>AI-generated — verify before clinical decisions.</span>
+        <button
+          type="button"
+          onClick={generate}
+          disabled={busy}
+          style={{ background: "none", border: "none", color: colors.secondary700, cursor: busy ? "default" : "pointer", textDecoration: "underline", padding: 0, fontSize: 11, opacity: busy ? 0.6 : 1 }}
+        >
+          {busy ? "Regenerating…" : `Regenerate${updatedAt ? ` · ${new Date(updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}`}
+        </button>
       </div>
     </div>
   );
@@ -645,6 +723,46 @@ function Avatar({ name, photoUrl }: { name: string; photoUrl?: string | null }) 
 // `tone` selects the chip background per Figma node 2441:1552 — communication
 // actions (call/email) use the primary tan; transactional actions (book / bill)
 // use the secondary sage so the two intents are distinguishable at a glance.
+
+function PhoneIconSVG({ style }: { style?: React.CSSProperties }) {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.63 3.38a2 2 0 0 1 1.99-2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.72-.72a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  );
+}
+
+function LetterIconSVG({ style }: { style?: React.CSSProperties }) {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <polyline points="2,7 12,14 22,7" />
+    </svg>
+  );
+}
+
+function CalendarIconSVG({ style }: { style?: React.CSSProperties }) {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+
+function BillingIconSVG({ style }: { style?: React.CSSProperties }) {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <path d="M6 2h12a1 1 0 0 1 1 1v17.5l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5V3a1 1 0 0 1 1-1z" />
+      <line x1="9" y1="9" x2="15" y2="9" />
+      <line x1="9" y1="13" x2="15" y2="13" />
+      <line x1="9" y1="17" x2="13" y2="17" />
+    </svg>
+  );
+}
+
 type IconActionTone = "primary" | "secondary";
 function IconAction({
   label,
@@ -912,6 +1030,7 @@ const styles: Record<string, React.CSSProperties> = {
   openFile: {
     position: "relative",
     width: "100%",
+    maxWidth: 880,
   },
   openFolderShape: {
     position: "absolute",
@@ -969,9 +1088,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   openBody: {
     position: "relative",
-    paddingTop: spacing["3xl"],
-    paddingInline: spacing["3xl"],
-    paddingBottom: spacing["2xl"],
+    paddingTop: "84px",
+    paddingLeft: "36px",
+    paddingRight: "24px",
+    paddingBottom: "40px",
     display: "flex",
     flexDirection: "row",
     alignItems: "flex-start",
@@ -1064,22 +1184,18 @@ const styles: Record<string, React.CSSProperties> = {
   openContent: {
     flex: 1,
     minWidth: 0,
-    // Figma node 2503:5154 uses 48px (spacing/4xl) between the header row and
-    // the AI Summary card, and caps the content at 362px wide so the card
-    // doesn't sprawl across the folder.
-    maxWidth: 362,
     display: "flex",
     flexDirection: "column",
-    gap: spacing["4xl"],
+    gap: "48px",
   },
   openHeaderRow: {
     display: "flex",
     alignItems: "center",
-    gap: spacing.l,
+    gap: "20px",
   },
   avatar: {
-    width: 64,
-    height: 64,
+    width: 81,
+    height: 81,
     borderRadius: "50%",
     backgroundColor: colors.primary400,
     color: colors.neutral100,
@@ -1089,7 +1205,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
     fontFamily: fonts.family.secondary,
     fontWeight: fonts.weight.regular,
-    fontSize: fonts.size.h4,
+    fontSize: "32px",
     lineHeight: 1,
     overflow: "hidden",
   },
@@ -1105,14 +1221,14 @@ const styles: Record<string, React.CSSProperties> = {
   nameBlock: {
     display: "flex",
     flexDirection: "column",
-    gap: 2,
+    gap: 4,
     minWidth: 0,
   },
   nameLine: {
     margin: 0,
     fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h5,
-    lineHeight: fonts.lineHeight.h5,
+    fontSize: "24px",
+    lineHeight: "34px",
     fontWeight: fonts.weight.regular,
     color: colors.neutral900,
     whiteSpace: "nowrap",
@@ -1122,50 +1238,50 @@ const styles: Record<string, React.CSSProperties> = {
   metaLine: {
     margin: 0,
     fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.l,
-    lineHeight: fonts.lineHeight.l,
+    fontSize: "20px",
+    lineHeight: "28px",
     fontWeight: fonts.weight.regular,
     color: colors.neutral900,
   },
   summaryCard: {
     backgroundColor: colors.primary100,
-    borderRadius: radii.xl,
-    padding: spacing.l,
+    borderRadius: "12px",
+    padding: "20px",
     display: "flex",
     flexDirection: "column",
-    gap: spacing.xs,
+    gap: "8px",
   },
   summaryTitle: {
     margin: 0,
     fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.l,
-    lineHeight: fonts.lineHeight.l,
+    fontSize: "20px",
+    lineHeight: "28px",
     fontWeight: fonts.weight.semibold,
     color: colors.neutral900,
   },
   summaryText: {
     margin: 0,
     fontFamily: fonts.family.primary,
-    fontSize: fonts.control.sm,
+    fontSize: "14px",
     lineHeight: "20px",
     color: colors.neutral900,
   },
   iconColumn: {
     display: "flex",
     flexDirection: "column",
-    gap: spacing.s,
+    gap: "12px",
     flexShrink: 0,
   },
   iconAction: {
-    width: 44,
+    width: 70,
     height: 44,
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.primary300,
-    borderRadius: radii.xs,
+    borderRadius: "4px",
     border: "none",
-    padding: 10,
+    padding: "10px",
     cursor: "pointer",
     color: colors.neutral900,
     textDecoration: "none",

@@ -4,6 +4,7 @@ import com.example.docodile.domain.Role
 import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.ClinicStaffRepository
+import com.example.docodile.security.CurrentUser
 import com.example.docodile.security.TokenService
 import com.example.docodile.web.LoginRequest
 import com.example.docodile.web.LoginResponse
@@ -11,6 +12,7 @@ import com.example.docodile.web.StaffLoginRequest
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
+import java.util.UUID
 
 @Service
 class AuthService(
@@ -18,7 +20,8 @@ class AuthService(
     private val clinicEntityRepository: ClinicEntityRepository,
     private val clinicStaffRepository: ClinicStaffRepository,
     private val passwordEncoder: PasswordEncoder,
-    private val tokenService: TokenService
+    private val tokenService: TokenService,
+    private val currentUser: CurrentUser,
 ) {
     fun login(request: LoginRequest): LoginResponse {
         val user = appUserRepository.findByEmail(request.email)
@@ -73,6 +76,29 @@ class AuthService(
         }
 
         val tenantId = clinic.tenant?.id ?: throw BadCredentialsException("Invalid credentials")
+        val token = tokenService.generateToken(user.id, tenantId, user.role.name, user.email, clinic.id)
+        return LoginResponse(
+            token = token,
+            role = user.role.name,
+            clinicId = clinic.id,
+            clinicName = clinic.name
+        )
+    }
+
+    fun switchClinic(targetClinicId: UUID): LoginResponse {
+        val userId   = currentUser.userId()
+        val tenantId = currentUser.tenantId()
+        val user     = appUserRepository.findById(userId)
+            .orElseThrow { BadCredentialsException("User not found") }
+
+        val clinic = clinicEntityRepository.findById(targetClinicId)
+            .orElseThrow { BadCredentialsException("Clinic not found") }
+
+        // Guard: clinic must belong to the same tenant
+        if (clinic.tenant?.id != tenantId) {
+            throw BadCredentialsException("Clinic not found")
+        }
+
         val token = tokenService.generateToken(user.id, tenantId, user.role.name, user.email, clinic.id)
         return LoginResponse(
             token = token,

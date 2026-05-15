@@ -26,8 +26,12 @@ class DoctorService(
                 DoctorDTO(
                     id = user.id,
                     name = user.name ?: "",
-                    speciality = user.speciality,
-                    registrationNo = user.registrationNo
+                    department = user.department,
+                    specialty = user.specialty,
+                    registrationNo = user.registrationNo,
+                    qualification = user.qualification,
+                    medicalCouncil = user.medicalCouncil,
+                    experienceYears = user.experienceYears
                 )
             }
 }

@@ -8,6 +8,17 @@ import java.time.LocalDate
 import java.util.UUID
 
 interface VisitRepository : JpaRepository<Visit, UUID> {
+    fun findAllByClinicIdAndVisitDateBetween(clinicId: UUID, start: LocalDate, end: LocalDate): List<Visit>
+
+    @Query("""
+        SELECT v FROM Visit v
+        WHERE v.clinic.id = :clinicId
+          AND v.reviewDate IS NOT NULL
+          AND v.reviewDate < :today
+        ORDER BY v.reviewDate ASC
+    """)
+    fun findOverdueReviews(@Param("clinicId") clinicId: UUID, @Param("today") today: LocalDate): List<Visit>
+
     fun findAllByClinicIdAndPatientIdOrderByVisitDateAsc(clinicId: UUID, patientId: UUID): List<Visit>
 
     @Query("SELECT v FROM Visit v WHERE v.clinic.id = :clinicId AND v.patient.id IN :patientIds ORDER BY v.visitDate ASC")
@@ -35,9 +46,29 @@ interface VisitRepository : JpaRepository<Visit, UUID> {
         """
     )
     fun findLastVisitDatesByClinic(@Param("clinicId") clinicId: UUID): List<LastVisitProjection>
+
+    /**
+     * Every (patient, doctor) pair appearing in this clinic's visits, so the
+     * frontend can filter patients by treating doctor / department without
+     * having to fetch each patient's visit history individually.
+     */
+    @Query(
+        """
+        SELECT DISTINCT v.patient.id AS patientId, v.createdByDoctor.id AS doctorId
+        FROM Visit v
+        WHERE v.clinic.id = :clinicId
+          AND v.createdByDoctor IS NOT NULL
+        """
+    )
+    fun findPatientDoctorPairsByClinic(@Param("clinicId") clinicId: UUID): List<PatientDoctorProjection>
 }
 
 interface LastVisitProjection {
     fun getPatientId(): UUID
     fun getLastVisitDate(): LocalDate?
+}
+
+interface PatientDoctorProjection {
+    fun getPatientId(): UUID
+    fun getDoctorId(): UUID?
 }
