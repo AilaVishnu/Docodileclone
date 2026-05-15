@@ -185,6 +185,15 @@ function renderBody(t: PrintTemplate, data: PrintVisitData): string {
           <section class="block rx">
             <div class="block-label rx-label">℞ Prescription</div>
             <table class="rx-table">
+              <colgroup>
+                <col style="width: 5%"/>
+                <col style="width: 28%"/>
+                <col style="width: 12%"/>
+                <col style="width: 11%"/>
+                <col style="width: 14%"/>
+                <col style="width: 12%"/>
+                <col style="width: 18%"/>
+              </colgroup>
               <thead>
                 <tr>
                   <th>#</th><th>Medicine</th><th>Dosage</th><th>When</th><th>Frequency</th><th>Duration</th><th>Notes</th>
@@ -377,10 +386,16 @@ export function buildPrintHtml(template: PrintTemplate, data: PrintVisitData): s
 
   .rx-table {
     width: 100%; border-collapse: collapse;
+    /* fixed layout makes the <colgroup> widths authoritative — without it,
+       long medicine names stretch the column past the page edge and
+       Duration / Notes get cropped in the printed PDF. */
+    table-layout: fixed;
     font-size: ${template.fontSizePt - 1}pt;
   }
   .rx-table th, .rx-table td {
     border: 1px solid #ccc; padding: 2mm 3mm; text-align: left; vertical-align: top;
+    /* Wrap long content (e.g. "Dolo 650 Tablet (Paracetamol (650mg))") instead of overflowing. */
+    word-break: break-word; overflow-wrap: anywhere;
   }
   .rx-table th { background: #f5f5f5; font-weight: 600; }
 
@@ -440,44 +455,83 @@ export function openPrintWindow(html: string): void {
   fallbackIframePrint(html);
 }
 
+/**
+ * Server-side render → PDF download. Bypasses the browser print dialog
+ * entirely — we POST the HTML to /api/print/pdf and the backend
+ * (openhtmltopdf) returns a real .pdf the user gets as a normal file
+ * download. Used by the Download button so it actually downloads instead
+ * of routing through Chrome's flaky "Save as PDF" preview.
+ */
+export async function downloadAsPdf(html: string, filename = "prescription"): Promise<void> {
+  const { API_BASE_URL } = await import("../../../apiConfig");
+  const token = localStorage.getItem("docodile_token");
+  const res = await fetch(`${API_BASE_URL}/api/print/pdf`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ html, filename }),
+  });
+  if (!res.ok) throw new Error(`PDF render failed: HTTP ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${filename}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 100);
+}
+
 function fallbackIframePrint(html: string): void {
   const iframe = document.createElement("iframe");
+  // Chrome / Edge sometimes print a 0×0 iframe as a blank page. Park the
+  // iframe off-screen with real dimensions so the browser actually lays out
+  // the content before snapshotting it for the print dialog.
   iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
+  iframe.style.left = "-10000px";
+  iframe.style.top = "0";
+  iframe.style.width = "210mm";
+  iframe.style.height = "297mm";
   iframe.style.border = "0";
-  document.body.appendChild(iframe);
-  const doc = iframe.contentDocument!;
-  doc.open();
-  doc.write(html);
-  doc.close();
+  iframe.style.opacity = "0";
+  iframe.setAttribute("aria-hidden", "true");
 
-  const finish = () => {
-    try {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-    } catch {}
-    // Leave a short window before removing so the print dialog can open.
-    setTimeout(() => document.body.removeChild(iframe), 1500);
+  // srcdoc + onload guarantees we fire print() only after the document is
+  // parsed and all inline assets are wired up. document.write() raced the
+  // print call on slower devices, hence the blank preview some users saw.
+  iframe.srcdoc = html;
+
+  let removed = false;
+  const remove = () => {
+    if (removed) return;
+    removed = true;
+    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
   };
 
-  const imgs = Array.from(doc.images);
-  if (imgs.length === 0) {
-    setTimeout(finish, 200);
-    return;
-  }
-  let pending = imgs.length;
-  const done = () => {
-    pending -= 1;
-    if (pending <= 0) setTimeout(finish, 100);
-  };
-  imgs.forEach((img) => {
-    if (img.complete) done();
-    else {
-      img.addEventListener("load", done);
-      img.addEventListener("error", done);
-    }
+  iframe.addEventListener("load", () => {
+    const win = iframe.contentWindow;
+    if (!win) { remove(); return; }
+    // afterprint fires whether the user saved or cancelled — clean up then.
+    // Fallback: 60s safety net in case the browser swallows the event.
+    win.addEventListener("afterprint", remove);
+    setTimeout(remove, 60_000);
+
+    // Wait one frame for layout to settle, then print. Images are inlined
+    // as base64 by buildPrintHtml so there's nothing async to await.
+    requestAnimationFrame(() => {
+      try {
+        win.focus();
+        win.print();
+      } catch {
+        remove();
+      }
+    });
   });
+
+  document.body.appendChild(iframe);
 }
