@@ -3,7 +3,7 @@ import { styles } from "./Pharmacy.styles";
 import { MOCK_INVENTORY } from "./mockInventory";
 import { PharmacyListView } from "./PharmacyListView";
 import { PharmacyShelfView } from "./PharmacyShelfView";
-import { Med } from "./types";
+import { Med, GroupBy } from "./types";
 import { formatExpiry, expiryStatus } from "./expiry";
 import { MedIllustration } from "./MedIllustration";
 import { Modal } from "../../components/Modal/Modal";
@@ -17,6 +17,7 @@ type ViewMode = "list" | "shelf";
 
 export function PharmacyView() {
   const [view, setView] = useState<ViewMode>("shelf");
+  const [groupBy, setGroupBy] = useState<GroupBy>("alpha");
   const [query, setQuery] = useState("");
   const [showZero, setShowZero] = useState(true);
   const [selected, setSelected] = useState<Med | null>(null);
@@ -38,7 +39,17 @@ export function PharmacyView() {
   return (
     <div style={styles.page}>
       <div style={styles.header}>
+        <div style={styles.headerSpacer} />
         <h1 style={styles.title}>Pharmacy Stocks</h1>
+        <div style={styles.headerActions}>
+          <Button
+            variant="dark"
+            size="md"
+            iconLeft={<PlusIcon style={{ width: 16, height: 16 }} />}
+          >
+            Add Stock
+          </Button>
+        </div>
       </div>
 
       <div style={styles.toolbar}>
@@ -52,17 +63,35 @@ export function PharmacyView() {
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
-          <label style={styles.filterChip}>
-            <input
-              type="checkbox"
-              checked={!showZero}
-              onChange={(e) => setShowZero(!e.target.checked)}
-            />
-            Hide 0 stock
-          </label>
+          <button
+            type="button"
+            style={{ ...styles.togglePill, ...(!showZero ? styles.togglePillActive : null) }}
+            onClick={() => setShowZero((v) => !v)}
+            aria-pressed={!showZero}
+          >
+            In stock only
+          </button>
         </div>
 
         <div style={styles.toolbarRight}>
+          <div style={styles.sortGroup} role="radiogroup" aria-label="Sort by">
+            {[
+              { value: "alpha" as const, label: "A–Z" },
+              { value: "form" as const, label: "Form" },
+              { value: "attention" as const, label: "Attention" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                role="radio"
+                aria-checked={groupBy === opt.value}
+                style={{ ...styles.sortChip, ...(groupBy === opt.value ? styles.sortChipActive : null) }}
+                onClick={() => setGroupBy(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
           <div style={styles.viewToggle} aria-label="View mode">
             <button
               type="button"
@@ -83,22 +112,15 @@ export function PharmacyView() {
               <WidgetIcon width={20} height={20} />
             </button>
           </div>
-          <Button
-            variant="dark"
-            size="md"
-            iconLeft={<PlusIcon style={{ width: 16, height: 16 }} />}
-          >
-            Add Stock
-          </Button>
         </div>
       </div>
 
       {view === "list" ? (
         <div style={styles.listCard}>
-          <PharmacyListView items={items} onPick={setSelected} />
+          <PharmacyListView items={items} groupBy={groupBy} onPick={setSelected} />
         </div>
       ) : (
-        <PharmacyShelfView items={items} onPick={setSelected} />
+        <PharmacyShelfView items={items} groupBy={groupBy} onPick={setSelected} />
       )}
 
       <Modal isOpen={selected !== null} onClose={() => setSelected(null)}>

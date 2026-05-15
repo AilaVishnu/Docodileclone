@@ -1,55 +1,47 @@
 import React from "react";
 import { styles } from "./Pharmacy.styles";
-import { Med, MedCategory } from "./types";
+import { Med, GroupBy } from "./types";
 import { MedIllustration } from "./MedIllustration";
 import { expiryStatus, ExpiryStatus, formatExpiry } from "./expiry";
+import { groupItems } from "./grouping";
 
 type Props = {
   items: Med[];
+  groupBy: GroupBy;
   onPick?: (med: Med) => void;
 };
 
-const CATEGORY_ORDER: MedCategory[] = [
-  "Acne & skin",
-  "Cleansers & soaps",
-  "Topicals",
-  "Serums & boosters",
-  "Tablets",
-];
+export function PharmacyShelfView({ items, groupBy, onPick }: Props) {
+  const groups = groupItems(items, groupBy);
 
-export function PharmacyShelfView({ items, onPick }: Props) {
-  if (items.length === 0) {
-    return <div style={styles.emptyState}>No medicines match your filters.</div>;
-  }
-
-  const grouped = new Map<MedCategory, Med[]>();
-  for (const m of items) {
-    const list = grouped.get(m.category) ?? [];
-    list.push(m);
-    grouped.set(m.category, list);
+  if (groups.length === 0) {
+    return (
+      <div style={styles.emptyState}>
+        {groupBy === "attention"
+          ? "All clear — no stock needs attention."
+          : "No medicines match your filters."}
+      </div>
+    );
   }
 
   return (
     <div style={styles.shelfContainer}>
-      {CATEGORY_ORDER.filter((c) => grouped.has(c)).map((cat) => {
-        const meds = grouped.get(cat)!;
-        return (
-          <div key={cat} style={styles.shelf}>
-            <div style={styles.shelfHeader}>
-              <h3 style={styles.shelfTitle}>{cat}</h3>
-              <span style={styles.shelfCount}>{meds.length} item{meds.length === 1 ? "" : "s"}</span>
-            </div>
-            <div style={styles.shelfPlank}>
-              <div style={styles.shelfRow}>
-                {meds.map((m) => (
-                  <Tile key={m.id} med={m} onClick={() => onPick?.(m)} />
-                ))}
-              </div>
-              <div style={styles.shelfBase} />
-            </div>
+      {groups.map((g) => (
+        <div key={g.key} style={styles.shelf}>
+          <div style={styles.shelfHeader}>
+            <h3 style={styles.shelfTitle}>{g.label}</h3>
+            <span style={styles.shelfCount}>{g.items.length} item{g.items.length === 1 ? "" : "s"}</span>
           </div>
-        );
-      })}
+          <div style={styles.shelfPlank}>
+            <div style={styles.shelfRow}>
+              {g.items.map((m) => (
+                <Tile key={m.id} med={m} onClick={() => onPick?.(m)} />
+              ))}
+            </div>
+            <div style={styles.shelfBase} />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

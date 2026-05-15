@@ -10,11 +10,17 @@ export const styles: Record<string, CSSProperties> = {
     minWidth: 0,
   },
 
-  // Centered serif title — matches Services / PatientFiles / Prescription.
+  // Centered serif title with primary CTA pinned to the right — 3-col grid
+  // keeps the title optically centered regardless of CTA width.
   header: {
-    display: "flex",
+    display: "grid",
+    gridTemplateColumns: "1fr auto 1fr",
     alignItems: "center",
-    justifyContent: "center",
+    gap: spacing.m,
+  },
+  headerSpacer: {},
+  headerActions: {
+    justifySelf: "end",
   },
   title: {
     margin: 0,
@@ -73,14 +79,47 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.control.md,
     color: colors.neutral900,
   },
-  filterChip: {
+  // Binary filter pill — matches PrescriptionQueue tab convention:
+  // inactive = subtle alphaBlack0 bg w/ muted text, active = white pill w/
+  // dark text. Never solid black (that's reserved for the primary CTA).
+  togglePill: {
+    height: 36,
+    padding: `0 ${spacing.m}`,
+    borderRadius: radii.full,
+    border: "none",
+    backgroundColor: colors.alphaBlack0,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.alphaBlack3,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+  togglePillActive: {
+    backgroundColor: colors.neutral100,
+    color: colors.neutral900,
+  },
+  sortGroup: {
     display: "inline-flex",
     alignItems: "center",
-    gap: spacing.xs,
+    gap: spacing["3xs"],
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.full,
+    padding: spacing["3xs"],
+  },
+  sortChip: {
+    height: 28,
+    padding: `0 ${spacing.s}`,
+    borderRadius: radii.full,
+    border: "none",
+    backgroundColor: "transparent",
     fontFamily: fonts.family.primary,
     fontSize: fonts.control.sm,
     color: colors.neutral700,
     cursor: "pointer",
+  },
+  sortChipActive: {
+    backgroundColor: colors.neutral900,
+    color: colors.neutral100,
   },
 
   // View toggle: gap-only group, matches PrescriptionQueue pattern.

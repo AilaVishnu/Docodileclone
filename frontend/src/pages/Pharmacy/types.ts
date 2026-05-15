@@ -15,6 +15,8 @@ export type MedCategory =
   | "Tablets"
   | "Serums & boosters";
 
+export type GroupBy = "alpha" | "form" | "attention";
+
 export type Med = {
   id: string;
   name: string;

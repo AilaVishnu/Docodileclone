@@ -1,16 +1,27 @@
 import React from "react";
 import { styles } from "./Pharmacy.styles";
-import { Med } from "./types";
+import { Med, GroupBy } from "./types";
 import { formatExpiry } from "./expiry";
+import { groupItems } from "./grouping";
 
 type Props = {
   items: Med[];
+  groupBy: GroupBy;
   onPick?: (med: Med) => void;
 };
 
-export function PharmacyListView({ items, onPick }: Props) {
-  if (items.length === 0) {
-    return <div style={styles.emptyState}>No medicines match your filters.</div>;
+export function PharmacyListView({ items, groupBy, onPick }: Props) {
+  const groups = groupItems(items, groupBy);
+  const ordered = groups.flatMap((g) => g.items);
+
+  if (ordered.length === 0) {
+    return (
+      <div style={styles.emptyState}>
+        {groupBy === "attention"
+          ? "All clear — no stock needs attention."
+          : "No medicines match your filters."}
+      </div>
+    );
   }
 
   return (
@@ -33,7 +44,7 @@ export function PharmacyListView({ items, onPick }: Props) {
           </tr>
         </thead>
         <tbody>
-          {items.map((m, i) => (
+          {ordered.map((m, i) => (
             <tr key={m.id} style={{ ...styles.tr, ...(i % 2 === 1 ? styles.trAlt : null) }}>
               <td style={styles.td}>{m.name}</td>
               <td style={styles.td}>
