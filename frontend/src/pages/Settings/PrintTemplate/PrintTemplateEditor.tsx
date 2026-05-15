@@ -214,8 +214,10 @@ export function PrintTemplateEditor() {
             template={active}
             onChange={persist}
             onPrintTest={() => {
-              const html = buildPrintHtml(active, SAMPLE);
-              openPrintWindow(html);
+              // Browser's native print dialog — user picks Save as PDF or a
+              // printer themselves. Same flow as the prescription Print
+              // button; no extra preview modal in between.
+              openPrintWindow(buildPrintHtml(active, SAMPLE));
             }}
             onDelete={onDelete}
           />

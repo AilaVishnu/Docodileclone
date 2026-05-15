@@ -46,7 +46,6 @@ import { colors } from "../../styles/theme";
 import { PrescriptionQueue } from "./PrescriptionQueue";
 import { Patient } from "../../hooks/usePatients";
 import { SessionBar } from "../../components/SessionBar/SessionBar";
-import { PrintPreviewModal } from "../../components/PrintPreviewModal";
 import {
   recordActiveSession,
   clearActiveSession,
@@ -60,7 +59,7 @@ import { API_BASE_URL } from "../../apiConfig";
 import { AddReportModal, AddReportRow } from "./AddReportModal";
 import { FileViewer } from "./FileViewer";
 import { EditPatientModal } from "./EditPatientModal";
-import { buildPrintHtml, downloadAsPdf, getDefaultTemplate, loadTemplates, PrintVisitData } from "../Settings";
+import { buildPrintHtml, openPrintWindow, downloadAsPdf, getDefaultTemplate, loadTemplates, PrintVisitData } from "../Settings";
 import { Modal } from "../../components/Modal/Modal";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -531,7 +530,6 @@ export function PrescriptionPage() {
   const [reviewDate, setReviewDate] = React.useState<Date | null>(null);
   const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
   const [rxRows, setRxRows] = React.useState<RxRowDraft[]>([]);
-  const [printPreviewHtml, setPrintPreviewHtml] = React.useState<string | null>(null);
   const [rxInteractions, setRxInteractions] = React.useState<Array<{ drug: string; interactsWith: string; comment: string }>>([]);
   const [reviewDays, setReviewDays] = React.useState<string>("");
   // Vital values + units (units are clickable to toggle between alternates
@@ -1243,7 +1241,7 @@ export function PrescriptionPage() {
   // us whether to render header/footer (Blank A4) or text-only (pre-printed
   // letterhead) and which patient fields to show. Auto-saves first so the
   // print reflects the latest edits.
-  const handlePrintPrescription = async () => {
+  const handlePrintPrescription = async (action: "print" | "download" = "print") => {
     // The default-template cache is primed by the editor (Settings → Print
     // template). If the user prints without visiting Settings first this
     // session, fetch lazily so we never miss a configured template.
@@ -1312,7 +1310,18 @@ export function PrescriptionPage() {
       reviewNotes: reviewNotesValue,
     };
     const html = buildPrintHtml(template, data);
-    setPrintPreviewHtml(html);
+    if (action === "download") {
+      const fname = `prescription-${selectedPatient.name.replace(/\s+/g, "_")}-${queueDate}`;
+      try {
+        await downloadAsPdf(html, fname);
+      } catch (e) {
+        showToast(`Couldn't download: ${(e as Error).message}`);
+      }
+    } else {
+      // Browser's native print dialog — user picks destination (printer or
+      // Save as PDF). Skips the custom preview modal entirely.
+      openPrintWindow(html);
+    }
   };
 
   if (selectedPatientId === null) {
@@ -2289,33 +2298,16 @@ export function PrescriptionPage() {
           storageKey={activeVisit?.id}
           readOnly={!isEditable}
           recordedDurationSec={activeVisit?.sessionDurationSec ?? null}
-          onPrint={() => handlePrintPrescription()}
-          // Reuses the same render pipeline as Print — browser print preview
-          // pops up and the user picks "Save as PDF" as the destination. Same
-          // template, same patient/visit data, same layout.
-          onDownload={() => handlePrintPrescription()}
+          onPrint={() => handlePrintPrescription("print")}
+          // Direct server-side PDF download — no preview modal, no browser
+          // dialog. Same template + data as Print.
+          onDownload={() => handlePrintPrescription("download")}
           onShare={() => showToast("Share: not wired yet")}
           onActiveChange={setFormActive}
           onStart={handleSessionStart}
           onEnd={handleSessionEnd}
         />
       )}
-
-      <PrintPreviewModal
-        isOpen={printPreviewHtml !== null}
-        html={printPreviewHtml}
-        onClose={() => setPrintPreviewHtml(null)}
-        onSave={async () => {
-          if (!printPreviewHtml) return;
-          const fname = `prescription-${selectedPatient?.name?.replace(/\s+/g, "_") || "patient"}-${queueDate}`;
-          try {
-            await downloadAsPdf(printPreviewHtml, fname);
-            setPrintPreviewHtml(null);
-          } catch (e) {
-            showToast(`Couldn't download: ${(e as Error).message}`);
-          }
-        }}
-      />
 
       {/* Add File modal. Drag-drop or click-to-choose, multi-file, per-file
           metadata (name, category, investigation date, tie-to-visit, notes).
