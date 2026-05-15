@@ -82,11 +82,17 @@ export async function createTemplate(name = "New template"): Promise<PrintTempla
 }
 
 export async function updateTemplate(updated: PrintTemplate): Promise<void> {
+  // Optimistically update the in-memory cache first, so any code reading
+  // through getDefaultTemplate() sees the new settings immediately — even
+  // before the API round-trip finishes. Without this, clicking Print in
+  // PrescriptionPage right after editing a template could read a stale row.
+  cache = cache.map((t) => (t.id === updated.id ? updated : (updated.isDefault ? { ...t, isDefault: false } : t)));
   const saved = await updatePrintTemplate(updated.id, {
     name: updated.name,
     isDefault: updated.isDefault,
     config: toConfigJson(updated),
   });
+  // Reconcile with the server's normalised version (mostly the same payload).
   const replaced = fromDto(saved);
   cache = cache.map((t) => (t.id === replaced.id ? replaced : (replaced.isDefault ? { ...t, isDefault: false } : t)));
 }
