@@ -61,7 +61,7 @@ function App() {
 
   return (
     <div className="App">
-      {view === "login" && (
+      {view === "login" &&  (
         <div className="centered-layout">
           <header className="App-header">
             <AdminLoginPage onLoginSuccess={handleLoginSuccess} />
