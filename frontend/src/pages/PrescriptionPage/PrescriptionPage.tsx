@@ -60,7 +60,7 @@ import { API_BASE_URL } from "../../apiConfig";
 import { AddReportModal, AddReportRow } from "./AddReportModal";
 import { FileViewer } from "./FileViewer";
 import { EditPatientModal } from "./EditPatientModal";
-import { buildPrintHtml, getDefaultTemplate, loadTemplates, PrintVisitData } from "../Settings";
+import { buildPrintHtml, downloadAsPdf, getDefaultTemplate, loadTemplates, PrintVisitData } from "../Settings";
 import { Modal } from "../../components/Modal/Modal";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2305,6 +2305,16 @@ export function PrescriptionPage() {
         isOpen={printPreviewHtml !== null}
         html={printPreviewHtml}
         onClose={() => setPrintPreviewHtml(null)}
+        onSave={async () => {
+          if (!printPreviewHtml) return;
+          const fname = `prescription-${selectedPatient?.name?.replace(/\s+/g, "_") || "patient"}-${queueDate}`;
+          try {
+            await downloadAsPdf(printPreviewHtml, fname);
+            setPrintPreviewHtml(null);
+          } catch (e) {
+            showToast(`Couldn't download: ${(e as Error).message}`);
+          }
+        }}
       />
 
       {/* Add File modal. Drag-drop or click-to-choose, multi-file, per-file
