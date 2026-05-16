@@ -78,7 +78,10 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       backgroundColor: colors.active.shade100,
       borderRadius: '55px',
       padding: '0 16px',
-      width: '364px',
+      // Shrinks smoothly between 200 and 364 as viewport narrows.
+      // 200px keeps "Search for anything…" placeholder visible, 364 is
+      // the design baseline at ≥1213 CSS px (364 / 0.30).
+      width: 'clamp(200px, 30vw, 364px)',
       height: '40px',
       boxSizing: 'border-box',
       gap: '12px',

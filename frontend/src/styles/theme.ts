@@ -233,6 +233,23 @@ export const strokes = {
   l: "4px",
 }
 
+// Responsive breakpoints — desktop-only scope (no phone / small tablet).
+//
+// The app degrades gracefully below 1024 but is not optimized there.
+// Two real thresholds:
+//   md (1024) — "compact desktop": small laptops, Windows laptops at 125%
+//                scaling (1366x768 → 1093 CSS px, 1920x1080 → 1536 CSS px).
+//   lg (1440) — "comfortable desktop": the design baseline. ≥1440 looks
+//                identical to what was shipped before responsive work.
+//
+// Used both in JS (via useMediaQuery) and as the literal numbers behind
+// the @media rules in globals.css. Keep the two sources in sync — if you
+// change a number here, update globals.css too.
+export const breakpoints = {
+  md: 1024,
+  lg: 1440,
+} as const;
+
 export const paragraphSpacing = {
   h2: "48px",
   h4: "44px",

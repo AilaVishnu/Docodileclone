@@ -75,6 +75,14 @@ textarea:-ms-input-placeholder {
   opacity: 1;
 }
 
+/* Reserve scrollbar space on the root so Windows (persistent scrollbar)
+   and macOS (overlay scrollbar) measure the same content width. Single
+   line, no-op on macOS, kills the "looks different on Windows" shift
+   that comes from the ~15px scrollbar gutter. */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   font-family: 'Inter', system-ui, sans-serif;
@@ -89,4 +97,39 @@ body {
   justify-content: center;
   min-height: 100vh;
   width: 100%;
+}
+
+/* Utility: scrollable region without the visible scrollbar chrome.
+   Used by horizontally-scrolling shelves and similar carousel layouts. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── Responsive design tokens ────────────────────────────────────────
+   Variables exposed on :root so inline styles in *.styles.ts can
+   consume them via var(--name). The browser handles the resize at the
+   compositor layer — no React re-renders, no JS work. Each var has
+   three potential values keyed to our two breakpoints (md=1024,
+   lg=1440); pages opt in by reading the var instead of a hardcoded
+   number.
+
+   Convention: the default block holds the "comfortable desktop" (lg+)
+   values that match the existing design exactly. Media-query blocks
+   override for narrower widths. Naming: --<page>-<purpose>. */
+:root {
+  /* Home page mainGrid (memo + calendar columns) */
+  --home-memo-min: 640px;
+  --home-cal-w: 352px;
+  --home-grid-gap: 40px;
+}
+@media (max-width: 1439.98px) {
+  :root {
+    --home-memo-min: 0px;
+    --home-cal-w: 280px;
+    --home-grid-gap: 24px;
+  }
 }

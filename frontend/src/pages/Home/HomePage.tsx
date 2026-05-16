@@ -14,6 +14,7 @@ import { Button } from "../../components/Button";
 import { ChatBubble } from "../../components/Chat/ChatBubble";
 import { setPendingSessionNav } from "../../components/TopNav/SessionTrayButton";
 import { hydrateScheduleFromBackend } from "../../components/DoctorSchedule/scheduleStorage";
+import { useIsCompact } from "../../hooks/useMediaQuery";
 
 type HomePageProps = {
   onLogout: () => void;
@@ -30,7 +31,16 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
     localStorage.setItem("docodile_home_tab", tab);
     setActiveTabState(tab);
   };
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  // Side-nav auto-collapses below the comfortable-desktop breakpoint
+  // (1440). On wider viewports it stays expanded by default. The manual
+  // toggle still works within a viewport "bucket"; crossing the threshold
+  // resets to the new default — same pattern Notion / Linear use.
+  const isCompact = useIsCompact();
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(!isCompact);
+  useEffect(() => {
+    setIsSidebarExpanded(!isCompact);
+  }, [isCompact]);
+
   const [isBooking, setIsBooking] = useState(false);
 
   // Pull the canonical clinic schedule from the backend on mount and seed the

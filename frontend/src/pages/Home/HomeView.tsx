@@ -269,8 +269,12 @@ const styles: Record<string, React.CSSProperties> = {
 
   mainGrid: {
     display: "grid",
-    gridTemplateColumns: "minmax(640px, 1fr) 352px",
-    gap: spacing["3xl"],
+    // Below lg (1440) the CSS vars collapse the memo's 640px floor to 0
+    // and shrink the calendar to 280px, so the grid never demands more
+    // width than is actually available. At >=lg the values match the
+    // original design exactly.
+    gridTemplateColumns: "minmax(var(--home-memo-min, 640px), 1fr) var(--home-cal-w, 352px)",
+    gap: "var(--home-grid-gap, 40px)",
     alignItems: "start",
   },
   memoSlot: {
