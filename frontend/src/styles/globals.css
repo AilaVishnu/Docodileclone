@@ -75,6 +75,14 @@ textarea:-ms-input-placeholder {
   opacity: 1;
 }
 
+/* Reserve scrollbar space on the root so Windows (persistent scrollbar)
+   and macOS (overlay scrollbar) measure the same content width. Single
+   line, no-op on macOS, kills the "looks different on Windows" shift
+   that comes from the ~15px scrollbar gutter. */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   font-family: 'Inter', system-ui, sans-serif;
@@ -89,4 +97,14 @@ body {
   justify-content: center;
   min-height: 100vh;
   width: 100%;
+}
+
+/* Utility: scrollable region without the visible scrollbar chrome.
+   Used by horizontally-scrolling shelves and similar carousel layouts. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
