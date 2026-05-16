@@ -68,9 +68,15 @@ export function DevViewportBar() {
   if (process.env.NODE_ENV !== "development") return null;
   if (isInsideSimFrame()) return null;
 
+  // While the overlay is open, hide the top bar entirely — the overlay's
+  // own header carries the width-switcher and a close button, so showing
+  // both at once just doubles the chrome.
+  const showTopBar = !hidden && !preview;
+  const showMiniHandle = hidden && !preview;
+
   return (
     <>
-      {!hidden && (
+      {showTopBar && (
         <div style={styles.bar} role="toolbar" aria-label="Viewport tester (development only)">
           <span style={styles.label}>viewport: <strong style={styles.widthValue}>{width}px</strong></span>
           <span style={styles.divider} />
@@ -78,7 +84,7 @@ export function DevViewportBar() {
             <button
               key={p.label}
               type="button"
-              style={{ ...styles.btn, ...(preview?.label === p.label ? styles.btnActive : null) }}
+              style={styles.btn}
               onClick={() => setPreview(p)}
               title={p.hint}
             >
@@ -98,7 +104,7 @@ export function DevViewportBar() {
         </div>
       )}
 
-      {hidden && (
+      {showMiniHandle && (
         <button
           type="button"
           style={styles.miniHandle}
