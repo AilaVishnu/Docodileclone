@@ -1,17 +1,22 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 // Floating dev-only viewport tester. Mounted at the React tree root in
-// development. Renders a small bar at top-center with the current
-// `window.innerWidth` and preset buttons that open a popup window at
-// the picked width so you can sanity-check responsive behavior without
-// resizing your real browser window.
+// development. Renders a small bar at top-center; clicking a width
+// opens an in-page overlay with an iframe at that exact size so you
+// can see the app render at a real viewport width — media queries
+// inside the iframe fire correctly, CSS clamp() resolves against the
+// iframe's vw, useMediaQuery reads the iframe's own matchMedia.
 //
-// Does NOT participate in the design system — `position: fixed`, very
-// high z-index, monospace styling, hard-coded colors. The whole point
-// is that it sits *outside* the responsive layout it's observing.
+// Iframe approach is used (not window.open) because some embedded
+// preview environments block popups. The iframe variant works
+// everywhere.
 //
-// In production builds (`process.env.NODE_ENV !== "development"`) this
-// component renders nothing and is dead-code-eliminated by the bundler.
+// The bar and overlay are NOT part of the design system — `position:
+// fixed`, hard-coded colors, max z-index. They sit outside the
+// responsive layout they're observing.
+//
+// In production builds this component renders nothing and is dead-code-
+// eliminated by the bundler.
 
 type Preset = { label: string; width: number; height: number; hint: string };
 
@@ -22,9 +27,17 @@ const PRESETS: Preset[] = [
   { label: "1920", width: 1920, height: 1080, hint: "External Full-HD monitor" },
 ];
 
+const SIM_PARAM = "nodevbar";
+
+function isInsideSimFrame(): boolean {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get(SIM_PARAM) === "1";
+}
+
 export function DevViewportBar() {
   const [width, setWidth] = useState<number>(typeof window !== "undefined" ? window.innerWidth : 0);
   const [hidden, setHidden] = useState<boolean>(false);
+  const [preview, setPreview] = useState<Preset | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -33,59 +46,103 @@ export function DevViewportBar() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  if (process.env.NODE_ENV !== "development") return null;
-  if (hidden) {
-    return (
-      <button
-        type="button"
-        style={styles.miniHandle}
-        onClick={() => setHidden(false)}
-        title="Show viewport bar"
-      >
-        {width}px
-      </button>
-    );
-  }
+  // Esc closes the simulator overlay.
+  useEffect(() => {
+    if (!preview) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPreview(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [preview]);
 
-  const openAt = (p: Preset) => {
-    // Single named target — opening the same name reuses the popup so
-    // repeated clicks update its size instead of stacking windows.
-    const features = `width=${p.width},height=${p.height},resizable=yes,scrollbars=yes,location=no,menubar=no,toolbar=no`;
-    const popup = window.open(window.location.href, "docodile_viewport_test", features);
-    // Belt-and-braces: some browsers ignore the size hint on reuse.
-    // Resizing after-the-fact works for windows opened by this script.
-    if (popup) {
-      try { popup.resizeTo(p.width, p.height); } catch {}
-      try { popup.focus(); } catch {}
-    }
-  };
+  const iframeSrc = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    const url = new URL(window.location.href);
+    url.searchParams.set(SIM_PARAM, "1");
+    return url.toString();
+  }, []);
+
+  // Inside the simulated iframe we suppress the bar entirely — otherwise
+  // each iframe would render its own bar, click would nest again, etc.
+  if (process.env.NODE_ENV !== "development") return null;
+  if (isInsideSimFrame()) return null;
 
   return (
-    <div style={styles.bar} role="toolbar" aria-label="Viewport tester (development only)">
-      <span style={styles.label}>viewport: <strong style={styles.widthValue}>{width}px</strong></span>
-      <span style={styles.divider} />
-      {PRESETS.map((p) => (
+    <>
+      {!hidden && (
+        <div style={styles.bar} role="toolbar" aria-label="Viewport tester (development only)">
+          <span style={styles.label}>viewport: <strong style={styles.widthValue}>{width}px</strong></span>
+          <span style={styles.divider} />
+          {PRESETS.map((p) => (
+            <button
+              key={p.label}
+              type="button"
+              style={{ ...styles.btn, ...(preview?.label === p.label ? styles.btnActive : null) }}
+              onClick={() => setPreview(p)}
+              title={p.hint}
+            >
+              {p.label}
+            </button>
+          ))}
+          <span style={styles.divider} />
+          <button
+            type="button"
+            style={styles.closeBtn}
+            onClick={() => setHidden(true)}
+            aria-label="Hide viewport bar"
+            title="Hide"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {hidden && (
         <button
-          key={p.label}
           type="button"
-          style={{ ...styles.btn, ...(width === p.width ? styles.btnActive : null) }}
-          onClick={() => openAt(p)}
-          title={`${p.hint}\n(opens in a new window)`}
+          style={styles.miniHandle}
+          onClick={() => setHidden(false)}
+          title="Show viewport bar"
         >
-          {p.label}
+          {width}px
         </button>
-      ))}
-      <span style={styles.divider} />
-      <button
-        type="button"
-        style={styles.closeBtn}
-        onClick={() => setHidden(true)}
-        aria-label="Hide viewport bar"
-        title="Hide"
-      >
-        ×
-      </button>
-    </div>
+      )}
+
+      {preview && (
+        <div style={styles.overlay} onClick={() => setPreview(null)}>
+          <div style={styles.overlayHeader} onClick={(e) => e.stopPropagation()}>
+            <span style={styles.overlayLabel}>
+              Preview at <strong style={styles.widthValue}>{preview.width}×{preview.height}</strong>
+              <span style={styles.overlayHint}> — {preview.hint}</span>
+            </span>
+            <div style={styles.overlaySwitch}>
+              {PRESETS.map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  style={{ ...styles.btn, ...(preview.label === p.label ? styles.btnActive : null) }}
+                  onClick={() => setPreview(p)}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <button type="button" style={styles.overlayClose} onClick={() => setPreview(null)} aria-label="Close preview">
+              ✕ close
+            </button>
+          </div>
+          <div style={styles.overlayBody} onClick={(e) => e.stopPropagation()}>
+            <iframe
+              key={preview.label}
+              title={`Viewport preview ${preview.width}×${preview.height}`}
+              src={iframeSrc}
+              style={{ ...styles.iframe, width: preview.width, height: preview.height }}
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -107,7 +164,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 11,
     lineHeight: "16px",
     boxShadow: "0 6px 16px rgba(0, 0, 0, 0.25)",
-    pointerEvents: "auto",
     userSelect: "none",
   },
   label: { opacity: 0.7 },
@@ -159,5 +215,66 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 10,
     lineHeight: "14px",
     opacity: 0.85,
+  },
+
+  // ─── Overlay (simulator) ────────────────────────────────────────────
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.78)",
+    zIndex: 2147483646,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    padding: 16,
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+    overflow: "auto",
+  },
+  overlayHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "8px 14px",
+    marginBottom: 12,
+    backgroundColor: "rgba(0, 0, 0, 0.9)",
+    color: "#fff",
+    borderRadius: 10,
+    fontSize: 11,
+    boxShadow: "0 6px 16px rgba(0, 0, 0, 0.4)",
+  },
+  overlayLabel: {
+    opacity: 0.85,
+  },
+  overlayHint: {
+    opacity: 0.55,
+    marginLeft: 4,
+  },
+  overlaySwitch: {
+    display: "inline-flex",
+    gap: 4,
+  },
+  overlayClose: {
+    padding: "3px 10px",
+    backgroundColor: "transparent",
+    color: "#fff",
+    border: "1px solid rgba(255,255,255,0.3)",
+    borderRadius: 6,
+    cursor: "pointer",
+    fontFamily: "inherit",
+    fontSize: 11,
+  },
+  overlayBody: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+    minHeight: 0,
+  },
+  iframe: {
+    border: "none",
+    backgroundColor: "#fff",
+    boxShadow: "0 16px 48px rgba(0, 0, 0, 0.5)",
+    borderRadius: 6,
   },
 };
