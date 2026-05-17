@@ -556,6 +556,11 @@ export function PrescriptionPage() {
   // AI SOAP draft modal — opens on the ✨ AI draft button next to the
   // Complaints/Diagnosis row. Fetched on open; applies per-field on demand.
   const [aiSoapOpen, setAiSoapOpen] = React.useState<boolean>(false);
+  // Forces SessionBar to remount after Restart. The visit id doesn't change
+  // on restart so React would otherwise keep the bar's old in-memory state
+  // (which still thinks the session is ended); bumping this counter is the
+  // cheap way to make the bar re-read its localStorage entry.
+  const [sessionBarEpoch, setSessionBarEpoch] = React.useState(0);
   // Form is non-interactive until the user clicks Start Session on the
   // floating SessionBar. Pausing / ending re-locks. Visually unchanged
   // while locked — only pointer-events are blocked.
@@ -1202,6 +1207,55 @@ export function PrescriptionPage() {
     // status next time they're viewed.
     if (selectedAppointmentId) {
       void patchAppointmentStatus(selectedAppointmentId, "COMPLETED");
+    }
+  };
+
+  // "Restart" really means "resume from where I ended". Visit data is
+  // untouched. The previously-recorded duration becomes the timer's new
+  // baseline, sessionEndedAt is cleared (so isEditable flips back to true),
+  // and we seed the per-visit localStorage state so the bar mounts as
+  // running with the saved seconds already on the clock — ticking forward
+  // from there instead of restarting at 00:00.
+  const handleSessionRestart = async () => {
+    if (!activeVisit) return;
+    if (selectedPatient) markStarted(selectedPatient.id);
+    // SessionBar writes to localStorage synchronously on End, but the
+    // post-End refetch of activeVisit hasn't necessarily completed yet,
+    // so localStorage is the more current source of truth for the
+    // recorded duration. Visit row is a fallback if storage was cleared.
+    let baseSeconds = activeVisit.sessionDurationSec ?? 0;
+    try {
+      const stateKey = "docodile_session_state";
+      const raw = localStorage.getItem(stateKey);
+      const all = raw ? JSON.parse(raw) as Record<string, any> : {};
+      const prior = all[activeVisit.id];
+      if (prior && typeof prior.baseSeconds === "number") {
+        baseSeconds = prior.baseSeconds;
+      }
+      all[activeVisit.id] = {
+        baseSeconds,
+        runStartedAtMs: Date.now(),
+        paused: false,
+        ended: false,
+      };
+      localStorage.setItem(stateKey, JSON.stringify(all));
+    } catch { /* localStorage full / private mode — bar will fall back to visit field */ }
+    const req: SaveVisitRequest = {
+      ...buildSaveRequest(),
+      sessionEndedAt: null,
+      // Keep the accumulated time on the visit so reopening on another
+      // device sees the same baseline. The bar will keep adding to it.
+      sessionDurationSec: baseSeconds,
+    };
+    try {
+      await updateVisit(activeVisit.id, req);
+      await refetchVisits();
+      // Force the SessionBar to remount so it re-reads the freshly seeded
+      // localStorage state and shows the running timer immediately —
+      // otherwise its in-memory `ended: true` lingers until a tab switch.
+      setSessionBarEpoch((n) => n + 1);
+    } catch (e) {
+      showToast(`Couldn't resume: ${(e as Error).message}`);
     }
   };
 
@@ -2294,7 +2348,7 @@ export function PrescriptionPage() {
         <SessionBar
           // Remount per-visit so the bar reads the persisted state for the
           // active visit rather than carrying state across visit switches.
-          key={activeVisit?.id ?? "no-visit"}
+          key={`${activeVisit?.id ?? "no-visit"}-${sessionBarEpoch}`}
           storageKey={activeVisit?.id}
           readOnly={!isEditable}
           recordedDurationSec={activeVisit?.sessionDurationSec ?? null}
@@ -2306,6 +2360,10 @@ export function PrescriptionPage() {
           onActiveChange={setFormActive}
           onStart={handleSessionStart}
           onEnd={handleSessionEnd}
+          // Restart only makes sense for today's visit — a past visit is
+          // closed for good. Suppress the icon on historical tabs by not
+          // passing onRestart through.
+          onRestart={activeVisit?.visitDate === todayIso() ? handleSessionRestart : undefined}
         />
       )}
 

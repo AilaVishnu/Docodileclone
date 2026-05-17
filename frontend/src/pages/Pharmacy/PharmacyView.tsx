@@ -1,6 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { styles } from "./Pharmacy.styles";
-import { MOCK_INVENTORY } from "./mockInventory";
 import { PharmacyListView } from "./PharmacyListView";
 import { PharmacyShelfView } from "./PharmacyShelfView";
 import { Med, GroupBy } from "./types";
@@ -12,6 +11,8 @@ import { PlusIcon } from "../../iconsUtil";
 import { ReactComponent as SearchIcon } from "../../assets/search.svg";
 import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
+import { listPharmacyStock, bulkCreatePharmacyStock, parseInventoryCsv } from "../../api/pharmacy";
+import { Toast } from "../../components/Toast";
 
 type ViewMode = "list" | "shelf";
 
@@ -21,10 +22,26 @@ export function PharmacyView() {
   const [query, setQuery] = useState("");
   const [showZero, setShowZero] = useState(true);
   const [selected, setSelected] = useState<Med | null>(null);
+  // Live inventory pulled from /api/tenant/pharmacy-stock. Empty until the
+  // first fetch settles.
+  const [inventory, setInventory] = useState<Med[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [importOpen, setImportOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+
+  const refresh = () => {
+    setLoading(true);
+    listPharmacyStock()
+      .then(setInventory)
+      .catch((e) => setToastMsg(`Couldn't load inventory: ${(e as Error).message}`))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { refresh(); }, []);
 
   const items = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return MOCK_INVENTORY.filter((m) => {
+    return inventory.filter((m) => {
       if (!showZero && m.unitsInStock === 0) return false;
       if (!q) return true;
       return (
@@ -34,14 +51,21 @@ export function PharmacyView() {
         m.category.toLowerCase().includes(q)
       );
     });
-  }, [query, showZero]);
+  }, [inventory, query, showZero]);
 
   return (
     <div style={styles.page}>
       <div style={styles.header}>
         <div style={styles.headerSpacer} />
         <h1 style={styles.title}>Pharmacy Stocks</h1>
-        <div style={styles.headerActions}>
+        <div style={{ ...styles.headerActions, display: "flex", gap: 8 }}>
+          <Button
+            variant="light"
+            size="md"
+            onClick={() => setImportOpen(true)}
+          >
+            Import CSV
+          </Button>
           <Button
             variant="dark"
             size="md"
@@ -126,6 +150,77 @@ export function PharmacyView() {
       <Modal isOpen={selected !== null} onClose={() => setSelected(null)}>
         {selected && <DetailBody med={selected} onClose={() => setSelected(null)} />}
       </Modal>
+
+      <Modal isOpen={importOpen} onClose={() => setImportOpen(false)}>
+        <ImportInventoryBody
+          onClose={() => setImportOpen(false)}
+          onImported={(msg) => {
+            setImportOpen(false);
+            setToastMsg(msg);
+            refresh();
+          }}
+        />
+      </Modal>
+
+      <Toast message={toastMsg} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
+      {loading && inventory.length === 0 && (
+        <div style={{ padding: 24, textAlign: "center", color: "#666" }}>Loading inventory…</div>
+      )}
+    </div>
+  );
+}
+
+function ImportInventoryBody({ onClose, onImported }: {
+  onClose: () => void;
+  onImported: (message: string) => void;
+}) {
+  const [text, setText] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const preview = useMemo(() => parseInventoryCsv(text), [text]);
+
+  const handleImport = async () => {
+    if (preview.rows.length === 0) {
+      setError("No valid rows parsed.");
+      return;
+    }
+    setImporting(true);
+    setError(null);
+    try {
+      const result = await bulkCreatePharmacyStock(preview.rows);
+      onImported(`Imported ${result.imported} item${result.imported === 1 ? "" : "s"}${result.skipped > 0 ? ` · skipped ${result.skipped}` : ""}`);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  return (
+    <div style={{ width: "min(720px, 92vw)", padding: 24, display: "flex", flexDirection: "column", gap: 12 }}>
+      <h2 style={{ margin: 0, fontSize: 18 }}>Import inventory (CSV)</h2>
+      <p style={{ margin: 0, fontSize: 13, color: "#666" }}>
+        Paste rows from the export — header line optional. Expected columns:<br/>
+        <code style={{ fontSize: 12 }}>Med Name, Invoice No., Batch, Pack(Price), Pack(MRP), Units(Per Pack), Units(Price), Units in Stock, Expiry, %(Discount), %(GST)</code>
+      </p>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={'"ACETUFF P TABLET","A00709","204","30.48","40.00","10","4.00","266","Jan-2027","0.02","5.00"'}
+        style={{ width: "100%", minHeight: 280, padding: 10, fontFamily: "monospace", fontSize: 12, border: "1px solid #ccc", borderRadius: 6 }}
+      />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: 12, color: "#666" }}>
+          {preview.rawLines === 0 ? "Paste your CSV above." : `${preview.rows.length} of ${preview.rawLines} rows parsed.`}
+        </span>
+        {error && <span style={{ fontSize: 12, color: "#b54040" }}>{error}</span>}
+      </div>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <Button variant="light" size="sm" onClick={onClose} disabled={importing}>Cancel</Button>
+        <Button variant="dark" size="sm" onClick={handleImport} disabled={importing || preview.rows.length === 0}>
+          {importing ? "Importing…" : `Import ${preview.rows.length}`}
+        </Button>
+      </div>
     </div>
   );
 }

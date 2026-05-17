@@ -27,6 +27,12 @@ type SessionBarProps = {
   onDownload?: () => void;
   onShare?: () => void;
   /**
+   * Fires when the doctor clicks the Restart icon on the ended bar. Host
+   * is responsible for resetting timer state + visit session fields so
+   * the bar returns to the Start Session view on next render.
+   */
+  onRestart?: () => void;
+  /**
    * Fires whenever the session goes active/inactive. "Active" = running
    * AND not paused — i.e. the form behind the bar should be editable.
    * Paused / ended / idle all report `false` so the host can lock the form.
@@ -111,6 +117,7 @@ export function SessionBar({
   onPrint,
   onDownload,
   onShare,
+  onRestart,
   onActiveChange,
   onStart,
   onEnd,
@@ -244,6 +251,11 @@ export function SessionBar({
           Session Ended
         </span>
         <div style={styles.idleActions}>
+          {onRestart && (
+            <button type="button" style={styles.iconBtn} onClick={onRestart} aria-label="Restart session" title="Restart session">
+              <RestartIcon width={24} height={24} />
+            </button>
+          )}
           <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
             <PrinterIcon width={24} height={24} />
           </button>
@@ -279,6 +291,11 @@ export function SessionBar({
             Session Ended
           </span>
           <div style={styles.idleActions}>
+            {onRestart && (
+              <button type="button" style={styles.iconBtn} onClick={onRestart} aria-label="Restart session" title="Restart session">
+                <RestartIcon width={24} height={24} />
+              </button>
+            )}
             <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
               <PrinterIcon width={24} height={24} />
             </button>
@@ -347,8 +364,8 @@ export function SessionBar({
               textAlign: "center",
             }}
           >
-            Ending the session is permanent — you won&rsquo;t be able to
-            restart the timer for this visit.
+            This will close the visit. You can hit Restart later to
+            resume editing if the patient comes back.
           </p>
           <div style={confirmStyles.actions}>
             <Button
