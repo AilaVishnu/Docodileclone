@@ -72,6 +72,13 @@ type SessionBarProps = {
    * this device's localStorage.
    */
   recordedDurationSec?: number | null;
+  /**
+   * Wall-clock ms timestamp of when this historic visit's session ended.
+   * Used in `readOnly` mode to gate the Resume button — only visible if
+   * the visit ended within the last 24h. Pass `null` (or omit) and Resume
+   * is suppressed entirely.
+   */
+  recordedEndedAtMs?: number | null;
 };
 
 // Wall-clock based session state. Total elapsed time is reconstructed
@@ -86,9 +93,18 @@ type SessionState = {
   runStartedAtMs: number | null;
   paused: boolean;
   ended: boolean;
+  // Wall-clock timestamp of when End was clicked. Drives the 24-hour
+  // "buffer" window during which the Resume button stays visible — after
+  // that, the bar treats the visit as closed for good and hides Resume.
+  // Optional so historic state from before this field existed still loads.
+  endedAtMs?: number | null;
 };
 
 const STORE_KEY = "docodile_session_state";
+
+// How long the Resume button stays visible after End is clicked. After
+// this window the session is considered closed for good and Resume hides.
+const RESUME_BUFFER_MS = 24 * 60 * 60 * 1000;
 
 function loadState(key: string): SessionState | null {
   try {
@@ -124,6 +140,7 @@ export function SessionBar({
   storageKey,
   readOnly = false,
   recordedDurationSec = null,
+  recordedEndedAtMs = null,
 }: SessionBarProps) {
   // Restore previous state if the visit had one — covers Pause + navigate
   // away + come back, plus reopening a visit that ended earlier. Skipped
@@ -140,6 +157,16 @@ export function SessionBar({
   );
   const [paused, setPaused] = React.useState(initial?.paused ?? false);
   const [ended, setEnded] = React.useState(initial?.ended ?? false);
+  // Backfill: legacy state persisted before endedAtMs existed will report
+  // ended=true with no timestamp. Treat the moment we first load it as
+  // "now" so the buffer starts ticking from this point instead of being
+  // immediately stale, which would hide Resume for an in-progress visit
+  // the doctor just ended.
+  const [endedAtMs, setEndedAtMs] = React.useState<number | null>(() => {
+    if (initial?.endedAtMs != null) return initial.endedAtMs;
+    if (initial?.ended) return Date.now();
+    return null;
+  });
   // Confirmation overlay for the End button — once a session ends it
   // can't be restarted for the visit, so we make sure the click is
   // intentional.
@@ -173,8 +200,8 @@ export function SessionBar({
   // is in readOnly mode (historic visits never write back).
   React.useEffect(() => {
     if (readOnly || !storageKey) return;
-    saveState(storageKey, { baseSeconds, runStartedAtMs, paused, ended });
-  }, [readOnly, storageKey, baseSeconds, runStartedAtMs, paused, ended]);
+    saveState(storageKey, { baseSeconds, runStartedAtMs, paused, ended, endedAtMs });
+  }, [readOnly, storageKey, baseSeconds, runStartedAtMs, paused, ended, endedAtMs]);
 
   // Notify parent when the form should be editable. Active = running and
   // not paused; everything else (idle / paused / ended) reports false.
@@ -196,7 +223,8 @@ export function SessionBar({
     setRunStartedAtMs(now);
     setPaused(false);
     setEnded(false);
-    if (storageKey) saveState(storageKey, { baseSeconds: 0, runStartedAtMs: now, paused: false, ended: false });
+    setEndedAtMs(null);
+    if (storageKey) saveState(storageKey, { baseSeconds: 0, runStartedAtMs: now, paused: false, ended: false, endedAtMs: null });
     onStart?.();
   };
   const togglePause = () => {
@@ -205,7 +233,7 @@ export function SessionBar({
       const now = Date.now();
       setRunStartedAtMs(now);
       setPaused(false);
-      if (storageKey) saveState(storageKey, { baseSeconds, runStartedAtMs: now, paused: false, ended });
+      if (storageKey) saveState(storageKey, { baseSeconds, runStartedAtMs: now, paused: false, ended, endedAtMs });
     } else {
       // Pause: bank the current run-segment's elapsed seconds and stop running.
       const elapsed = runStartedAtMs == null ? 0 : Math.max(0, Math.floor((Date.now() - runStartedAtMs) / 1000));
@@ -213,7 +241,7 @@ export function SessionBar({
       setBaseSeconds(newBase);
       setRunStartedAtMs(null);
       setPaused(true);
-      if (storageKey) saveState(storageKey, { baseSeconds: newBase, runStartedAtMs: null, paused: true, ended });
+      if (storageKey) saveState(storageKey, { baseSeconds: newBase, runStartedAtMs: null, paused: true, ended, endedAtMs });
     }
   };
   const handleRestart = () => {
@@ -221,19 +249,29 @@ export function SessionBar({
     const now = runStartedAtMs == null ? null : Date.now();
     setBaseSeconds(0);
     setRunStartedAtMs(now);
-    if (storageKey) saveState(storageKey, { baseSeconds: 0, runStartedAtMs: now, paused, ended });
+    if (storageKey) saveState(storageKey, { baseSeconds: 0, runStartedAtMs: now, paused, ended, endedAtMs });
   };
   const handleEnd = () => {
     // Freeze the timer at its current displayed value.
     const elapsed = runStartedAtMs == null ? 0 : Math.max(0, Math.floor((Date.now() - runStartedAtMs) / 1000));
     const finalSeconds = baseSeconds + elapsed;
+    const now = Date.now();
     setBaseSeconds(finalSeconds);
     setRunStartedAtMs(null);
     setPaused(false);
     setEnded(true);
-    if (storageKey) saveState(storageKey, { baseSeconds: finalSeconds, runStartedAtMs: null, paused: false, ended: true });
+    setEndedAtMs(now);
+    if (storageKey) saveState(storageKey, { baseSeconds: finalSeconds, runStartedAtMs: null, paused: false, ended: true, endedAtMs: now });
     onEnd?.(finalSeconds);
   };
+
+  // Resume is only offered while we're inside the 24h buffer window. Once
+  // the window expires (or the recorded endedAt is unknown — legacy state)
+  // the visit is considered closed and the Resume button is suppressed.
+  const interactiveCanResume =
+    endedAtMs != null && Date.now() - endedAtMs < RESUME_BUFFER_MS;
+  const readOnlyCanResume =
+    recordedEndedAtMs != null && Date.now() - recordedEndedAtMs < RESUME_BUFFER_MS;
 
   // Read-only branch — historic visits render the recorded duration
   // alongside a centered "Session Ended" label and the print / download
@@ -251,7 +289,7 @@ export function SessionBar({
           Session Ended
         </span>
         <div style={styles.idleActions}>
-          {onRestart && (
+          {onRestart && readOnlyCanResume && (
             <button
               type="button"
               style={{ ...styles.pauseBtn, backgroundColor: colors.secondary400 }}
@@ -297,7 +335,7 @@ export function SessionBar({
             Session Ended
           </span>
           <div style={styles.idleActions}>
-            {onRestart && (
+            {onRestart && interactiveCanResume && (
               <button
                 type="button"
                 style={{ ...styles.pauseBtn, backgroundColor: colors.secondary400 }}

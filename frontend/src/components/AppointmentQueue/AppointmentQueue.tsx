@@ -192,6 +192,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               patientAge: apt.patientAge || undefined,
               notes: apt.notes || "",
               fee: apt.fee || 0,
+              patientArchived: apt.patientArchived || false,
             });
           });
 
@@ -329,6 +330,10 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
             doctorName={doctors.find(d => d.id === activeDoctorId)?.name}
             menuItems={[
               { label: "Edit Appointment", onClick: (apt) => {
+                if (apt.patientArchived) {
+                  setToastMessage(`${apt.patientName} is archived — restore the patient to continue.`);
+                  return;
+                }
                 setEditingAppointment({
                   id: apt.id,
                   patientName: apt.patientName,
@@ -349,6 +354,12 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                 onEditStart?.();
               } },
               { label: "View Patient File", onClick: (apt) => {
+                // Block navigation for archived patients — the doctor needs
+                // to restore them first before adding to their chart.
+                if (apt.patientArchived) {
+                  setToastMessage(`${apt.patientName} is archived — restore the patient to continue.`);
+                  return;
+                }
                 // Pass the full patient + appointment context so the host can
                 // route directly into the patient's prescription/visit view
                 // (same as PrescriptionQueue's View Pad path) instead of just
@@ -369,6 +380,10 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                 }
               } },
               { label: "Bill Medicines", onClick: (apt) => {
+                if (apt.patientArchived) {
+                  setToastMessage(`${apt.patientName} is archived — restore the patient to continue.`);
+                  return;
+                }
                 setMedsBillingApt(apt);
               } },
             ]}

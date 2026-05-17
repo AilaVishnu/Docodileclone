@@ -10,6 +10,7 @@ import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { ReactComponent as RestartIcon } from "../../assets/icons/restart-24.svg";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { styles } from "./PrescriptionQueue.styles";
+import { Toast } from "../../components/Toast";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal landing of the Prescription page — Figma 2282:17378.
@@ -32,6 +33,7 @@ type AppointmentRow = {
   status: string | null;
   scheduledTime: string | null;
   doctorId: string;
+  patientArchived?: boolean;
 };
 
 type StatusFilter = "all" | "AT_DOC" | "IN_PROGRESS" | "WAITING" | "COMPLETED";
@@ -63,6 +65,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
   // this device. Loaded on mount and on every fetch (so transitions made
   // inside the form propagate back when the user returns to the queue).
   const [startedSet, setStartedSet] = useState<Set<string>>(loadStartedSet);
+  const [toastMsg, setToastMsg] = useState<string>("");
   useEffect(() => {
     setStartedSet(loadStartedSet());
   }, [appointments]);
@@ -135,6 +138,13 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
   }, []);
 
   const handleViewPad = (apt: AppointmentRow) => {
+    // Archived patients stay visible in the queue (the receptionist still
+    // needs to see who was scheduled) but the doctor can't open the pad —
+    // archiving is the signal to stop adding to that patient's chart.
+    if (apt.patientArchived) {
+      setToastMsg(`${apt.patientName} is archived — restore the patient to continue.`);
+      return;
+    }
     // Just open the form; the "started" flag now flips when the doctor
     // clicks Start Session inside the form (handled by PrescriptionPage).
     const patient: Patient = {
@@ -285,6 +295,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
       </div>
 
       {renderCards()}
+      <Toast message={toastMsg} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
     </div>
   );
 }

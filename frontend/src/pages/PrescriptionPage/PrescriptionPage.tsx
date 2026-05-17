@@ -2352,6 +2352,9 @@ export function PrescriptionPage() {
           storageKey={activeVisit?.id}
           readOnly={!isEditable}
           recordedDurationSec={activeVisit?.sessionDurationSec ?? null}
+          // Drives the SessionBar's 24h "Resume" buffer in readOnly mode.
+          // After 24h since the visit's sessionEndedAt the Resume pill hides.
+          recordedEndedAtMs={activeVisit?.sessionEndedAt ? new Date(activeVisit.sessionEndedAt).getTime() : null}
           onPrint={() => handlePrintPrescription("print")}
           // Direct server-side PDF download — no preview modal, no browser
           // dialog. Same template + data as Print.
@@ -2387,6 +2390,12 @@ export function PrescriptionPage() {
           if (selectedPatient) setSelectedPatient({ ...selectedPatient, ...updated });
         }}
         onSaved={() => showToast("Patient info saved")}
+        onArchived={() => {
+          showToast("Patient archived");
+          // Drop the now-hidden patient from local selection so the queue
+          // re-fetches a fresh active-only list on next mount.
+          setSelectedPatient(null);
+        }}
         onError={(msg) => showToast(msg)}
       />
 

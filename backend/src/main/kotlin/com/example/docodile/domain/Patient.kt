@@ -37,5 +37,11 @@ class Patient(
     var address: String? = null,
 
     @Column(name = "created_at")
-    var createdAt: Instant? = null
+    var createdAt: Instant? = null,
+
+    @Column(nullable = false)
+    var archived: Boolean = false,
+
+    @Column(name = "archived_at")
+    var archivedAt: Instant? = null
 )

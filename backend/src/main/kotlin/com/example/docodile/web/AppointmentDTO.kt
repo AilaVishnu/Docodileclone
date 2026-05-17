@@ -21,5 +21,10 @@ data class AppointmentDTO(
     val payStatus: String?,
     val paymentMethod: String?,
     val notes: String?,
-    val fee: java.math.BigDecimal?
+    val fee: java.math.BigDecimal?,
+    // True if the linked patient has been archived. The appointment still
+    // appears in the queue (so the receptionist can see who's checked in),
+    // but the frontend blocks navigation into the prescription pad and
+    // surfaces a "patient is archived" toast instead.
+    val patientArchived: Boolean = false
 )

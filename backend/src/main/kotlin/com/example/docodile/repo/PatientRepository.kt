@@ -9,6 +9,12 @@ import java.util.UUID
 interface PatientRepository : JpaRepository<Patient, UUID> {
     fun findAllByClinicId(clinicId: UUID): List<Patient>
 
+    // Active patients only — used by the patient picker / queue. Archived
+    // patients still exist in the DB but are hidden from default lists.
+    fun findAllByClinicIdAndArchivedFalse(clinicId: UUID): List<Patient>
+
+    fun findAllByClinicIdAndArchivedTrue(clinicId: UUID): List<Patient>
+
     @Query("SELECT p FROM Patient p WHERE p.id = :id AND p.clinic.id = :clinicId")
     fun findByIdAndClinicId(@Param("id") id: UUID, @Param("clinicId") clinicId: UUID): Patient?
 

@@ -38,6 +38,9 @@ export type Appointment = {
   doctorId?: string;
   notes?: string;
   fee?: number;
+  /** True when the linked patient has been archived. Drives "patient is
+   *  archived" toasts in queue/pad navigation. */
+  patientArchived?: boolean;
 };
 
 type MenuItem = {
