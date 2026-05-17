@@ -87,6 +87,35 @@ export async function createPharmacyStock(item: PharmacyStockRequest): Promise<M
   return dtoToMed(await res.json());
 }
 
+export async function updatePharmacyStock(id: string, item: PharmacyStockRequest): Promise<Med> {
+  const res = await fetch(`${API_BASE_URL}/api/tenant/pharmacy-stock/${id}`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: JSON.stringify(item),
+  });
+  if (!res.ok) throw new Error(await readError(res));
+  return dtoToMed(await res.json());
+}
+
+// Convert a Med (UI shape) back to the request payload the backend expects.
+export function medToRequest(m: Omit<Med, "id">): PharmacyStockRequest {
+  return {
+    name: m.name,
+    category: m.category,
+    form: m.form,
+    invoiceNo: m.invoiceNo || null,
+    batch: m.batch || null,
+    packPrice: m.packPrice,
+    packMrp: m.packMrp,
+    unitsPerPack: m.unitsPerPack,
+    unitPrice: m.unitPrice,
+    unitsInStock: m.unitsInStock,
+    expiry: m.expiry,
+    discountPct: m.discountPct,
+    gstPct: m.gstPct,
+  };
+}
+
 export async function deletePharmacyStock(id: string): Promise<void> {
   const res = await fetch(`${API_BASE_URL}/api/tenant/pharmacy-stock/${id}`, {
     method: "DELETE",
