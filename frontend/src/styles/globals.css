@@ -227,6 +227,8 @@ body {
   --book-patient-avatar: 140px;
   --book-details-pad-y: 24px;
   --book-details-gap: 16px;
+  --book-header-mb: 20px;
+  --book-footer-mt: 16px;
 }
 @media (max-width: 1439.98px) {
   :root {
@@ -260,7 +262,7 @@ body {
     --sidenav-item-pady: 10px;
 
     /* Tighter top breathing room above the page title at 1024 */
-    --page-pad-top: 20px;
+    --page-pad-top: 24px;
 
     /* ─── Compact type scale at 1024 ──────────────────────────────────
        Headings step one rung down, body shrinks 1–2 px, xs/caption hold
@@ -325,11 +327,13 @@ body {
     --book-col-right: 280px;
     --book-input-pady: 4px;
     --book-grid-gap: 10px;             /* tighter spacing between blocks */
-    --book-form-pad-bottom: 8px;       /* less air below male/female */
+    --book-form-pad-bottom: 12px;      /* breathing room below male/female */
     --book-patient-pad: 8px;           /* slimmer patient card padding */
     --book-patient-gap: 4px;           /* avatar sits closer to T001 */
     --book-patient-avatar: 96px;       /* smaller avatar so card height shrinks */
     --book-details-pad-y: 12px;        /* doctor/service top+bottom tightened */
     --book-details-gap: 8px;           /* doctor & service rows closer */
+    --book-header-mb: 8px;             /* tighter gap between title and blocks */
+    --book-footer-mt: 8px;             /* tighter gap between blocks and CTAs */
   }
 }

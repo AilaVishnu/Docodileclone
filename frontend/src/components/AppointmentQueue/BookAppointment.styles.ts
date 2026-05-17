@@ -47,7 +47,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     position: "relative",
-    marginBottom: spacing.l,
+    marginBottom: "var(--book-header-mb, 20px)",
     // Cap at content max-width, center in viewport
     width: "100%",
     maxWidth: layout.contentMaxWidth,
@@ -407,7 +407,7 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing.m,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: spacing.m,
+    marginTop: "var(--book-footer-mt, 16px)",
     width: "100%",
   },
   pillButtonPrimary: {
