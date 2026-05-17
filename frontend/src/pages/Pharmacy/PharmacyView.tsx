@@ -383,35 +383,33 @@ function DetailBody({ med, onClose }: { med: Med; onClose: () => void }) {
         styles.expiryBad;
 
   return (
-    <div style={styles.detailModal}>
-      <div style={styles.detailHeader}>
-        <div>
-          <h2 style={styles.detailName}>{med.name}</h2>
-          <div style={styles.detailCategory}>{med.category}</div>
-        </div>
-        <button type="button" style={styles.detailClose} onClick={onClose} aria-label="Close">×</button>
-      </div>
+    <div style={ms.container}>
+      <ModalHeader
+        title={med.name}
+        subtitle={`${med.category} · ${med.form}${med.batch ? ` · Batch ${med.batch}` : ""}`}
+        onClose={onClose}
+      />
 
-      <div style={{ display: "flex", justifyContent: "center" }}>
+      <div style={ms.illustrationWrap}>
         <MedIllustration med={med} width={96} height={120} />
       </div>
 
-      <div style={styles.detailGrid}>
-        <DetailField label="Invoice no." value={med.invoiceNo} />
-        <DetailField label="Batch" value={med.batch} />
-        <DetailField label="Pack price" value={`₹${med.packPrice.toFixed(2)}`} />
-        <DetailField label="MRP" value={`₹${med.packMrp.toFixed(2)}`} />
-        <DetailField label="Units per pack" value={String(med.unitsPerPack)} />
-        <DetailField label="Unit price" value={`₹${med.unitPrice.toFixed(2)}`} />
-        <DetailField label="In stock" value={String(med.unitsInStock)} />
-        <DetailField
-          label="Expiry"
-          value={
-            <span style={{ ...styles.expiryChip, ...expiryStyle }}>{formatExpiry(med.expiry)}</span>
-          }
-        />
-        <DetailField label="Discount" value={`${med.discountPct.toFixed(2)}%`} />
-        <DetailField label="GST" value={`${med.gstPct.toFixed(2)}%`} />
+      <div style={ms.formCard}>
+        <div style={ms.twoCol}>
+          <DetailField label="Invoice no." value={med.invoiceNo || "—"} />
+          <DetailField label="Batch" value={med.batch || "—"} />
+          <DetailField label="Pack price" value={`₹${med.packPrice.toFixed(2)}`} />
+          <DetailField label="MRP" value={`₹${med.packMrp.toFixed(2)}`} />
+          <DetailField label="Units per pack" value={String(med.unitsPerPack)} />
+          <DetailField label="Unit price" value={`₹${med.unitPrice.toFixed(2)}`} />
+          <DetailField label="In stock" value={String(med.unitsInStock)} />
+          <DetailField
+            label="Expiry"
+            value={<span style={{ ...styles.expiryChip, ...expiryStyle }}>{formatExpiry(med.expiry)}</span>}
+          />
+          <DetailField label="Discount" value={`${med.discountPct.toFixed(2)}%`} />
+          <DetailField label="GST" value={`${med.gstPct.toFixed(2)}%`} />
+        </div>
       </div>
     </div>
   );
@@ -419,9 +417,9 @@ function DetailBody({ med, onClose }: { med: Med; onClose: () => void }) {
 
 function DetailField({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div>
-      <div style={styles.detailLabel}>{label}</div>
-      <div style={styles.detailValue}>{value}</div>
+    <div style={ms.fieldWrap}>
+      <span style={ms.fieldLabel}>{label}</span>
+      <span style={ms.detailValue}>{value}</span>
     </div>
   );
 }
@@ -501,6 +499,14 @@ const ms: Record<string, React.CSSProperties> = {
   fieldError: {
     fontFamily: fonts.family.primary, fontSize: fonts.control.xs,
     color: colors.red100, marginTop: 2,
+  },
+  detailValue: {
+    fontFamily: fonts.family.primary, fontSize: fonts.control.md,
+    fontWeight: fonts.weight.semibold, color: colors.neutral900,
+  },
+  illustrationWrap: {
+    display: "flex", justifyContent: "center",
+    padding: `${spacing.s} 0`,
   },
   textInput: {
     width: "100%", height: 35, boxSizing: "border-box",
