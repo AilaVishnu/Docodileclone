@@ -28,7 +28,7 @@ export const styles: Record<string, CSSProperties> = {
   tableContainer: {
     backgroundColor: colors.primary100,
     borderRadius: "0 24px 24px 24px",
-    padding: "24px",
+    padding: "var(--queue-table-pad, 24px)",
     overflow: "visible",
   },
 
@@ -41,7 +41,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   th: {
-    padding: "12px 28px",
+    padding: "12px var(--queue-cell-padx, 28px)",
     borderBottom: `1px solid ${colors.primary300}`,
     color: colors.alphaBlack3,
     fontWeight: 400,
@@ -56,7 +56,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   td: {
-    padding: "14px 28px",
+    padding: "14px var(--queue-cell-padx, 28px)",
     fontSize: fonts.size.s,
     color: colors.neutral900,
     verticalAlign: "middle",

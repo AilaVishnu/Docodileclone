@@ -322,7 +322,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
             activeId={activeDoctorId}
             onSelect={setActiveDoctorId}
           />
-          <div style={{ display: "flex", gap: "24px", minWidth: 0, width: "100%" }}>
+          <div style={{ display: "flex", gap: "var(--queue-gap, 24px)", minWidth: 0, width: "100%" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
           <QueueTable
             appointments={activeQueue}

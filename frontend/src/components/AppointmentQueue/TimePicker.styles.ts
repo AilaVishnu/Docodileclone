@@ -39,7 +39,7 @@ export const styles: Record<string, CSSProperties> = {
 
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
+    gridTemplateColumns: "repeat(6, 1fr)",
     gap: "4px",
   },
 

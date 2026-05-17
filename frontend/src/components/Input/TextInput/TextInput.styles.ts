@@ -6,7 +6,8 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: spacing.xs,
-    padding: "6px 8px",
+    // Vertical padding is var-driven so 1024 compacts every TextInput row.
+    padding: "var(--input-pady, 6px) 8px",
     borderBottom: `1px solid ${colors.neutral300}`,
     width: "100%",
   },

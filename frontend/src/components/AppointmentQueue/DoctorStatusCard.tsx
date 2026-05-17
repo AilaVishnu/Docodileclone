@@ -163,11 +163,13 @@ const cardStyles: Record<string, React.CSSProperties> = {
     backgroundColor: colors.primary100,   // #F9F9ED — warm cream from Figma
     borderRadius: "20px",
     border: "none",
-    padding: "40px 20px 20px",
+    // Top/bottom fixed, horizontal var-driven so 1024 tightens the right
+    // whitespace; width var lets the queue table reclaim space.
+    padding: "40px var(--queue-side-padx, 20px) 20px",
     display: "flex",
     flexDirection: "column",
     gap: "2px",
-    width: "246px",
+    width: "var(--queue-side-w, 246px)",
   },
 
   doctorName: {
@@ -191,7 +193,9 @@ const statStyles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: "10px",
-    padding: "5px 0",
+    // Left padding var-driven so 1024 can indent the stat list slightly
+    // for better visual hierarchy against the centered name + avatar.
+    padding: "5px 0 5px var(--queue-stat-padl, 0px)",
   },
 
   iconWrap: {

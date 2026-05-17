@@ -22,7 +22,7 @@ export const styles: Record<string, CSSProperties> = {
     border: `${strokes.xs} solid ${colors.neutral300}`,
     borderRadius: radii.m,
     backgroundColor: colors.neutral100,
-    height: 40,
+    height: "var(--input-h, 40px)",
     width: "100%",
     position: "relative",
     cursor: "pointer",

@@ -126,8 +126,9 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     backgroundColor: colors.primary100,
     borderRadius: "20px",
-    padding: "20px",
-    width: "246px",
+    // Vertical 20 fixed, horizontal var-driven so it matches the doctor card.
+    padding: "20px var(--queue-side-padx, 20px)",
+    width: "var(--queue-side-w, 246px)",
     boxSizing: "border-box",
     marginTop: "16px",
     display: "flex",

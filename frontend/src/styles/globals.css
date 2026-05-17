@@ -136,6 +136,18 @@ body {
   --btn-md-h: 42px;
   --btn-fs: 16px;
 
+  /* Universal form control primitives (Select dropdown, TextInput row, …) */
+  --input-h: 40px;
+  --input-pady: 6px;
+
+  /* Today's Queue — right-side DoctorStatusCard + HeatmapCard width/padding */
+  --queue-side-w: 246px;
+  --queue-side-padx: 20px;
+  --queue-gap: 24px;          /* gap between queue table column and side cards */
+  --queue-stat-padl: 0px;     /* left indent on DoctorStatusCard stat rows */
+  --queue-table-pad: 24px;    /* tableContainer outer padding */
+  --queue-cell-padx: 28px;    /* th/td horizontal padding inside the table */
+
   /* TopNav (header chrome) — baseline at 1440 */
   --topnav-h: 70px;
   --topnav-search-min: 200px;
@@ -229,6 +241,7 @@ body {
   --book-details-gap: 16px;
   --book-header-mb: 20px;
   --book-footer-mt: 16px;
+  --book-clearlink-mb: 6px;
 }
 @media (max-width: 1439.98px) {
   :root {
@@ -244,6 +257,21 @@ body {
     --btn-sm-h: 32px;
     --btn-md-h: 34px;
     --btn-fs: 14px;
+
+    /* Form controls (Select / TextInput) step down at 1024 — standard */
+    --input-h: 32px;
+    --input-pady: 3px;
+
+    /* Today's Queue side cards: narrower so the table gets more width */
+    --queue-side-w: 200px;
+    --queue-side-padx: 12px;
+    --queue-gap: 12px;          /* tighter gap between queue and side cards */
+    --queue-stat-padl: 12px;    /* nudge stat list right inside doctor card */
+    --queue-table-pad: 16px;    /* slimmer table container padding */
+    --queue-cell-padx: 16px;    /* tighter horizontal cell padding so columns fit */
+
+    /* Tighter outer page padding at 1024 (sidebar → content and content → right edge) */
+    --page-pad-x: 24px;
 
     /* Header chrome */
     --topnav-h: 56px;
@@ -325,7 +353,7 @@ body {
     --book-col-form-min: 460px;
     --book-col-form-max: 600px;
     --book-col-right: 280px;
-    --book-input-pady: 4px;
+    --book-input-pady: 2px;
     --book-grid-gap: 10px;             /* tighter spacing between blocks */
     --book-form-pad-bottom: 12px;      /* breathing room below male/female */
     --book-patient-pad: 8px;           /* slimmer patient card padding */
@@ -335,5 +363,6 @@ body {
     --book-details-gap: 8px;           /* doctor & service rows closer */
     --book-header-mb: 8px;             /* tighter gap between title and blocks */
     --book-footer-mt: 8px;             /* tighter gap between blocks and CTAs */
+    --book-clearlink-mb: -4px;         /* pull "Clear & enter new patient" closer to Name */
   }
 }

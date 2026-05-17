@@ -521,7 +521,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         {/* Patient Details Card */}
         <Card style={{ ...styles.card, ...styles.formCard }}>
           {patientFieldsLocked && lockedPatientId !== "editing" && (
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--book-clearlink-mb, 6px)" }}>
               <button
                 type="button"
                 onClick={clearSelectedPatient}
