@@ -252,8 +252,14 @@ export function SessionBar({
         </span>
         <div style={styles.idleActions}>
           {onRestart && (
-            <button type="button" style={styles.iconBtn} onClick={onRestart} aria-label="Restart session" title="Restart session">
-              <RestartIcon width={24} height={24} />
+            <button
+              type="button"
+              style={{ ...styles.pauseBtn, backgroundColor: colors.secondary400 }}
+              onClick={onRestart}
+              aria-label="Resume session"
+              title="Resume session"
+            >
+              Resume
             </button>
           )}
           <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
@@ -292,8 +298,14 @@ export function SessionBar({
           </span>
           <div style={styles.idleActions}>
             {onRestart && (
-              <button type="button" style={styles.iconBtn} onClick={onRestart} aria-label="Restart session" title="Restart session">
-                <RestartIcon width={24} height={24} />
+              <button
+                type="button"
+                style={{ ...styles.pauseBtn, backgroundColor: colors.secondary400 }}
+                onClick={onRestart}
+                aria-label="Resume session"
+                title="Resume session"
+              >
+                Resume
               </button>
             )}
             <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">

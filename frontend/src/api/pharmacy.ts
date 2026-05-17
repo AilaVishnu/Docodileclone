@@ -67,7 +67,7 @@ export async function listPharmacyStock(): Promise<Med[]> {
   return dtos.map(dtoToMed);
 }
 
-export async function bulkCreatePharmacyStock(items: PharmacyStockRequest[]): Promise<{ imported: number; skipped: number }> {
+export async function bulkCreatePharmacyStock(items: PharmacyStockRequest[]): Promise<{ created: number; updated: number; skipped: number }> {
   const res = await fetch(`${API_BASE_URL}/api/tenant/pharmacy-stock/bulk`, {
     method: "POST",
     headers: authHeaders(),

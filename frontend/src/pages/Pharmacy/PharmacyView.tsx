@@ -175,9 +175,25 @@ function ImportInventoryBody({ onClose, onImported }: {
   onImported: (message: string) => void;
 }) {
   const [text, setText] = useState("");
+  const [fileName, setFileName] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const preview = useMemo(() => parseInventoryCsv(text), [text]);
+
+  const readFile = (file: File) => {
+    if (!/\.csv$/i.test(file.name) && file.type !== "text/csv") {
+      setError("Please pick a .csv file.");
+      return;
+    }
+    setError(null);
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => setText(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => setError("Couldn't read the file.");
+    reader.readAsText(file);
+  };
 
   const handleImport = async () => {
     if (preview.rows.length === 0) {
@@ -188,7 +204,11 @@ function ImportInventoryBody({ onClose, onImported }: {
     setError(null);
     try {
       const result = await bulkCreatePharmacyStock(preview.rows);
-      onImported(`Imported ${result.imported} item${result.imported === 1 ? "" : "s"}${result.skipped > 0 ? ` · skipped ${result.skipped}` : ""}`);
+      const parts: string[] = [];
+      if (result.updated > 0) parts.push(`Updated ${result.updated}`);
+      if (result.created > 0) parts.push(`added ${result.created}`);
+      if (result.skipped > 0) parts.push(`skipped ${result.skipped}`);
+      onImported(parts.length > 0 ? parts.join(" · ") : "Nothing to import");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -197,28 +217,68 @@ function ImportInventoryBody({ onClose, onImported }: {
   };
 
   return (
-    <div style={{ width: "min(720px, 92vw)", padding: 24, display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ width: "min(640px, 92vw)", padding: 24, display: "flex", flexDirection: "column", gap: 12 }}>
       <h2 style={{ margin: 0, fontSize: 18 }}>Import inventory (CSV)</h2>
       <p style={{ margin: 0, fontSize: 13, color: "#666" }}>
-        Paste rows from the export — header line optional. Expected columns:<br/>
-        <code style={{ fontSize: 12 }}>Med Name, Invoice No., Batch, Pack(Price), Pack(MRP), Units(Per Pack), Units(Price), Units in Stock, Expiry, %(Discount), %(GST)</code>
+        Upload the supplier's <code style={{ fontSize: 12 }}>current_inventory_*.csv</code> file.
+        Existing batches refresh in place (matched on name + batch + invoice), new batches are added.
       </p>
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder={'"ACETUFF P TABLET","A00709","204","30.48","40.00","10","4.00","266","Jan-2027","0.02","5.00"'}
-        style={{ width: "100%", minHeight: 280, padding: 10, fontFamily: "monospace", fontSize: 12, border: "1px solid #ccc", borderRadius: 6 }}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv,text/csv"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) readFile(f);
+          // Allow re-picking the same filename later.
+          e.target.value = "";
+        }}
       />
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 12, color: "#666" }}>
-          {preview.rawLines === 0 ? "Paste your CSV above." : `${preview.rows.length} of ${preview.rawLines} rows parsed.`}
-        </span>
-        {error && <span style={{ fontSize: 12, color: "#b54040" }}>{error}</span>}
+
+      <div
+        onClick={() => fileInputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          const f = e.dataTransfer.files?.[0];
+          if (f) readFile(f);
+        }}
+        style={{
+          border: `2px dashed ${dragOver ? "#2c6e49" : "#bbb"}`,
+          borderRadius: 8,
+          padding: 24,
+          textAlign: "center",
+          cursor: "pointer",
+          background: dragOver ? "#f1f8f3" : "#fafafa",
+          fontSize: 13,
+          color: "#555",
+        }}
+      >
+        {fileName ? (
+          <>
+            <div style={{ fontWeight: 600, color: "#222" }}>{fileName}</div>
+            <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+              {preview.rows.length} of {preview.rawLines} rows ready to import. Click to pick a different file.
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontWeight: 600, color: "#222" }}>Click to choose a CSV file</div>
+            <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>…or drag & drop it here.</div>
+          </>
+        )}
       </div>
+
+      {error && <span style={{ fontSize: 12, color: "#b54040" }}>{error}</span>}
+
       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
         <Button variant="light" size="sm" onClick={onClose} disabled={importing}>Cancel</Button>
         <Button variant="dark" size="sm" onClick={handleImport} disabled={importing || preview.rows.length === 0}>
-          {importing ? "Importing…" : `Import ${preview.rows.length}`}
+          {importing ? "Importing…" : preview.rows.length > 0 ? `Import ${preview.rows.length}` : "Import"}
         </Button>
       </div>
     </div>

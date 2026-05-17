@@ -73,8 +73,11 @@ class PharmacyStockController(
     }
 
     /**
-     * Bulk insert for CSV imports. Skips rows with blank names. Returns the
-     * count actually saved so the frontend can surface "Imported N items".
+     * Upsert for CSV imports. Existing rows are matched by the natural
+     * identity (name + batch + invoiceNo, case-insensitive) and updated in
+     * place; new rows are inserted. Lets the user re-paste their
+     * "current inventory" export every day without creating duplicates —
+     * stock counts and prices on existing batches just refresh.
      */
     @PostMapping("/bulk")
     @PreAuthorize("hasAnyRole('ADMIN','PHARMACY')")
@@ -84,15 +87,35 @@ class PharmacyStockController(
         val clinic = clinicEntityRepository.findById(clinicId)
             .orElseThrow { IllegalArgumentException("Clinic not found") }
         val now = Instant.now()
-        var saved = 0
+
+        // Build a lookup keyed by (name|batch|invoice) so each request row
+        // can find its existing twin in O(1). All keys are lower-cased so a
+        // stray case difference in the CSV doesn't cause a false miss.
+        fun key(name: String, batch: String?, invoice: String?) =
+            "${name.trim().lowercase()}|${(batch ?: "").trim().lowercase()}|${(invoice ?: "").trim().lowercase()}"
+
+        val existing = repo.findAllByClinicIdOrderByNameAsc(clinicId)
+        val existingByKey = existing.associateBy { key(it.name, it.batch, it.invoiceNo) }
+
+        var created = 0
+        var updated = 0
+        var skipped = 0
         for (req in requests) {
-            if (req.name.isBlank()) continue
-            val row = PharmacyStock(clinic = clinic, createdAt = now, updatedAt = now)
-            applyRequest(row, req)
-            repo.save(row)
-            saved++
+            if (req.name.isBlank()) { skipped++; continue }
+            val k = key(req.name, req.batch, req.invoiceNo)
+            val match = existingByKey[k]
+            if (match != null) {
+                applyRequest(match, req)
+                repo.save(match)
+                updated++
+            } else {
+                val row = PharmacyStock(clinic = clinic, createdAt = now, updatedAt = now)
+                applyRequest(row, req)
+                repo.save(row)
+                created++
+            }
         }
-        return BulkResult(imported = saved, skipped = requests.size - saved)
+        return BulkResult(created = created, updated = updated, skipped = skipped)
     }
 
     @PutMapping("/{id}")
@@ -154,4 +177,4 @@ data class PharmacyStockRequest(
     val gstPct: BigDecimal = BigDecimal.ZERO,
 )
 
-data class BulkResult(val imported: Int, val skipped: Int)
+data class BulkResult(val created: Int, val updated: Int, val skipped: Int)
