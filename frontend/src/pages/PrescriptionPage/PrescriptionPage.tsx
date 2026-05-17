@@ -2273,31 +2273,36 @@ export function PrescriptionPage() {
                           />
                         </span>
                       </div>
-                      {referOpen && (
-                        <div style={styles.referMenu}>
-                          {doctors.length === 0 ? (
-                            <div style={styles.referMenuEmpty}>No doctors in this clinic</div>
-                          ) : (
-                            doctors.map((d) => (
-                              <button
-                                key={d.id}
-                                type="button"
-                                style={styles.referMenuItem}
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  setReferDoctorId(d.id);
-                                  setReferOpen(false);
-                                }}
-                              >
-                                <span style={styles.referMenuItemName}>{d.name}</span>
-                                {(d.specialty || d.department) && (
-                                  <span style={styles.referMenuItemMeta}>{d.specialty || d.department}</span>
-                                )}
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
+                      {referOpen && (() => {
+                        // Hide the doctor who's already treating this visit
+                        // — referring to yourself isn't a referral.
+                        const referableDoctors = doctors.filter((d) => d.id !== appointmentDoctorId);
+                        return (
+                          <div style={styles.referMenu}>
+                            {referableDoctors.length === 0 ? (
+                              <div style={styles.referMenuEmpty}>No other doctors in this clinic</div>
+                            ) : (
+                              referableDoctors.map((d) => (
+                                <button
+                                  key={d.id}
+                                  type="button"
+                                  style={styles.referMenuItem}
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    setReferDoctorId(d.id);
+                                    setReferOpen(false);
+                                  }}
+                                >
+                                  <span style={styles.referMenuItemName}>{d.name}</span>
+                                  {(d.specialty || d.department) && (
+                                    <span style={styles.referMenuItemMeta}>{d.specialty || d.department}</span>
+                                  )}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                   {/* Next Review — date picker + "or ___ days" + notes field */}
