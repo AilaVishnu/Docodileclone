@@ -100,14 +100,14 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       backgroundColor: colors.active.shade300,
     },
     contentArea: {
-      marginLeft: isSidebarExpanded ? "204px" : "95px",
-      width: isSidebarExpanded ? "calc(100% - 204px)" : "calc(100% - 95px)",
+      marginLeft: isSidebarExpanded ? "var(--sidenav-w-expanded)" : "var(--sidenav-w-collapsed)",
+      width: isSidebarExpanded ? "calc(100% - var(--sidenav-w-expanded))" : "calc(100% - var(--sidenav-w-collapsed))",
       display: "flex",
       flexDirection: "column" as const,
       transition: "margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     },
     mainContent: {
-      padding: "40px 40px 24px",
+      padding: "var(--page-pad-top) var(--page-pad-x) var(--page-pad-bottom)",
       display: "flex",
       flexDirection: "column" as const,
       gap: "24px",

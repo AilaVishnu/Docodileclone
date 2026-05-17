@@ -904,7 +904,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     width: "100%",
-    height: 40,
+    height: "var(--search-h)",
     gap: 12,
     padding: "0 16px",
     borderRadius: 55,
@@ -912,8 +912,8 @@ const styles: Record<string, React.CSSProperties> = {
     boxSizing: "border-box",
   },
   searchIcon: {
-    width: 20,
-    height: 20,
+    width: "var(--search-icon)",
+    height: "var(--search-icon)",
     color: colors.neutral400,
     flexShrink: 0,
   },
@@ -924,7 +924,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "transparent",
     outline: "none",
     fontFamily: fonts.family.primary,
-    fontSize: fonts.control.md,
+    fontSize: "var(--search-fs)",
     color: colors.neutral900,
   },
   clearBtn: {

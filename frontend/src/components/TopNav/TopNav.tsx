@@ -39,7 +39,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: `0 ${spacing.xl} 0 0`,
-      height: '70px',
+      height: 'var(--topnav-h)',
       backgroundColor: colors.active.shade300,
       width: '100%',
       zIndex: 3000,
@@ -62,8 +62,8 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      width: '48px',
-      height: '48px',
+      width: 'var(--topnav-iconbtn)',
+      height: 'var(--topnav-iconbtn)',
       borderRadius: '50%',
       backgroundColor: 'transparent',
       cursor: 'pointer',
@@ -78,11 +78,9 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       backgroundColor: colors.active.shade100,
       borderRadius: '55px',
       padding: '0 16px',
-      // Shrinks smoothly between 200 and 364 as viewport narrows.
-      // 200px keeps "Search for anything…" placeholder visible, 364 is
-      // the design baseline at ≥1213 CSS px (364 / 0.30).
-      width: 'clamp(200px, 30vw, 364px)',
-      height: '40px',
+      // Width + height + font track --topnav-* vars; vars step down at <1440.
+      width: 'clamp(var(--topnav-search-min), var(--topnav-search-ideal), var(--topnav-search-max))',
+      height: 'var(--search-h)',
       boxSizing: 'border-box',
       gap: '12px',
     },
@@ -92,7 +90,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       border: 'none',
       outline: 'none',
       fontFamily: fonts.family.primary,
-      fontSize: fonts.size.m,
+      fontSize: 'var(--search-fs)',
       color: colors.neutral900,
       padding: 0,
     },
@@ -100,8 +98,8 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       position: 'relative' as const,
     },
     profileAvatar: {
-      width: '48px',
-      height: '48px',
+      width: 'var(--topnav-avatar)',
+      height: 'var(--topnav-avatar)',
       borderRadius: '50%',
       overflow: 'hidden',
       display: 'flex',
@@ -213,7 +211,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
     <div style={styles.container}>
       {/* Search Bar */}
       <div style={styles.searchBarContainer}>
-        <SearchIcon style={{ width: 20, height: 20, color: '#ABABAB' }} />
+        <SearchIcon style={{ width: 'var(--search-icon)', height: 'var(--search-icon)', color: '#ABABAB', flexShrink: 0 }} />
         <input
           type="text"
           placeholder="Search for anything..."
@@ -233,8 +231,8 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
           <Button
             variant="primary"
             size="sm"
-            iconLeft={<PlusIcon style={{ width: 16, height: 16, fill: '#fff' }} />}
-            style={{ height: '40px', fontSize: fonts.size.s, padding: '0 16px' }}
+            iconLeft={<PlusIcon style={{ width: 'var(--topnav-cta-icon)', height: 'var(--topnav-cta-icon)', fill: '#fff' }} />}
+            style={{ padding: '0 var(--topnav-cta-padx)' }}
             onClick={onNewAppointment}
           >
             New Appointment

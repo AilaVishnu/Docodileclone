@@ -128,38 +128,37 @@ export const fonts = {
     primary: "'Inter', sans-serif",
     secondary: "'Libertinus Serif', 'source-serif', serif",
   },
-  // ─── "Universal" fluid scale ─────────────────────────────────────────
-  // Rates chosen so min is held across the full 1280–1920 CSS viewport
-  // range. Formula: rate_vw = min_px / 19.2. At viewport ≤ 1920 the clamp
-  // returns MIN (design baseline). Between 1920 and ~2300–2400 it grows to
-  // the ceiling. Effect: 1280/1440/1536/1920 all render identical to the
-  // Figma design; 2560 users get a mild scale-up, nothing dramatic.
+  // ─── Type scale ───────────────────────────────────────────────────────
+  // Tokens are CSS-var-driven. Values live in globals.css as --fs-* and
+  // --lh-* under :root (baseline = 1440 design, with clamps that grow
+  // fluidly above 1920) and a 1024 compact tier in the media query.
+  // Components keep reading fonts.size.h1 etc.; the value resolves per
+  // viewport with no React re-renders.
   size: {
-    h1: "clamp(60px, 3.125vw, 80px)",  // 60 up to 1920, 80 at 2560
-    h2: "clamp(48px, 2.5vw, 64px)",    // 48 up to 1920, 64 at 2560
-    h3: "clamp(40px, 2.08vw, 52px)",   // 40 up to 1920, 52 at 2500
-    h4: "clamp(32px, 1.67vw, 42px)",   // 32 up to 1920, 42 at 2515
-    h5: "clamp(24px, 1.25vw, 30px)",   // 24 up to 1920, 30 at 2400
-    h6: "clamp(20px, 1.04vw, 24px)",   // 20 up to 1920, 24 at 2308
-    l:  "clamp(20px, 1.04vw, 24px)",
-    m:  "clamp(16px, 0.83vw, 18px)",   // 16 up to 1920, 18 at 2170
-    s:  "clamp(14px, 0.73vw, 16px)",   // 14 up to 1920, 16 at 2192
-    xs: "12px",
-    caption: "10px",
+    h1: "var(--fs-h1)",
+    h2: "var(--fs-h2)",
+    h3: "var(--fs-h3)",
+    h4: "var(--fs-h4)",
+    h5: "var(--fs-h5)",
+    h6: "var(--fs-h6)",
+    l:  "var(--fs-l)",
+    m:  "var(--fs-m)",
+    s:  "var(--fs-s)",
+    xs: "var(--fs-xs)",
+    caption: "var(--fs-caption)",
   },
   lineHeight: {
-    // Same pattern — min held to 1920, modest ceiling above.
-    h1: "clamp(72px, 3.75vw, 96px)",
-    h2: "clamp(56px, 2.92vw, 76px)",
-    h3: "clamp(48px, 2.5vw, 64px)",
-    h4: "clamp(44px, 2.29vw, 56px)",
-    h5: "clamp(34px, 1.77vw, 42px)",
-    h6: "clamp(28px, 1.46vw, 34px)",
-    l:  "clamp(28px, 1.46vw, 32px)",
-    m:  "clamp(22px, 1.15vw, 26px)",
-    s:  "clamp(20px, 1.04vw, 22px)",
-    xs: "16px",
-    caption: "14px",
+    h1: "var(--lh-h1)",
+    h2: "var(--lh-h2)",
+    h3: "var(--lh-h3)",
+    h4: "var(--lh-h4)",
+    h5: "var(--lh-h5)",
+    h6: "var(--lh-h6)",
+    l:  "var(--lh-l)",
+    m:  "var(--lh-m)",
+    s:  "var(--lh-s)",
+    xs: "var(--lh-xs)",
+    caption: "var(--lh-caption)",
   },
   weight: {
     regular: 400,
@@ -186,10 +185,10 @@ export const fonts = {
   // control text is static; only long-form content is fluid.
   // ──────────────────────────────────────────────────────────────────────────
   control: {
-    lg: "18px",
-    md: "16px",   // default button / input text
-    sm: "14px",   // secondary label / small button
-    xs: "12px",   // helper text / micro label
+    lg: "var(--ctrl-fs-lg)",
+    md: "var(--ctrl-fs-md)",   // default button / input text
+    sm: "var(--ctrl-fs-sm)",   // secondary label / small button
+    xs: "var(--ctrl-fs-xs)",   // helper text / micro label
   },
 };
 
@@ -251,13 +250,13 @@ export const breakpoints = {
 } as const;
 
 export const paragraphSpacing = {
-  h2: "48px",
-  h4: "44px",
-  h5: "34px",
-  l: "24px",
-  m: "22px",
-  xs: "16px",
-  caption: "14px",
+  h2: "var(--ps-h2)",
+  h4: "var(--ps-h4)",
+  h5: "var(--ps-h5)",
+  l:  "var(--ps-l)",
+  m:  "var(--ps-m)",
+  xs: "var(--ps-xs)",
+  caption: "var(--ps-caption)",
 };
 
 // ──────────────────────────────────────────────────────────────────────────────

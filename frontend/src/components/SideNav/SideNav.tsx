@@ -51,20 +51,25 @@ export function SideNav({
 }: SideNavProps) {
   const styles = {
     container: {
-      width: isExpanded ? '204px' : '95px',
+      width: isExpanded ? 'var(--sidenav-w-expanded)' : 'var(--sidenav-w-collapsed)',
       height: '100vh',
       backgroundColor: colors.active.shade300,
       display: 'flex',
       flexDirection: 'column',
-      paddingTop: '19px',
       position: 'fixed' as const,
       left: 0,
       top: 0,
       transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       zIndex: 3000,
     },
+    // Logo strip matches TopNav height (var --topnav-h) so the mark
+    // sits on the same horizontal baseline as the search bar to the right.
+    // Bottom spacer separates it from the nav items below.
     logoSection: {
-      padding: isExpanded ? '0 24px 32px 24px' : '0 0 32px 0',
+      height: 'var(--topnav-h)',
+      flexShrink: 0,
+      padding: isExpanded ? '0 24px' : '0',
+      marginBottom: '16px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: isExpanded ? 'flex-start' : 'center',
@@ -100,7 +105,8 @@ export function SideNav({
     navList: {
       display: 'flex',
       flexDirection: 'column',
-      gap: '4px',
+      // Slightly looser stack when collapsed so icon-only items breathe.
+      gap: isExpanded ? '4px' : '8px',
     }
   } as const;
 
@@ -157,9 +163,11 @@ export function SideNav({
     <div style={styles.container}>
       <div style={styles.logoSection}>
         {isExpanded ? (
-          <LogoFull style={{ width: 140, height: 42 }} />
+          // Height locked to the search-bar height so the wordmark and the
+          // header search share a baseline. Width auto preserves aspect.
+          <LogoFull style={{ height: 'var(--search-h)', width: 'auto' }} />
         ) : (
-          <LogoSmall style={{ width: 32, height: 32 }} />
+          <LogoSmall style={{ height: 'var(--search-h)', width: 'var(--search-h)' }} />
         )}
       </div>
 

@@ -23,28 +23,30 @@ export const styles: Record<string, CSSProperties> = {
     flexShrink: 0,
   },
 
-  // Button text uses STATIC control sizes (fonts.control.*) so proportions
-  // don't drift at larger viewports. See theme.ts `fonts.control` comment.
+  // Button text uses STATIC control sizes within a breakpoint, but steps
+  // down at <1440 via CSS vars (see globals.css --btn-sm-h, --btn-md-h,
+  // --btn-fs). 1440 baseline preserved: --btn-sm-h:40, --btn-md-h:42,
+  // --btn-fs:16. Below 1440: 32 / 34 / 14.
   smIcon: {
-    fontSize: fonts.control.md,
-    height: 40,
+    fontSize: "var(--btn-fs)",
+    height: "var(--btn-sm-h)",
     padding: spacing.xs
   },
 
   mdIcon: {
-    fontSize: fonts.control.md,
-    height: 42,
+    fontSize: "var(--btn-fs)",
+    height: "var(--btn-md-h)",
     padding: spacing.xs
   },
 
   sm: {
-    fontSize: fonts.control.md,
-    height: 40
+    fontSize: "var(--btn-fs)",
+    height: "var(--btn-sm-h)"
   },
 
   md: {
-    fontSize: fonts.control.md,
-    height: 42,
+    fontSize: "var(--btn-fs)",
+    height: "var(--btn-md-h)",
   },
 };
 

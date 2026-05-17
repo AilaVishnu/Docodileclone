@@ -33,7 +33,7 @@ export function PharmacyShelfView({ items, groupBy, onPick }: Props) {
             <span style={styles.shelfCount}>{g.items.length} item{g.items.length === 1 ? "" : "s"}</span>
           </div>
           <div style={styles.shelfPlank}>
-            <div style={styles.shelfRow}>
+            <div style={styles.shelfRow} className="no-scrollbar">
               {g.items.map((m) => (
                 <Tile key={m.id} med={m} onClick={() => onPick?.(m)} />
               ))}

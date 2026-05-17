@@ -29,7 +29,7 @@ export const styles: Record<string, CSSProperties> = {
     bottom: 0,
     backgroundColor: colors.active.shade200,
     zIndex: 2000,
-    padding: `40px ${fluidSpacing.outerX} ${fluidSpacing.outerY}`,
+    padding: `var(--page-pad-top) ${fluidSpacing.outerX} ${fluidSpacing.outerY}`,
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,
@@ -37,7 +37,9 @@ export const styles: Record<string, CSSProperties> = {
     // using 2xl (16) since 32 isn't on the Figma radius ladder. Ask design if
     // they want radii["3xl"] added for this.
     borderRadius: `${radii["2xl"]}px 0 0 0`,
-    overflow: "auto",
+    // Content fits at 1024 after the recent tightening — disable scroll so
+    // we don't get a stray gutter / persistent track.
+    overflow: "hidden",
   },
 
   // ─── Header (back button + centered title with doctor dropdown) ──────────
@@ -112,10 +114,11 @@ export const styles: Record<string, CSSProperties> = {
   // ─── Main 3-column grid ──────────────────────────────────────────────────
   grid: {
     display: "grid",
-    // patient | form (grows 524 → 700) | bill
-    gridTemplateColumns: "200px minmax(524px, 700px) 312px",
+    // patient | form (grows min → max) | bill — column widths var-driven
+    // so 1024 can tighten all three at once via globals.css.
+    gridTemplateColumns: "var(--book-col-left) minmax(var(--book-col-form-min), var(--book-col-form-max)) var(--book-col-right)",
     gridTemplateRows: "auto auto auto",
-    gap: spacing.m,
+    gap: "var(--book-grid-gap, 16px)",
     justifyContent: "center",
     alignItems: "stretch",
     width: "100%",
@@ -143,7 +146,8 @@ export const styles: Record<string, CSSProperties> = {
     gridRow: "1",
     alignItems: "center",
     justifyContent: "center",
-    padding: spacing.m,
+    padding: "var(--book-patient-pad, 16px)",
+    gap: "var(--book-patient-gap, 12px)",
   },
   scheduleColumn: {
     gridColumn: "1",
@@ -171,8 +175,8 @@ export const styles: Record<string, CSSProperties> = {
   // Avatar illustration shown above the Patient ID — Figma 2350:52.
   // Picked by gender + age band; updates as the user fills the form.
   patientAvatar: {
-    width: 140,
-    height: 140,
+    width: "var(--book-patient-avatar, 140px)",
+    height: "var(--book-patient-avatar, 140px)",
     objectFit: "contain" as const,
     display: "block",
   },
@@ -183,7 +187,8 @@ export const styles: Record<string, CSSProperties> = {
     gridColumn: "2",
     gridRow: "1",
     gap: spacing.m,
-    padding: `${spacing.m} ${spacing.xl}`,
+    // Bottom padding var-driven so 1024 trims the space under male/female.
+    padding: `${spacing.m} ${spacing.xl} var(--book-form-pad-bottom, 16px) ${spacing.xl}`,
   },
 
   // Appointment details — Figma: padding 24/24/24/16 (asymmetric left), gap 16
@@ -191,8 +196,10 @@ export const styles: Record<string, CSSProperties> = {
   appointmentDetailsCard: {
     gridColumn: "2",
     gridRow: "2",
-    gap: spacing.m,
-    padding: `${spacing.xl} ${spacing.xl} ${spacing.xl} ${spacing.m}`,
+    // Inter-row gap + top/bottom padding var-driven so 1024 compresses the
+    // doctor/service rhythm without touching the left/right asymmetry.
+    gap: "var(--book-details-gap, 16px)",
+    padding: `var(--book-details-pad-y, 24px) ${spacing.xl} var(--book-details-pad-y, 24px) ${spacing.m}`,
     justifyContent: "center",
     alignSelf: "start",
     minHeight: "144px",
@@ -286,7 +293,8 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: spacing.xs,
-    padding: spacing.xs,
+    // Horizontal padding fixed; vertical via var so 1024 can flatten the row.
+    padding: `var(--book-input-pady) ${spacing.xs}`,
     borderBottom: `${strokes.xs} solid ${colors.neutral300}`,
     width: "100%",
   },
@@ -328,7 +336,7 @@ export const styles: Record<string, CSSProperties> = {
   },
   input: {
     width: "100%",
-    padding: `${spacing.xs} ${spacing.s}`,
+    padding: `var(--book-input-pady) ${spacing.s}`,
     borderRadius: radii.m,
     border: `${strokes.xs} solid ${colors.neutral300}`,
     fontSize: fonts.size.m,
@@ -379,7 +387,7 @@ export const styles: Record<string, CSSProperties> = {
   },
   select: {
     width: "100%",
-    padding: `${spacing.xs} ${spacing.s}`,
+    padding: `var(--book-input-pady) ${spacing.s}`,
     borderRadius: radii.m,
     border: `${strokes.xs} solid ${colors.neutral300}`,
     fontSize: fonts.size.m,

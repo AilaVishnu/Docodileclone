@@ -23,12 +23,13 @@ export function SideNavItem({ label, icon, active, onClick, isExpanded, trailing
 
   const styles = {
     container: {
+      position: 'relative' as const, // anchor for the collapsed-mode tooltip
       display: 'flex',
       flexDirection: isExpanded ? 'row' : 'column',
       alignItems: 'center',
       justifyContent: isExpanded ? 'flex-start' : 'center',
       gap: isExpanded ? '12px' : '4px',
-      padding: isExpanded ? '12px 16px' : '8px 4px',
+      padding: isExpanded ? 'var(--sidenav-item-pady) 16px' : '8px 4px',
       cursor: 'pointer',
       backgroundColor: getBackgroundColor(),
       borderTopLeftRadius: isExpanded ? '12px' : '8px', // Slightly smaller for collapsed
@@ -38,6 +39,26 @@ export function SideNavItem({ label, icon, active, onClick, isExpanded, trailing
       width: isExpanded ? 'calc(100% - 12px)' : 'calc(100% - 8px)',
       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       textAlign: isExpanded ? 'left' : 'center' as const,
+    },
+    // Floating bubble shown to the right of the item in collapsed mode.
+    // Replaces the browser's slow native title attribute.
+    tooltip: {
+      position: 'absolute' as const,
+      left: '100%',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      marginLeft: 12,
+      padding: '6px 10px',
+      backgroundColor: colors.neutral900,
+      color: colors.neutral100,
+      fontFamily: fonts.family.primary,
+      fontSize: fonts.control.xs,
+      fontWeight: fonts.weight.medium,
+      borderRadius: 6,
+      whiteSpace: 'nowrap' as const,
+      pointerEvents: 'none' as const,
+      boxShadow: '0 4px 10px rgba(0,0,0,0.12)',
+      zIndex: 3100,
     },
     label: {
       textAlign: isExpanded ? 'left' : 'center' as const,
@@ -53,12 +74,11 @@ export function SideNavItem({ label, icon, active, onClick, isExpanded, trailing
   } as const;
 
   return (
-    <div 
-      style={styles.container} 
+    <div
+      style={styles.container}
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      title={!isExpanded ? label : undefined}
     >
       <div style={{
         display: 'flex',
@@ -68,12 +88,13 @@ export function SideNavItem({ label, icon, active, onClick, isExpanded, trailing
       }}>
         {icon}
       </div>
-      <span style={styles.label}>{label}</span>
+      {isExpanded && <span style={styles.label}>{label}</span>}
       {trailing && isExpanded && (
         <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0, color: colors.neutral700 }}>
           {trailing}
         </span>
       )}
+      {!isExpanded && hovered && <span style={styles.tooltip}>{label}</span>}
     </div>
   );
 }

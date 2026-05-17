@@ -125,11 +125,211 @@ body {
   --home-memo-min: 640px;
   --home-cal-w: 352px;
   --home-grid-gap: 40px;
+
+  /* Universal search-bar primitives (TopNav + page-level search bars) */
+  --search-h: 40px;
+  --search-icon: 20px;
+  --search-fs: 16px;
+
+  /* Universal Button primitives (sm / md sizes used app-wide) */
+  --btn-sm-h: 40px;
+  --btn-md-h: 42px;
+  --btn-fs: 16px;
+
+  /* TopNav (header chrome) — baseline at 1440 */
+  --topnav-h: 70px;
+  --topnav-search-min: 200px;
+  --topnav-search-ideal: 30vw;
+  --topnav-search-max: 364px;
+  --topnav-cta-padx: 16px;
+  --topnav-cta-icon: 16px;
+  --topnav-iconbtn: 48px;
+  --topnav-avatar: 48px;
+
+  /* SideNav width (logo height tracks --search-h) */
+  --sidenav-w-expanded: 204px;
+  --sidenav-w-collapsed: 95px;
+  --sidenav-item-pady: 12px;
+
+  /* mainContent outer padding (applied in HomePage). The top value sets the
+     space above every module's <h1> title (Hello Admin / Pharmacy / etc.). */
+  --page-pad-top: 40px;
+  --page-pad-x: 40px;
+  --page-pad-bottom: 24px;
+
+  /* ─── Type scale ────────────────────────────────────────────────────
+     Source of truth for every text token in theme.ts. Baseline values
+     match the 1440 design (clamps preserve fluid grow above 1920).
+     1024 tier (media query below) holds one-rung-down compact sizes. */
+  --fs-h1: clamp(60px, 3.125vw, 80px);
+  --fs-h2: clamp(48px, 2.5vw, 64px);
+  --fs-h3: clamp(40px, 2.08vw, 52px);
+  --fs-h4: clamp(32px, 1.67vw, 42px);
+  --fs-h5: clamp(24px, 1.25vw, 30px);
+  --fs-h6: clamp(20px, 1.04vw, 24px);
+  --fs-l:  clamp(20px, 1.04vw, 24px);
+  --fs-m:  clamp(16px, 0.83vw, 18px);
+  --fs-s:  clamp(14px, 0.73vw, 16px);
+  --fs-xs: 12px;
+  --fs-caption: 10px;
+
+  --lh-h1: clamp(72px, 3.75vw, 96px);
+  --lh-h2: clamp(56px, 2.92vw, 76px);
+  --lh-h3: clamp(48px, 2.5vw, 64px);
+  --lh-h4: clamp(44px, 2.29vw, 56px);
+  --lh-h5: clamp(34px, 1.77vw, 42px);
+  --lh-h6: clamp(28px, 1.46vw, 34px);
+  --lh-l:  clamp(28px, 1.46vw, 32px);
+  --lh-m:  clamp(22px, 1.15vw, 26px);
+  --lh-s:  clamp(20px, 1.04vw, 22px);
+  --lh-xs: 16px;
+  --lh-caption: 14px;
+
+  --ctrl-fs-lg: 18px;
+  --ctrl-fs-md: 16px;
+  --ctrl-fs-sm: 14px;
+  --ctrl-fs-xs: 12px;
+
+  --ps-h2: 48px;
+  --ps-h4: 44px;
+  --ps-h5: 34px;
+  --ps-l:  24px;
+  --ps-m:  22px;
+  --ps-xs: 16px;
+  --ps-caption: 14px;
+
+  /* Home page scaling knobs (1024-only step-downs) */
+  --home-memo-scale: 1;
+  --home-cal-scale: 1;
+  --home-clock-scale: 1;
+  --home-clock-mr: 0px;
+  --home-computer-w: 480px;
+  --home-computer-fs: clamp(10px, 1.05vw, 14px);
+  --home-desk-front-h: 84px;
+  --home-desk-left-gap: 40px;
+  --home-cal-graphic-padtop: 32px;
+  --home-cal-graphic-padbottom: 20px;
+  --home-cal-graphic-minh: 132px;
+  --home-cal-month-fs: clamp(40px, 2.08vw, 52px); /* matches fonts.size.h3 */
+  --home-cal-graphic-dir: column;
+  --home-cal-graphic-gap: 2px;
+
+  /* New Appointment (BookAppointment) — column widths + input padding */
+  --book-col-left: 200px;
+  --book-col-form-min: 524px;
+  --book-col-form-max: 700px;
+  --book-col-right: 312px;
+  --book-input-pady: 8px;
+  --book-grid-gap: 16px;
+  --book-form-pad-bottom: 16px;
+  --book-patient-pad: 16px;
+  --book-patient-gap: 12px;
+  --book-patient-avatar: 140px;
+  --book-details-pad-y: 24px;
+  --book-details-gap: 16px;
 }
 @media (max-width: 1439.98px) {
   :root {
     --home-memo-min: 0px;
     --home-cal-w: 280px;
     --home-grid-gap: 24px;
+
+    /* Compact (1024 → <1440): search bars + buttons step down */
+    --search-h: 32px;
+    --search-icon: 16px;
+    --search-fs: 14px;
+
+    --btn-sm-h: 32px;
+    --btn-md-h: 34px;
+    --btn-fs: 14px;
+
+    /* Header chrome */
+    --topnav-h: 56px;
+    --topnav-search-min: 160px;
+    --topnav-search-ideal: 26vw;
+    --topnav-search-max: 280px;
+    --topnav-cta-padx: 12px;
+    --topnav-cta-icon: 14px;
+    --topnav-iconbtn: 40px;
+    --topnav-avatar: 40px;
+
+    /* Icon-only collapsed sidebar at 1024 (no caption labels) */
+    --sidenav-w-collapsed: 68px;
+    /* Manually-expanded sidebar at 1024 is tighter than baseline */
+    --sidenav-w-expanded: 180px;
+    --sidenav-item-pady: 10px;
+
+    /* Tighter top breathing room above the page title at 1024 */
+    --page-pad-top: 20px;
+
+    /* ─── Compact type scale at 1024 ──────────────────────────────────
+       Headings step one rung down, body shrinks 1–2 px, xs/caption hold
+       at their accessibility floor. */
+    --fs-h1: 48px;
+    --fs-h2: 40px;
+    --fs-h3: 32px;
+    --fs-h4: 26px;
+    --fs-h5: 20px;
+    --fs-h6: 18px;
+    --fs-l:  18px;
+    --fs-m:  14px;
+    --fs-s:  13px;
+    /* --fs-xs (12px) and --fs-caption (10px) hold */
+
+    --lh-h1: 60px;
+    --lh-h2: 48px;
+    --lh-h3: 40px;
+    --lh-h4: 36px;
+    --lh-h5: 28px;
+    --lh-h6: 24px;
+    --lh-l:  24px;
+    --lh-m:  20px;
+    --lh-s:  18px;
+    /* --lh-xs / --lh-caption hold */
+
+    --ctrl-fs-lg: 16px;
+    --ctrl-fs-md: 14px;
+    --ctrl-fs-sm: 13px;
+    /* --ctrl-fs-xs holds at 12px */
+
+    --ps-h2: 40px;
+    --ps-h4: 36px;
+    --ps-h5: 28px;
+    --ps-l:  20px;
+    --ps-m:  18px;
+    --ps-xs: 14px;
+    --ps-caption: 12px;
+
+    /* Home page step-downs at 1024 */
+    --home-memo-scale: 0.8;     /* MemoBoard at 80% */
+    --home-cal-scale: 0.8;      /* MyHoursCalendar at 80% */
+    --home-clock-scale: 0.7;    /* DeskClock at 70% */
+    --home-clock-mr: 32px;      /* Pull clock left, away from the right edge */
+    --home-computer-w: 324px;   /* Computer at 67.5% (480 → 324) */
+    --home-computer-fs: 14px;   /* Stat type held at 14px (no shrink) */
+    --home-desk-front-h: 21px;  /* Desk-front strip trimmed to ~1/4 */
+    --home-desk-left-gap: 24px; /* Tighter gap between papers and computer */
+    --home-grid-gap: 16px;      /* Memo + calendar sit closer together */
+    --home-cal-scale: 0.84;             /* +5% on the previous 0.8 */
+    --home-cal-graphic-padtop: 12px;    /* A touch of air above "May 2026" */
+    --home-cal-graphic-padbottom: 10px; /* …and matching below */
+    --home-cal-graphic-minh: 0px;       /* Drop the 132px floor so padding rules */
+    --home-cal-month-fs: 20px;          /* Match "2026" size */
+    --home-cal-graphic-dir: row;        /* Month + year side-by-side */
+    --home-cal-graphic-gap: 8px;        /* Comfortable space between them */
+
+    /* New Appointment — tighter columns + slimmer input boxes */
+    --book-col-left: 180px;
+    --book-col-form-min: 460px;
+    --book-col-form-max: 600px;
+    --book-col-right: 280px;
+    --book-input-pady: 4px;
+    --book-grid-gap: 10px;             /* tighter spacing between blocks */
+    --book-form-pad-bottom: 8px;       /* less air below male/female */
+    --book-patient-pad: 8px;           /* slimmer patient card padding */
+    --book-patient-gap: 4px;           /* avatar sits closer to T001 */
+    --book-patient-avatar: 96px;       /* smaller avatar so card height shrinks */
+    --book-details-pad-y: 12px;        /* doctor/service top+bottom tightened */
+    --book-details-gap: 8px;           /* doctor & service rows closer */
   }
 }

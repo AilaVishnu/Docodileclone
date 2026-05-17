@@ -38,7 +38,7 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     width: "100%",
     maxWidth: 360,
-    height: 40,
+    height: "var(--search-h)",
     gap: 12,
     padding: "0 16px",
     borderRadius: 55,
@@ -47,8 +47,8 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   searchIcon: {
-    width: 20,
-    height: 20,
+    width: "var(--search-icon)",
+    height: "var(--search-icon)",
     color: colors.neutral400,
     flexShrink: 0,
   },
@@ -60,7 +60,7 @@ export const styles: Record<string, CSSProperties> = {
     outline: "none",
     background: "transparent",
     fontFamily: fonts.family.primary,
-    fontSize: fonts.control.md,
+    fontSize: "var(--search-fs)",
     color: colors.neutral900,
   },
 

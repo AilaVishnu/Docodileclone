@@ -171,13 +171,17 @@ function Computer({ stats }: { stats: Stats }) {
   return (
     <div className="docodile-computer" style={styles.computerWrap}>
       <ComputerSvg />
+      {/* Two-column grid: [label + dots] [value]. The auto-sized value column
+          is shared across all rows, so every number sits at the same X. */}
       <div style={styles.screenOverlay}>
         {rows.map(([label, value]) => (
-          <div key={label} style={styles.statLine}>
-            <span style={styles.statLabel}>{label}</span>
-            <span style={styles.statDots} aria-hidden />
+          <React.Fragment key={label}>
+            <span style={styles.labelDots}>
+              <span style={styles.statLabel}>{label}</span>
+              <span style={styles.statDots} aria-hidden />
+            </span>
             <span style={styles.statValue}>{value}</span>
-          </div>
+          </React.Fragment>
         ))}
       </div>
     </div>
@@ -279,11 +283,19 @@ const styles: Record<string, React.CSSProperties> = {
   },
   memoSlot: {
     minWidth: 0,
-    width: "100%",
+    // Width is pre-divided by the scale so the visible board fills the
+    // grid column after shrinking (e.g. scale 0.8 → width 125%, visual 100%).
+    // At baseline scale=1, width=100% (no-op).
+    width: "calc(100% / var(--home-memo-scale, 1))",
+    transform: "scale(var(--home-memo-scale, 1))",
+    transformOrigin: "top left",
   },
   calendarSlot: {
     minWidth: 0,
     paddingTop: spacing.xs,
+    // Anchored top-right so the calendar hugs the column's right edge.
+    transform: "scale(var(--home-cal-scale, 1))",
+    transformOrigin: "top right",
   },
 
   // ─── Full-width desk band absolutely pinned to the bottom of the viewport ───
@@ -300,7 +312,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: "column",
   },
   deskFront: {
-    height: 84,
+    height: "var(--home-desk-front-h, 84px)",
     backgroundColor: colors.primary400, // #EDCA99
   },
   deskItems: {
@@ -314,7 +326,7 @@ const styles: Record<string, React.CSSProperties> = {
   deskLeftGroup: {
     display: "flex",
     alignItems: "flex-end",
-    gap: spacing["3xl"],
+    gap: "var(--home-desk-left-gap, 40px)",
     minWidth: 0,
   },
   papersSlot: {
@@ -331,11 +343,15 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     justifyContent: "center",
     alignItems: "flex-end",
+    marginRight: "var(--home-clock-mr, 0px)",
   },
   deskClockWrap: {
     position: "relative",
     width: 140,
     height: 167,
+    // Scaled anchored at bottom-center so it stays sitting on the desk.
+    transform: "scale(var(--home-clock-scale, 1))",
+    transformOrigin: "bottom center",
   },
   deskClockBody: {
     display: "block",
@@ -375,7 +391,7 @@ const styles: Record<string, React.CSSProperties> = {
   // ─── Computer ───────────────────────────────────────────────────────────────
   computerWrap: {
     position: "relative",
-    width: 480,
+    width: "var(--home-computer-w, 480px)",
     flexShrink: 0,
   },
   screenOverlay: {
@@ -386,18 +402,26 @@ const styles: Record<string, React.CSSProperties> = {
     height: `${SCREEN_HEIGHT_PCT}%`,
     padding: "12% 8%",
     boxSizing: "border-box",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    gap: "6%",
+    // 2-col grid: [label + dots] auto-sized, [value] auto-sized.
+    // alignContent:center vertically centers the rows inside the screen.
+    display: "grid",
+    gridTemplateColumns: "1fr auto",
+    columnGap: 8,
+    rowGap: "6%",
+    alignContent: "center",
+    alignItems: "baseline",
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
     color: colors.neutral900,
+    // Var lets us hold a fixed size at 1024 while the computer shrinks.
+    fontSize: "var(--home-computer-fs, clamp(10px, 1.05vw, 14px))",
   },
-  statLine: {
+  // Wraps label + dots so they live in one grid cell and the dots stretch
+  // to fill the remaining horizontal space before the value column.
+  labelDots: {
     display: "flex",
     alignItems: "baseline",
     gap: 6,
-    fontSize: "clamp(10px, 1.05vw, 14px)",
+    minWidth: 0,
   },
   statLabel: {
     whiteSpace: "nowrap",
@@ -409,7 +433,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   statValue: {
     fontWeight: 700,
-    minWidth: 20,
     textAlign: "right",
   },
 };
