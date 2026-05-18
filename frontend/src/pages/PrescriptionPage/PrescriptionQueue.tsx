@@ -8,9 +8,20 @@ import { loadStartedSet } from "../../utils/sessionStarted";
 import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { ReactComponent as RestartIcon } from "../../assets/icons/restart-24.svg";
+import { ReactComponent as StarIcon } from "../../assets/icons/star.svg";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { styles } from "./PrescriptionQueue.styles";
 import { Toast } from "../../components/Toast";
+
+// Pick the icon that fits the appointment type. New patient = filled
+// star (first-time visit); everything else (Review, follow-up) uses
+// the restart/refresh glyph to signal a repeat.
+function TypeIcon({ type }: { type: string | null | undefined }) {
+  const isNew = (type ?? "").trim().toLowerCase() === "new";
+  return isNew
+    ? <StarIcon width={18} height={18} />
+    : <RestartIcon width={18} height={18} />;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal landing of the Prescription page — Figma 2282:17378.
@@ -356,7 +367,7 @@ function PatientCard({
             label="Type"
             value={
               <span style={styles.typeRow}>
-                <RestartIcon width={18} height={18} />
+                <TypeIcon type={apt.type} />
                 {apt.type ?? "—"}
               </span>
             }
@@ -483,7 +494,7 @@ function PatientListTable({
                 </td>
                 <td style={{ ...styles.td, textAlign: "center" }}>
                   <span style={styles.typeRow}>
-                    <RestartIcon width={18} height={18} />
+                    <TypeIcon type={apt.type} />
                     {apt.type ?? "—"}
                   </span>
                 </td>
