@@ -323,6 +323,34 @@ const todayIso = (): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+// Total units to dispense for one Rx row:
+//   qty = ceil( units/dose × doses/day × days )
+// Returns null when any input is missing or unparseable (SOS, "As
+// directed", fractional dose with no clear duration) so the printed Rx
+// can simply show a blank Total column. Mirrors the formula used by
+// AppointmentQueue's Bill Medicines auto-quantity so the printed Rx and
+// the dispensary bill stay consistent.
+const computeRxTotal = (dosage?: string | null, frequency?: string | null, duration?: string | null): number | null => {
+  const dosageMatch = (dosage ?? "").match(/([\d.]+)/);
+  const unitsPerDose = dosageMatch ? parseFloat(dosageMatch[1]) : 1;
+  const dosesPerDay = (frequency ?? "")
+    .split(/[-+,/\s]+/)
+    .map((p) => parseInt(p, 10))
+    .filter((n) => Number.isFinite(n))
+    .reduce((a, b) => a + b, 0);
+  const d = (duration ?? "").match(/(\d+)\s*(day|week|month|year|d|w|m|y)?/i);
+  if (!d) return null;
+  const n = parseInt(d[1], 10);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const unit = (d[2] ?? "day").toLowerCase();
+  const days = unit.startsWith("w") ? n * 7
+    : (unit.startsWith("mon") || unit === "m") ? n * 30
+    : unit.startsWith("y") ? n * 365
+    : n;
+  if (!dosesPerDay || !Number.isFinite(unitsPerDose) || unitsPerDose <= 0) return null;
+  return Math.ceil(unitsPerDose * dosesPerDay * days);
+};
+
 // Format the secondary line of the patient identity card. Shape:
 // "(M|25)  9876543210" — gender shortened to M/F if needed; phone trailing.
 // Falls back gracefully when fields are missing.
@@ -1401,6 +1429,11 @@ export function PrescriptionPage() {
         frequency: r.frequency ?? null,
         duration: r.duration ?? null,
         notes: r.notes ?? null,
+        // Total units to dispense — mirrors the Bill Medicines modal's
+        // auto-quantity so the printed Rx and the dispensary bill stay
+        // consistent. Returns null when any field is unparseable (SOS,
+        // "As directed") and the column shows blank.
+        totalQty: computeRxTotal(r.dosage, r.frequency, r.duration),
       })),
       reviewDate: reviewDate ? `${reviewDate.getFullYear()}-${String(reviewDate.getMonth() + 1).padStart(2, "0")}-${String(reviewDate.getDate()).padStart(2, "0")}` : null,
       reviewNotes: reviewNotesValue,

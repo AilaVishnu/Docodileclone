@@ -30,6 +30,10 @@ export type PrintRxRow = {
   frequency?: string | null;
   duration?: string | null;
   notes?: string | null;
+  // Total units to dispense for this Rx row — units/dose × doses/day ×
+  // days. Computed by the caller (same formula the Bill Medicines modal
+  // uses) so the printed prescription matches the dispensary count.
+  totalQty?: number | null;
 };
 
 export type PrintVisitData = {
@@ -180,23 +184,30 @@ function renderBody(t: PrintTemplate, data: PrintVisitData): string {
         return med;
       };
 
+      // Pretty total — "10 tabs" if numeric, blank otherwise so the
+      // column / suffix stays clean when the qty couldn't be computed
+      // (SOS, "As directed", missing fields).
+      const totalLabel = (r: PrintRxRow): string =>
+        r.totalQty != null && r.totalQty > 0 ? `${r.totalQty}` : "";
+
       if (t.rxLayout === "tabular") {
         sections.push(`
           <section class="block rx">
             <div class="block-label rx-label">℞ Prescription</div>
             <table class="rx-table">
               <colgroup>
-                <col style="width: 5%"/>
-                <col style="width: 28%"/>
-                <col style="width: 12%"/>
+                <col style="width: 4%"/>
+                <col style="width: 26%"/>
                 <col style="width: 11%"/>
-                <col style="width: 14%"/>
-                <col style="width: 12%"/>
+                <col style="width: 10%"/>
+                <col style="width: 13%"/>
+                <col style="width: 11%"/>
+                <col style="width: 7%"/>
                 <col style="width: 18%"/>
               </colgroup>
               <thead>
                 <tr>
-                  <th>#</th><th>Medicine</th><th>Dosage</th><th>When</th><th>Frequency</th><th>Duration</th><th>Notes</th>
+                  <th>#</th><th>Medicine</th><th>Dosage</th><th>When</th><th>Frequency</th><th>Duration</th><th>Total</th><th>Notes</th>
                 </tr>
               </thead>
               <tbody>
@@ -210,6 +221,7 @@ function renderBody(t: PrintTemplate, data: PrintVisitData): string {
                     <td>${esc(r.whenToTake)}</td>
                     <td>${esc(r.frequency)}</td>
                     <td>${esc(r.duration)}</td>
+                    <td>${esc(totalLabel(r))}</td>
                     <td>${esc(r.notes)}</td>
                   </tr>`,
                   )
@@ -227,7 +239,7 @@ function renderBody(t: PrintTemplate, data: PrintVisitData): string {
                 .map(
                   (r) => `
                 <li>
-                  <div class="rx-line-1"><strong>${medicineLabel(r)}</strong>${r.dosage ? ` — ${esc(r.dosage)}` : ""}</div>
+                  <div class="rx-line-1"><strong>${medicineLabel(r)}</strong>${r.dosage ? ` — ${esc(r.dosage)}` : ""}${totalLabel(r) ? ` <span class="rx-total">× ${esc(totalLabel(r))}</span>` : ""}</div>
                   <div class="rx-line-2">
                     ${[r.whenToTake, r.frequency, r.duration].filter(Boolean).map((p) => `<span>${esc(p as string)}</span>`).join(" · ")}
                   </div>

@@ -134,6 +134,34 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
       setBillingMedicines([]);
       return;
     }
+    // Derive the dispensary quantity from the prescription itself so the
+    // receptionist doesn't have to mentally compute
+    // (units/dose × doses/day × days). Falls back to 1 when any field is
+    // missing or non-numeric (e.g. SOS, "As directed").
+    const parseDurationDays = (d?: string): number | null => {
+      if (!d) return null;
+      const m = d.match(/(\d+)\s*(day|week|month|year|d|w|m|y)?/i);
+      if (!m) return null;
+      const n = parseInt(m[1], 10);
+      if (!Number.isFinite(n) || n <= 0) return null;
+      const unit = (m[2] ?? "day").toLowerCase();
+      if (unit.startsWith("w")) return n * 7;
+      if (unit.startsWith("mon") || unit === "m") return n * 30;
+      if (unit.startsWith("y")) return n * 365;
+      return n; // days / unknown unit
+    };
+    const computeQty = (dosage?: string, frequency?: string, duration?: string): number | null => {
+      const dosageMatch = (dosage ?? "").match(/([\d.]+)/);
+      const unitsPerDose = dosageMatch ? parseFloat(dosageMatch[1]) : 1;
+      const dosesPerDay = (frequency ?? "")
+        .split(/[-+,/\s]+/)
+        .map((p) => parseInt(p, 10))
+        .filter((n) => Number.isFinite(n))
+        .reduce((a, b) => a + b, 0);
+      const days = parseDurationDays(duration);
+      if (!dosesPerDay || !days || !Number.isFinite(unitsPerDose) || unitsPerDose <= 0) return null;
+      return Math.ceil(unitsPerDose * dosesPerDay * days);
+    };
     const patientId = medsBillingApt.patientId;
     setBillingLoading(true);
     const token = localStorage.getItem("docodile_token");
@@ -160,7 +188,10 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               // editable price field for that row.
               unitPrice: stocked ?? 0,
               inStock: stocked != null,
-              qty: 1,
+              // qty = units/dose × doses/day × days, ceiling to a whole
+              // unit. The receptionist can still bump up/down in the
+              // modal if the doctor wrote SOS or fractional doses.
+              qty: computeQty(p.dosage, p.frequency, p.duration) ?? 1,
             };
           });
         setBillingMedicines(rows);
