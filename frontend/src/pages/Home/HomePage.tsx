@@ -60,7 +60,10 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   };
 
   const handleNewAppointment = () => {
-    if (isBooking || isEditing) {
+    // Only gate on isBooking — the "Current booking data will be discarded"
+    // message only makes sense when a new-booking form is open. isEditing
+    // tracks the Edit Appointment modal which has its own discard flow.
+    if (isBooking) {
       setShowConfirm(true);
       return;
     }
@@ -79,6 +82,15 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
 
   useEffect(() => {
     document.title = `Docodile | ${activeTab}`;
+    // Leaving the Appointments tab implicitly closes any open booking /
+    // edit flow. Without this reset, navigating to another section while
+    // the booking form is open leaves isBooking=true stuck on — the next
+    // "+ New Appointment" click then triggers a phantom discard prompt
+    // even though no form is visible.
+    if (activeTab !== "Appointments") {
+      setIsBooking(false);
+      setIsEditing(false);
+    }
   }, [activeTab]);
 
   const styles = {
