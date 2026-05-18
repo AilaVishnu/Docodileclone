@@ -138,6 +138,48 @@ class PharmacyStockController(
         return ResponseEntity.noContent().build()
     }
 
+    /**
+     * Bulk deduction triggered by the Bill Medicines flow. For each item in
+     * the request, finds matching pharmacy_stock rows (case-insensitive name
+     * match, this clinic only) and decrements units across batches in
+     * earliest-expiry-first order. Batches are never overdrawn — if the
+     * caller requested more units than the clinic has, only what's
+     * available is deducted and the row's resulting count is reported.
+     */
+    @PostMapping("/deduct")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
+    @Transactional
+    fun deduct(@RequestBody items: List<DeductItem>): DeductResult {
+        val clinicId = currentUser.clinicId()
+        val all = repo.findAllByClinicIdOrderByNameAsc(clinicId)
+        // Group by lowercase name so multiple batches of the same med are
+        // bundled. Earliest-expiry-first dispensing rotates stock naturally
+        // and avoids leaving short-dated batches behind.
+        val byName = all.groupBy { it.name.trim().lowercase() }
+        val applied = mutableListOf<DeductedItem>()
+        val missing = mutableListOf<String>()
+        for (it in items) {
+            val key = it.name.trim().lowercase()
+            if (key.isEmpty() || it.qty <= 0) continue
+            val batches = byName[key]?.sortedBy { b -> b.expiry } ?: emptyList()
+            if (batches.isEmpty()) { missing += it.name; continue }
+            var remaining = it.qty
+            var deducted = 0
+            for (b in batches) {
+                if (remaining <= 0) break
+                val take = minOf(b.unitsInStock, remaining)
+                if (take <= 0) continue
+                b.unitsInStock -= take
+                b.updatedAt = Instant.now()
+                repo.save(b)
+                remaining -= take
+                deducted += take
+            }
+            applied += DeductedItem(name = it.name, requested = it.qty, deducted = deducted)
+        }
+        return DeductResult(applied = applied, missing = missing)
+    }
+
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgument(e: IllegalArgumentException): ResponseEntity<Map<String, String>> {
         return ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
@@ -178,3 +220,9 @@ data class PharmacyStockRequest(
 )
 
 data class BulkResult(val created: Int, val updated: Int, val skipped: Int)
+
+data class DeductItem(val name: String = "", val qty: Int = 0)
+
+data class DeductedItem(val name: String, val requested: Int, val deducted: Int)
+
+data class DeductResult(val applied: List<DeductedItem>, val missing: List<String>)

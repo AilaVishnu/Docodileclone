@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Tabs, TabItem } from "../Tabs";
 import { QueueTable, Appointment } from "./QueueTable";
 import { styles } from "./AppointmentQueue.styles";
@@ -12,6 +12,7 @@ import { Toast } from "../Toast";
 import { Button } from "../Button";
 import { confirmStyles } from "../AddStaffModal/AddStaffModal.styles";
 import { API_BASE_URL } from "../../apiConfig";
+import { listPharmacyStock, deductPharmacyStock } from "../../api/pharmacy";
 
 type Doctor = {
   id: string;
@@ -48,6 +49,37 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
   const [medsBillingApt, setMedsBillingApt] = useState<Appointment | null>(null);
   const [billingMedicines, setBillingMedicines] = useState<BillingMedicine[]>([]);
   const [billingLoading, setBillingLoading] = useState(false);
+  // Clinic pharmacy inventory — drives both the unit prices used when
+  // seeding the bill from a prescription and the "Add medicine" catalog
+  // dropdown. Fetched once on mount; cheap (a few hundred SKUs at most)
+  // and the bill modal opens often enough that pre-fetching is a win.
+  const [pharmacyStock, setPharmacyStock] = useState<{ id: string; name: string; unitPrice: number }[]>([]);
+  useEffect(() => {
+    listPharmacyStock()
+      .then((meds) => {
+        // Collapse multiple batches of the same medicine name into one
+        // catalog row — pick the lowest in-stock unit price so the bill
+        // never overcharges for a med the clinic has cheaper batches of.
+        const byName = new Map<string, { id: string; name: string; unitPrice: number }>();
+        for (const m of meds) {
+          const key = m.name.trim().toLowerCase();
+          if (!key) continue;
+          const existing = byName.get(key);
+          if (!existing || m.unitPrice < existing.unitPrice) {
+            byName.set(key, { id: m.id, name: m.name.trim(), unitPrice: m.unitPrice });
+          }
+        }
+        setPharmacyStock(Array.from(byName.values()));
+      })
+      .catch(() => setPharmacyStock([]));
+  }, []);
+  // Lookup map keyed by lowercase med name. Used to attach a unit price
+  // when seeding billing rows from a prescription that has no price.
+  const priceByName = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const p of pharmacyStock) m.set(p.name.toLowerCase(), p.unitPrice);
+    return m;
+  }, [pharmacyStock]);
 
   const doStatusChange = async (aptId: string, newStatus: string) => {
     const token = localStorage.getItem("docodile_token");
@@ -114,18 +146,28 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
         const latest = visits[visits.length - 1];
         const rows: BillingMedicine[] = (latest?.prescriptions ?? [])
           .filter((p: any) => p.medicine)
-          .map((p: any, i: number) => ({
-            id: p.id ?? `rx-${i}`,
-            name: p.medicine as string,
-            dosage: [p.dosage, p.frequency, p.duration].filter(Boolean).join(" · ") || undefined,
-            unitPrice: 0,
-            qty: 1,
-          }));
+          .map((p: any, i: number) => {
+            const name = p.medicine as string;
+            const stocked = priceByName.get(name.trim().toLowerCase());
+            return {
+              id: p.id ?? `rx-${i}`,
+              name,
+              dosage: [p.dosage, p.frequency, p.duration].filter(Boolean).join(" · ") || undefined,
+              // Look up the clinic's pharmacy unit price by name. Falls
+              // back to 0 for prescribed meds the clinic doesn't stock
+              // (doctor / pharmacy can override in the modal). inStock
+              // drives the modal's "not in inventory" highlight + the
+              // editable price field for that row.
+              unitPrice: stocked ?? 0,
+              inStock: stocked != null,
+              qty: 1,
+            };
+          });
         setBillingMedicines(rows);
       })
       .catch(() => setBillingMedicines([]))
       .finally(() => setBillingLoading(false));
-  }, [medsBillingApt]);
+  }, [medsBillingApt, priceByName]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -441,16 +483,54 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
       <BillMedicinesModal
         isOpen={!!medsBillingApt}
         onClose={() => setMedsBillingApt(null)}
-        onBilled={(method, total) => {
+        onBilled={(method, total, billedItems) => {
           const inr = total.toLocaleString("en-IN", { minimumFractionDigits: 2 });
-          const msg = method === "Waive"
+          const baseMsg = method === "Waive"
             ? `Bill waived for ${medsBillingApt?.patientName}`
             : `₹${inr} billed via ${method} for ${medsBillingApt?.patientName}`;
-          setToastMessage(msg);
+          // Only deduct meds the clinic actually stocks — out-of-stock
+          // items have no inventory row to touch. Waived bills still
+          // deduct (the meds were dispensed, just not charged).
+          const toDeduct = billedItems.filter((b) => b.inStock && b.qty > 0).map((b) => ({ name: b.name, qty: b.qty }));
+          if (toDeduct.length === 0) {
+            setToastMessage(baseMsg);
+            return;
+          }
+          deductPharmacyStock(toDeduct)
+            .then((result) => {
+              // Refresh the local catalog so the next bill modal sees
+              // the updated stock counts without a page reload.
+              listPharmacyStock().then((meds) => {
+                const byName = new Map<string, { id: string; name: string; unitPrice: number }>();
+                for (const m of meds) {
+                  const key = m.name.trim().toLowerCase();
+                  if (!key) continue;
+                  const existing = byName.get(key);
+                  if (!existing || m.unitPrice < existing.unitPrice) {
+                    byName.set(key, { id: m.id, name: m.name.trim(), unitPrice: m.unitPrice });
+                  }
+                }
+                setPharmacyStock(Array.from(byName.values()));
+              }).catch(() => {});
+              const shortFills = result.applied.filter((a) => a.deducted < a.requested);
+              if (shortFills.length > 0) {
+                const names = shortFills.map((s) => `${s.name} (${s.deducted}/${s.requested})`).join(", ");
+                setToastMessage(`${baseMsg} · Short stock on: ${names}`);
+              } else {
+                setToastMessage(`${baseMsg} · Inventory updated`);
+              }
+            })
+            .catch((err) => {
+              setToastMessage(`${baseMsg} · Inventory deduction failed: ${(err as Error).message}`);
+            });
         }}
         patientName={medsBillingApt?.patientName || ""}
         medicines={billingMedicines}
         loading={billingLoading}
+        // Use this clinic's pharmacy inventory as the Add-medicine
+        // catalog so prices match what the dispensary actually stocks.
+        // Falls back to the modal's hardcoded default when empty.
+        catalog={pharmacyStock.length > 0 ? pharmacyStock : undefined}
         pendingDue={medsBillingApt?.payStatus === "DUE" ? (medsBillingApt.fee ?? 500) : 0}
       />
     </div>

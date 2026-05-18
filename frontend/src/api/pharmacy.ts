@@ -124,6 +124,26 @@ export async function deletePharmacyStock(id: string): Promise<void> {
   if (!res.ok) throw new Error(await readError(res));
 }
 
+export type DeductResult = {
+  applied: { name: string; requested: number; deducted: number }[];
+  missing: string[];
+};
+
+// Bulk-deduct units from this clinic's pharmacy stock — called after a
+// bill is committed so the shelf count stays in sync with what was
+// dispensed. The backend matches by name (case-insensitive) and walks
+// batches earliest-expiry-first; partial fills are reported in the
+// `applied` array so the caller can surface a "short-stock" warning.
+export async function deductPharmacyStock(items: { name: string; qty: number }[]): Promise<DeductResult> {
+  const res = await fetch(`${API_BASE_URL}/api/tenant/pharmacy-stock/deduct`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(items),
+  });
+  if (!res.ok) throw new Error(await readError(res));
+  return res.json();
+}
+
 // ── CSV parser ──────────────────────────────────────────────────────────────
 
 const MONTH_TO_NUM: Record<string, string> = {
