@@ -169,12 +169,26 @@ class StatsController(
                 && !created.isAfter(end.toInstant(ZoneOffset.UTC))
         }
 
+        // Classify by SERVICE, not type. Appointment.type means "new
+        // patient vs review patient" — a procedure booking still carries
+        // type=new, so the old logic miscounted procedures as consults.
+        // Walk-ins remain their own bucket; among the rest, the service
+        // name decides:
+        //   • empty / "consultation" / shortform "C"  → consultation
+        //   • "review"                                 → review
+        //   • anything else                            → procedure
+        fun isConsultService(svc: String?): Boolean {
+            val s = svc?.trim()?.lowercase() ?: return true   // empty service ≈ default consult
+            return s.isEmpty() || s == "consultation" || s == "consult" || s == "c"
+        }
         val composition = mapOf(
-            "consultation" to appointments.count { it.type?.lowercase() in listOf("consultation", "new") },
+            "consultation" to appointments.count { it.isWalkin != true && it.type?.lowercase() != "review" && isConsultService(it.service) },
             "review"       to appointments.count { it.type?.lowercase() == "review" },
             "walkin"       to appointments.count { it.isWalkin == true },
             "procedure"    to appointments.count {
-                it.type?.lowercase() !in listOf("consultation", "review", "new") && it.isWalkin != true
+                it.isWalkin != true
+                    && it.type?.lowercase() != "review"
+                    && !isConsultService(it.service)
             },
         )
 

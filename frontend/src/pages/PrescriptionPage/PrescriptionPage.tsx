@@ -573,7 +573,20 @@ export function PrescriptionPage() {
   // is locked permanently (read-only history). This intentionally covers
   // past visits the doctor left open — they stay editable until ended.
   const isLatestVisit = visits.length === 0 || activeTab === visits.length - 1;
-  const isEditable = !activeVisit?.sessionEndedAt;
+  // A visit is editable while three things hold:
+  //   • Its session hasn't been ended (otherwise it's a historic record).
+  //   • The visit date is today OR yesterday — anything older than 24h
+  //     is closed for good (matches the 24h Resume buffer; a visit you
+  //     can't resume shouldn't be startable either).
+  //   • If no visit row exists yet we treat the bar as editable so the
+  //     doctor can kick off a brand-new visit from the prescription page.
+  const isWithinBuffer = (() => {
+    if (!activeVisit?.visitDate) return true;
+    const visitMs = new Date(activeVisit.visitDate).getTime();
+    if (Number.isNaN(visitMs)) return true;
+    return Date.now() - visitMs < 24 * 60 * 60 * 1000;
+  })();
+  const isEditable = !activeVisit?.sessionEndedAt && isWithinBuffer;
 
   // Keep the header session tray in sync with whatever's running for the
   // visit currently on screen. recordActiveSession fires once at handle-
@@ -2397,10 +2410,11 @@ export function PrescriptionPage() {
           onActiveChange={setFormActive}
           onStart={handleSessionStart}
           onEnd={handleSessionEnd}
-          // Restart only makes sense for today's visit — a past visit is
-          // closed for good. Suppress the icon on historical tabs by not
-          // passing onRestart through.
-          onRestart={activeVisit?.visitDate === todayIso() ? handleSessionRestart : undefined}
+          // Always pass onRestart and let the SessionBar's 24h-buffer
+          // logic decide whether to show the Resume pill. Restricting to
+          // today's date alone was hiding Resume for yesterday's visit
+          // even while the buffer was still active.
+          onRestart={handleSessionRestart}
         />
       )}
 

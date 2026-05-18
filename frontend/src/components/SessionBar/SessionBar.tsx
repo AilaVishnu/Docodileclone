@@ -73,10 +73,11 @@ type SessionBarProps = {
    */
   recordedDurationSec?: number | null;
   /**
-   * Wall-clock ms timestamp of when this historic visit's session ended.
-   * Used in `readOnly` mode to gate the Resume button — only visible if
-   * the visit ended within the last 24h. Pass `null` (or omit) and Resume
-   * is suppressed entirely.
+   * Wall-clock ms timestamp of when this visit's session was ended on
+   * the DB row. Used by both the readOnly branch (Resume gate for
+   * historic visits) and as a fallback for legacy interactive state
+   * that has `ended=true` but no `endedAtMs` persisted. Pass `null` (or
+   * omit) and Resume is suppressed once any backed-up state expires.
    */
   recordedEndedAtMs?: number | null;
 };
@@ -157,16 +158,14 @@ export function SessionBar({
   );
   const [paused, setPaused] = React.useState(initial?.paused ?? false);
   const [ended, setEnded] = React.useState(initial?.ended ?? false);
-  // Backfill: legacy state persisted before endedAtMs existed will report
-  // ended=true with no timestamp. Treat the moment we first load it as
-  // "now" so the buffer starts ticking from this point instead of being
-  // immediately stale, which would hide Resume for an in-progress visit
-  // the doctor just ended.
-  const [endedAtMs, setEndedAtMs] = React.useState<number | null>(() => {
-    if (initial?.endedAtMs != null) return initial.endedAtMs;
-    if (initial?.ended) return Date.now();
-    return null;
-  });
+  // Source of truth for the 24h Resume buffer = the DB's sessionEndedAt
+  // (passed in as recordedEndedAtMs). On a fresh End click, handleEnd
+  // below calls setEndedAtMs(now) so Resume stays visible until the
+  // updateVisit fetch syncs the column back. We deliberately ignore
+  // any persisted endedAtMs in localStorage on init — earlier code
+  // backfilled it to Date.now() which kept Resume visible forever for
+  // long-ended visits.
+  const [endedAtMs, setEndedAtMs] = React.useState<number | null>(recordedEndedAtMs ?? null);
   // Confirmation overlay for the End button — once a session ends it
   // can't be restarted for the visit, so we make sure the click is
   // intentional.

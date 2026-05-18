@@ -72,7 +72,13 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
     appointment.patientId ? loadStartedSet().has(appointment.patientId) : false
   );
   const ref = useRef<HTMLDivElement>(null);
-  const isLocked = currentStatus === "COMPLETED" || timerStarted;
+  // Lock the status badge while the doctor's actually in a session for
+  // this patient — but only if the appointment is in flight. A stale
+  // "started" flag from a previous appointment (the flag persists in
+  // localStorage indefinitely) shouldn't block status changes on a new
+  // BOOKED / AT_DOC row.
+  const isLocked = currentStatus === "COMPLETED"
+    || (timerStarted && (currentStatus === "IN_PROGRESS" || currentStatus === "AT_DOC"));
 
   useEffect(() => {
     if (!appointment.patientId) return;
