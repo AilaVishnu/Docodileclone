@@ -42,7 +42,7 @@ import { DosagePicker } from "../../components/DosagePicker/DosagePicker";
 import { DurationPicker } from "../../components/DurationPicker/DurationPicker";
 import { AutocompleteTags } from "../../components/Autocomplete/AutocompleteTags";
 import { useDoctors } from "../../hooks/useDoctors";
-import { colors } from "../../styles/theme";
+import { colors, spacing } from "../../styles/theme";
 import { PrescriptionQueue } from "./PrescriptionQueue";
 import { Patient } from "../../hooks/usePatients";
 import { SessionBar } from "../../components/SessionBar/SessionBar";
@@ -601,20 +601,25 @@ export function PrescriptionPage() {
   // is locked permanently (read-only history). This intentionally covers
   // past visits the doctor left open — they stay editable until ended.
   const isLatestVisit = visits.length === 0 || activeTab === visits.length - 1;
-  // A visit is editable while three things hold:
-  //   • Its session hasn't been ended (otherwise it's a historic record).
-  //   • The visit date is today OR yesterday — anything older than 24h
-  //     is closed for good (matches the 24h Resume buffer; a visit you
-  //     can't resume shouldn't be startable either).
-  //   • If no visit row exists yet we treat the bar as editable so the
-  //     doctor can kick off a brand-new visit from the prescription page.
+  // A visit stays editable for the full 24h Resume window. Once End is
+  // clicked the session is "ended" but the form remains writable so the
+  // doctor can hit Resume and continue updating fields for up to a day.
+  // After 24h elapses past the recorded sessionEndedAt (or, if that
+  // wasn't persisted, past the visitDate), the visit hard-locks into a
+  // historic record.
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  const endedAtMs = activeVisit?.sessionEndedAt ? new Date(activeVisit.sessionEndedAt).getTime() : null;
+  const visitMs = activeVisit?.visitDate ? new Date(activeVisit.visitDate).getTime() : null;
   const isWithinBuffer = (() => {
-    if (!activeVisit?.visitDate) return true;
-    const visitMs = new Date(activeVisit.visitDate).getTime();
-    if (Number.isNaN(visitMs)) return true;
-    return Date.now() - visitMs < 24 * 60 * 60 * 1000;
+    if (endedAtMs != null && !Number.isNaN(endedAtMs)) {
+      return Date.now() - endedAtMs < ONE_DAY_MS;
+    }
+    if (visitMs != null && !Number.isNaN(visitMs)) {
+      return Date.now() - visitMs < ONE_DAY_MS;
+    }
+    return true;
   })();
-  const isEditable = !activeVisit?.sessionEndedAt && isWithinBuffer;
+  const isEditable = isWithinBuffer;
 
   // Keep the header session tray in sync with whatever's running for the
   // visit currently on screen. recordActiveSession fires once at handle-
@@ -2100,7 +2105,7 @@ export function PrescriptionPage() {
                             {/* Left: serial + medicine cell — visually anchors for all tapering rows */}
                             <div style={styles.rxGroupLeft}>
                               <span style={styles.rxSerial}>{i + 1}</span>
-                              <div style={{ ...styles.rxMedicineCell, flex: 1 }}>
+                              <div style={{ ...styles.rxMedicineCell, flex: 1, position: "relative" }}>
                                 <div style={styles.rxMedicineInputCol}>
                                   <MedicineAutocomplete
                                     inputStyle={styles.rxMedicineInput}
@@ -2110,12 +2115,23 @@ export function PrescriptionPage() {
                                     onSelect={(name, genericName) => setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: name, genericName } : r))}
                                   />
                                 </div>
+                                {row.medicine.trim() && (
+                                  <input
+                                    type="text"
+                                    style={{
+                                      ...styles.rxGenericName,
+                                      position: "absolute",
+                                      left: spacing.s,
+                                      top: "calc(100% + 2px)",
+                                      width: "auto",
+                                      right: 8,
+                                    }}
+                                    placeholder="Molecule"
+                                    value={row.genericName}
+                                    onChange={(e) => updateField("genericName", e.target.value)}
+                                  />
+                                )}
                                 <div style={styles.rxGenericRow}>
-                                  {row.medicine && (
-                                    <span style={styles.rxGenericName}>
-                                      {row.genericName || "Unknown"}
-                                    </span>
-                                  )}
                                   <button
                                     type="button"
                                     style={styles.rxAddNoteBtn}

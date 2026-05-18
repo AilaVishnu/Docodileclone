@@ -158,14 +158,16 @@ export function SessionBar({
   );
   const [paused, setPaused] = React.useState(initial?.paused ?? false);
   const [ended, setEnded] = React.useState(initial?.ended ?? false);
-  // Source of truth for the 24h Resume buffer = the DB's sessionEndedAt
-  // (passed in as recordedEndedAtMs). On a fresh End click, handleEnd
-  // below calls setEndedAtMs(now) so Resume stays visible until the
-  // updateVisit fetch syncs the column back. We deliberately ignore
-  // any persisted endedAtMs in localStorage on init — earlier code
-  // backfilled it to Date.now() which kept Resume visible forever for
-  // long-ended visits.
-  const [endedAtMs, setEndedAtMs] = React.useState<number | null>(recordedEndedAtMs ?? null);
+  // 24h Resume buffer — prefer the DB's sessionEndedAt
+  // (recordedEndedAtMs) since it's canonical and survives reloads.
+  // Fall back to the persisted local endedAtMs to cover (1) the race
+  // window between clicking End and the updateVisit fetch syncing the
+  // column back and (2) sessions ended locally without DB sync. We
+  // deliberately do NOT backfill ended-without-timestamp to Date.now()
+  // — that was the earlier bug that kept Resume on forever.
+  const [endedAtMs, setEndedAtMs] = React.useState<number | null>(
+    recordedEndedAtMs ?? initial?.endedAtMs ?? null,
+  );
   // Confirmation overlay for the End button — once a session ends it
   // can't be restarted for the visit, so we make sure the click is
   // intentional.
@@ -334,7 +336,10 @@ export function SessionBar({
             Session Ended
           </span>
           <div style={styles.idleActions}>
-            {onRestart && interactiveCanResume && (
+            {/* Interactive ended = the doctor literally just clicked End
+                on this device. Resume is always available; the 24h
+                buffer only gates the readOnly (historic) branch. */}
+            {onRestart && (
               <button
                 type="button"
                 style={{ ...styles.pauseBtn, backgroundColor: colors.secondary400 }}

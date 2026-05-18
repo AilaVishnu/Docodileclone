@@ -1039,18 +1039,22 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "row" as const,
     gap: spacing.s,
-    alignItems: "stretch",
+    alignItems: "flex-start",
     overflow: "visible" as const,
     backgroundColor: colors.neutral100,
     borderRadius: radii.xs,
     padding: `${spacing["2xs"]} ${spacing["2xs"]}`,
+    // Push the bottom of the row down by the molecule height so the
+    // medicine pill + right-side controls all sit on the same baseline,
+    // and the molecule subtitle hangs into this extra space.
+    paddingBottom: 22,
   },
   rxGroupLeft: {
     flex: "0 0 360px" as const,
     display: "flex",
     flexDirection: "row" as const,
     gap: spacing["2xs"],
-    alignItems: "stretch",
+    alignItems: "flex-start",
   },
   rxGroupRight: {
     flex: 1,
@@ -1181,7 +1185,7 @@ export const styles: Record<string, CSSProperties> = {
     minWidth: 0,
   },
   rxGenericName: {
-    flex: 1,
+    width: "100%",
     minWidth: 0,
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.xs,
@@ -1190,6 +1194,13 @@ export const styles: Record<string, CSSProperties> = {
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap" as const,
+    // Reset input chrome so the molecule editor looks like the old span.
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    padding: 0,
+    margin: 0,
+    boxSizing: "border-box" as const,
   },
   rxAddNoteBtn: {
     flexShrink: 0,
