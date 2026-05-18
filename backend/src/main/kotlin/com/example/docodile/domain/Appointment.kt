@@ -50,6 +50,13 @@ class Appointment(
 
     var fee: BigDecimal? = null,
 
+    // Latest pharmacy bill total for this visit. Set by the Bill
+    // Medicines flow; null when the patient hasn't been billed for meds
+    // yet. Kept separate from `fee` so the Finance dashboard can split
+    // consultation vs dispensary revenue.
+    @Column(name = "pharmacy_amount")
+    var pharmacyAmount: BigDecimal? = null,
+
     var notes: String? = null,
 
     @Column(name = "created_at")

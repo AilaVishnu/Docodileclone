@@ -94,11 +94,18 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
     () => items.reduce((acc, m) => acc + m.unitPrice * m.qty, 0),
     [items]
   );
+  // Waive = "free dispense" — pin the bill to ₹0 and lock the discount/
+  // GST / qty inputs so the receptionist can't accidentally edit a
+  // figure that's about to be ignored anyway. Toggle off Waive and the
+  // values they had before re-apply (state is preserved).
+  const isWaived = paymentMethod === "Waive";
   const due = Math.max(0, pendingDue);
-  const discountAmt = discountMode === "%" ? (subtotal * discount) / 100 : discount;
+  const discountAmt = isWaived
+    ? subtotal
+    : (discountMode === "%" ? (subtotal * discount) / 100 : discount);
   const afterDiscount = Math.max(0, subtotal - discountAmt);
-  const gstAmt = (afterDiscount * gst) / 100;
-  const total = afterDiscount + gstAmt + due;
+  const gstAmt = isWaived ? 0 : (afterDiscount * gst) / 100;
+  const total = isWaived ? 0 : afterDiscount + gstAmt + due;
 
   const setQty = (id: string, qty: number) => {
     setItems((prev) => prev.map((m) => (m.id === id ? { ...m, qty: Math.max(0, qty) } : m)));
@@ -272,32 +279,34 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
 
               <div style={styles.fieldRow}>
                 <label style={styles.label}>Discount</label>
-                <div style={styles.fieldValue}>
+                <div style={{ ...styles.fieldValue, ...(isWaived ? { opacity: 0.5 } : null) }}>
                   <input
-                    style={{ ...styles.input, textAlign: "right" }}
+                    style={{ ...styles.input, textAlign: "right", cursor: isWaived ? "not-allowed" : "text" }}
                     type="number"
                     min={0}
                     placeholder="0"
-                    value={discount || ""}
+                    value={isWaived ? 100 : (discount || "")}
+                    disabled={isWaived}
                     onChange={(e) => setDiscount(Number(e.target.value))}
                   />
                   <div style={styles.toggleGroup}>
-                    <button style={discountMode === "%" ? styles.toggleActive : styles.toggleInactive} onClick={() => setDiscountMode("%")}>%</button>
-                    <button style={discountMode === "₹" ? styles.toggleActive : styles.toggleInactive} onClick={() => setDiscountMode("₹")}>₹</button>
+                    <button style={discountMode === "%" ? styles.toggleActive : styles.toggleInactive} disabled={isWaived} onClick={() => setDiscountMode("%")}>%</button>
+                    <button style={discountMode === "₹" ? styles.toggleActive : styles.toggleInactive} disabled={isWaived} onClick={() => setDiscountMode("₹")}>₹</button>
                   </div>
                 </div>
               </div>
 
               <div style={styles.fieldRow}>
                 <label style={styles.label}>GST</label>
-                <div style={styles.fieldValue}>
+                <div style={{ ...styles.fieldValue, ...(isWaived ? { opacity: 0.5 } : null) }}>
                   <input
-                    style={{ ...styles.input, textAlign: "right" }}
+                    style={{ ...styles.input, textAlign: "right", cursor: isWaived ? "not-allowed" : "text" }}
                     type="number"
                     min={0}
                     max={100}
                     placeholder="0"
-                    value={gst || ""}
+                    value={isWaived ? 0 : (gst || "")}
+                    disabled={isWaived}
                     onChange={(e) => setGst(Number(e.target.value))}
                   />
                   <span style={styles.fieldSuffix}>%</span>
@@ -330,7 +339,7 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
                 variant="dark"
                 size="sm"
                 style={{ height: "40px", fontSize: fonts.size.s, padding: "0 20px" }}
-                disabled={items.length === 0 || total <= 0}
+                disabled={items.length === 0 || (!isWaived && total <= 0)}
                 onClick={() => {
                   const billedItems = items
                     .filter((m) => m.qty > 0)

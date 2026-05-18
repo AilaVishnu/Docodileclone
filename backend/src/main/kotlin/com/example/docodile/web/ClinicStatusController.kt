@@ -116,6 +116,34 @@ class ClinicStatusController(
         }
     }
 
+    // Payment + pay-status update — called by the Bill Medicines flow
+    // after Charge & Bill / Mark Waived. `payStatus` is the new label
+    // (PAID / WAIVED / DUE) and `paymentMethod` is the channel
+    // (Cash/Card/UPI/Waive). Storing both keeps the queue's Pay pill
+    // accurate without a separate billing table.
+    @PatchMapping("/appointments/{appointmentId}/payment")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
+    fun updateAppointmentPayment(
+        @PathVariable appointmentId: UUID,
+        @RequestBody body: Map<String, Any?>
+    ): ResponseEntity<Any> {
+        return try {
+            val payStatus = body["payStatus"]?.toString() ?: throw IllegalArgumentException("payStatus is required")
+            val paymentMethod = body["paymentMethod"]?.toString()
+            // pharmacyAmount arrives as a JSON number — Kotlin's Map<String, Any?>
+            // surfaces it as Number; convert defensively for either Number or String.
+            val pharmacyAmount: java.math.BigDecimal? = when (val v = body["pharmacyAmount"]) {
+                null -> null
+                is Number -> java.math.BigDecimal(v.toString())
+                is String -> if (v.isBlank()) null else java.math.BigDecimal(v)
+                else -> null
+            }
+            ResponseEntity.ok(appointmentService.updatePayment(appointmentId, payStatus, paymentMethod, pharmacyAmount))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
+        }
+    }
+
     @GetMapping("/domain/check")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     fun checkDomain(@RequestParam domain: String): Map<String, Boolean> {

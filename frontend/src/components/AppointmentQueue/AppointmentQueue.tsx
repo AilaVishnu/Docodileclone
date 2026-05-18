@@ -519,6 +519,28 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           const baseMsg = method === "Waive"
             ? `Bill waived for ${medsBillingApt?.patientName}`
             : `₹${inr} billed via ${method} for ${medsBillingApt?.patientName}`;
+
+          // Persist pay status + method on the appointment row so the
+          // queue's Pay pill stays accurate after a reload. WAIVED for a
+          // waived bill, PAID for everything else; the channel is the
+          // selected radio. Fire-and-forget — toast on failure.
+          const aptId = medsBillingApt?.id;
+          if (aptId) {
+            const token = localStorage.getItem("docodile_token");
+            const payStatus = method === "Waive" ? "WAIVED" : "PAID";
+            fetch(`${API_BASE_URL}/api/tenant/appointments/${aptId}/payment`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              // pharmacyAmount = the bill total minus any pending
+              // consultation due that's rolled in. For waived bills
+              // pass 0 so finance reflects the goodwill, not a charge.
+              body: JSON.stringify({ payStatus, paymentMethod: method, pharmacyAmount: method === "Waive" ? 0 : total }),
+            })
+              .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); })
+              .then(() => setRefreshKey((k) => k + 1))
+              .catch((err) => setToastMessage(`Pay status update failed: ${(err as Error).message}`));
+          }
+
           // Only deduct meds the clinic actually stocks — out-of-stock
           // items have no inventory row to touch. Waived bills still
           // deduct (the meds were dispensed, just not charged).

@@ -152,6 +152,24 @@ class AppointmentService(
     }
 
     @Transactional
+    fun updatePayment(
+        appointmentId: UUID,
+        payStatus: String,
+        paymentMethod: String?,
+        pharmacyAmount: java.math.BigDecimal? = null,
+    ): AppointmentDTO {
+        val appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow { IllegalArgumentException("Appointment not found") }
+        appointment.payStatus = payStatus
+        appointment.paymentMethod = paymentMethod
+        // Only overwrite pharmacy_amount when the caller actually passes
+        // a value (null = "don't touch"). Lets a future consultation-only
+        // payment update leave a prior bill intact.
+        if (pharmacyAmount != null) appointment.pharmacyAmount = pharmacyAmount
+        return appointmentRepository.save(appointment).toDTO()
+    }
+
+    @Transactional
     fun updateStatus(appointmentId: UUID, status: String): AppointmentDTO {
         val appointment = appointmentRepository.findById(appointmentId)
             .orElseThrow { IllegalArgumentException("Appointment not found") }

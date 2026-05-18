@@ -65,7 +65,28 @@ data class FinanceStatsDTO(
     val avgPerVisit: Long,
     val revenueTrend: List<DailyCountDTO>,
     val paymentMix: Map<String, Long>,
+    // Total fee value of bills marked WAIVED — money the clinic chose
+    // not to collect. Useful to track goodwill / charity over time.
+    val waivedAmount: Long,
+    // Revenue split by service short-form / name ("Consultation", "SKR" …).
+    // Empty services collapse under "Other".
+    val revenueByService: Map<String, Long>,
+    // Higher-level type rollup: Consultation / Procedure / Review, using
+    // the same classifier as the Overview composition.
+    val revenueByType: Map<String, Long>,
+    // Bill counts (paid / waived / due) — denominators for the doctor's
+    // sanity-check beside the rupee figures.
+    val billsCount: BillsCountDTO,
+    // Total dispensary revenue across paid bills (sum of
+    // appointment.pharmacy_amount). Kept separate from consultation
+    // revenue so the Finance dashboard can split the two.
+    val pharmacyRevenue: Long,
+    // Total revenue (consultation + pharmacy) bucketed by appointment
+    // hour-of-day, 0..23. Lets the doctor spot peak earning hours.
+    val revenueByHour: Map<Int, Long>,
 )
+
+data class BillsCountDTO(val paid: Int, val waived: Int, val due: Int)
 
 data class OperationsStatsDTO(
     val totalAppointments: Int,
@@ -579,12 +600,67 @@ class StatsController(
             .groupBy { it.paymentMethod?.uppercase()?.ifBlank { "CASH" } ?: "CASH" }
             .mapValues { (_, apts) -> apts.mapNotNull { it.fee }.fold(BigDecimal.ZERO, BigDecimal::add).toLong() }
 
+        // Same service classifier the Overview composition uses so
+        // "Consultation" rollups match between the two views.
+        fun isConsultService(svc: String?): Boolean {
+            val s = svc?.trim()?.lowercase() ?: return true
+            return s.isEmpty() || s == "consultation" || s == "consult" || s == "c"
+        }
+
+        val waived = appointments.filter { it.payStatus?.uppercase() == "WAIVED" }
+        val waivedAmount = waived.mapNotNull { it.fee }.fold(BigDecimal.ZERO, BigDecimal::add).toLong()
+
+        // Revenue by raw service label — but skip the generic Consultation
+        // bucket here because it already has its own row under "By Type".
+        // Doubling it up would clutter the chart and let the receptionist
+        // double-count when reading the numbers.
+        val revenueByService = paid
+            .filter { !isConsultService(it.service) }
+            .groupBy { it.service?.trim()?.ifBlank { null } ?: "Other" }
+            .mapValues { (_, apts) -> apts.mapNotNull { it.fee }.fold(BigDecimal.ZERO, BigDecimal::add).toLong() }
+
+        val revenueByType: Map<String, Long> = paid
+            .groupBy {
+                when {
+                    it.type?.lowercase() == "review" -> "Review"
+                    isConsultService(it.service) -> "Consultation"
+                    else -> "Procedure"
+                }
+            }
+            .mapValues { (_, apts) -> apts.mapNotNull { it.fee }.fold(BigDecimal.ZERO, BigDecimal::add).toLong() }
+
+        val dueCount = appointments.count {
+            val ps = it.payStatus?.uppercase()
+            ps != "PAID" && ps != "WAIVED" && (it.fee ?: BigDecimal.ZERO) > BigDecimal.ZERO
+        }
+
+        val pharmacyRevenue = paid
+            .mapNotNull { it.pharmacyAmount }
+            .fold(BigDecimal.ZERO, BigDecimal::add)
+            .toLong()
+
+        // Revenue (consultation fee + pharmacy bill) bucketed by the
+        // appointment's scheduled hour. Empty hours stay out of the map
+        // so the chart only shows hours with actual revenue.
+        val revenueByHour: Map<Int, Long> = paid
+            .filter { it.scheduledTime != null }
+            .groupBy { it.scheduledTime!!.hour }
+            .mapValues { (_, apts) ->
+                apts.sumOf { (it.fee ?: BigDecimal.ZERO) + (it.pharmacyAmount ?: BigDecimal.ZERO) }.toLong()
+            }
+
         return FinanceStatsDTO(
             revenue = revenue,
             outstandingDues = outstanding,
             avgPerVisit = avgPerVisit,
             revenueTrend = revenueTrend,
             paymentMix = paymentMix,
+            waivedAmount = waivedAmount,
+            revenueByService = revenueByService,
+            revenueByType = revenueByType,
+            billsCount = BillsCountDTO(paid = paid.size, waived = waived.size, due = dueCount),
+            pharmacyRevenue = pharmacyRevenue,
+            revenueByHour = revenueByHour,
         )
     }
 
