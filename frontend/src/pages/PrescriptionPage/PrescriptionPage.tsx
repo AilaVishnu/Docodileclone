@@ -1324,6 +1324,20 @@ export function PrescriptionPage() {
     };
     try {
       await updateVisit(activeVisit.id, req);
+      // Flip the linked appointment's status back to IN_PROGRESS so the
+      // queue card stops showing "Completed" — the doctor reopened the
+      // visit, the patient is effectively in-session again. Best-effort:
+      // don't fail the resume flow if the appointment update fails.
+      if (selectedAppointmentId) {
+        try {
+          const token = localStorage.getItem("docodile_token");
+          await fetch(`${API_BASE_URL}/api/tenant/appointments/${selectedAppointmentId}/status`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ status: "IN_PROGRESS" }),
+          });
+        } catch { /* swallow — visit reopened either way */ }
+      }
       await refetchVisits();
       // Force the SessionBar to remount so it re-reads the freshly seeded
       // localStorage state and shows the running timer immediately —
