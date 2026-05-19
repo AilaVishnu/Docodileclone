@@ -41,6 +41,9 @@ export type Appointment = {
   /** True when the linked patient has been archived. Drives "patient is
    *  archived" toasts in queue/pad navigation. */
   patientArchived?: boolean;
+  /** Wall-clock ISO when the appointment was created. Used to gate the
+   *  24h "edit window" — past that, Edit Appointment is suppressed. */
+  createdAt?: string;
 };
 
 type MenuItem = {

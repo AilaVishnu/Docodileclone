@@ -266,6 +266,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               notes: apt.notes || "",
               fee: apt.fee || 0,
               patientArchived: apt.patientArchived || false,
+              createdAt: apt.createdAt || undefined,
             });
           });
 
@@ -315,7 +316,8 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
     });
   };
 
-  const dateText = isToday(selectedDate) ? "Today's" : formatDate(selectedDate);
+  const isQueueToday = isToday(selectedDate);
+  const dateText = isQueueToday ? "Today's" : formatDate(selectedDate);
 
   if (isLoading && doctors.length === 0) {
     return <div style={{ padding: "40px", textAlign: "center" }}>Loading Queue...</div>;
@@ -407,6 +409,16 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                   setToastMessage(`${apt.patientName} is archived — restore the patient to continue.`);
                   return;
                 }
+                // 24h edit window — same buffer as the prescription pad.
+                // Past that, the appointment is treated as historic so
+                // accidental edits can't rewrite past records.
+                if (apt.createdAt) {
+                  const ageMs = Date.now() - new Date(apt.createdAt).getTime();
+                  if (ageMs > 24 * 60 * 60 * 1000) {
+                    setToastMessage("Edit window closed (24h after booking). This appointment is locked.");
+                    return;
+                  }
+                }
                 setEditingAppointment({
                   id: apt.id,
                   patientName: apt.patientName,
@@ -460,13 +472,16 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                 setMedsBillingApt(apt);
               } },
             ]}
-            onStatusChange={async (aptId, newStatus) => {
+            // Only today's queue can mutate appointment status — past
+            // and future dates render the badge read-only so a stray
+            // click can't rewrite history (or pre-empt tomorrow's flow).
+            onStatusChange={isQueueToday ? async (aptId, newStatus) => {
               if (newStatus === "CANCELLED") {
                 setPendingCancelId(aptId);
                 return;
               }
               await doStatusChange(aptId, newStatus);
-            }}
+            } : undefined}
           />
           </div>
           <div style={{ marginTop: "-30px", flexShrink: 0, display: "flex", flexDirection: "column" }}>

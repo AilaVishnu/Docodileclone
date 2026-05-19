@@ -207,7 +207,8 @@ class AppointmentService(
             paymentMethod = this.paymentMethod,
             notes = this.notes,
             fee = this.fee,
-            patientArchived = this.patient?.archived ?: false
+            patientArchived = this.patient?.archived ?: false,
+            createdAt = this.createdAt
         )
     }
 }

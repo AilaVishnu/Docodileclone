@@ -1,5 +1,6 @@
 package com.example.docodile.web
 
+import java.time.Instant
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -26,5 +27,9 @@ data class AppointmentDTO(
     // appears in the queue (so the receptionist can see who's checked in),
     // but the frontend blocks navigation into the prescription pad and
     // surfaces a "patient is archived" toast instead.
-    val patientArchived: Boolean = false
+    val patientArchived: Boolean = false,
+    // Wall-clock when the row was first inserted. Drives the 24h "edit
+    // window" — receptionists can correct mistakes for a day after a
+    // booking is made, then it locks to preserve the audit trail.
+    val createdAt: Instant? = null
 )
