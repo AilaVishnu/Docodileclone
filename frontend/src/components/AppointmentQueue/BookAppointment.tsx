@@ -48,6 +48,11 @@ export type EditAppointmentData = {
   paymentMethod?: string;
   notes?: string;
   fee?: number;
+  // When set, every input renders disabled and the save action is
+  // suppressed — useful for viewing the booking details of completed
+  // or out-of-window appointments without allowing edits.
+  readOnly?: boolean;
+  readOnlyReason?: string;
 };
 
 type BookAppointmentProps = {
@@ -503,7 +508,38 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         </div>
       </header>
 
-      <div style={styles.grid}>
+      {editingAppointment?.readOnly && (
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          margin: `0 ${spacing.xl}`,
+        }}>
+          <div style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: spacing.xs,
+            padding: `${spacing["2xs"]} ${spacing.m}`,
+            backgroundColor: colors.primary200,
+            color: colors.primary800,
+            borderRadius: 999,
+            fontFamily: fonts.family.primary,
+            fontSize: fonts.size.xs,
+            fontWeight: fonts.weight.medium,
+            lineHeight: fonts.lineHeight.s,
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <span>{editingAppointment.readOnlyReason ?? "This appointment is locked — view only."}</span>
+          </div>
+        </div>
+      )}
+
+      <div style={{
+        ...styles.grid,
+        ...(editingAppointment?.readOnly ? { pointerEvents: "none" as const, opacity: 0.85 } : {}),
+      }}>
         {/* Patient ID Card — avatar above the ID. Avatar reacts to the gender +
             age the user has filled in below. */}
         <Card style={{ ...styles.card, ...styles.patientIdCard }}>
@@ -969,13 +1005,13 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         <div style={styles.footerButtonGroup}>
           {editingAppointment ? (
             <>
-              {isDirty && (
+              {!editingAppointment.readOnly && isDirty && (
                 <button style={styles.pillButtonPrimary} onClick={() => handleBook(editingAppointment.payStatus || "Unpaid")} disabled={submitting}>
                   <EditPencilIcon width={18} height={18} style={{ color: colors.neutral100 }} />
                   {submitting ? "Saving..." : "Save Edits"}
                 </button>
               )}
-              {editingAppointment.payStatus?.toUpperCase() !== "PAID" && (
+              {!editingAppointment.readOnly && editingAppointment.payStatus?.toUpperCase() !== "PAID" && (
                 <button style={styles.pillButtonPayDue} onClick={() => handleBook("Paid", "Payment is done")} disabled={submitting}>
                   <BillCheckIcon width={20} height={20} style={{ color: colors.neutral100 }} />
                   {submitting ? "Saving..." : "Pay Due"}

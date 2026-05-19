@@ -409,16 +409,14 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                   setToastMessage(`${apt.patientName} is archived — restore the patient to continue.`);
                   return;
                 }
-                // 24h edit window — same buffer as the prescription pad.
-                // Past that, the appointment is treated as historic so
-                // accidental edits can't rewrite past records.
-                if (apt.createdAt) {
-                  const ageMs = Date.now() - new Date(apt.createdAt).getTime();
-                  if (ageMs > 24 * 60 * 60 * 1000) {
-                    setToastMessage("Edit window closed (24h after booking). This appointment is locked.");
-                    return;
-                  }
-                }
+                // Locked = completed appointment OR booking older than
+                // 24h. The modal still opens with full details so the
+                // receptionist can review, just every field + save
+                // action is disabled.
+                const isCompleted = apt.status === "COMPLETED";
+                const ageMs = apt.createdAt ? Date.now() - new Date(apt.createdAt).getTime() : 0;
+                const isPastWindow = apt.createdAt != null && ageMs > 24 * 60 * 60 * 1000;
+                const readOnly = isCompleted || isPastWindow;
                 setEditingAppointment({
                   id: apt.id,
                   patientName: apt.patientName,
@@ -435,6 +433,11 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                   paymentMethod: apt.paymentMethod,
                   notes: apt.notes,
                   fee: apt.fee,
+                  readOnly,
+                  readOnlyReason: isCompleted
+                    ? "Appointment is completed — view only."
+                    : isPastWindow ? "Edit window closed (24h after booking) — view only."
+                    : undefined,
                 });
                 onEditStart?.();
               } },

@@ -122,6 +122,20 @@ class AppointmentService(
         val appointment = appointmentRepository.findById(appointmentId)
             .orElseThrow { IllegalArgumentException("Appointment not found") }
 
+        // Server-side enforcement of the edit window — mirrors the
+        // BookAppointment modal's readOnly gates so a direct API call
+        // can't bypass them. COMPLETED locks instantly; any other
+        // status respects the 24h window from createdAt.
+        if (appointment.status?.uppercase() == "COMPLETED") {
+            throw IllegalArgumentException("Appointment is completed and locked.")
+        }
+        appointment.createdAt?.let { created ->
+            val ageMs = java.time.Duration.between(created, java.time.Instant.now()).toMillis()
+            if (ageMs > 24L * 60 * 60 * 1000) {
+                throw IllegalArgumentException("Edit window closed (24h after booking). This appointment is locked.")
+            }
+        }
+
         val doctor = appUserRepository.findById(request.doctorId)
             .orElseThrow { IllegalArgumentException("Doctor not found") }
 
