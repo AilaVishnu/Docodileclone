@@ -519,7 +519,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               doctorGender="male"
               appointments={activeQueue}
             />
-            <HeatmapCard appointments={activeQueue} />
+            <HeatmapCard appointments={activeQueue} date={selectedDate} />
           </div>
           </div>
         </>
