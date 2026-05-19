@@ -144,11 +144,18 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
 
   const selectedPatient = visible.find((p) => p.id === selectedId) ?? null;
 
-  const handleOpen = (patient: Patient) => {
+  const handleOpen = (patient: Patient, opts?: { initialAction?: number }) => {
     // Record where the doctor came from so the Prescription page's Back
     // button can route them back to Patient Files rather than dumping
-    // them on the prescription home picker.
-    setPendingSessionNav({ patient, appointmentId: null, returnTab: "Patient Files" });
+    // them on the prescription home picker. `initialAction` lets a
+    // specific left-rail tab (Visits/Files/Timeline/Bills) be pre-
+    // selected when the doctor jumps in for a specific reason.
+    setPendingSessionNav({
+      patient,
+      appointmentId: null,
+      returnTab: "Patient Files",
+      initialAction: opts?.initialAction,
+    });
     onNavigate?.("Prescription");
   };
 
@@ -306,7 +313,11 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
             real content on top of it. */}
         <div style={styles.openPane}>
           {selectedPatient ? (
-            <OpenFile patient={selectedPatient} onOpenChart={() => handleOpen(selectedPatient)} />
+            <OpenFile
+              patient={selectedPatient}
+              onOpenChart={() => handleOpen(selectedPatient)}
+              onOpenBills={() => handleOpen(selectedPatient, { initialAction: 3 })}
+            />
           ) : (
             <div style={styles.openEmpty}>Select a patient to view their file</div>
           )}
@@ -496,7 +507,7 @@ function DateTrigger({
 // The folder visual fills the pane, with rich content on top: code+name as
 // the heading, AI summary, smart chips, contact/demographics, recent visits
 // as cards, action buttons. This is where the cabinet design gets to breathe.
-function OpenFile({ patient, onOpenChart }: { patient: Patient; onOpenChart: () => void }) {
+function OpenFile({ patient, onOpenChart, onOpenBills }: { patient: Patient; onOpenChart: () => void; onOpenBills?: () => void }) {
   const code = shortCode(patient.id);
   const ageShort = genderAgeShort(patient);
   const metaLine = [
@@ -570,8 +581,8 @@ function OpenFile({ patient, onOpenChart }: { patient: Patient; onOpenChart: () 
           icon={<CalendarIconSVG style={styles.iconActionGlyph} />}
         />
         <IconAction
-          label="Generate bill"
-          onClick={onOpenChart}
+          label="Open Bills"
+          onClick={onOpenBills}
           tone="secondary"
           icon={<BillingIconSVG style={styles.iconActionGlyph} />}
         />

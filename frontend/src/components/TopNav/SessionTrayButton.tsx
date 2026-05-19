@@ -92,6 +92,9 @@ export type PendingSessionNav = {
   // Prescription page. Lets callers (Patient Files etc.) bring the
   // doctor back where they came from instead of the prescription home.
   returnTab?: NavTab;
+  // Left-rail action to land on inside the chart (0=Visits, 1=Files,
+  // 2=Timeline, 3=Bills). Defaults to Visits when omitted.
+  initialAction?: number;
 };
 
 // Short-lived in-memory cache so a quick StrictMode remount (or any

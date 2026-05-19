@@ -561,6 +561,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
       setSelectedPatient(nav.patient);
       setSelectedAppointmentId(nav.appointmentId);
       if (nav.returnTab) setReturnTab(nav.returnTab);
+      if (typeof nav.initialAction === "number") setActiveAction(nav.initialAction);
     };
     window.addEventListener("docodile:session-nav", handler);
     return () => window.removeEventListener("docodile:session-nav", handler);
@@ -569,7 +570,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   // patient triggers the fetch.
   const { visits, loading: visitsLoading, loadedFor: visitsLoadedFor, refetch: refetchVisits } = useVisits(selectedPatientId);
   const [activeTab, setActiveTab] = React.useState(0);
-  const [activeAction, setActiveAction] = React.useState(0);
+  const [activeAction, setActiveAction] = React.useState(initialNav?.initialAction ?? 0);
   const activeVisit: VisitDTO | undefined = visits[activeTab];
   // Visit immediately before the currently-viewed tab — used by the rewind
   // buttons to pull the previous prescription's data into the current form.
