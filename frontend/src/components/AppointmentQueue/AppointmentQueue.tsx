@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Tabs, TabItem } from "../Tabs";
 import { QueueTable, Appointment } from "./QueueTable";
 import { styles } from "./AppointmentQueue.styles";
-import { DatePicker } from "./DatePicker";
+import { DatePicker } from "../DatePicker/DatePicker";
 import { colors } from "../../styles/theme";
 import { BookAppointment, EditAppointmentData } from "./BookAppointment";
 import { BillMedicinesModal } from "./BillMedicinesModal";

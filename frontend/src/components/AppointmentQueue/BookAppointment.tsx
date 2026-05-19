@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { styles } from "./BookAppointment.styles";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
-import { DatePicker } from "./DatePicker";
+import { DatePicker } from "../DatePicker/DatePicker";
 import { TimePicker } from "./TimePicker";
 import {
   StethoscopeIcon,

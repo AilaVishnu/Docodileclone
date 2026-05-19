@@ -17,7 +17,7 @@ import { TextInput } from "../../components/Input/TextInput";
 import { Select } from "../../components/Input/Select/Select";
 import { UnderlineSelect } from "../../components/Input/UnderlineSelect/UnderlineSelect";
 import { StatusBadge, PayBadge } from "../../components/AppointmentQueue/StatusBadge";
-import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
+import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { TimePicker } from "../../components/AppointmentQueue/TimePicker";
 
 // ── Layout primitives used inside this page only ───────────────────────────────

@@ -3,7 +3,7 @@ import { API_BASE_URL } from "../../apiConfig";
 import { Patient } from "../../hooks/usePatients";
 import { pickAvatar } from "../../utils/avatar";
 import { Button } from "../../components/Button";
-import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
+import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { loadStartedSet } from "../../utils/sessionStarted";
 import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";

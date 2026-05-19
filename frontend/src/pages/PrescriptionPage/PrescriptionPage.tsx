@@ -31,7 +31,7 @@ import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg"
 import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
-import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
+import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 import { Toast } from "../../components/Toast";
 import { Autocomplete } from "../../components/Autocomplete/Autocomplete";

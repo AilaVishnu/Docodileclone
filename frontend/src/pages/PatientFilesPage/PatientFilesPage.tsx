@@ -7,7 +7,7 @@ import { fetchPatientSummary, generatePatientSummary, parsePatientSummary, Patie
 import { ReactComponent as SearchIcon } from "../../assets/search.svg";
 import { ReactComponent as PrescriptionIconSVG } from "../../assets/prescription.svg";
 import { Select } from "../../components/Input/Select/Select";
-import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
+import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { styles as queueStyles } from "../../components/AppointmentQueue/AppointmentQueue.styles";
 import { setPendingSessionNav } from "../../components/TopNav/SessionTrayButton";
 import type { NavTab } from "../../components/SideNav";
