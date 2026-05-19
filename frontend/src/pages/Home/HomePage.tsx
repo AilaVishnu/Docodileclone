@@ -145,7 +145,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
           setActiveTab("Prescription");
         }} />;
       case "Prescription":
-        return <PrescriptionView />;
+        return <PrescriptionView onNavigate={setActiveTab} />;
       case "Patient Files":
         return <PatientFilesView onNavigate={setActiveTab} initialSelectedId={patientFileNavId} />;
       case "Services":

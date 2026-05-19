@@ -511,15 +511,28 @@ function AuthThumb({ fileUrl, mimeType, style }: { fileUrl: string | null | unde
   return <img src={src} alt="" style={style} />;
 }
 
-export function PrescriptionPage() {
+type PrescriptionPageProps = {
+  onNavigate?: (tab: import("../../components/SideNav").NavTab) => void;
+};
+
+export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
+  // Drain any pending nav synchronously during the very first render so
+  // the form mounts with the right patient already selected — no brief
+  // flash of the patient picker before the chart opens.
+  const initialNavRef = React.useRef<PendingSessionNav | null | undefined>(undefined);
+  if (initialNavRef.current === undefined) {
+    initialNavRef.current = consumePendingSessionNav();
+  }
+  const initialNav = initialNavRef.current;
+
   // null → renders <PatientPicker>; otherwise renders the prescription form
   // scoped to that patient. Clicking "← back to patients" clears it.
-  const [selectedPatient, setSelectedPatient] = React.useState<Patient | null>(null);
+  const [selectedPatient, setSelectedPatient] = React.useState<Patient | null>(initialNav?.patient ?? null);
   const selectedPatientId = selectedPatient?.id ?? null;
   // The appointment row the doctor clicked View Pad on. Needed so the
   // Start Session / End Session actions can update the appointment's
   // backend status without bouncing back to the queue.
-  const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(initialNav?.appointmentId ?? null);
   // The date the queue was showing when the doctor clicked View Pad.
   // Used as the visit date for auto-create so past-date queues don't
   // create a visit stamped today.
@@ -532,16 +545,22 @@ export function PrescriptionPage() {
   // If the doctor clicked an entry in the header session-tray, route them
   // straight back to that patient's prescription form. Handled both on mount
   // (component wasn't rendered yet) and via a custom event (already mounted).
+  // Where Back should route the doctor — set when the patient was
+  // opened from another screen (Patient Files, the session tray, etc.).
+  // Falls back to clearing selection so the prescription home picker
+  // reappears, matching the original behavior.
+  const [returnTab, setReturnTab] = React.useState<import("../../components/SideNav").NavTab | null>(
+    initialNav?.returnTab ?? null,
+  );
   React.useEffect(() => {
-    const pending = consumePendingSessionNav();
-    if (pending) {
-      setSelectedPatient(pending.patient);
-      setSelectedAppointmentId(pending.appointmentId);
-    }
+    // initialNav was already consumed at first render — we just listen
+    // for subsequent navs fired while the page is already mounted (e.g.
+    // the session tray in the top nav).
     const handler = (e: Event) => {
       const nav = (e as CustomEvent<PendingSessionNav>).detail;
       setSelectedPatient(nav.patient);
       setSelectedAppointmentId(nav.appointmentId);
+      if (nav.returnTab) setReturnTab(nav.returnTab);
     };
     window.addEventListener("docodile:session-nav", handler);
     return () => window.removeEventListener("docodile:session-nav", handler);
@@ -820,15 +839,25 @@ export function PrescriptionPage() {
   //      ambiently (e.g. browsing patient files) — visits should only
   //      come from booked appointments, so don't fabricate one.
   const autoCreatedForPatientRef = React.useRef<string | null>(null);
+  // Track whether we've already done the one-shot "jump to unfinished
+  // visit" for this patient. Without this guard the effect's activeTab
+  // dependency made every tab click snap back to the unfinished tab,
+  // so the doctor couldn't browse historic visits.
+  const unfinishedJumpedForPatientRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     const hasTodayVisit = visits.some((v) => v.visitDate === queueDate);
     const unfinishedIdx = visits.findIndex(
       (v) => v.sessionStartedAt && !v.sessionEndedAt
     );
     if (unfinishedIdx >= 0) {
-      const v = visits[unfinishedIdx];
-      if (activeTab !== unfinishedIdx) setActiveTab(unfinishedIdx);
-      if (v.visitDate && queueDate !== v.visitDate) setQueueDate(v.visitDate);
+      // Only auto-jump once per patient. After that the user controls
+      // which tab they're on; we don't override their choice.
+      if (unfinishedJumpedForPatientRef.current !== selectedPatientId) {
+        const v = visits[unfinishedIdx];
+        if (activeTab !== unfinishedIdx) setActiveTab(unfinishedIdx);
+        if (v.visitDate && queueDate !== v.visitDate) setQueueDate(v.visitDate);
+        unfinishedJumpedForPatientRef.current = selectedPatientId;
+      }
       autoCreatedForPatientRef.current = selectedPatientId;
       return;
     }
@@ -873,7 +902,10 @@ export function PrescriptionPage() {
   // Reset the auto-create guard whenever the user picks a different patient
   // (or leaves and comes back to the same one).
   React.useEffect(() => {
-    if (selectedPatientId === null) autoCreatedForPatientRef.current = null;
+    if (selectedPatientId === null) {
+      autoCreatedForPatientRef.current = null;
+      unfinishedJumpedForPatientRef.current = null;
+    }
   }, [selectedPatientId]);
 
   // When the view swaps from picker → form (or back), reset the scroll
@@ -1494,6 +1526,17 @@ export function PrescriptionPage() {
   // user sees a brief unfilled state, then activeVisit lands and every
   // field pops in at once — perceived as a jerk.
   if (visitsLoadedFor !== selectedPatientId) {
+    // A patient is already selected (e.g. opened from Patient Files) but
+    // their visits haven't been fetched yet — show a quiet loading
+    // skeleton instead of flashing the queue picker, which would be a
+    // misleading screen on its way to the actual chart.
+    if (selectedPatientId !== null) {
+      return (
+        <div ref={pageRootRef} style={{ padding: 40, textAlign: "center", color: "#888", fontFamily: "'Inter', sans-serif", fontSize: 14 }}>
+          Loading patient file…
+        </div>
+      );
+    }
     return (
       <div ref={pageRootRef}>
         <PrescriptionQueue
@@ -1522,6 +1565,14 @@ export function PrescriptionPage() {
             onClick={() => {
               setSelectedPatient(null);
               setSelectedAppointmentId(null);
+              // If the doctor jumped in from another tab (e.g. Patient
+              // Files), route them straight back. Otherwise stay on
+              // Prescription and surface the picker.
+              if (returnTab && onNavigate) {
+                const tab = returnTab;
+                setReturnTab(null);
+                onNavigate(tab);
+              }
             }}
           >
             <ArrowLeftIcon width={24} height={24} />

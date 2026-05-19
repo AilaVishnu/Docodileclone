@@ -85,11 +85,29 @@ function listActiveSessions(): Array<{ meta: ActiveSessionMeta; state: SessionSt
 
 // Set when the doctor clicks a tray item — picked up by PrescriptionPage on
 // next mount so it can pre-select the right patient/appointment.
-export type PendingSessionNav = { patient: Patient; appointmentId: string | null };
+export type PendingSessionNav = {
+  patient: Patient;
+  appointmentId: string | null;
+  // Sidebar tab to return to when the user hits Back from the
+  // Prescription page. Lets callers (Patient Files etc.) bring the
+  // doctor back where they came from instead of the prescription home.
+  returnTab?: NavTab;
+};
+
+// Short-lived in-memory cache so a quick StrictMode remount (or any
+// remount within the same JS tick) can still see the pending nav after
+// localStorage has been wiped. Cleared 1s after writing — long enough
+// for any same-event remount, short enough to not leak into a real
+// later navigation.
+let memNav: PendingSessionNav | null = null;
+let memNavClearTimer: number | null = null;
 
 export function setPendingSessionNav(nav: PendingSessionNav) {
   try {
     localStorage.setItem(PENDING_NAV_KEY, JSON.stringify(nav));
+    memNav = nav;
+    if (memNavClearTimer != null) window.clearTimeout(memNavClearTimer);
+    memNavClearTimer = window.setTimeout(() => { memNav = null; memNavClearTimer = null; }, 1000);
     window.dispatchEvent(new CustomEvent("docodile:session-nav", { detail: nav }));
   } catch {
     /* ignore */
@@ -99,11 +117,19 @@ export function setPendingSessionNav(nav: PendingSessionNav) {
 export function consumePendingSessionNav(): PendingSessionNav | null {
   try {
     const raw = localStorage.getItem(PENDING_NAV_KEY);
-    if (!raw) return null;
-    localStorage.removeItem(PENDING_NAV_KEY);
-    return JSON.parse(raw) as PendingSessionNav;
+    if (raw) {
+      localStorage.removeItem(PENDING_NAV_KEY);
+      const parsed = JSON.parse(raw) as PendingSessionNav;
+      memNav = parsed;
+      if (memNavClearTimer != null) window.clearTimeout(memNavClearTimer);
+      memNavClearTimer = window.setTimeout(() => { memNav = null; memNavClearTimer = null; }, 1000);
+      return parsed;
+    }
+    // Storage empty — fall back to the in-memory cache so a StrictMode
+    // double-mount can still see the freshly cleared value.
+    return memNav;
   } catch {
-    return null;
+    return memNav;
   }
 }
 

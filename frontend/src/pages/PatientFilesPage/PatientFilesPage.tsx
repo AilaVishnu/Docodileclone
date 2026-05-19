@@ -145,7 +145,10 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
   const selectedPatient = visible.find((p) => p.id === selectedId) ?? null;
 
   const handleOpen = (patient: Patient) => {
-    setPendingSessionNav({ patient, appointmentId: null });
+    // Record where the doctor came from so the Prescription page's Back
+    // button can route them back to Patient Files rather than dumping
+    // them on the prescription home picker.
+    setPendingSessionNav({ patient, appointmentId: null, returnTab: "Patient Files" });
     onNavigate?.("Prescription");
   };
 
@@ -549,23 +552,26 @@ function OpenFile({ patient, onOpenChart }: { patient: Patient; onOpenChart: () 
       {/* Buttons pinned to the top-right corner of the card, straddling the right edge */}
       <div style={{ ...styles.iconColumn, position: "absolute", right: "-35px", top: "60px" }}>
         <IconAction
-          label="Call"
+          label={patient.phone ? `Call ${patient.phone}` : "No phone on file"}
           href={patient.phone ? `tel:${patient.phone}` : undefined}
+          onClick={patient.phone ? undefined : () => window.alert("No phone number on file for this patient.")}
           icon={<PhoneIconSVG style={styles.iconActionGlyph} />}
         />
         <IconAction
-          label="Email"
+          label={patient.email ? `Email ${patient.email}` : "No email on file"}
           href={patient.email ? `mailto:${patient.email}` : undefined}
+          onClick={patient.email ? undefined : () => window.alert("No email on file for this patient.")}
           icon={<LetterIconSVG style={styles.iconActionGlyph} />}
         />
         <IconAction
-          label="Book appointment"
+          label="Open chart / book visit"
           onClick={onOpenChart}
           tone="secondary"
           icon={<CalendarIconSVG style={styles.iconActionGlyph} />}
         />
         <IconAction
           label="Generate bill"
+          onClick={onOpenChart}
           tone="secondary"
           icon={<BillingIconSVG style={styles.iconActionGlyph} />}
         />
