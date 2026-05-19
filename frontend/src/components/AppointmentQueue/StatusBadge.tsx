@@ -148,12 +148,16 @@ export function PayBadge({ status }: PayBadgeProps) {
 
   return (
     <span
+      // `title` is the native hover tooltip — shows "Paid" / "Due" / "No Pay"
+      // when the label text is hidden at 1024 (see globals.css).
+      title={cfg.label}
       style={{
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
         gap: "4px",
-        width: "80px",
+        // Width var-driven so 1024 collapses to icon-only (no fixed 80px gap).
+        width: "var(--paybadge-w, 80px)",
         fontSize: fonts.size.s,
         fontFamily: fonts.family.primary,
         fontWeight: 400,
@@ -173,7 +177,7 @@ export function PayBadge({ status }: PayBadgeProps) {
       >
         {cfg.icon}
       </span>
-      {cfg.label}
+      <span className="pay-badge-label">{cfg.label}</span>
     </span>
   );
 }

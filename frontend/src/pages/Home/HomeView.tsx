@@ -310,6 +310,11 @@ const styles: Record<string, React.CSSProperties> = {
     bottom: 0,
     display: "flex",
     flexDirection: "column",
+    // The desk is purely decorative (papers / computer / clock — no clicks).
+    // pointer-events:none lets clicks fall through to whatever's underneath
+    // (e.g., the MemoBoard's "+" FAB when the desk overlaps it on short
+    // viewports).
+    pointerEvents: "none" as const,
   },
   deskFront: {
     height: "var(--home-desk-front-h, 84px)",

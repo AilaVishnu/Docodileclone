@@ -147,6 +147,7 @@ body {
   --queue-stat-padl: 0px;     /* left indent on DoctorStatusCard stat rows */
   --queue-table-pad: 24px;    /* tableContainer outer padding */
   --queue-cell-padx: 28px;    /* th/td horizontal padding inside the table */
+  --paybadge-w: 80px;         /* Pay column badge width (icon + label) */
 
   /* TopNav (header chrome) — baseline at 1440 */
   --topnav-h: 70px;
@@ -243,6 +244,14 @@ body {
   --book-footer-mt: 16px;
   --book-clearlink-mb: 6px;
 }
+/* Queue Pay column: hide the word at 1024, keep icon only. Native `title`
+   on PayBadge provides the tooltip with the full status. */
+@media (max-width: 1439.98px) {
+  .pay-badge-label {
+    display: none;
+  }
+}
+
 @media (max-width: 1439.98px) {
   :root {
     --home-memo-min: 0px;
@@ -269,6 +278,7 @@ body {
     --queue-stat-padl: 12px;    /* nudge stat list right inside doctor card */
     --queue-table-pad: 16px;    /* slimmer table container padding */
     --queue-cell-padx: 16px;    /* tighter horizontal cell padding so columns fit */
+    --paybadge-w: auto;         /* Pay column shows icon only; label hidden below */
 
     /* Tighter outer page padding at 1024 (sidebar → content and content → right edge) */
     --page-pad-x: 24px;

@@ -190,7 +190,7 @@ function ActionMenu({
           (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
         }}
       >
-        <ReorderDotsIcon width={18} height={18} />
+        <ReorderDotsIcon width={14} height={14} />
       </button>
       {isOpen && (
         <div
@@ -237,27 +237,29 @@ export function QueueTable({
     <div style={styles.tableContainer}>
       <table style={styles.table}>
         <colgroup>
-          <col style={{ width: "40px" }} />
+          <col style={{ width: "16px" }} />
           <col style={{ width: "28%" }} />
           <col style={{ width: "14%" }} />
           <col style={{ width: "9%" }} />
           <col style={{ width: "9%" }} />
           <col style={{ width: "9%" }} />
           <col style={{ width: "11%" }} />
-          <col style={{ width: "11%" }} />
-          <col style={{ width: "48px" }} />
+          <col style={{ width: "30px" }} />
+          <col style={{ width: "14px" }} />
         </colgroup>
         <thead>
           <tr>
-            <th style={{ ...styles.th, paddingLeft: "8px", paddingRight: "8px" }}>#</th>
-            <th style={{ ...styles.th, paddingLeft: "8px", paddingRight: "8px" }}>Name</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Phone</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Service</th>
-            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "8px", paddingRight: "8px" }}>Type</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Time</th>
+            {/* Browsers center <th> by default — set textAlign: "left" explicitly
+                on # and Name so headers match their left-aligned body cells. */}
+            <th style={{ ...styles.th, textAlign: "left", paddingLeft: 0, paddingRight: 0 }}>#</th>
+            <th style={{ ...styles.th, textAlign: "left", paddingLeft: "4px", paddingRight: "4px" }}>Name</th>
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Phone</th>
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Service</th>
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Type</th>
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Time</th>
             <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Status</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Pay</th>
-            <th style={styles.th}></th>
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Pay</th>
+            <th style={{ ...styles.th, paddingLeft: 0, paddingRight: 0 }}></th>
           </tr>
         </thead>
         <tbody>
@@ -349,7 +351,7 @@ export function QueueTable({
                     </td>
 
                     {/* Phone */}
-                    <td style={{ ...styles.td, textAlign: "center" }}>{apt.patientPhone}</td>
+                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>{apt.patientPhone}</td>
 
                     {/* Service */}
                     <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px", maxWidth: 0 }}>
@@ -373,12 +375,12 @@ export function QueueTable({
                     </td>
 
                     {/* Type */}
-                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "8px", paddingRight: "8px" }}>
+                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
                       <TypeBadge type={apt.type} />
                     </td>
 
                     {/* Time */}
-                    <td style={{ ...styles.td, textAlign: "center" }}>
+                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
                       <span style={styles.time}>{apt.scheduledTime}</span>
                       {apt.isWalkin && (
                         <span style={styles.walkinBadge}>Walk-in</span>
@@ -399,12 +401,12 @@ export function QueueTable({
                     </td>
 
                     {/* Pay status */}
-                    <td style={{ ...styles.payCell, textAlign: "center" }}>
+                    <td style={{ ...styles.payCell, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
                       <PayBadge status={apt.payStatus} />
                     </td>
 
-                    {/* Action menu */}
-                    <td style={{ ...styles.td, padding: "14px 24px 14px 8px" }}>
+                    {/* Action menu — zero horizontal padding */}
+                    <td style={{ ...styles.td, padding: "14px 0" }}>
                       {menuItems && menuItems.length > 0 ? (
                         <ActionMenu
                           appointment={apt}

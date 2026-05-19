@@ -64,9 +64,9 @@ export const styles: Record<string, CSSProperties> = {
     whiteSpace: "nowrap" as const,
   },
 
-  // Serial number cell
+  // Serial number cell — no horizontal padding so the "#" hugs the row edge.
   serialCell: {
-    padding: "14px 8px",
+    padding: "14px 0",
     fontSize: fonts.size.s,
     color: colors.neutral900,
     verticalAlign: "middle",
@@ -75,7 +75,7 @@ export const styles: Record<string, CSSProperties> = {
 
   // Name cell with gender/age sub-detail
   nameCell: {
-    padding: "14px 8px",
+    padding: "14px 4px",
     verticalAlign: "middle",
   },
 
@@ -170,7 +170,7 @@ export const styles: Record<string, CSSProperties> = {
     background: "none",
     border: "none",
     cursor: "pointer",
-    padding: "6px 8px",
+    padding: "6px 0",
     color: "#000",
     borderRadius: "6px",
     display: "flex",
