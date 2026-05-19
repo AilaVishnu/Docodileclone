@@ -326,6 +326,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   };
 
   const handleBook = async (payStatus: string, successMessage?: string) => {
+    // Payment method is only required when the booking is being marked
+    // Paid right now. "Book Now Pay Later" keeps the bill open and
+    // shouldn't force the receptionist to pick a channel they don't yet
+    // know — the patient settles at the counter later.
+    const requiresPaymentMethod = payStatus === "Paid";
     const newErrors: Record<string, boolean> = {
       name: !form.name.trim(),
       email: !!form.email.trim() && !isValidEmail(form.email),
@@ -334,7 +339,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       doctor: !activeDoctor,
       services: form.services.length === 0,
       time: !form.time,
-      paymentMethod: !form.paymentMethod,
+      paymentMethod: requiresPaymentMethod && !form.paymentMethod,
     };
     setErrors(newErrors);
     const firstError =
@@ -397,7 +402,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         type: form.type,
         service: form.services.join(" + "),
         isWalkin: false,
-        paymentMethod: form.paymentMethod,
+        // "Book Now Pay Later" leaves the payment channel undecided —
+        // even if the receptionist accidentally clicked a Cash/Card/UPI
+        // radio in the UI, we discard it here so the appointment row
+        // doesn't carry a misleading method until it's actually paid.
+        paymentMethod: payStatus === "Paid" ? form.paymentMethod : null,
         notes: form.note || null,
         fee: total > 0 ? total : null,
         payStatus,

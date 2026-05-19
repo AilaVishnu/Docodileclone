@@ -171,15 +171,17 @@ class AppointmentService(
         payStatus: String,
         paymentMethod: String?,
         pharmacyAmount: java.math.BigDecimal? = null,
+        discountAmount: java.math.BigDecimal? = null,
     ): AppointmentDTO {
         val appointment = appointmentRepository.findById(appointmentId)
             .orElseThrow { IllegalArgumentException("Appointment not found") }
         appointment.payStatus = payStatus
         appointment.paymentMethod = paymentMethod
-        // Only overwrite pharmacy_amount when the caller actually passes
-        // a value (null = "don't touch"). Lets a future consultation-only
-        // payment update leave a prior bill intact.
+        // Only overwrite pharmacy_amount / discount when the caller passes
+        // a value (null = "don't touch"). Lets independent flows update
+        // payment status without nuking each other's fields.
         if (pharmacyAmount != null) appointment.pharmacyAmount = pharmacyAmount
+        if (discountAmount != null) appointment.discountAmount = discountAmount
         return appointmentRepository.save(appointment).toDTO()
     }
 

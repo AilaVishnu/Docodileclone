@@ -582,7 +582,12 @@ class StatsController(
         val appointments = appointmentRepository.findAllByClinicIdAndScheduledTimeBetween(clinicId, start, end)
 
         val paid = appointments.filter { it.payStatus?.uppercase() == "PAID" }
-        val revenue = paid.mapNotNull { it.fee }.fold(BigDecimal.ZERO, BigDecimal::add).toLong()
+        // Collected revenue = (fee + pharmacy_amount - discount_amount)
+        // summed across paid rows. Discounts trim the cash actually in
+        // the till; pharmacy revenue keeps its own breakdown below.
+        val revenue = paid.sumOf {
+            (it.fee ?: BigDecimal.ZERO) + (it.pharmacyAmount ?: BigDecimal.ZERO) - (it.discountAmount ?: BigDecimal.ZERO)
+        }.toLong().coerceAtLeast(0L)
         val outstanding = appointments
             .filter { it.payStatus?.uppercase() != "PAID" && (it.fee ?: BigDecimal.ZERO) > BigDecimal.ZERO }
             .mapNotNull { it.fee }.fold(BigDecimal.ZERO, BigDecimal::add).toLong()

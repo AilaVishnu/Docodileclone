@@ -3,9 +3,10 @@ import { Tabs, TabItem } from "../Tabs";
 import { QueueTable, Appointment } from "./QueueTable";
 import { styles } from "./AppointmentQueue.styles";
 import { DatePicker } from "../DatePicker/DatePicker";
-import { colors } from "../../styles/theme";
+import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { BookAppointment, EditAppointmentData } from "./BookAppointment";
 import { BillMedicinesModal } from "./BillMedicinesModal";
+import { BillCard } from "../BillCard/BillCard";
 import { DoctorStatusCard } from "./DoctorStatusCard";
 import { HeatmapCard } from "./HeatmapCard";
 import { Toast } from "../Toast";
@@ -47,6 +48,13 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
   const [toastMessage, setToastMessage] = useState("");
   const [pendingCancelId, setPendingCancelId] = useState<string | null>(null);
   const [medsBillingApt, setMedsBillingApt] = useState<Appointment | null>(null);
+  // "Mark as Paid" popup state — keeps the receptionist on the queue
+  // instead of opening the full Edit modal just to pick a channel.
+  const [payDueApt, setPayDueApt] = useState<Appointment | null>(null);
+  const [payDueMethod, setPayDueMethod] = useState<string>("Cash");
+  const [payDueSubmitting, setPayDueSubmitting] = useState(false);
+  const [payDueDiscount, setPayDueDiscount] = useState<number>(0);
+  const [payDueDiscountMode, setPayDueDiscountMode] = useState<"%" | "₹">("₹");
   const [billingMedicines, setBillingMedicines] = useState<BillingMedicine[]>([]);
   const [billingLoading, setBillingLoading] = useState(false);
   // Clinic pharmacy inventory — drives both the unit prices used when
@@ -265,6 +273,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               patientAge: apt.patientAge || undefined,
               notes: apt.notes || "",
               fee: apt.fee || 0,
+              pharmacyAmount: apt.pharmacyAmount || 0,
               patientArchived: apt.patientArchived || false,
               createdAt: apt.createdAt || undefined,
             });
@@ -474,6 +483,23 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                 }
                 setMedsBillingApt(apt);
               } },
+              // One-click consultation-fee paid. Only appears when the
+              // appointment is in DUE state (anything other than PAID/
+              // WAIVED). PATCHes payStatus → PAID with method "Cash"
+              // and refreshes the queue so the pill flips immediately.
+              {
+                label: "Mark as Paid",
+                visible: (apt) => {
+                  const ps = (apt.payStatus || "").toUpperCase();
+                  return ps !== "PAID" && ps !== "WAIVED";
+                },
+                onClick: (apt) => {
+                  setPayDueApt(apt);
+                  setPayDueMethod(apt.paymentMethod || "Cash");
+                  setPayDueDiscount(0);
+                  setPayDueDiscountMode("₹");
+                },
+              },
             ]}
             // Only today's queue can mutate appointment status — past
             // and future dates render the badge read-only so a stray
@@ -604,6 +630,192 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
         catalog={pharmacyStock.length > 0 ? pharmacyStock : undefined}
         pendingDue={medsBillingApt?.payStatus === "DUE" ? (medsBillingApt.fee ?? 500) : 0}
       />
+
+      {/* Pay Due popup — opened by the "Mark as Paid" menu action.
+          Tiny modal: shows patient + due amount, lets the receptionist
+          pick Cash/Card/UPI/Waive, then PATCHes payStatus → PAID. */}
+      {payDueApt && (() => {
+        const consultAmt = payDueApt.fee ?? 0;
+        const pharmacyAmt = payDueApt.pharmacyAmount ?? 0;
+        const subtotal = consultAmt + pharmacyAmt;
+        // Waive pins the bill to ₹0 (full 100% discount) and locks the
+        // discount input so the receptionist can't override it. Toggle
+        // back to Cash/Card/UPI and the prior discount values restore.
+        const isWaived = payDueMethod === "Waive";
+        const discountAmt = isWaived
+          ? subtotal
+          : (payDueDiscountMode === "%"
+              ? (subtotal * payDueDiscount) / 100
+              : payDueDiscount);
+        const totalDue = isWaived ? 0 : Math.max(0, subtotal - discountAmt);
+        const services: { name: string; price: number }[] = [];
+        if (consultAmt > 0) services.push({ name: payDueApt.service?.trim() || "Consultation", price: consultAmt });
+        if (pharmacyAmt > 0) services.push({ name: "Pharmacy", price: pharmacyAmt });
+        const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return (
+        <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>
+          <div style={{ display: "flex", flexDirection: "column", width: 360, maxWidth: "92vw" }}>
+            {/* Receipt card — patient header + bill body + actions, all
+                under one white sheet so the action buttons read as part
+                of the bill instead of hanging detached below the zigzag. */}
+            <div style={{ backgroundColor: colors.neutral100, padding: spacing.xl, borderRadius: "16px 16px 0 0", display: "flex", flexDirection: "column", gap: spacing.s }}>
+              {/* Patient name header — serif, centered */}
+              <h3 style={{ margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.regular, color: colors.neutral900, textAlign: "center" as const }}>
+                {payDueApt.patientName}
+              </h3>
+              <div style={{ fontFamily: fonts.family.primary, fontSize: fonts.size.xs, color: colors.neutral500, textAlign: "center" as const, marginTop: -spacing["2xs"] }}>Pay Due</div>
+
+              {/* Service line items in cream pills */}
+              {services.map((svc) => (
+                <div key={svc.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${spacing.xs} ${spacing.s}`, backgroundColor: colors.primary100, borderRadius: radii.m, fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral900 }}>
+                  <span>{svc.name}</span>
+                  <span style={{ fontVariantNumeric: "tabular-nums" as const, fontWeight: fonts.weight.medium }}>₹ {fmt(svc.price)}</span>
+                </div>
+              ))}
+              {services.length === 0 && (
+                <div style={{ padding: spacing.s, fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral500, textAlign: "center" as const }}>
+                  No charges on this booking.
+                </div>
+              )}
+
+              {/* Subtotal + Discount rows — underline style */}
+              {subtotal > 0 && (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${spacing.xs} 0`, borderBottom: `1px solid ${colors.neutral200}`, fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral700 }}>
+                    <span>Subtotal</span>
+                    <span style={{ fontVariantNumeric: "tabular-nums" as const }}>₹ {fmt(subtotal)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs} 0`, borderBottom: `1px solid ${colors.neutral200}`, fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral700, opacity: isWaived ? 0.5 : 1 }}>
+                    <span>Discount</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={isWaived ? (payDueDiscountMode === "%" ? 100 : subtotal) : (payDueDiscount || "")}
+                      placeholder="0"
+                      disabled={isWaived}
+                      onChange={(e) => setPayDueDiscount(Number(e.target.value) || 0)}
+                      style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", textAlign: "right" as const, fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral900, padding: 0, fontVariantNumeric: "tabular-nums" as const, cursor: isWaived ? "not-allowed" : "text" }}
+                    />
+                    {/* % / ₹ toggle — also disabled while Waive is on. */}
+                    <div style={{ display: "flex", border: `1px solid ${colors.neutral300}`, borderRadius: radii.s, overflow: "hidden", flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        onClick={() => setPayDueDiscountMode("%")}
+                        disabled={isWaived}
+                        style={{
+                          padding: "2px 10px",
+                          border: "none",
+                          cursor: isWaived ? "not-allowed" : "pointer",
+                          fontFamily: fonts.family.primary,
+                          fontSize: fonts.control.xs,
+                          fontWeight: payDueDiscountMode === "%" ? fonts.weight.semibold : fonts.weight.regular,
+                          backgroundColor: payDueDiscountMode === "%" ? colors.active.shade100 : "transparent",
+                          color: payDueDiscountMode === "%" ? colors.neutral900 : colors.neutral500,
+                        }}
+                      >%</button>
+                      <button
+                        type="button"
+                        onClick={() => setPayDueDiscountMode("₹")}
+                        disabled={isWaived}
+                        style={{
+                          padding: "2px 10px",
+                          border: "none",
+                          cursor: isWaived ? "not-allowed" : "pointer",
+                          fontFamily: fonts.family.primary,
+                          fontSize: fonts.control.xs,
+                          fontWeight: payDueDiscountMode === "₹" ? fonts.weight.semibold : fonts.weight.regular,
+                          backgroundColor: payDueDiscountMode === "₹" ? colors.active.shade100 : "transparent",
+                          color: payDueDiscountMode === "₹" ? colors.neutral900 : colors.neutral500,
+                        }}
+                      >₹</button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Total — cream-banded headline */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: `${spacing.xs} ${spacing.s}`, backgroundColor: colors.primary100, borderRadius: radii.m, marginTop: spacing["2xs"] }}>
+                <span style={{ fontFamily: fonts.family.primary, fontSize: fonts.control.md, fontWeight: fonts.weight.semibold, color: colors.neutral900 }}>Total</span>
+                <span style={{ fontFamily: fonts.family.secondary, fontSize: fonts.size.h4, lineHeight: 1, color: colors.neutral900, fontWeight: fonts.weight.regular, fontVariantNumeric: "tabular-nums" as const }}>₹ {fmt(totalDue)}</span>
+              </div>
+
+              {/* Method radio row */}
+              <div style={{ display: "flex", gap: spacing.m, justifyContent: "center", flexWrap: "wrap" as const, paddingTop: spacing["2xs"] }}>
+                {["Cash", "Card", "UPI", "Waive"].map((m) => (
+                  <label key={m} style={{ display: "flex", alignItems: "center", gap: spacing["2xs"], cursor: "pointer", fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: m === "Waive" ? colors.red200 : colors.neutral900 }}>
+                    <input
+                      type="radio"
+                      name="payDueMethod"
+                      checked={payDueMethod === m}
+                      onChange={() => setPayDueMethod(m)}
+                      style={{ margin: 0, cursor: "pointer" }}
+                    />
+                    {m}
+                  </label>
+                ))}
+              </div>
+
+              {/* Action buttons — inside the white card, above the zigzag */}
+              <div style={{ display: "flex", gap: spacing.s, justifyContent: "center", paddingTop: spacing.s }}>
+              <Button
+                variant="dangerLight"
+                size="sm"
+                onClick={() => { setPayDueApt(null); }}
+                disabled={payDueSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="dark"
+                size="sm"
+                disabled={payDueSubmitting}
+                onClick={async () => {
+                  const apt = payDueApt;
+                  setPayDueSubmitting(true);
+                  const token = localStorage.getItem("docodile_token");
+                  const newPayStatus = payDueMethod === "Waive" ? "WAIVED" : "PAID";
+                  try {
+                    const res = await fetch(`${API_BASE_URL}/api/tenant/appointments/${apt.id}/payment`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                      // Discount = full subtotal for Waive, computed
+                      // amount otherwise. Backend persists it for the
+                      // finance dashboard's collected-revenue rollup.
+                      body: JSON.stringify({
+                        payStatus: newPayStatus,
+                        paymentMethod: payDueMethod,
+                        discountAmount: discountAmt,
+                      }),
+                    });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    setToastMessage(payDueMethod === "Waive"
+                      ? `Bill waived for ${apt.patientName}`
+                      : `Marked ${apt.patientName} as Paid via ${payDueMethod}`);
+                    setRefreshKey((k) => k + 1);
+                    setPayDueApt(null);
+                  } catch (e) {
+                    setToastMessage(`Couldn't update payment: ${(e as Error).message}`);
+                  } finally {
+                    setPayDueSubmitting(false);
+                  }
+                }}
+              >
+                {payDueSubmitting ? "Saving…" : payDueMethod === "Waive" ? "Mark Waived" : "Pay Due"}
+              </Button>
+            </div>
+            </div>
+            {/* Zigzag torn-receipt edge under the unified card */}
+            <div style={{
+              width: "100%",
+              height: 20,
+              backgroundImage: `linear-gradient(135deg, ${colors.neutral100} 50%, transparent 50%), linear-gradient(225deg, ${colors.neutral100} 50%, transparent 50%)`,
+              backgroundSize: "20px 20px",
+              backgroundRepeat: "repeat-x",
+            }} />
+          </div>
+        </div>
+        );
+      })()}
     </div>
   );
 }

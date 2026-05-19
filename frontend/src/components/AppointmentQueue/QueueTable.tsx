@@ -38,6 +38,10 @@ export type Appointment = {
   doctorId?: string;
   notes?: string;
   fee?: number;
+  /** Latest pharmacy bill total set by Bill Medicines. Surfaced in the
+   *  Pay Due popup so the receptionist sees consultation + medicine
+   *  charges separately. */
+  pharmacyAmount?: number;
   /** True when the linked patient has been archived. Drives "patient is
    *  archived" toasts in queue/pad navigation. */
   patientArchived?: boolean;
@@ -49,6 +53,10 @@ export type Appointment = {
 type MenuItem = {
   label: string;
   onClick: (appointment: Appointment) => void;
+  // Optional per-row gate — return false to omit this menu item for a
+  // given appointment. Lets the parent express conditional actions like
+  // "Mark as Paid" only for DUE rows without duplicating menus.
+  visible?: (appointment: Appointment) => boolean;
 };
 
 type QueueTableProps = {
@@ -211,7 +219,7 @@ function ActionMenu({
             ...(openUpward ? { top: "auto", bottom: "100%" } : {}),
           }}
         >
-          {menuItems.map((item, i) => (
+          {menuItems.filter((item) => item.visible?.(appointment) !== false).map((item, i) => (
             <div
               key={i}
               style={styles.actionMenuItem}

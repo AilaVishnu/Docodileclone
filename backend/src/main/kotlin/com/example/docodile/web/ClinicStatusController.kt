@@ -130,15 +130,18 @@ class ClinicStatusController(
         return try {
             val payStatus = body["payStatus"]?.toString() ?: throw IllegalArgumentException("payStatus is required")
             val paymentMethod = body["paymentMethod"]?.toString()
-            // pharmacyAmount arrives as a JSON number — Kotlin's Map<String, Any?>
-            // surfaces it as Number; convert defensively for either Number or String.
-            val pharmacyAmount: java.math.BigDecimal? = when (val v = body["pharmacyAmount"]) {
+            // pharmacyAmount / discountAmount arrive as JSON numbers —
+            // Kotlin's Map<String, Any?> surfaces them as Number; convert
+            // defensively for either Number or String.
+            fun parseMoney(key: String): java.math.BigDecimal? = when (val v = body[key]) {
                 null -> null
                 is Number -> java.math.BigDecimal(v.toString())
                 is String -> if (v.isBlank()) null else java.math.BigDecimal(v)
                 else -> null
             }
-            ResponseEntity.ok(appointmentService.updatePayment(appointmentId, payStatus, paymentMethod, pharmacyAmount))
+            val pharmacyAmount = parseMoney("pharmacyAmount")
+            val discountAmount = parseMoney("discountAmount")
+            ResponseEntity.ok(appointmentService.updatePayment(appointmentId, payStatus, paymentMethod, pharmacyAmount, discountAmount))
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
         }

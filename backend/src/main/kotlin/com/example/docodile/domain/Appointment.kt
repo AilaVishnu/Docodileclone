@@ -57,6 +57,13 @@ class Appointment(
     @Column(name = "pharmacy_amount")
     var pharmacyAmount: BigDecimal? = null,
 
+    // Rupee discount applied at payment time (Pay Due / waiver). The
+    // booking `fee` stays as the original quoted amount; collected
+    // revenue is (fee + pharmacy_amount - discount_amount) for PAID
+    // rows. Null when no discount was applied.
+    @Column(name = "discount_amount")
+    var discountAmount: BigDecimal? = null,
+
     var notes: String? = null,
 
     @Column(name = "created_at")
