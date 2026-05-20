@@ -31,4 +31,4 @@ logging:
 security:
   jwt:
     secret: ${JWT_SECRET:change-me-change-me-change-me-change-me}
-    expiration-ms: ${JWT_EXPIRATION_MS:3600000}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
