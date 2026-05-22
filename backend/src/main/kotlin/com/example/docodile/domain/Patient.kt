@@ -43,5 +43,11 @@ class Patient(
     var archived: Boolean = false,
 
     @Column(name = "archived_at")
-    var archivedAt: Instant? = null
+    var archivedAt: Instant? = null,
+
+    // Source-system id when this patient was bulk-imported (e.g. the
+    // HealthPlix "T428"). Null for patients created natively in Docodile.
+    // Drives idempotent re-imports — see V41 migration.
+    @Column(name = "external_ref")
+    var externalRef: String? = null
 )

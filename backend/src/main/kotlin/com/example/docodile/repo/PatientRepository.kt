@@ -20,4 +20,8 @@ interface PatientRepository : JpaRepository<Patient, UUID> {
 
     fun findByClinicIdAndPhone(clinicId: UUID, phone: String): Patient?
     fun findAllByClinicIdAndPhone(clinicId: UUID, phone: String): List<Patient>
+
+    // All previously-imported patients in a clinic — used by the data
+    // migration importer to upsert by external_ref instead of duplicating.
+    fun findAllByClinicIdAndExternalRefIsNotNull(clinicId: UUID): List<Patient>
 }

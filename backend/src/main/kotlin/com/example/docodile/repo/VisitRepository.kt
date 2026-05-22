@@ -32,6 +32,10 @@ interface VisitRepository : JpaRepository<Visit, UUID> {
     // PatientRepository.findAllByClinicId.
     fun findByIdAndClinicId(id: UUID, clinicId: UUID): Visit?
 
+    // All previously-imported visits in a clinic — used by the data
+    // migration importer to upsert by external_ref.
+    fun findAllByClinicIdAndExternalRefIsNotNull(clinicId: UUID): List<Visit>
+
     /**
      * Most-recent visit_date per patient, scoped to one clinic. Used by the
      * patient list endpoint to render "last visit DD MMM" without N+1

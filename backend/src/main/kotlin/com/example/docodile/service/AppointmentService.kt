@@ -48,15 +48,20 @@ class AppointmentService(
 
         // Find existing patient by phone within this clinic, or create a new one.
         // The phone column stores whatever string the user typed ("+91 99999
-        // 99999", "9999999999", "+91-99999-99999", etc.) and an exact-string
-        // lookup treated all of those as different patients — so booking the
-        // same person twice silently created duplicate Patient rows. Match
-        // on the digits-only suffix instead so any reasonable formatting of
-        // the same number is recognised as the same patient.
+        // 99999", "9999999999", "+91-99999-99999", etc.), so we match on the
+        // digits-only suffix — any reasonable formatting of the same number
+        // resolves to the same patient.
+        //
+        // A phone number is NOT unique per patient: families routinely share
+        // one mobile. So phone alone can't identify the person — we also
+        // require the name to match. Booking "Sita" on a number already held
+        // by "Ravi" therefore creates a new patient for Sita instead of
+        // overwriting Ravi's record.
         val reqDigits = normalizePhone(request.patientPhone)
         val existingPatient = reqDigits?.let { digits ->
             patientRepository.findAllByClinicId(clinic.id!!)
                 .filter { normalizePhone(it.phone) == digits }
+                .filter { it.name.trim().equals(request.patientName.trim(), ignoreCase = true) }
                 .minByOrNull { it.createdAt ?: Instant.EPOCH }
         }
         val savedPatient = if (existingPatient != null) {

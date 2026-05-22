@@ -365,7 +365,11 @@ const formatPatientMeta = (
     if (g.startsWith("f")) return "F";
     return p.gender;
   })();
-  const ageStr = p.age != null ? String(p.age) : "";
+  // patient.age is stored in MONTHS — show whole years, or "Nm" for an
+  // infant under a year so it never reads as a bare "0".
+  const ageStr = p.age != null
+    ? (p.age < 12 ? `${p.age}m` : String(Math.floor(p.age / 12)))
+    : "";
   const head = genderShort || ageStr ? `(${[genderShort, ageStr].filter(Boolean).join("|")})` : "";
   return [head, p.phone ?? ""].filter(Boolean).join("  ");
 };
