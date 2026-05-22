@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { usePatients, Patient } from "../../hooks/usePatients";
 import { useDoctors } from "../../hooks/useDoctors";
@@ -129,6 +129,35 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
     else list.sort((a, b) => a.name.localeCompare(b.name));
     return list;
   }, [patients, search, sort, dateFrom, dateTo, doctors, department, doctorId]);
+
+  // ── Progressive rendering ──────────────────────────────────────────────
+  // A clinic can have thousands of patients; rendering every row at once is
+  // the visible lag on each page open. Render a small initial batch and
+  // grow it as a sentinel near the list end scrolls into view.
+  const PAGE = 60;
+  const [limit, setLimit] = useState(PAGE);
+  const shown = visible.slice(0, limit);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  // Any search/filter change rebuilds the list — restart the window.
+  useEffect(() => {
+    setLimit(PAGE);
+  }, [search, sort, dateFrom, dateTo, department, doctorId]);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || limit >= visible.length) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setLimit((n) => Math.min(n + PAGE, visible.length));
+        }
+      },
+      // Grow a little before the sentinel is actually on screen so the
+      // next batch is ready by the time the user scrolls to it.
+      { rootMargin: "600px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [limit, visible.length]);
 
   // Keep selection valid as filters change. If the current selection vanishes
   // from `visible`, fall back to the first item.
@@ -272,6 +301,7 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
                 {search ? `No files match “${search}”.` : "No patient files."}
               </p>
             ) : (
+              <>
               <table style={queueStyles.table}>
                 <colgroup>
                   <col style={{ width: "10%" }} />
@@ -290,7 +320,7 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {visible.map((p) => (
+                  {shown.map((p) => (
                     <IndexRow
                       key={p.id}
                       patient={p}
@@ -301,6 +331,10 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
                   ))}
                 </tbody>
               </table>
+              {limit < visible.length && (
+                <div ref={sentinelRef} style={{ height: 1 }} />
+              )}
+              </>
             )}
           </div>
 
