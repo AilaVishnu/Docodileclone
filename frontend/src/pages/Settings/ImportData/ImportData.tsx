@@ -2,15 +2,148 @@ import React, { useRef, useState } from "react";
 import { colors, fonts, radii, spacing } from "../../../styles/theme";
 import { API_BASE_URL } from "../../../apiConfig";
 import { Toast } from "../../../components/Toast";
+import { Modal } from "../../../components/Modal";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Settings → Import data. Self-service HealthPlix → Docodile migration. The
-// clinic admin uploads the four standard HealthPlix export CSVs; the backend
-// (POST /api/tenant/migration/healthplix) loads them into this clinic's
-// tenant. Re-running the same files upserts by external_ref instead of
-// duplicating, so the import is safe to repeat. Every file is optional — a
-// clinic with no Investigations data simply leaves that slot empty.
+// Settings → Import data. Self-service migration from another EMR into
+// Docodile. Every source platform exports data in its own format, so the
+// screen starts with a platform picker; choosing one opens the importer
+// built for that platform's export.
+//
+// HealthPlix is fully supported — its four export CSVs are uploaded and the
+// backend (POST /api/tenant/migration/healthplix) loads them into the JWT
+// clinic. Re-running the same files upserts instead of duplicating. Other
+// platforms are stubbed as "coming soon" until their format is added.
 // ─────────────────────────────────────────────────────────────────────────────
+
+type PlatformId = "healthplix" | "docon" | "other";
+
+type Platform = {
+  id: PlatformId;
+  name: string;
+  description: string;
+  ready: boolean;
+};
+
+const PLATFORMS: Platform[] = [
+  {
+    id: "healthplix",
+    name: "HealthPlix",
+    description: "Upload the four HealthPlix export CSVs — patients, clinical, investigations and medications.",
+    ready: true,
+  },
+  {
+    id: "docon",
+    name: "Docon",
+    description: "Docon EMR export. Its format differs from HealthPlix — support is coming soon.",
+    ready: false,
+  },
+  {
+    id: "other",
+    name: "Other EMR",
+    description: "Migrating from a different system? Tell us which one and we'll add an importer for it.",
+    ready: false,
+  },
+];
+
+export function ImportData() {
+  const [platform, setPlatform] = useState<PlatformId | null>(null);
+  // The platform picker opens as a popup the moment this section loads, so
+  // the user is asked where they're migrating from before anything else.
+  const [pickerOpen, setPickerOpen] = useState(true);
+
+  const choose = (id: PlatformId) => {
+    setPlatform(id);
+    setPickerOpen(false);
+  };
+
+  return (
+    <>
+      {platform === "healthplix" ? (
+        <HealthPlixImport onBack={() => setPickerOpen(true)} />
+      ) : platform ? (
+        <ComingSoon
+          name={PLATFORMS.find((p) => p.id === platform)!.name}
+          onBack={() => setPickerOpen(true)}
+        />
+      ) : (
+        <EmptyState onChoose={() => setPickerOpen(true)} />
+      )}
+
+      <Modal isOpen={pickerOpen} onClose={() => setPickerOpen(false)}>
+        <PlatformPicker onPick={choose} />
+      </Modal>
+    </>
+  );
+}
+
+// ── The popup: pick the source platform ─────────────────────────────────────
+
+function PlatformPicker({ onPick }: { onPick: (id: PlatformId) => void }) {
+  return (
+    <div style={S.picker}>
+      <h3 style={S.pickerTitle}>Where are you migrating from?</h3>
+      <p style={S.pickerSub}>
+        Each platform exports patient data in its own format — pick yours to
+        open the matching importer.
+      </p>
+      <div style={S.platformList}>
+        {PLATFORMS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            disabled={!p.ready}
+            onClick={() => p.ready && onPick(p.id)}
+            style={{ ...S.platformCard, ...(p.ready ? null : S.platformCardDisabled) }}
+          >
+            <div style={S.platformHead}>
+              <span style={S.platformName}>{p.name}</span>
+              <span style={{ ...S.badge, ...(p.ready ? S.badgeReady : S.badgeSoon) }}>
+                {p.ready ? "Ready" : "Coming soon"}
+              </span>
+            </div>
+            <p style={S.platformDesc}>{p.description}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Shown on the page behind the popup when no platform is chosen yet (e.g.
+// the user dismissed the popup) — gives a way to reopen it.
+function EmptyState({ onChoose }: { onChoose: () => void }) {
+  return (
+    <div style={S.wrap}>
+      <div style={{ ...S.card, alignItems: "center", textAlign: "center" }}>
+        <p style={S.intro}>Choose the platform you're migrating from to begin.</p>
+        <button type="button" onClick={onChoose} style={S.importBtn}>
+          Choose platform
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ComingSoon({ name, onBack }: { name: string; onBack: () => void }) {
+  return (
+    <div style={S.wrap}>
+      <button type="button" onClick={onBack} style={S.backBtn}>
+        ← Choose a different platform
+      </button>
+      <div style={S.card}>
+        <h3 style={S.resultTitle}>{name} import — coming soon</h3>
+        <p style={S.intro}>
+          Importing from {name} isn't available yet. {name} exports data in a
+          different format from HealthPlix, so it needs its own import screen.
+          It's on the roadmap — for now, pick a supported platform.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Step 2 (HealthPlix): upload the four export CSVs ────────────────────────
 
 type SlotId = "patients" | "clinical" | "investigations" | "medications";
 
@@ -60,7 +193,7 @@ type MigrationResult = {
   warnings: string[];
 };
 
-export function ImportData() {
+function HealthPlixImport({ onBack }: { onBack: () => void }) {
   const [files, setFiles] = useState<Partial<Record<SlotId, PickedFile>>>({});
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<MigrationResult | null>(null);
@@ -117,11 +250,16 @@ export function ImportData() {
 
   return (
     <div style={S.wrap}>
+      <button type="button" onClick={onBack} style={S.backBtn}>
+        ← Choose a different platform
+      </button>
+
       <div style={S.card}>
         <p style={S.intro}>
-          Upload your HealthPlix export files below. The four files are
-          optional — import the ones you have. Running the same files again is
-          safe: existing records are updated in place, not duplicated.
+          Migrating from <strong>HealthPlix</strong>. Upload your export files
+          below — the four files are optional, import the ones you have.
+          Running the same files again is safe: existing records are updated
+          in place, not duplicated.
         </p>
 
         <div style={S.slots}>
@@ -277,6 +415,98 @@ const S: Record<string, React.CSSProperties> = {
     color: colors.neutral600,
     lineHeight: 1.5,
   },
+
+  // ── Platform picker popup ────────────────────────────────────────────────
+  picker: {
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.xs,
+    minWidth: 380,
+  },
+  pickerTitle: {
+    margin: 0,
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h6,
+    fontWeight: fonts.weight.regular,
+    color: colors.neutral900,
+    textAlign: "center",
+  },
+  pickerSub: {
+    margin: 0,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.neutral600,
+    lineHeight: 1.5,
+    textAlign: "center",
+  },
+  platformList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.s,
+    marginTop: spacing.s,
+  },
+  platformCard: {
+    textAlign: "left",
+    backgroundColor: colors.neutral100,
+    border: `1px solid ${colors.primary300}`,
+    borderRadius: radii.l,
+    padding: spacing.l,
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.xs,
+    cursor: "pointer",
+    fontFamily: fonts.family.primary,
+  },
+  platformCardDisabled: {
+    opacity: 0.6,
+    cursor: "not-allowed",
+  },
+  platformHead: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.xs,
+  },
+  platformName: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.md,
+    fontWeight: fonts.weight.medium,
+    color: colors.neutral900,
+  },
+  platformDesc: {
+    margin: 0,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.xs,
+    color: colors.neutral500,
+    lineHeight: 1.45,
+  },
+  badge: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.xs,
+    borderRadius: radii.full,
+    padding: "2px 10px",
+    whiteSpace: "nowrap",
+  },
+  badgeReady: {
+    color: colors.neutral100,
+    backgroundColor: colors.primary700,
+  },
+  badgeSoon: {
+    color: colors.neutral600,
+    backgroundColor: colors.primary200,
+  },
+  backBtn: {
+    alignSelf: "flex-start",
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.primary700,
+    backgroundColor: "transparent",
+    border: "none",
+    cursor: "pointer",
+    padding: 0,
+  },
+
+  // ── HealthPlix file slots ────────────────────────────────────────────────
   slots: {
     display: "grid",
     gridTemplateColumns: "repeat(2, 1fr)",

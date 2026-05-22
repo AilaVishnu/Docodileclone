@@ -23,7 +23,7 @@ const META = Object.fromEntries(
 const SUBS: Partial<Record<SettingsSection, string>> = {
   "print-template": "Configure how prescriptions look when printed. Defaults to the template marked as default.",
   "archived-patients": "Patients you've archived from the active list. Restore one to bring them back into the patient picker and queues.",
-  "import-data": "Migrate your records from HealthPlix into Docodile. Upload the export CSVs — re-running the same files is safe.",
+  "import-data": "Migrate your records from another platform into Docodile. Pick the system you're coming from to get the matching importer.",
 };
 
 export function SettingsPage({ section }: SettingsPageProps) {
