@@ -1,9 +1,11 @@
 package com.example.docodile.service
 
+import com.example.docodile.domain.MigrationRun
 import com.example.docodile.domain.Patient
 import com.example.docodile.domain.RxRow
 import com.example.docodile.domain.Visit
 import com.example.docodile.repo.ClinicEntityRepository
+import com.example.docodile.repo.MigrationRunRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.repo.RxRowRepository
 import com.example.docodile.repo.VisitRepository
@@ -39,6 +41,7 @@ class HealthPlixMigrationService(
     private val visitRepository: VisitRepository,
     private val rxRowRepository: RxRowRepository,
     private val clinicEntityRepository: ClinicEntityRepository,
+    private val migrationRunRepository: MigrationRunRepository,
     private val currentUser: CurrentUser,
     private val entityManager: EntityManager,
 ) {
@@ -343,6 +346,22 @@ class HealthPlixMigrationService(
         }
 
         val visits = touchedVisitIds.size
+
+        // Record the run so the Import data screen can show "last import".
+        migrationRunRepository.save(
+            MigrationRun(
+                clinic = clinic,
+                platform = "HealthPlix",
+                patients = patients,
+                visits = visits,
+                prescriptions = prescriptions,
+                medicines = medicines,
+                investigations = investigations,
+                skipped = skipped,
+                createdAt = now,
+            )
+        )
+
         log.info(
             "HealthPlix migration into clinic {} — patients={} visits={} prescriptions={} medicines={} inv={} skipped={}",
             clinicId, patients, visits, prescriptions, medicines, investigations, skipped,

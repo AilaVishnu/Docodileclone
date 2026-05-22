@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { colors, fonts, radii, spacing } from "../../../styles/theme";
 import { API_BASE_URL } from "../../../apiConfig";
 import { Toast } from "../../../components/Toast";
@@ -140,6 +140,7 @@ function HealthPlixZipImport({
   const [result, setResult] = useState<MigrationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const pick = (f: File | undefined) => {
@@ -173,6 +174,7 @@ function HealthPlixZipImport({
         throw new Error(body?.error || `HTTP ${res.status}`);
       }
       setResult(await res.json());
+      setToastMsg("Migration completed successfully");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -188,6 +190,7 @@ function HealthPlixZipImport({
         <div style={{ ...S.actions, justifyContent: "center" }}>
           <button type="button" onClick={onDone} style={S.importBtn}>Done</button>
         </div>
+        <Toast message={toastMsg} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
       </div>
     );
   }
@@ -241,13 +244,85 @@ function HealthPlixZipImport({
   );
 }
 
-// Shown on the page behind the popup when no platform is chosen yet (e.g.
-// the user dismissed the popup) — gives a way to reopen it.
+type LastImport = {
+  platform: string;
+  patients: number;
+  visits: number;
+  prescriptions: number;
+  medicines: number;
+  investigations: number;
+  skipped: number;
+  completedAt: string;
+};
+
+function formatWhen(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+// Page behind the popup. Shows the clinic's most recent migration if there
+// is one, otherwise a plain prompt to pick a platform.
 function EmptyState({ onChoose }: { onChoose: () => void }) {
+  const [last, setLast] = useState<LastImport | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = localStorage.getItem("docodile_token");
+        const res = await fetch(`${API_BASE_URL}/api/tenant/migration/last`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!cancelled && res.status === 200) setLast(await res.json());
+      } catch {
+        /* ignore — fall back to the plain prompt */
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (last) {
+    return (
+      <div style={S.wrap}>
+        <div style={S.card}>
+          <div style={S.lastHead}>
+            <span style={S.lastTitle}>Last import — {last.platform}</span>
+            <span style={S.lastDate}>{formatWhen(last.completedAt)}</span>
+          </div>
+          <div style={S.statRow}>
+            <Stat label="Patients" value={last.patients} />
+            <Stat label="Visits" value={last.visits} />
+            <Stat label="Prescriptions" value={last.prescriptions} />
+            <Stat label="Medicines" value={last.medicines} />
+            <Stat label="Investigations" value={last.investigations} />
+          </div>
+          <button
+            type="button"
+            onClick={onChoose}
+            style={{ ...S.importBtn, alignSelf: "center" }}
+          >
+            Import again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={S.wrap}>
       <div style={{ ...S.card, alignItems: "center", textAlign: "center" }}>
-        <p style={S.intro}>Choose the platform you're migrating from to begin.</p>
+        <p style={S.intro}>
+          {loaded
+            ? "Choose the platform you're migrating from to begin."
+            : "Loading…"}
+        </p>
         <button type="button" onClick={onChoose} style={S.importBtn}>
           Choose platform
         </button>
@@ -428,7 +503,7 @@ function HealthPlixImport({ onBack }: { onBack: () => void }) {
       const data: MigrationResult = await res.json();
       setResult(data);
       setFiles({});
-      setToastMsg("Migration complete");
+      setToastMsg("Migration completed successfully");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -879,6 +954,23 @@ const S: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,
+  },
+  lastHead: {
+    display: "flex",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+  },
+  lastTitle: {
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.s,
+    color: colors.neutral900,
+  },
+  lastDate: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.xs,
+    color: colors.neutral500,
   },
   noteBox: {
     backgroundColor: colors.neutral100,

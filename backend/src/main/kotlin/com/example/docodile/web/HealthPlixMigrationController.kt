@@ -1,10 +1,13 @@
 package com.example.docodile.web
 
+import com.example.docodile.repo.MigrationRunRepository
+import com.example.docodile.security.CurrentUser
 import com.example.docodile.service.HealthPlixMigrationService
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -21,6 +24,8 @@ import org.springframework.web.multipart.MultipartFile
 @RequestMapping("/api/tenant/migration")
 class HealthPlixMigrationController(
     private val migrationService: HealthPlixMigrationService,
+    private val migrationRunRepository: MigrationRunRepository,
+    private val currentUser: CurrentUser,
 ) {
 
     // Self-service migration — any signed-in member of a clinic can run it.
@@ -56,7 +61,40 @@ class HealthPlixMigrationController(
         return migrationService.migrateZip(file.bytes)
     }
 
+    // The clinic's most recent migration — drives the "last import" card on
+    // the Import data screen. 204 when the clinic has never imported.
+    @GetMapping("/last")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','LAB','OTHER')")
+    fun lastMigration(): ResponseEntity<MigrationRunDTO> {
+        val run = migrationRunRepository
+            .findFirstByClinicIdOrderByCreatedAtDesc(currentUser.clinicId())
+            ?: return ResponseEntity.noContent().build()
+        return ResponseEntity.ok(
+            MigrationRunDTO(
+                platform = run.platform,
+                patients = run.patients,
+                visits = run.visits,
+                prescriptions = run.prescriptions,
+                medicines = run.medicines,
+                investigations = run.investigations,
+                skipped = run.skipped,
+                completedAt = run.createdAt?.toString() ?: "",
+            )
+        )
+    }
+
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgument(e: IllegalArgumentException): ResponseEntity<Map<String, String>> =
         ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
 }
+
+data class MigrationRunDTO(
+    val platform: String,
+    val patients: Int,
+    val visits: Int,
+    val prescriptions: Int,
+    val medicines: Int,
+    val investigations: Int,
+    val skipped: Int,
+    val completedAt: String,
+)
