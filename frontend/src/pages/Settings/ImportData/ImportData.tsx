@@ -54,8 +54,9 @@ const PLATFORMS: Platform[] = [
 type View = "picker" | "zip" | "individual" | "comingsoon" | "empty";
 
 export function ImportData() {
-  // The platform picker opens as a popup the moment this section loads.
-  const [view, setView] = useState<View>("picker");
+  // Page loads to the background (last-import card / prompt). The platform
+  // picker popup opens only when the user clicks to start a migration.
+  const [view, setView] = useState<View>("empty");
   const [comingSoonName, setComingSoonName] = useState("");
 
   const choosePlatform = (id: PlatformId) => {
