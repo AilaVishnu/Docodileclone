@@ -1842,6 +1842,34 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
               )}
             </>
           ) : (
+            selectedPatientId &&
+            !visitsLoading &&
+            visitsLoadedFor === selectedPatientId &&
+            visits.length === 0 &&
+            !selectedAppointmentId
+          ) ? (
+            // Patient opened with no visits and no appointment (just added
+            // or freshly migrated) — offer to create the first visit rather
+            // than dropping straight into a blank session form.
+            <section style={styles.rightColumn}>
+              <div style={styles.noVisits}>
+                <VisitsIcon width={40} height={40} style={styles.noVisitsIcon} />
+                <h3 style={styles.noVisitsTitle}>No visits yet</h3>
+                <p style={styles.noVisitsText}>
+                  This patient has no recorded visits. Create one to start
+                  charting today's consultation.
+                </p>
+                <button
+                  type="button"
+                  style={styles.noVisitsBtn}
+                  onClick={handleAddVisit}
+                  disabled={saving}
+                >
+                  {saving ? "Creating…" : "Create visit"}
+                </button>
+              </div>
+            </section>
+          ) : (
             <>
               {/* Visit tabs — sit OUTSIDE the cream sheet, above it. The tuning
               button (Figma node 2133:9927) is pushed to the far right of the
@@ -2510,7 +2538,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
           shows that visit's recorded duration in a frozen Session Ended
           view — no interactive controls, can't accidentally start a new
           session for a historic record. */}
-      {visitsLoadedFor === selectedPatientId && (
+      {visitsLoadedFor === selectedPatientId && visits.length > 0 && (
         <SessionBar
           // Remount per-visit so the bar reads the persisted state for the
           // active visit rather than carrying state across visit switches.

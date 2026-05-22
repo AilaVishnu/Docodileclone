@@ -1349,4 +1349,45 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral500,
     fontFamily: fonts.family.primary,
   },
+
+  // Empty state for the Visits tab when a patient has no recorded visits
+  // (e.g. just added or freshly migrated, with no appointment).
+  noVisits: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    textAlign: "center",
+    gap: spacing.s,
+    // Extra top padding nudges the empty state down from the sheet's edge.
+    padding: `${spacing["6xl"]} ${spacing.xl} ${spacing["3xl"]}`,
+  },
+  noVisitsIcon: {
+    color: colors.neutral400,
+  },
+  noVisitsTitle: {
+    margin: 0,
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h6,
+    fontWeight: fonts.weight.regular,
+    color: colors.neutral900,
+  },
+  noVisitsText: {
+    margin: 0,
+    maxWidth: 360,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    color: colors.neutral500,
+  },
+  noVisitsBtn: {
+    marginTop: spacing.xs,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.md,
+    color: colors.neutral100,
+    backgroundColor: colors.primary700,
+    border: "none",
+    borderRadius: radii.pill,
+    padding: "10px 28px",
+    cursor: "pointer",
+  },
 };
