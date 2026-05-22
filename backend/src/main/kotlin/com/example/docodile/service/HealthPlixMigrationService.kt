@@ -12,10 +12,12 @@ import jakarta.persistence.EntityManager
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.io.ByteArrayInputStream
 import java.time.Instant
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.zip.ZipInputStream
 
 /**
  * Self-service importer for a HealthPlix EMR export. Accepts the four
@@ -43,11 +45,15 @@ class HealthPlixMigrationService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     data class Result(
+        // Total records migrated (created + updated) — so a re-run reports
+        // the real totals, not just what was newly inserted.
         val patients: Int,
         val visits: Int,
-        val prescriptions: Int,
+        val prescriptions: Int,   // visit-prescriptions (one per Medications row)
+        val medicines: Int,       // individual medicine lines across all prescriptions
         val investigations: Int,
         val skipped: Int,
+        val skippedDetails: List<String>,
         val warnings: List<String>,
     )
 
@@ -67,6 +73,42 @@ class HealthPlixMigrationService(
         "Investigations" to listOf("org_person_bid_str", "test_result_date", "test_name"),
         "Medications" to listOf("patient_id", "visit_date", "pres"),
     )
+
+    /**
+     * Import from a single ZIP of the HealthPlix export. Each CSV inside is
+     * identified by its header columns — not its filename — so the four
+     * files can be zipped in any order, any folder depth, any naming.
+     */
+    @Transactional
+    fun migrateZip(zipBytes: ByteArray): Result {
+        val bySlot = HashMap<String, String>()
+        val unrecognised = mutableListOf<String>()
+        ZipInputStream(ByteArrayInputStream(zipBytes)).use { zin ->
+            var entry = zin.nextEntry
+            while (entry != null) {
+                val name = entry.name.substringAfterLast('/')
+                if (!entry.isDirectory && name.lowercase().endsWith(".csv")) {
+                    val content = zin.readBytes().toString(Charsets.UTF_8)
+                    val slot = detectSlot(content)
+                    if (slot != null) bySlot[slot] = content else unrecognised.add(name)
+                }
+                zin.closeEntry()
+                entry = zin.nextEntry
+            }
+        }
+        if (bySlot.isEmpty()) {
+            throw IllegalArgumentException(
+                "No recognisable HealthPlix CSV files were found in the ZIP." +
+                    if (unrecognised.isNotEmpty()) " Skipped: ${unrecognised.joinToString(", ")}." else ""
+            )
+        }
+        return migrate(
+            patientsCsv = bySlot["Patients"],
+            clinicalCsv = bySlot["Clinical"],
+            investigationsCsv = bySlot["Investigations"],
+            medicationsCsv = bySlot["Medications"],
+        )
+    }
 
     @Transactional
     fun migrate(
@@ -102,17 +144,22 @@ class HealthPlixMigrationService(
         val preExistingVisitIds = visitByRef.values.mapTo(HashSet()) { it.id }
 
         var patients = 0
-        var visits = 0
         var prescriptions = 0
+        var medicines = 0
         var investigations = 0
         var skipped = 0
         val warnings = mutableListOf<String>()
+        val skippedDetails = mutableListOf<String>()
+        // Distinct visits the import wrote to — counted at the end so a
+        // re-run reports the true total, not just newly created visits.
+        val touchedVisitIds = HashSet<java.util.UUID>()
         val now = Instant.now()
-        // Visits whose rx_rows we've already cleared this run, so multiple
-        // medication rows for one visit append rather than wipe each other.
-        val rxClearedVisitIds = HashSet<java.util.UUID>()
 
         fun warn(msg: String) { if (warnings.size < 50) warnings.add(msg) }
+        fun skip(reason: String) {
+            skipped++
+            if (skippedDetails.size < 200) skippedDetails.add(reason)
+        }
 
         // Resolve a patient by HealthPlix ref, creating a name-only stub if
         // the patient file didn't include them — never drop a visit/rx.
@@ -135,7 +182,7 @@ class HealthPlixMigrationService(
         // is "<patientRef>|<isoDate>" so it's stable across files + re-runs.
         fun resolveVisit(patientRef: String, date: LocalDate): Visit {
             val key = "$patientRef|$date"
-            visitByRef[key]?.let { return it }
+            visitByRef[key]?.let { touchedVisitIds.add(it.id); return it }
             val patient = resolvePatient(patientRef)
             val v = Visit(
                 clinic = clinic,
@@ -147,7 +194,7 @@ class HealthPlixMigrationService(
             )
             entityManager.persist(v)
             visitByRef[key] = v
-            visits++
+            touchedVisitIds.add(v.id)
             return v
         }
 
@@ -158,8 +205,8 @@ class HealthPlixMigrationService(
             for (row in rows.drop(1)) {
                 val ref = cell(row, header, "ID").trim()
                 val name = cell(row, header, "name").trim()
-                if (ref.isEmpty() || name.isEmpty()) { skipped++; continue }
-                if (name.lowercase() in setOf("demo patient", "demo 1")) { skipped++; continue }
+                if (ref.isEmpty() || name.isEmpty()) { skip("Patient row with no ID or name"); continue }
+                if (name.lowercase() in setOf("demo patient", "demo 1")) { skip("Demo/sample patient row"); continue }
 
                 val existing = patientByRef[ref]
                 val p = existing ?: Patient(clinic = clinic, externalRef = ref, createdAt = now)
@@ -178,8 +225,8 @@ class HealthPlixMigrationService(
                     // field mutations flush as an UPDATE on their own.
                     entityManager.persist(p)
                     patientByRef[ref] = p
-                    patients++
                 }
+                patients++   // counts both new and updated patients
             }
         }
 
@@ -190,8 +237,8 @@ class HealthPlixMigrationService(
             for (row in rows.drop(1)) {
                 val ref = cell(row, header, "org_person_bid_str").trim()
                 val date = parseHpDate(cell(row, header, "visit_date"))
-                if (ref.isEmpty() || date == null) { skipped++; continue }
-                if (ref == "2") { skipped++; continue }   // demo patient
+                if (ref.isEmpty() || date == null) { skip("Clinical row with no patient ID or visit date"); continue }
+                if (ref == "2") { skip("Clinical demo patient row"); continue }
 
                 val v = resolveVisit(ref, date)
                 v.diagnosis = cell(row, header, "diagnosis_temp").trim().ifBlank { null }
@@ -213,7 +260,9 @@ class HealthPlixMigrationService(
                 val date = parseHpDate(cell(row, header, "test_result_date"))
                 val testName = cell(row, header, "test_name").trim()
                 val resultText = cell(row, header, "test_result_text").trim()
-                if (ref.isEmpty() || date == null || testName.isEmpty()) { skipped++; continue }
+                if (ref.isEmpty() || date == null || testName.isEmpty()) {
+                    skip("Investigations row with no patient ID, date or test name"); continue
+                }
 
                 val v = resolveVisit(ref, date)
                 when (testName.lowercase()) {
@@ -241,26 +290,36 @@ class HealthPlixMigrationService(
         if (!medicationsCsv.isNullOrBlank()) {
             val rows = parseCsv(medicationsCsv)
             val header = headerIndex(rows.firstOrNull())
-            // Running rx position per visit — lets several medication rows
-            // for one visit append in order without a per-row lookup query.
-            val nextPos = HashMap<java.util.UUID, Int>()
+
+            // Pass 1 — resolve every visit and parse its prescription blob.
+            val pending = ArrayList<Pair<Visit, List<ParsedMed>>>()
             for (row in rows.drop(1)) {
                 val ref = cell(row, header, "patient_id").trim()
                 val date = parseHpDate(cell(row, header, "visit_date"))
                 val pres = cell(row, header, "pres")
-                if (ref.isEmpty() || date == null || pres.isBlank()) { skipped++; continue }
-                if (ref == "2") { skipped++; continue }
+                if (ref.isEmpty() || date == null || pres.isBlank()) {
+                    skip("Medications row with no patient ID, date or prescription"); continue
+                }
+                if (ref == "2") { skip("Medications demo patient row"); continue }
 
                 val v = resolveVisit(ref, date)
-                // First medication row for this visit wipes any prior rx so a
-                // re-import doesn't stack duplicates. Only visits that existed
-                // before this run can hold stale rx — new ones never do.
-                if (rxClearedVisitIds.add(v.id)) {
-                    if (v.id in preExistingVisitIds) rxRowRepository.deleteByVisitId(v.id)
-                    nextPos[v.id] = 0
-                }
-
                 val meds = parsePresBlob(pres)
+                if (meds.isNotEmpty()) pending.add(v to meds)
+            }
+            prescriptions += pending.size
+
+            // Clear prior rx for visits that already existed — one bulk
+            // DELETE, so the inserts below batch cleanly. New visits have no
+            // rx to clear, so they're excluded.
+            val toClear = pending.mapNotNullTo(HashSet()) { (v, _) ->
+                v.id.takeIf { it in preExistingVisitIds }
+            }
+            if (toClear.isNotEmpty()) rxRowRepository.deleteByVisitIdIn(toClear)
+
+            // Pass 2 — persist the new rx rows. Position runs per visit so
+            // several medication rows for one visit append in order.
+            val nextPos = HashMap<java.util.UUID, Int>()
+            for ((v, meds) in pending) {
                 var pos = nextPos.getOrDefault(v.id, 0)
                 for (m in meds) {
                     pos += 1
@@ -277,20 +336,38 @@ class HealthPlixMigrationService(
                             createdAt = now,
                         )
                     )
-                    prescriptions++
+                    medicines++
                 }
                 nextPos[v.id] = pos
             }
         }
 
+        val visits = touchedVisitIds.size
         log.info(
-            "HealthPlix migration into clinic {} — patients={} visits={} rx={} inv={} skipped={}",
-            clinicId, patients, visits, prescriptions, investigations, skipped,
+            "HealthPlix migration into clinic {} — patients={} visits={} prescriptions={} medicines={} inv={} skipped={}",
+            clinicId, patients, visits, prescriptions, medicines, investigations, skipped,
         )
-        return Result(patients, visits, prescriptions, investigations, skipped, warnings)
+        return Result(
+            patients, visits, prescriptions, medicines,
+            investigations, skipped, skippedDetails, warnings,
+        )
     }
 
     // ── validation ───────────────────────────────────────────────────────
+
+    /**
+     * Identify which of the four exports a CSV is, by matching its header
+     * against each slot's required columns. Returns null if it matches none
+     * (e.g. an unrelated file zipped in alongside the export).
+     */
+    private fun detectSlot(csv: String): String? {
+        val header = headerIndex(parseCsv(csv).firstOrNull())
+        if (header.isEmpty()) return null
+        return requiredColumns.entries
+            .firstOrNull { (_, cols) -> cols.all { it.lowercase() in header } }
+            ?.key
+    }
+
 
     /**
      * Returns null if the CSV is absent or its header carries every column

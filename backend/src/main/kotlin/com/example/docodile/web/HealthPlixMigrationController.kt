@@ -45,6 +45,17 @@ class HealthPlixMigrationController(
         )
     }
 
+    // Single-ZIP variant — the clinic drops one .zip of the whole export and
+    // the importer identifies each CSV inside by its header columns.
+    @PostMapping("/healthplix/zip", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','LAB','OTHER')")
+    fun migrateHealthPlixZip(
+        @RequestParam("file") file: MultipartFile,
+    ): HealthPlixMigrationService.Result {
+        if (file.isEmpty) throw IllegalArgumentException("No ZIP file uploaded")
+        return migrationService.migrateZip(file.bytes)
+    }
+
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgument(e: IllegalArgumentException): ResponseEntity<Map<String, String>> =
         ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))

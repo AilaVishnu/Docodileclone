@@ -46,32 +46,46 @@ const PLATFORMS: Platform[] = [
   },
 ];
 
-export function ImportData() {
-  const [platform, setPlatform] = useState<PlatformId | null>(null);
-  // The platform picker opens as a popup the moment this section loads, so
-  // the user is asked where they're migrating from before anything else.
-  const [pickerOpen, setPickerOpen] = useState(true);
+// "picker"     — platform-choice popup
+// "zip"        — HealthPlix ZIP-upload popup
+// "individual" — HealthPlix four-file page
+// "comingsoon" — placeholder for an unsupported platform
+// "empty"      — popup dismissed, nothing chosen yet
+type View = "picker" | "zip" | "individual" | "comingsoon" | "empty";
 
-  const choose = (id: PlatformId) => {
-    setPlatform(id);
-    setPickerOpen(false);
+export function ImportData() {
+  // The platform picker opens as a popup the moment this section loads.
+  const [view, setView] = useState<View>("picker");
+  const [comingSoonName, setComingSoonName] = useState("");
+
+  const choosePlatform = (id: PlatformId) => {
+    if (id === "healthplix") {
+      setView("zip");
+      return;
+    }
+    setComingSoonName(PLATFORMS.find((p) => p.id === id)!.name);
+    setView("comingsoon");
   };
+
+  const page =
+    view === "individual" ? <HealthPlixImport onBack={() => setView("picker")} />
+    : view === "comingsoon" ? <ComingSoon name={comingSoonName} onBack={() => setView("picker")} />
+    : <EmptyState onChoose={() => setView("picker")} />;
 
   return (
     <>
-      {platform === "healthplix" ? (
-        <HealthPlixImport onBack={() => setPickerOpen(true)} />
-      ) : platform ? (
-        <ComingSoon
-          name={PLATFORMS.find((p) => p.id === platform)!.name}
-          onBack={() => setPickerOpen(true)}
-        />
-      ) : (
-        <EmptyState onChoose={() => setPickerOpen(true)} />
-      )}
+      {page}
 
-      <Modal isOpen={pickerOpen} onClose={() => setPickerOpen(false)}>
-        <PlatformPicker onPick={choose} />
+      <Modal isOpen={view === "picker"} onClose={() => setView("empty")}>
+        <PlatformPicker onPick={choosePlatform} />
+      </Modal>
+
+      <Modal isOpen={view === "zip"} onClose={() => setView("empty")}>
+        <HealthPlixZipImport
+          onBack={() => setView("picker")}
+          onIndividual={() => setView("individual")}
+          onDone={() => setView("empty")}
+        />
       </Modal>
     </>
   );
@@ -106,6 +120,123 @@ function PlatformPicker({ onPick }: { onPick: (id: PlatformId) => void }) {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ── The popup: HealthPlix ZIP upload ────────────────────────────────────────
+
+function HealthPlixZipImport({
+  onBack,
+  onIndividual,
+  onDone,
+}: {
+  onBack: () => void;
+  onIndividual: () => void;
+  onDone: () => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [result, setResult] = useState<MigrationResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const pick = (f: File | undefined) => {
+    if (!f) return;
+    if (!f.name.toLowerCase().endsWith(".zip")) {
+      setError("Please choose a .zip file.");
+      return;
+    }
+    setError(null);
+    setFile(f);
+  };
+
+  const handleImport = async () => {
+    if (!file) return;
+    setImporting(true);
+    setError(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const token = localStorage.getItem("docodile_token");
+      const res = await fetch(`${API_BASE_URL}/api/tenant/migration/healthplix/zip`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          throw new Error("Your login session has expired. Log out, log back in, then retry the import.");
+        }
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || `HTTP ${res.status}`);
+      }
+      setResult(await res.json());
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  if (result) {
+    return (
+      <div style={S.picker}>
+        <h3 style={S.pickerTitle}>Migration complete</h3>
+        <MigrationSummary result={result} />
+        <div style={{ ...S.actions, justifyContent: "center" }}>
+          <button type="button" onClick={onDone} style={S.importBtn}>Done</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={S.picker}>
+      <h3 style={S.pickerTitle}>Import HealthPlix data</h3>
+      <p style={S.pickerSub}>
+        Drop the ZIP of your HealthPlix export — it should hold the four CSV
+        files. Docodile unzips it and imports them. Re-running is safe.
+      </p>
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".zip,application/zip"
+        style={{ display: "none" }}
+        onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }}
+      />
+      <div
+        style={{ ...S.dropzone, ...(dragOver ? S.dropzoneActive : null) }}
+        onClick={() => inputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => { e.preventDefault(); setDragOver(false); pick(e.dataTransfer.files?.[0]); }}
+      >
+        {file ? (
+          <span style={S.dropzoneFile}>{file.name}</span>
+        ) : (
+          <>
+            <span style={S.dropzoneTitle}>Click to choose a ZIP file</span>
+            <span style={S.dropzoneHint}>…or drag &amp; drop it here.</span>
+          </>
+        )}
+      </div>
+      {error && <div style={S.error}>{error}</div>}
+      <div style={{ ...S.actions, justifyContent: "center", gap: spacing.s }}>
+        <button type="button" onClick={onBack} style={S.cancelBtn}>Cancel</button>
+        <button
+          type="button"
+          onClick={handleImport}
+          disabled={!file || importing}
+          style={{ ...S.importBtn, ...(!file || importing ? S.importBtnDisabled : null) }}
+        >
+          {importing ? "Importing…" : "Import"}
+        </button>
+      </div>
+      <button type="button" onClick={onIndividual} style={S.linkBtn}>
+        Or upload the four files individually
+      </button>
     </div>
   );
 }
@@ -188,10 +319,64 @@ type MigrationResult = {
   patients: number;
   visits: number;
   prescriptions: number;
+  medicines: number;
   investigations: number;
   skipped: number;
+  skippedDetails: string[];
   warnings: string[];
 };
+
+// Collapse a list of repeated reason strings into [reason, count] pairs.
+function groupCounts(items: string[]): [string, number][] {
+  const map = new Map<string, number>();
+  items.forEach((s) => map.set(s, (map.get(s) ?? 0) + 1));
+  return Array.from(map.entries());
+}
+
+// Shared post-import summary — used by both the ZIP popup and the
+// individual-files page so the result always looks the same.
+function MigrationSummary({ result }: { result: MigrationResult }) {
+  const skipGroups = groupCounts(result.skippedDetails);
+  return (
+    <div style={S.summary}>
+      <div style={S.statRow}>
+        <Stat label="Patients" value={result.patients} />
+        <Stat label="Visits" value={result.visits} />
+        <Stat label="Prescriptions" value={result.prescriptions} />
+        <Stat label="Medicines" value={result.medicines} />
+        <Stat label="Investigations" value={result.investigations} />
+      </div>
+
+      {result.skipped > 0 && (
+        <div style={S.noteBox}>
+          <div style={S.noteHead}>
+            {result.skipped} row{result.skipped === 1 ? "" : "s"} skipped — not real records
+          </div>
+          <ul style={S.noteList}>
+            {skipGroups.map(([reason, count], i) => (
+              <li key={i} style={S.noteItem}>
+                {reason}{count > 1 ? ` — ${count} rows` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {result.warnings.length > 0 && (
+        <div style={S.noteBox}>
+          <div style={S.noteHead}>
+            {result.warnings.length} warning{result.warnings.length === 1 ? "" : "s"}
+          </div>
+          <ul style={S.noteList}>
+            {result.warnings.map((w, i) => (
+              <li key={i} style={S.noteItem}>{w}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function HealthPlixImport({ onBack }: { onBack: () => void }) {
   const [files, setFiles] = useState<Partial<Record<SlotId, PickedFile>>>({});
@@ -234,6 +419,9 @@ function HealthPlixImport({ onBack }: { onBack: () => void }) {
         body: form,
       });
       if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          throw new Error("Your login session has expired. Log out, log back in, then retry the import.");
+        }
         const body = await res.json().catch(() => null);
         throw new Error(body?.error || `HTTP ${res.status}`);
       }
@@ -302,23 +490,7 @@ function HealthPlixImport({ onBack }: { onBack: () => void }) {
       {result && (
         <div style={S.card}>
           <h3 style={S.resultTitle}>Migration summary</h3>
-          <div style={S.statRow}>
-            <Stat label="Patients" value={result.patients} />
-            <Stat label="Visits" value={result.visits} />
-            <Stat label="Prescriptions" value={result.prescriptions} />
-            <Stat label="Investigations" value={result.investigations} />
-            <Stat label="Skipped rows" value={result.skipped} muted />
-          </div>
-          {result.warnings.length > 0 && (
-            <div style={S.warnBox}>
-              <div style={S.warnHead}>{result.warnings.length} warning{result.warnings.length === 1 ? "" : "s"}</div>
-              <ul style={S.warnList}>
-                {result.warnings.map((w, i) => (
-                  <li key={i} style={S.warnItem}>{w}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <MigrationSummary result={result} />
         </div>
       )}
 
@@ -506,6 +678,65 @@ const S: Record<string, React.CSSProperties> = {
     padding: 0,
   },
 
+  // ── HealthPlix ZIP popup ─────────────────────────────────────────────────
+  dropzone: {
+    marginTop: spacing.s,
+    border: `1.5px dashed ${colors.primary300}`,
+    borderRadius: radii.l,
+    backgroundColor: colors.neutral100,
+    padding: `${spacing.xl} ${spacing.l}`,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: spacing["2xs"],
+    cursor: "pointer",
+    textAlign: "center",
+  },
+  dropzoneActive: {
+    borderColor: colors.primary700,
+    backgroundColor: colors.primary100,
+  },
+  dropzoneTitle: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    fontWeight: fonts.weight.medium,
+    color: colors.neutral900,
+  },
+  dropzoneHint: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.xs,
+    color: colors.neutral500,
+  },
+  dropzoneFile: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.primary700,
+    fontWeight: fonts.weight.medium,
+    wordBreak: "break-all",
+  },
+  cancelBtn: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.neutral700,
+    backgroundColor: "transparent",
+    border: `1px solid ${colors.primary300}`,
+    borderRadius: radii.full,
+    padding: "10px 24px",
+    cursor: "pointer",
+  },
+  linkBtn: {
+    alignSelf: "center",
+    marginTop: spacing["2xs"],
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.xs,
+    color: colors.primary700,
+    backgroundColor: "transparent",
+    border: "none",
+    cursor: "pointer",
+    textDecoration: "underline",
+    padding: 0,
+  },
+
   // ── HealthPlix file slots ────────────────────────────────────────────────
   slots: {
     display: "grid",
@@ -617,24 +848,39 @@ const S: Record<string, React.CSSProperties> = {
   statRow: {
     display: "flex",
     flexWrap: "wrap",
-    gap: spacing.l,
+    gap: spacing.s,
   },
+  // Each stat is an even white tile so the five counts read as a clean
+  // row rather than loose text.
   stat: {
+    flex: "1 1 88px",
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.l,
+    padding: `${spacing.m} ${spacing.s}`,
     display: "flex",
     flexDirection: "column",
-    gap: 2,
+    alignItems: "center",
+    gap: spacing["3xs"],
   },
   statValue: {
     fontFamily: fonts.family.secondary,
     fontSize: fonts.size.h6,
+    lineHeight: 1,
     color: colors.primary700,
   },
   statLabel: {
     fontFamily: fonts.family.primary,
     fontSize: fonts.control.xs,
-    color: colors.neutral500,
+    color: colors.neutral600,
+    textAlign: "center",
+    whiteSpace: "nowrap",
   },
-  warnBox: {
+  summary: {
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.m,
+  },
+  noteBox: {
     backgroundColor: colors.neutral100,
     borderRadius: radii.l,
     padding: spacing.m,
@@ -642,23 +888,23 @@ const S: Record<string, React.CSSProperties> = {
     flexDirection: "column",
     gap: spacing.xs,
   },
-  warnHead: {
+  noteHead: {
     fontFamily: fonts.family.primary,
     fontSize: fonts.control.xs,
     fontWeight: fonts.weight.medium,
-    color: colors.neutral600,
+    color: colors.neutral700,
   },
-  warnList: {
+  noteList: {
     margin: 0,
     paddingLeft: spacing.l,
     display: "flex",
     flexDirection: "column",
-    gap: 2,
+    gap: spacing["3xs"],
   },
-  warnItem: {
+  noteItem: {
     fontFamily: fonts.family.primary,
     fontSize: fonts.control.xs,
     color: colors.neutral600,
-    lineHeight: 1.4,
+    lineHeight: 1.45,
   },
 };
