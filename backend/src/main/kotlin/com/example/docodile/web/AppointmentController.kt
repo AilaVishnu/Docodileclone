@@ -1,7 +1,9 @@
 package com.example.docodile.web
 
 import com.example.docodile.service.AppointmentService
+import com.example.docodile.service.DuplicateAppointmentException
 import org.springframework.format.annotation.DateTimeFormat
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
@@ -28,6 +30,13 @@ class AppointmentController(private val appointmentService: AppointmentService) 
         return try {
             val appointment = appointmentService.bookAppointment(request)
             ResponseEntity.ok(appointment)
+        } catch (e: DuplicateAppointmentException) {
+            // 409 + duplicate flag lets the booking UI distinguish "already
+            // booked today" (where it can prompt to add anyway) from any
+            // other booking failure.
+            ResponseEntity.status(HttpStatus.CONFLICT).body(
+                mapOf("error" to (e.message ?: "Duplicate appointment"), "duplicate" to true)
+            )
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
         }

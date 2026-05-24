@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.UUID
 
 // Thrown when a booking would violate the "one appointment per patient
@@ -87,19 +89,27 @@ class AppointmentService(
         }
 
         // One appointment per patient per day, per clinic. Blocks both the
-        // soft-FE-only path and any direct API call. Storage-side guard is
-        // the partial unique index added in V25; this check just lets us
-        // surface a friendly 409 instead of letting the constraint trip.
-        val dayStart = request.scheduledTime.toLocalDate().atStartOfDay()
-        val dayEnd = request.scheduledTime.toLocalDate().atTime(23, 59, 59)
-        val sameDay = appointmentRepository
-            .findAllByClinicIdAndPatientIdAndScheduledTimeBetween(
-                clinic.id!!, savedPatient.id!!, dayStart, dayEnd,
-            )
-        if (sameDay.isNotEmpty()) {
-            throw DuplicateAppointmentException(
-                "${savedPatient.name} already has an appointment on ${request.scheduledTime.toLocalDate()}",
-            )
+        // soft-FE-only path and any direct API call. The DB-side UNIQUE
+        // index was relaxed in V44 — same-day duplicates are allowed when
+        // the caller passes `force = true`, which the booking UI sets
+        // after the staff explicitly confirms the second appointment.
+        if (!request.force) {
+            val dayStart = request.scheduledTime.toLocalDate().atStartOfDay()
+            val dayEnd = request.scheduledTime.toLocalDate().atTime(23, 59, 59)
+            val sameDay = appointmentRepository
+                .findAllByClinicIdAndPatientIdAndScheduledTimeBetween(
+                    clinic.id!!, savedPatient.id!!, dayStart, dayEnd,
+                )
+            if (sameDay.isNotEmpty()) {
+                val timeFmt = DateTimeFormatter.ofPattern("hh:mm a", Locale.ENGLISH)
+                val times = sameDay
+                    .mapNotNull { it.scheduledTime?.format(timeFmt) }
+                    .joinToString(", ")
+                val suffix = if (times.isNotEmpty()) " at $times" else ""
+                throw DuplicateAppointmentException(
+                    "${savedPatient.name} already has an appointment on ${request.scheduledTime.toLocalDate()}$suffix",
+                )
+            }
         }
 
         val appointment = Appointment(
