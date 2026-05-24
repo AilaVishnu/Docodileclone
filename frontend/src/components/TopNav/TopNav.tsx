@@ -206,6 +206,9 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
     );
   };
 
+  const userRole = localStorage.getItem("docodile_role");
+  const isAdmin = userRole === "ADMIN";
+
   return (
     <div style={styles.container}>
       {/* Search Bar */}
@@ -261,14 +264,18 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
                 label="Settings"
                 onClick={() => { }}
               />
-              <DropdownItem
-                label="Build Your Clinic"
-                onClick={() => onBuildClinic && onBuildClinic()}
-              />
-              <DropdownItem
-                label="View All Clinics"
-                onClick={() => onViewAllClinics && onViewAllClinics()}
-              />
+              {isAdmin && (
+                <>
+                  <DropdownItem
+                    label="Build Your Clinic"
+                    onClick={() => onBuildClinic && onBuildClinic()}
+                  />
+                  <DropdownItem
+                    label="View All Clinics"
+                    onClick={() => onViewAllClinics && onViewAllClinics()}
+                  />
+                </>
+              )}
               <DropdownItem
                 label="Logout"
                 onClick={() => onLogout && onLogout()}

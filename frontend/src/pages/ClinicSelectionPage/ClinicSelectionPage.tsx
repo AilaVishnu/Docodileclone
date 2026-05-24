@@ -72,6 +72,9 @@ export function ClinicSelectionPage({ onSelectClinic, onGoToBuild, onLogout }: C
     fetchClinics();
   }, []);
 
+  const userRole = localStorage.getItem("docodile_role");
+  const isAdmin = userRole === "ADMIN";
+
   return (
     <div style={styles.page}>
       <div style={styles.cardGrid}>
@@ -88,9 +91,11 @@ export function ClinicSelectionPage({ onSelectClinic, onGoToBuild, onLogout }: C
         ))}
       </div>
 
-      <button style={styles.buildLink} onClick={onGoToBuild}>
-        Go to 'Build Your Clinic'
-      </button>
+      {isAdmin && (
+        <button style={styles.buildLink} onClick={onGoToBuild}>
+          Go to 'Build Your Clinic'
+        </button>
+      )}
 
       <button style={styles.logoutButton} onClick={onLogout}>
         Logout
