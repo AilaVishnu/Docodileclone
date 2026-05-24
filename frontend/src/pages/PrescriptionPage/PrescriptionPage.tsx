@@ -2224,7 +2224,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                                       width: "auto",
                                       right: 8,
                                     }}
-                                    placeholder="Molecule"
+                                    placeholder="Unknown"
                                     value={row.genericName}
                                     onChange={(e) => updateField("genericName", e.target.value)}
                                   />
