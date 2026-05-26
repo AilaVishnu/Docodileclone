@@ -11,6 +11,7 @@ import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { styles as queueStyles } from "../../components/AppointmentQueue/AppointmentQueue.styles";
 import { setPendingSessionNav } from "../../components/TopNav/SessionTrayButton";
 import type { NavTab } from "../../components/SideNav";
+import "./PatientFilesPage.responsive.css";
 
 // Patient Files — stack of physical-looking folders. Each row is the folder-tab
 // shape from Figma (assets/patient_folder.svg) stretched horizontally; rows
@@ -595,7 +596,7 @@ function OpenFile({ patient, onOpenChart, onOpenBills }: { patient: Patient; onO
       </div>
 
       {/* Buttons pinned to the top-right corner of the card, straddling the right edge */}
-      <div style={{ ...styles.iconColumn, position: "absolute", right: "-35px", top: "60px" }}>
+      <div style={{ ...styles.iconColumn, position: "absolute", right: "-35px", top: "60px" }} data-patient-icon-actions>
         <IconAction
           label={patient.phone ? `Call ${patient.phone}` : "No phone on file"}
           href={patient.phone ? `tel:${patient.phone}` : undefined}

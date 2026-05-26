@@ -102,11 +102,11 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       backgroundColor: colors.active.shade300,
     },
     contentArea: {
-      marginLeft: isSidebarExpanded ? "204px" : "95px",
-      width: isSidebarExpanded ? "calc(100% - 204px)" : "calc(100% - 95px)",
+      flex: 1,
       display: "flex",
       flexDirection: "column" as const,
-      transition: "margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      minWidth: 0,
     },
     mainContent: {
       padding: "40px 40px 24px",

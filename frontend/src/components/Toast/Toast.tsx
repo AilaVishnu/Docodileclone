@@ -23,7 +23,7 @@ export function Toast({ message, isVisible, onClose, duration = 4000, actionLabe
   if (!isVisible) return null;
 
   return (
-    <div style={styles.container}>
+    <div style={styles.container} className="docodile-toast">
       <BuildingIcon style={styles.icon} />
       <p style={styles.message}>{message}</p>
       {actionLabel && onAction && (
