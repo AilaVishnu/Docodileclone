@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { colors, fonts, spacing, radii } from "../../styles/theme";
 import { Button } from "../Button";
 import { Select } from "../Input/Select/Select";
+import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
 
 type Medicine = {
   id: string;
@@ -10,6 +11,10 @@ type Medicine = {
   dosage?: string;
   unitPrice: number;
   qty: number;
+  // True if this medicine is in the clinic's pharmacy stock. When false
+  // the row is highlighted as "not in inventory" and the unit price is
+  // editable so the dispensary can charge a one-off rate.
+  inStock?: boolean;
 };
 
 type CatalogItem = {
@@ -32,7 +37,10 @@ const DEFAULT_CATALOG: CatalogItem[] = [
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  onBilled?: (paymentMethod: string, total: number) => void;
+  // Called when "Charge & Bill" / "Mark Waived" is clicked. The third
+  // arg lists every billed medicine (name + qty) so the host can deduct
+  // them from the clinic's pharmacy inventory in one round-trip.
+  onBilled?: (paymentMethod: string, total: number, items: { name: string; qty: number; inStock: boolean }[]) => void;
   patientName: string;
   medicines: Medicine[];
   loading?: boolean;
@@ -74,7 +82,7 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
       if (existing) {
         return prev.map((m) => (m.id === existing.id ? { ...m, qty: m.qty + 1 } : m));
       }
-      return [...prev, { id: `add-${Date.now()}`, name: picked.name, unitPrice: picked.unitPrice, qty: 1 }];
+      return [...prev, { id: `add-${Date.now()}`, name: picked.name, unitPrice: picked.unitPrice, qty: 1, inStock: true }];
     });
     setIsAdding(false);
   };
@@ -86,14 +94,29 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
     () => items.reduce((acc, m) => acc + m.unitPrice * m.qty, 0),
     [items]
   );
+  // Waive = "free dispense" — pin the bill to ₹0 and lock the discount/
+  // GST / qty inputs so the receptionist can't accidentally edit a
+  // figure that's about to be ignored anyway. Toggle off Waive and the
+  // values they had before re-apply (state is preserved).
+  const isWaived = paymentMethod === "Waive";
   const due = Math.max(0, pendingDue);
-  const discountAmt = discountMode === "%" ? (subtotal * discount) / 100 : discount;
+  const discountAmt = isWaived
+    ? subtotal
+    : (discountMode === "%" ? (subtotal * discount) / 100 : discount);
   const afterDiscount = Math.max(0, subtotal - discountAmt);
-  const gstAmt = (afterDiscount * gst) / 100;
-  const total = afterDiscount + gstAmt + due;
+  const gstAmt = isWaived ? 0 : (afterDiscount * gst) / 100;
+  const total = isWaived ? 0 : afterDiscount + gstAmt + due;
 
   const setQty = (id: string, qty: number) => {
     setItems((prev) => prev.map((m) => (m.id === id ? { ...m, qty: Math.max(0, qty) } : m)));
+  };
+
+  const setUnitPrice = (id: string, unitPrice: number) => {
+    setItems((prev) => prev.map((m) => (m.id === id ? { ...m, unitPrice: Math.max(0, unitPrice) } : m)));
+  };
+
+  const removeItem = (id: string) => {
+    setItems((prev) => prev.filter((m) => m.id !== id));
   };
 
   if (!isOpen) return null;
@@ -115,6 +138,7 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
                 <col style={{ width: "70px" }} />
                 <col style={{ width: "110px" }} />
                 <col style={{ width: "80px" }} />
+                <col style={{ width: "36px" }} />
               </colgroup>
               <thead>
                 <tr>
@@ -122,19 +146,20 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
                   <th style={{ ...styles.th, textAlign: "right" }}>Unit ₹</th>
                   <th style={{ ...styles.th, textAlign: "center" }}>Qty</th>
                   <th style={{ ...styles.th, textAlign: "right" }}>Amount</th>
+                  <th style={styles.th} aria-label="Actions" />
                 </tr>
               </thead>
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={4} style={{ ...styles.td, textAlign: "center", color: colors.neutral500, borderBottom: "none" }}>
+                    <td colSpan={5} style={{ ...styles.td, textAlign: "center", color: colors.neutral500, borderBottom: "none" }}>
                       Loading prescription…
                     </td>
                   </tr>
                 )}
                 {!loading && items.length === 0 && !isAdding && (
                   <tr>
-                    <td colSpan={4} style={{ ...styles.td, textAlign: "center", color: colors.neutral500, borderBottom: "none" }}>
+                    <td colSpan={5} style={{ ...styles.td, textAlign: "center", color: colors.neutral500, borderBottom: "none" }}>
                       No medicines prescribed yet.
                     </td>
                   </tr>
@@ -142,10 +167,34 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
                 {items.map((m, idx) => {
                   const isLast = idx === items.length - 1 && !isAdding;
                   const cellStyle = isLast ? { ...styles.td, borderBottom: "none" } : styles.td;
+                  // Rows for meds the clinic doesn't stock get a soft red
+                  // background and an editable price field — the dispensary
+                  // can charge a one-off rate without leaving the modal.
+                  const notInStock = m.inStock === false;
+                  const rowStyle = notInStock ? { backgroundColor: colors.redAlpha10 } : undefined;
                   return (
-                    <tr key={m.id}>
-                      <td style={cellStyle}>{m.name}</td>
-                      <td style={{ ...cellStyle, textAlign: "right" }}>{m.unitPrice.toLocaleString("en-IN")}</td>
+                    <tr key={m.id} style={rowStyle}>
+                      <td style={cellStyle}>
+                        {m.name}
+                        {notInStock && (
+                          <span style={styles.notInStockBadge} title="Not in pharmacy inventory">Not in stock</span>
+                        )}
+                      </td>
+                      <td style={{ ...cellStyle, textAlign: "right" }}>
+                        {notInStock ? (
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={m.unitPrice || ""}
+                            placeholder="0"
+                            onChange={(e) => setUnitPrice(m.id, Number(e.target.value))}
+                            style={styles.priceInput}
+                          />
+                        ) : (
+                          m.unitPrice.toLocaleString("en-IN")
+                        )}
+                      </td>
                       <td style={{ ...cellStyle, textAlign: "center" }}>
                         <div style={styles.qtyWrap}>
                           <button style={styles.stepper} onClick={() => setQty(m.id, m.qty - 1)} disabled={m.qty <= 0}>−</button>
@@ -154,12 +203,23 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
                         </div>
                       </td>
                       <td style={{ ...cellStyle, textAlign: "right", fontWeight: 500 }}>{(m.unitPrice * m.qty).toLocaleString("en-IN")}</td>
+                      <td style={{ ...cellStyle, textAlign: "center", padding: "10px 4px" }}>
+                        <button
+                          type="button"
+                          style={styles.deleteBtn}
+                          onClick={() => removeItem(m.id)}
+                          aria-label={`Remove ${m.name}`}
+                          title="Remove from bill"
+                        >
+                          <TrashIcon width={16} height={16} />
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
                 {isAdding && (
                   <tr>
-                    <td colSpan={4} style={{ ...styles.td, borderBottom: "none", padding: "10px 8px" }}>
+                    <td colSpan={5} style={{ ...styles.td, borderBottom: "none", padding: "10px 8px" }}>
                       <Select
                         value=""
                         onChange={(value) => {
@@ -219,32 +279,34 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
 
               <div style={styles.fieldRow}>
                 <label style={styles.label}>Discount</label>
-                <div style={styles.fieldValue}>
+                <div style={{ ...styles.fieldValue, ...(isWaived ? { opacity: 0.5 } : null) }}>
                   <input
-                    style={{ ...styles.input, textAlign: "right" }}
+                    style={{ ...styles.input, textAlign: "right", cursor: isWaived ? "not-allowed" : "text" }}
                     type="number"
                     min={0}
                     placeholder="0"
-                    value={discount || ""}
+                    value={isWaived ? 100 : (discount || "")}
+                    disabled={isWaived}
                     onChange={(e) => setDiscount(Number(e.target.value))}
                   />
                   <div style={styles.toggleGroup}>
-                    <button style={discountMode === "%" ? styles.toggleActive : styles.toggleInactive} onClick={() => setDiscountMode("%")}>%</button>
-                    <button style={discountMode === "₹" ? styles.toggleActive : styles.toggleInactive} onClick={() => setDiscountMode("₹")}>₹</button>
+                    <button style={discountMode === "%" ? styles.toggleActive : styles.toggleInactive} disabled={isWaived} onClick={() => setDiscountMode("%")}>%</button>
+                    <button style={discountMode === "₹" ? styles.toggleActive : styles.toggleInactive} disabled={isWaived} onClick={() => setDiscountMode("₹")}>₹</button>
                   </div>
                 </div>
               </div>
 
               <div style={styles.fieldRow}>
                 <label style={styles.label}>GST</label>
-                <div style={styles.fieldValue}>
+                <div style={{ ...styles.fieldValue, ...(isWaived ? { opacity: 0.5 } : null) }}>
                   <input
-                    style={{ ...styles.input, textAlign: "right" }}
+                    style={{ ...styles.input, textAlign: "right", cursor: isWaived ? "not-allowed" : "text" }}
                     type="number"
                     min={0}
                     max={100}
                     placeholder="0"
-                    value={gst || ""}
+                    value={isWaived ? 0 : (gst || "")}
+                    disabled={isWaived}
                     onChange={(e) => setGst(Number(e.target.value))}
                   />
                   <span style={styles.fieldSuffix}>%</span>
@@ -277,8 +339,14 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
                 variant="dark"
                 size="sm"
                 style={{ height: "40px", fontSize: fonts.size.s, padding: "0 20px" }}
-                disabled={items.length === 0 || total <= 0}
-                onClick={() => { onBilled?.(paymentMethod, total); onClose(); }}
+                disabled={items.length === 0 || (!isWaived && total <= 0)}
+                onClick={() => {
+                  const billedItems = items
+                    .filter((m) => m.qty > 0)
+                    .map((m) => ({ name: m.name, qty: m.qty, inStock: m.inStock !== false }));
+                  onBilled?.(paymentMethod, total, billedItems);
+                  onClose();
+                }}
               >
                 {paymentMethod === "Waive" ? "Mark Waived" : "Charge & Bill"}
               </Button>
@@ -387,6 +455,42 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: fonts.size.xs,
     color: colors.neutral500,
     marginTop: 2,
+  },
+  notInStockBadge: {
+    display: "inline-block",
+    marginLeft: 8,
+    padding: "1px 8px",
+    borderRadius: 999,
+    fontSize: fonts.size.xs,
+    color: colors.red200,
+    backgroundColor: colors.redAlpha10,
+    fontWeight: 500,
+    verticalAlign: "middle",
+  },
+  priceInput: {
+    width: 70,
+    padding: "4px 8px",
+    border: `1px solid ${colors.red200}`,
+    borderRadius: 6,
+    fontSize: fonts.size.s,
+    color: colors.neutral900,
+    backgroundColor: colors.neutral100,
+    textAlign: "right",
+    fontFamily: "inherit",
+    outline: "none",
+  },
+  deleteBtn: {
+    border: "none",
+    background: "transparent",
+    cursor: "pointer",
+    color: colors.neutral500,
+    width: 28,
+    height: 28,
+    borderRadius: radii.xs,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 0,
   },
 
   qtyWrap: {

@@ -3,13 +3,25 @@ import { API_BASE_URL } from "../../apiConfig";
 import { Patient } from "../../hooks/usePatients";
 import { pickAvatar } from "../../utils/avatar";
 import { Button } from "../../components/Button";
-import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
+import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { loadStartedSet } from "../../utils/sessionStarted";
 import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { ReactComponent as RestartIcon } from "../../assets/icons/restart-24.svg";
+import { ReactComponent as StarIcon } from "../../assets/icons/star.svg";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { styles } from "./PrescriptionQueue.styles";
+import { Toast } from "../../components/Toast";
+
+// Pick the icon that fits the appointment type. New patient = filled
+// star (first-time visit); everything else (Review, follow-up) uses
+// the restart/refresh glyph to signal a repeat.
+function TypeIcon({ type }: { type: string | null | undefined }) {
+  const isNew = (type ?? "").trim().toLowerCase() === "new";
+  return isNew
+    ? <StarIcon width={18} height={18} />
+    : <RestartIcon width={18} height={18} />;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal landing of the Prescription page — Figma 2282:17378.
@@ -32,6 +44,7 @@ type AppointmentRow = {
   status: string | null;
   scheduledTime: string | null;
   doctorId: string;
+  patientArchived?: boolean;
 };
 
 type StatusFilter = "all" | "AT_DOC" | "IN_PROGRESS" | "WAITING" | "COMPLETED";
@@ -63,6 +76,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
   // this device. Loaded on mount and on every fetch (so transitions made
   // inside the form propagate back when the user returns to the queue).
   const [startedSet, setStartedSet] = useState<Set<string>>(loadStartedSet);
+  const [toastMsg, setToastMsg] = useState<string>("");
   useEffect(() => {
     setStartedSet(loadStartedSet());
   }, [appointments]);
@@ -135,6 +149,13 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
   }, []);
 
   const handleViewPad = (apt: AppointmentRow) => {
+    // Archived patients stay visible in the queue (the receptionist still
+    // needs to see who was scheduled) but the doctor can't open the pad —
+    // archiving is the signal to stop adding to that patient's chart.
+    if (apt.patientArchived) {
+      setToastMsg(`${apt.patientName} is archived — restore the patient to continue.`);
+      return;
+    }
     // Just open the form; the "started" flag now flips when the doctor
     // clicks Start Session inside the form (handled by PrescriptionPage).
     const patient: Patient = {
@@ -285,6 +306,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
       </div>
 
       {renderCards()}
+      <Toast message={toastMsg} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
     </div>
   );
 }
@@ -345,7 +367,7 @@ function PatientCard({
             label="Type"
             value={
               <span style={styles.typeRow}>
-                <RestartIcon width={18} height={18} />
+                <TypeIcon type={apt.type} />
                 {apt.type ?? "—"}
               </span>
             }
@@ -472,7 +494,7 @@ function PatientListTable({
                 </td>
                 <td style={{ ...styles.td, textAlign: "center" }}>
                   <span style={styles.typeRow}>
-                    <RestartIcon width={18} height={18} />
+                    <TypeIcon type={apt.type} />
                     {apt.type ?? "—"}
                   </span>
                 </td>

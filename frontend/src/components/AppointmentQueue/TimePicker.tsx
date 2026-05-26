@@ -53,6 +53,25 @@ export function TimePicker({ initialTime, onSelect, onClose, style }: TimePicker
     onClose();
   };
 
+  // Snap to the current wall-clock time, rounded to the nearest 5 minutes
+  // so it lines up with the minute selector below. Commits + closes in one
+  // click — typical walk-in flow is "book for right now".
+  const handleNow = () => {
+    const now = new Date();
+    let h = now.getHours();
+    const period = h >= 12 ? "PM" : "AM";
+    h = h % 12;
+    if (h === 0) h = 12;
+    let m = Math.round(now.getMinutes() / 5) * 5;
+    if (m === 60) {
+      m = 0;
+      h = h === 12 ? 1 : h + 1;
+    }
+    const formattedTime = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")} ${period}`;
+    onSelect(formattedTime);
+    onClose();
+  };
+
   return (
     <>
       <div style={styles.backdrop} onClick={onClose} />
@@ -109,9 +128,14 @@ export function TimePicker({ initialTime, onSelect, onClose, style }: TimePicker
           </button>
         </div>
 
-        <button style={styles.doneButton} onClick={handleDone}>
-          Done
-        </button>
+        <div style={styles.actionsRow}>
+          <button type="button" style={styles.nowButton} onClick={handleNow}>
+            Now
+          </button>
+          <button type="button" style={styles.doneButton} onClick={handleDone}>
+            Done
+          </button>
+        </div>
         </div>
       </div>
     </>

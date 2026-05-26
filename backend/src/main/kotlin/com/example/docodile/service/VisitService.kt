@@ -29,17 +29,10 @@ class VisitService(
     fun listForPatient(patientId: UUID): List<VisitDTO> {
         val clinicId = currentUser.clinicId()
 
-        // Collect all patient UUIDs that share the same phone number so that
-        // visits created before the find-or-create fix (which gave the same
-        // person different UUIDs on each booking) are all returned together.
-        val phone = patientRepository.findById(patientId).orElse(null)?.phone
-        val patientIds: List<UUID> = if (!phone.isNullOrBlank()) {
-            patientRepository.findAllByClinicIdAndPhone(clinicId, phone).map { it.id }
-        } else {
-            listOf(patientId)
-        }
-
-        return visitRepository.findAllByClinicIdAndPatientIdInOrderByVisitDateAsc(clinicId, patientIds)
+        // Strictly this patient's own visits. A phone number can be shared
+        // across a family, so visit history must never be merged by phone —
+        // each patient row owns its own history.
+        return visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAsc(clinicId, patientId)
             .map { it.toDTO(loadRxRows(it.id)) }
     }
 

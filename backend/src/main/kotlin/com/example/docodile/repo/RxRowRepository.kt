@@ -18,6 +18,13 @@ interface RxRowRepository : JpaRepository<RxRow, UUID> {
     @Query("DELETE FROM RxRow r WHERE r.visit.id = :visitId")
     fun deleteByVisitId(@Param("visitId") visitId: UUID): Int
 
+    // Bulk variant for the data importer — clears rx for many visits in one
+    // statement. A query-per-visit would force a persistence-context flush
+    // each time, defeating JDBC insert batching on a re-import.
+    @Modifying
+    @Query("DELETE FROM RxRow r WHERE r.visit.id IN :visitIds")
+    fun deleteByVisitIdIn(@Param("visitIds") visitIds: Collection<UUID>): Int
+
     @Query("""
         SELECT r.medicine FROM RxRow r
         WHERE r.visit.patient.clinic.id = :clinicId

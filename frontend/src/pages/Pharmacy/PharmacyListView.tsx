@@ -8,9 +8,12 @@ type Props = {
   items: Med[];
   groupBy: GroupBy;
   onPick?: (med: Med) => void;
+  onEdit?: (med: Med) => void;
+  onAdjustQty?: (med: Med) => void;
+  onDelete?: (med: Med) => void;
 };
 
-export function PharmacyListView({ items, groupBy, onPick }: Props) {
+export function PharmacyListView({ items, groupBy, onPick, onEdit, onAdjustQty, onDelete }: Props) {
   const groups = groupItems(items, groupBy);
   const ordered = groups.flatMap((g) => g.items);
 
@@ -69,9 +72,24 @@ export function PharmacyListView({ items, groupBy, onPick }: Props) {
               <td style={{ ...styles.td, ...styles.tdNumeric }}>{m.discountPct.toFixed(2)}</td>
               <td style={{ ...styles.td, ...styles.tdNumeric }}>{m.gstPct.toFixed(2)}</td>
               <td style={styles.td}>
-                <button type="button" style={styles.actionBtn} title="Return">↺</button>
-                <button type="button" style={styles.actionBtn} title="Edit">✎</button>
-                <button type="button" style={styles.actionBtn} title="Edit qty">#</button>
+                <button
+                  type="button"
+                  style={styles.actionBtn}
+                  title="Delete batch"
+                  onClick={() => onDelete?.(m)}
+                >↺</button>
+                <button
+                  type="button"
+                  style={styles.actionBtn}
+                  title="Edit batch"
+                  onClick={() => onEdit?.(m)}
+                >✎</button>
+                <button
+                  type="button"
+                  style={styles.actionBtn}
+                  title="Adjust quantity"
+                  onClick={() => onAdjustQty?.(m)}
+                >#</button>
               </td>
             </tr>
           ))}

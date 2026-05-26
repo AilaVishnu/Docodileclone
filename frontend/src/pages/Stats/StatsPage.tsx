@@ -13,6 +13,7 @@ import {
   ThemedHorizontalBar,
   ThemedVerticalBar,
 } from "../../components/charts";
+import "./StatsPage.responsive.css";
 
 type TabId = "overview" | "health" | "patients" | "doctors" | "clinical" | "operations" | "finance";
 type RangeId = "today" | "week" | "month" | "year" | "custom";
@@ -173,6 +174,12 @@ type FinanceStats = {
   avgPerVisit: number;
   revenueTrend: DailyCount[];
   paymentMix: Record<string, number>;
+  waivedAmount: number;
+  revenueByService: Record<string, number>;
+  revenueByType: Record<string, number>;
+  billsCount: { paid: number; waived: number; due: number };
+  pharmacyRevenue: number;
+  revenueByHour: Record<string, number>;
 };
 
 function useFinanceStats(range: RangeId, customStart: string, customEnd: string) {
@@ -1038,13 +1045,130 @@ function FinanceTab({ range, customStart, customEnd }: { range: RangeId; customS
 
       <div style={styles.kpiGrid}>
         <KpiTile label="Revenue"              value={L ?? fmtInr(stats?.revenue ?? 0)}        delta="" tone="flat" sub={subFor(range)} />
-        <KpiTile label="Outstanding dues"     value={L ?? fmtInr(stats?.outstandingDues ?? 0)} delta="" tone="flat" sub="unpaid appointments with fee" />
-        <KpiTile label="Avg revenue / visit"  value={L ?? fmtInr(stats?.avgPerVisit ?? 0)}    delta="" tone="flat" sub="paid visits" />
+        <KpiTile label="Pharmacy"             value={L ?? fmtInr(stats?.pharmacyRevenue ?? 0)} delta="" tone="flat" sub="medicine bills" />
+        <KpiTile label="Outstanding dues"     value={L ?? fmtInr(stats?.outstandingDues ?? 0)} delta="" tone="flat" sub={`${stats?.billsCount?.due ?? 0} unpaid`} />
+        <KpiTile label="Avg revenue / visit"  value={L ?? fmtInr(stats?.avgPerVisit ?? 0)}    delta="" tone="flat" sub={`${stats?.billsCount?.paid ?? 0} paid visits`} />
+        <KpiTile label="Waived"               value={L ?? fmtInr(stats?.waivedAmount ?? 0)}   delta="" tone="flat" sub={`${stats?.billsCount?.waived ?? 0} bills`} />
       </div>
+
+      <RevenueBreakdownCard
+        byType={stats?.revenueByType ?? {}}
+        byService={stats?.revenueByService ?? {}}
+        loading={loading}
+      />
+
+      <PeakRevenueHoursCard data={stats?.revenueByHour ?? {}} loading={loading} />
 
       <PaymentMixCard data={stats?.paymentMix ?? {}} loading={loading} />
 
       <RevenueTrendCardFin data={stats?.revenueTrend ?? []} loading={loading} />
+    </div>
+  );
+}
+
+// Peak earning hours — 24-bar chart (one per hour) sized by total
+// revenue (consultation + pharmacy) that scheduled in that slot. Empty
+// hours render as a flat baseline so the silhouette of the clinic's
+// "busy + earning" window is obvious at a glance.
+function PeakRevenueHoursCard({ data, loading }: { data: Record<string, number>; loading: boolean }) {
+  const buckets = Array.from({ length: 24 }, (_, h) => ({ hour: h, value: Number(data[String(h)] ?? 0) }));
+  const max = Math.max(1, ...buckets.map((b) => b.value));
+  const hasAny = buckets.some((b) => b.value > 0);
+  const fmtInr = (v: number) => `₹ ${v.toLocaleString("en-IN")}`;
+  const hourLabel = (h: number) => {
+    const period = h >= 12 ? "PM" : "AM";
+    const display = h % 12 === 0 ? 12 : h % 12;
+    return `${display} ${period}`;
+  };
+  const peak = buckets.reduce((best, b) => (b.value > best.value ? b : best), buckets[0]);
+  return (
+    <div style={styles.card}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: spacing.s }}>
+        <h3 style={styles.cardTitle}>Peak earning hours</h3>
+        {hasAny && (
+          <span style={{ fontSize: fonts.size.xs, color: colors.neutral500 }}>
+            Peak: {hourLabel(peak.hour)} · {fmtInr(peak.value)}
+          </span>
+        )}
+      </div>
+      {loading ? (
+        <div style={{ fontSize: fonts.size.s, color: colors.neutral500 }}>…</div>
+      ) : !hasAny ? (
+        <div style={{ fontSize: fonts.size.s, color: colors.neutral500 }}>No revenue in this range.</div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 160 }}>
+          {buckets.map((b) => {
+            const ratio = b.value / max;
+            return (
+              <div key={b.hour} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }} title={`${hourLabel(b.hour)} — ${fmtInr(b.value)}`}>
+                <div style={{
+                  width: "100%",
+                  height: `${Math.max(2, ratio * 100)}%`,
+                  backgroundColor: b.value > 0 ? colors.active.shade600 : colors.neutral150,
+                  borderRadius: 4,
+                  transition: "height 0.2s ease",
+                }} />
+                <div style={{ fontSize: 10, color: colors.neutral500, fontVariantNumeric: "tabular-nums" }}>
+                  {b.hour % 3 === 0 ? hourLabel(b.hour).replace(" ", "") : ""}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Two-column breakdown card: revenue by Type (Consultation/Procedure/
+// Review) on the left, by individual Service on the right. Bars are
+// proportional to the largest value in each list so the doctor can scan
+// what's actually bringing money in.
+function RevenueBreakdownCard({ byType, byService, loading }: {
+  byType: Record<string, number>;
+  byService: Record<string, number>;
+  loading: boolean;
+}) {
+  const fmtInr = (v: number) => `₹ ${v.toLocaleString("en-IN")}`;
+  const renderList = (data: Record<string, number>) => {
+    const entries = Object.entries(data).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+    if (entries.length === 0) {
+      return <div style={{ fontSize: fonts.size.s, color: colors.neutral500 }}>No revenue in this range.</div>;
+    }
+    const max = entries[0][1];
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {entries.map(([label, value]) => (
+          <div key={label}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: fonts.size.s, color: colors.neutral800, marginBottom: 4 }}>
+              <span>{label}</span>
+              <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 500 }}>{fmtInr(value)}</span>
+            </div>
+            <div style={{ height: 6, borderRadius: 999, backgroundColor: colors.neutral150, overflow: "hidden" }}>
+              <div style={{ width: `${Math.max(2, (value / max) * 100)}%`, height: "100%", backgroundColor: colors.active.shade600 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+  return (
+    <div style={styles.card}>
+      <h3 style={styles.cardTitle}>Revenue breakdown</h3>
+      {loading ? (
+        <div style={{ fontSize: fonts.size.s, color: colors.neutral500 }}>…</div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing.xl }}>
+          <div>
+            <div style={{ fontSize: fonts.size.xs, color: colors.neutral500, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>By type</div>
+            {renderList(byType)}
+          </div>
+          <div>
+            <div style={{ fontSize: fonts.size.xs, color: colors.neutral500, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>By service</div>
+            {renderList(byService)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

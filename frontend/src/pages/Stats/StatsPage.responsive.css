@@ -1,0 +1,197 @@
+/* Responsive styles for StatsPage at different DPI scaling levels */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   DESKTOP - 125% DPI scaling (effective viewport ~1536px)
+   ───────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1600px) {
+  [data-stats-tabs] {
+    gap: 8px !important;
+    overflow-x: auto !important;
+  }
+
+  [data-stats-tab] {
+    padding: 6px 10px !important;
+  }
+
+  [data-chart-grid] {
+    gap: 12px !important;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+  }
+
+  [data-chart-card] {
+    padding: 12px !important;
+    gap: 8px !important;
+  }
+
+  [data-metric-row] {
+    padding: 8px !important;
+    gap: 8px !important;
+  }
+
+  [data-range-selector] {
+    gap: 6px !important;
+    padding: 10px !important;
+  }
+
+  [data-main-content] {
+    padding: 20px !important;
+    gap: 12px !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   DESKTOP - 150% DPI scaling (effective viewport ~1280px)
+   ───────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1400px) {
+  [data-stats-tabs] {
+    gap: 6px !important;
+  }
+
+  [data-stats-tab] {
+    padding: 5px 8px !important;
+  }
+
+  [data-chart-grid] {
+    gap: 10px !important;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+  }
+
+  [data-chart-card] {
+    padding: 10px !important;
+    gap: 6px !important;
+  }
+
+  [data-metric-row] {
+    padding: 6px !important;
+    gap: 6px !important;
+  }
+
+  [data-range-selector] {
+    gap: 4px !important;
+    padding: 8px !important;
+  }
+
+  [data-main-content] {
+    padding: 16px !important;
+    gap: 10px !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   TABLET - 175% DPI scaling or smaller desktop (effective viewport ~1100px)
+   ───────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  [data-stats-tabs] {
+    gap: 4px !important;
+    flex-wrap: wrap !important;
+  }
+
+  [data-stats-tab] {
+    padding: 4px 6px !important;
+  }
+
+  [data-chart-grid] {
+    gap: 8px !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  [data-chart-card] {
+    padding: 8px !important;
+    gap: 4px !important;
+  }
+
+  [data-metric-row] {
+    padding: 4px !important;
+    gap: 4px !important;
+  }
+
+  [data-range-selector] {
+    gap: 3px !important;
+    padding: 6px !important;
+  }
+
+  [data-main-content] {
+    padding: 12px !important;
+    gap: 8px !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SMALL TABLET - Mobile landscape (max-width 768px)
+   ───────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  [data-stats-tabs] {
+    gap: 2px !important;
+    flex-wrap: wrap !important;
+  }
+
+  [data-stats-tab] {
+    padding: 3px 5px !important;
+  }
+
+  [data-chart-grid] {
+    gap: 6px !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  [data-chart-card] {
+    padding: 6px !important;
+    gap: 3px !important;
+  }
+
+  [data-metric-row] {
+    padding: 3px !important;
+    gap: 3px !important;
+  }
+
+  [data-range-selector] {
+    gap: 2px !important;
+    padding: 4px !important;
+    flex-direction: column !important;
+  }
+
+  [data-main-content] {
+    padding: 8px !important;
+    gap: 6px !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MOBILE - Portrait (max-width 480px)
+   ───────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  [data-stats-tabs] {
+    gap: 2px !important;
+    flex-wrap: wrap !important;
+  }
+
+  [data-stats-tab] {
+    padding: 2px 4px !important;
+  }
+
+  [data-chart-grid] {
+    gap: 4px !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  [data-chart-card] {
+    padding: 4px !important;
+    gap: 2px !important;
+  }
+
+  [data-metric-row] {
+    padding: 2px !important;
+    gap: 2px !important;
+  }
+
+  [data-range-selector] {
+    gap: 2px !important;
+    padding: 3px !important;
+    flex-direction: column !important;
+  }
+
+  [data-main-content] {
+    padding: 6px !important;
+    gap: 4px !important;
+  }
+}

@@ -4,6 +4,7 @@ import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 const UNITS = ["Days", "Weeks", "Months", "Years"];
 
 const STATIC_SUGGESTIONS = [
+  "SOS",
   "3 Days", "5 Days", "7 Days", "10 Days", "14 Days",
   "1 Month", "2 Months", "3 Months",
   "As directed",

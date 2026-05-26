@@ -60,7 +60,10 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   };
 
   const handleNewAppointment = () => {
-    if (isBooking || isEditing) {
+    // Only gate on isBooking — the "Current booking data will be discarded"
+    // message only makes sense when a new-booking form is open. isEditing
+    // tracks the Edit Appointment modal which has its own discard flow.
+    if (isBooking) {
       setShowConfirm(true);
       return;
     }
@@ -79,6 +82,15 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
 
   useEffect(() => {
     document.title = `Docodile | ${activeTab}`;
+    // Leaving the Appointments tab implicitly closes any open booking /
+    // edit flow. Without this reset, navigating to another section while
+    // the booking form is open leaves isBooking=true stuck on — the next
+    // "+ New Appointment" click then triggers a phantom discard prompt
+    // even though no form is visible.
+    if (activeTab !== "Appointments") {
+      setIsBooking(false);
+      setIsEditing(false);
+    }
   }, [activeTab]);
 
   const styles = {
@@ -91,10 +103,13 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
     },
     contentArea: {
       marginLeft: isSidebarExpanded ? "204px" : "95px",
-      width: isSidebarExpanded ? "calc(100% - 204px)" : "calc(100% - 95px)",
+      flex: "1 1 auto",
       display: "flex",
       flexDirection: "column" as const,
-      transition: "margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      transition: "margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      minWidth: 0,
+      width: "auto",
+      overflow: "hidden" as const,
     },
     mainContent: {
       padding: "40px 40px 24px",
@@ -107,6 +122,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       backgroundColor: colors.active.shade200,
       borderTopLeftRadius: "16px",
       position: "relative",
+      minWidth: 0,
     },
     title: {
       margin: 0,
@@ -133,7 +149,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
           setActiveTab("Prescription");
         }} />;
       case "Prescription":
-        return <PrescriptionView />;
+        return <PrescriptionView onNavigate={setActiveTab} />;
       case "Patient Files":
         return <PatientFilesView onNavigate={setActiveTab} initialSelectedId={patientFileNavId} />;
       case "Services":
@@ -167,7 +183,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         settingsSection={settingsSection}
         onSettingsSection={setSettingsSection}
       />
-      <div style={styles.contentArea}>
+      <div style={styles.contentArea} data-content-area>
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
           <TopNav
             onBuildClinic={onViewClinic}
@@ -177,7 +193,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
             isBooking={isBooking}
             onNavigate={setActiveTab}
           />
-          <main style={styles.mainContent}>
+          <main style={styles.mainContent} data-main-content>
             {renderContent()}
           </main>
         </div>

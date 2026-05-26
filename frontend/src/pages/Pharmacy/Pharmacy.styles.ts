@@ -95,8 +95,8 @@ export const styles: Record<string, CSSProperties> = {
     whiteSpace: "nowrap",
   },
   togglePillActive: {
-    backgroundColor: colors.neutral100,
-    color: colors.neutral900,
+    backgroundColor: colors.neutral900,
+    color: colors.neutral100,
   },
   sortGroup: {
     display: "inline-flex",

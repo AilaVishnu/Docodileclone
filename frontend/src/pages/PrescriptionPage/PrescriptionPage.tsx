@@ -1,5 +1,6 @@
 import React from "react";
 import { styles } from "./PrescriptionPage.styles";
+import "./PrescriptionPage.responsive.css";
 import { pickAvatar } from "../../utils/avatar";
 // Action-list icons exported from Figma node 2059:6764 (currentColor-normalized)
 import { ReactComponent as VisitsIcon } from "../../assets/icons/visits.svg";
@@ -31,7 +32,7 @@ import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg"
 import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
-import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
+import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 import { Toast } from "../../components/Toast";
 import { Autocomplete } from "../../components/Autocomplete/Autocomplete";
@@ -42,7 +43,7 @@ import { DosagePicker } from "../../components/DosagePicker/DosagePicker";
 import { DurationPicker } from "../../components/DurationPicker/DurationPicker";
 import { AutocompleteTags } from "../../components/Autocomplete/AutocompleteTags";
 import { useDoctors } from "../../hooks/useDoctors";
-import { colors } from "../../styles/theme";
+import { colors, spacing } from "../../styles/theme";
 import { PrescriptionQueue } from "./PrescriptionQueue";
 import { Patient } from "../../hooks/usePatients";
 import { SessionBar } from "../../components/SessionBar/SessionBar";
@@ -323,6 +324,34 @@ const todayIso = (): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+// Total units to dispense for one Rx row:
+//   qty = ceil( units/dose × doses/day × days )
+// Returns null when any input is missing or unparseable (SOS, "As
+// directed", fractional dose with no clear duration) so the printed Rx
+// can simply show a blank Total column. Mirrors the formula used by
+// AppointmentQueue's Bill Medicines auto-quantity so the printed Rx and
+// the dispensary bill stay consistent.
+const computeRxTotal = (dosage?: string | null, frequency?: string | null, duration?: string | null): number | null => {
+  const dosageMatch = (dosage ?? "").match(/([\d.]+)/);
+  const unitsPerDose = dosageMatch ? parseFloat(dosageMatch[1]) : 1;
+  const dosesPerDay = (frequency ?? "")
+    .split(/[-+,/\s]+/)
+    .map((p) => parseInt(p, 10))
+    .filter((n) => Number.isFinite(n))
+    .reduce((a, b) => a + b, 0);
+  const d = (duration ?? "").match(/(\d+)\s*(day|week|month|year|d|w|m|y)?/i);
+  if (!d) return null;
+  const n = parseInt(d[1], 10);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const unit = (d[2] ?? "day").toLowerCase();
+  const days = unit.startsWith("w") ? n * 7
+    : (unit.startsWith("mon") || unit === "m") ? n * 30
+    : unit.startsWith("y") ? n * 365
+    : n;
+  if (!dosesPerDay || !Number.isFinite(unitsPerDose) || unitsPerDose <= 0) return null;
+  return Math.ceil(unitsPerDose * dosesPerDay * days);
+};
+
 // Format the secondary line of the patient identity card. Shape:
 // "(M|25)  9876543210" — gender shortened to M/F if needed; phone trailing.
 // Falls back gracefully when fields are missing.
@@ -337,7 +366,11 @@ const formatPatientMeta = (
     if (g.startsWith("f")) return "F";
     return p.gender;
   })();
-  const ageStr = p.age != null ? String(p.age) : "";
+  // patient.age is stored in MONTHS — show whole years, or "Nm" for an
+  // infant under a year so it never reads as a bare "0".
+  const ageStr = p.age != null
+    ? (p.age < 12 ? `${p.age}m` : String(Math.floor(p.age / 12)))
+    : "";
   const head = genderShort || ageStr ? `(${[genderShort, ageStr].filter(Boolean).join("|")})` : "";
   return [head, p.phone ?? ""].filter(Boolean).join("  ");
 };
@@ -483,15 +516,28 @@ function AuthThumb({ fileUrl, mimeType, style }: { fileUrl: string | null | unde
   return <img src={src} alt="" style={style} />;
 }
 
-export function PrescriptionPage() {
+type PrescriptionPageProps = {
+  onNavigate?: (tab: import("../../components/SideNav").NavTab) => void;
+};
+
+export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
+  // Drain any pending nav synchronously during the very first render so
+  // the form mounts with the right patient already selected — no brief
+  // flash of the patient picker before the chart opens.
+  const initialNavRef = React.useRef<PendingSessionNav | null | undefined>(undefined);
+  if (initialNavRef.current === undefined) {
+    initialNavRef.current = consumePendingSessionNav();
+  }
+  const initialNav = initialNavRef.current;
+
   // null → renders <PatientPicker>; otherwise renders the prescription form
   // scoped to that patient. Clicking "← back to patients" clears it.
-  const [selectedPatient, setSelectedPatient] = React.useState<Patient | null>(null);
+  const [selectedPatient, setSelectedPatient] = React.useState<Patient | null>(initialNav?.patient ?? null);
   const selectedPatientId = selectedPatient?.id ?? null;
   // The appointment row the doctor clicked View Pad on. Needed so the
   // Start Session / End Session actions can update the appointment's
   // backend status without bouncing back to the queue.
-  const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(initialNav?.appointmentId ?? null);
   // The date the queue was showing when the doctor clicked View Pad.
   // Used as the visit date for auto-create so past-date queues don't
   // create a visit stamped today.
@@ -504,16 +550,23 @@ export function PrescriptionPage() {
   // If the doctor clicked an entry in the header session-tray, route them
   // straight back to that patient's prescription form. Handled both on mount
   // (component wasn't rendered yet) and via a custom event (already mounted).
+  // Where Back should route the doctor — set when the patient was
+  // opened from another screen (Patient Files, the session tray, etc.).
+  // Falls back to clearing selection so the prescription home picker
+  // reappears, matching the original behavior.
+  const [returnTab, setReturnTab] = React.useState<import("../../components/SideNav").NavTab | null>(
+    initialNav?.returnTab ?? null,
+  );
   React.useEffect(() => {
-    const pending = consumePendingSessionNav();
-    if (pending) {
-      setSelectedPatient(pending.patient);
-      setSelectedAppointmentId(pending.appointmentId);
-    }
+    // initialNav was already consumed at first render — we just listen
+    // for subsequent navs fired while the page is already mounted (e.g.
+    // the session tray in the top nav).
     const handler = (e: Event) => {
       const nav = (e as CustomEvent<PendingSessionNav>).detail;
       setSelectedPatient(nav.patient);
       setSelectedAppointmentId(nav.appointmentId);
+      if (nav.returnTab) setReturnTab(nav.returnTab);
+      if (typeof nav.initialAction === "number") setActiveAction(nav.initialAction);
     };
     window.addEventListener("docodile:session-nav", handler);
     return () => window.removeEventListener("docodile:session-nav", handler);
@@ -522,7 +575,7 @@ export function PrescriptionPage() {
   // patient triggers the fetch.
   const { visits, loading: visitsLoading, loadedFor: visitsLoadedFor, refetch: refetchVisits } = useVisits(selectedPatientId);
   const [activeTab, setActiveTab] = React.useState(0);
-  const [activeAction, setActiveAction] = React.useState(0);
+  const [activeAction, setActiveAction] = React.useState(initialNav?.initialAction ?? 0);
   const activeVisit: VisitDTO | undefined = visits[activeTab];
   // Visit immediately before the currently-viewed tab — used by the rewind
   // buttons to pull the previous prescription's data into the current form.
@@ -556,6 +609,11 @@ export function PrescriptionPage() {
   // AI SOAP draft modal — opens on the ✨ AI draft button next to the
   // Complaints/Diagnosis row. Fetched on open; applies per-field on demand.
   const [aiSoapOpen, setAiSoapOpen] = React.useState<boolean>(false);
+  // Forces SessionBar to remount after Restart. The visit id doesn't change
+  // on restart so React would otherwise keep the bar's old in-memory state
+  // (which still thinks the session is ended); bumping this counter is the
+  // cheap way to make the bar re-read its localStorage entry.
+  const [sessionBarEpoch, setSessionBarEpoch] = React.useState(0);
   // Form is non-interactive until the user clicks Start Session on the
   // floating SessionBar. Pausing / ending re-locks. Visually unchanged
   // while locked — only pointer-events are blocked.
@@ -568,7 +626,54 @@ export function PrescriptionPage() {
   // is locked permanently (read-only history). This intentionally covers
   // past visits the doctor left open — they stay editable until ended.
   const isLatestVisit = visits.length === 0 || activeTab === visits.length - 1;
-  const isEditable = !activeVisit?.sessionEndedAt;
+  // A visit stays editable for the full 24h Resume window. Once End is
+  // clicked the session is "ended" but the form remains writable so the
+  // doctor can hit Resume and continue updating fields for up to a day.
+  // After 24h elapses past the recorded sessionEndedAt (or, if that
+  // wasn't persisted, past the visitDate), the visit hard-locks into a
+  // historic record.
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  const endedAtMs = activeVisit?.sessionEndedAt ? new Date(activeVisit.sessionEndedAt).getTime() : null;
+  const visitMs = activeVisit?.visitDate ? new Date(activeVisit.visitDate).getTime() : null;
+  const isWithinBuffer = (() => {
+    if (endedAtMs != null && !Number.isNaN(endedAtMs)) {
+      return Date.now() - endedAtMs < ONE_DAY_MS;
+    }
+    if (visitMs != null && !Number.isNaN(visitMs)) {
+      return Date.now() - visitMs < ONE_DAY_MS;
+    }
+    return true;
+  })();
+  const isEditable = isWithinBuffer;
+
+  // Keep the header session tray in sync with whatever's running for the
+  // visit currently on screen. recordActiveSession fires once at handle-
+  // SessionStart, but if the doctor reloads the page mid-session (or the
+  // session was started before this tray existed) the meta map can lose
+  // its entry — then the tray skips a still-running session. This effect
+  // backfills the meta by reading the SessionBar's own localStorage
+  // state, which is the source of truth for whether the timer is ticking
+  // (the DB column `sessionStartedAt` can lag behind it).
+  React.useEffect(() => {
+    if (!activeVisit || !selectedPatient) return;
+    try {
+      const raw = localStorage.getItem("docodile_session_state");
+      const map = raw ? (JSON.parse(raw) as Record<string, { runStartedAtMs: number | null; baseSeconds: number; paused: boolean; ended: boolean }>) : {};
+      const state = map[activeVisit.id];
+      // A session counts as "live" if it has timer activity and hasn't
+      // been ended yet — covers both currently-running and paused.
+      const isLive = state != null && !state.ended && (state.runStartedAtMs != null || state.baseSeconds > 0);
+      if (isLive) {
+        recordActiveSession({
+          visitId: activeVisit.id,
+          patient: selectedPatient,
+          appointmentId: selectedAppointmentId ?? null,
+        });
+      }
+    } catch {
+      /* localStorage unavailable — tray will simply miss this entry */
+    }
+  }, [activeVisit, selectedPatient, selectedAppointmentId]);
   // Edit flag used by every gate below.
   const canEditForm = formActive && isEditable;
   // On initial open of a patient, jump to the latest (today's) visit
@@ -740,15 +845,25 @@ export function PrescriptionPage() {
   //      ambiently (e.g. browsing patient files) — visits should only
   //      come from booked appointments, so don't fabricate one.
   const autoCreatedForPatientRef = React.useRef<string | null>(null);
+  // Track whether we've already done the one-shot "jump to unfinished
+  // visit" for this patient. Without this guard the effect's activeTab
+  // dependency made every tab click snap back to the unfinished tab,
+  // so the doctor couldn't browse historic visits.
+  const unfinishedJumpedForPatientRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     const hasTodayVisit = visits.some((v) => v.visitDate === queueDate);
     const unfinishedIdx = visits.findIndex(
       (v) => v.sessionStartedAt && !v.sessionEndedAt
     );
     if (unfinishedIdx >= 0) {
-      const v = visits[unfinishedIdx];
-      if (activeTab !== unfinishedIdx) setActiveTab(unfinishedIdx);
-      if (v.visitDate && queueDate !== v.visitDate) setQueueDate(v.visitDate);
+      // Only auto-jump once per patient. After that the user controls
+      // which tab they're on; we don't override their choice.
+      if (unfinishedJumpedForPatientRef.current !== selectedPatientId) {
+        const v = visits[unfinishedIdx];
+        if (activeTab !== unfinishedIdx) setActiveTab(unfinishedIdx);
+        if (v.visitDate && queueDate !== v.visitDate) setQueueDate(v.visitDate);
+        unfinishedJumpedForPatientRef.current = selectedPatientId;
+      }
       autoCreatedForPatientRef.current = selectedPatientId;
       return;
     }
@@ -793,7 +908,10 @@ export function PrescriptionPage() {
   // Reset the auto-create guard whenever the user picks a different patient
   // (or leaves and comes back to the same one).
   React.useEffect(() => {
-    if (selectedPatientId === null) autoCreatedForPatientRef.current = null;
+    if (selectedPatientId === null) {
+      autoCreatedForPatientRef.current = null;
+      unfinishedJumpedForPatientRef.current = null;
+    }
   }, [selectedPatientId]);
 
   // When the view swaps from picker → form (or back), reset the scroll
@@ -1205,6 +1323,69 @@ export function PrescriptionPage() {
     }
   };
 
+  // "Restart" really means "resume from where I ended". Visit data is
+  // untouched. The previously-recorded duration becomes the timer's new
+  // baseline, sessionEndedAt is cleared (so isEditable flips back to true),
+  // and we seed the per-visit localStorage state so the bar mounts as
+  // running with the saved seconds already on the clock — ticking forward
+  // from there instead of restarting at 00:00.
+  const handleSessionRestart = async () => {
+    if (!activeVisit) return;
+    if (selectedPatient) markStarted(selectedPatient.id);
+    // SessionBar writes to localStorage synchronously on End, but the
+    // post-End refetch of activeVisit hasn't necessarily completed yet,
+    // so localStorage is the more current source of truth for the
+    // recorded duration. Visit row is a fallback if storage was cleared.
+    let baseSeconds = activeVisit.sessionDurationSec ?? 0;
+    try {
+      const stateKey = "docodile_session_state";
+      const raw = localStorage.getItem(stateKey);
+      const all = raw ? JSON.parse(raw) as Record<string, any> : {};
+      const prior = all[activeVisit.id];
+      if (prior && typeof prior.baseSeconds === "number") {
+        baseSeconds = prior.baseSeconds;
+      }
+      all[activeVisit.id] = {
+        baseSeconds,
+        runStartedAtMs: Date.now(),
+        paused: false,
+        ended: false,
+      };
+      localStorage.setItem(stateKey, JSON.stringify(all));
+    } catch { /* localStorage full / private mode — bar will fall back to visit field */ }
+    const req: SaveVisitRequest = {
+      ...buildSaveRequest(),
+      sessionEndedAt: null,
+      // Keep the accumulated time on the visit so reopening on another
+      // device sees the same baseline. The bar will keep adding to it.
+      sessionDurationSec: baseSeconds,
+    };
+    try {
+      await updateVisit(activeVisit.id, req);
+      // Flip the linked appointment's status back to IN_PROGRESS so the
+      // queue card stops showing "Completed" — the doctor reopened the
+      // visit, the patient is effectively in-session again. Best-effort:
+      // don't fail the resume flow if the appointment update fails.
+      if (selectedAppointmentId) {
+        try {
+          const token = localStorage.getItem("docodile_token");
+          await fetch(`${API_BASE_URL}/api/tenant/appointments/${selectedAppointmentId}/status`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ status: "IN_PROGRESS" }),
+          });
+        } catch { /* swallow — visit reopened either way */ }
+      }
+      await refetchVisits();
+      // Force the SessionBar to remount so it re-reads the freshly seeded
+      // localStorage state and shows the running timer immediately —
+      // otherwise its in-memory `ended: true` lingers until a tab switch.
+      setSessionBarEpoch((n) => n + 1);
+    } catch (e) {
+      showToast(`Couldn't resume: ${(e as Error).message}`);
+    }
+  };
+
   const handleAddVisit = async () => {
     if (!selectedPatientId) return;
     setSaving(true);
@@ -1305,6 +1486,11 @@ export function PrescriptionPage() {
         frequency: r.frequency ?? null,
         duration: r.duration ?? null,
         notes: r.notes ?? null,
+        // Total units to dispense — mirrors the Bill Medicines modal's
+        // auto-quantity so the printed Rx and the dispensary bill stay
+        // consistent. Returns null when any field is unparseable (SOS,
+        // "As directed") and the column shows blank.
+        totalQty: computeRxTotal(r.dosage, r.frequency, r.duration),
       })),
       reviewDate: reviewDate ? `${reviewDate.getFullYear()}-${String(reviewDate.getMonth() + 1).padStart(2, "0")}-${String(reviewDate.getDate()).padStart(2, "0")}` : null,
       reviewNotes: reviewNotesValue,
@@ -1346,6 +1532,17 @@ export function PrescriptionPage() {
   // user sees a brief unfilled state, then activeVisit lands and every
   // field pops in at once — perceived as a jerk.
   if (visitsLoadedFor !== selectedPatientId) {
+    // A patient is already selected (e.g. opened from Patient Files) but
+    // their visits haven't been fetched yet — show a quiet loading
+    // skeleton instead of flashing the queue picker, which would be a
+    // misleading screen on its way to the actual chart.
+    if (selectedPatientId !== null) {
+      return (
+        <div ref={pageRootRef} style={{ padding: 40, textAlign: "center", color: "#888", fontFamily: "'Inter', sans-serif", fontSize: 14 }}>
+          Loading patient file…
+        </div>
+      );
+    }
     return (
       <div ref={pageRootRef}>
         <PrescriptionQueue
@@ -1374,6 +1571,14 @@ export function PrescriptionPage() {
             onClick={() => {
               setSelectedPatient(null);
               setSelectedAppointmentId(null);
+              // If the doctor jumped in from another tab (e.g. Patient
+              // Files), route them straight back. Otherwise stay on
+              // Prescription and surface the picker.
+              if (returnTab && onNavigate) {
+                const tab = returnTab;
+                setReturnTab(null);
+                onNavigate(tab);
+              }
             }}
           >
             <ArrowLeftIcon width={24} height={24} />
@@ -1638,6 +1843,34 @@ export function PrescriptionPage() {
               )}
             </>
           ) : (
+            selectedPatientId &&
+            !visitsLoading &&
+            visitsLoadedFor === selectedPatientId &&
+            visits.length === 0 &&
+            !selectedAppointmentId
+          ) ? (
+            // Patient opened with no visits and no appointment (just added
+            // or freshly migrated) — offer to create the first visit rather
+            // than dropping straight into a blank session form.
+            <section style={styles.rightColumn}>
+              <div style={styles.noVisits}>
+                <VisitsIcon width={40} height={40} style={styles.noVisitsIcon} />
+                <h3 style={styles.noVisitsTitle}>No visits yet</h3>
+                <p style={styles.noVisitsText}>
+                  This patient has no recorded visits. Create one to start
+                  charting today's consultation.
+                </p>
+                <button
+                  type="button"
+                  style={styles.noVisitsBtn}
+                  onClick={handleAddVisit}
+                  disabled={saving}
+                >
+                  {saving ? "Creating…" : "Create visit"}
+                </button>
+              </div>
+            </section>
+          ) : (
             <>
               {/* Visit tabs — sit OUTSIDE the cream sheet, above it. The tuning
               button (Figma node 2133:9927) is pushed to the far right of the
@@ -1697,9 +1930,9 @@ export function PrescriptionPage() {
                     </button>
                   </div>
                   {openSections.vitals && (
-                    <div style={styles.vitalsGrid}>
+                    <div style={styles.vitalsGrid} data-vitals-grid>
                       {VITAL_COLUMNS.map((col, ci) => (
-                        <div key={ci} style={styles.vitalColumn}>
+                        <div key={ci} style={styles.vitalColumn} data-vital-column>
                           {col.map((v, ri) => {
                             const cellKey = `${ci}-${ri}`;
                             const cell = vitalState[cellKey];
@@ -1722,7 +1955,7 @@ export function PrescriptionPage() {
                               : undefined;
                             return (
                               <div key={ri} style={styles.vitalCell}>
-                                <span style={styles.vitalLabel}>{v.label}</span>
+                                <span style={styles.vitalLabel} data-vital-label>{v.label}</span>
                                 <div style={styles.vitalInputRow} title={!valueValid ? rangeHint : undefined}>
                                   {isBp ? (
                                     <BpInput
@@ -1746,6 +1979,7 @@ export function PrescriptionPage() {
                                       onChange={(e) => setVitalValue(cellKey, e.target.value)}
                                       onKeyDown={(e) => validateVitalOnEnter(e, v.label, cell.value, cell.unit)}
                                       aria-invalid={!valueValid}
+                                      data-vital-input-value
                                     />
                                   )}
                                   <button
@@ -1758,6 +1992,7 @@ export function PrescriptionPage() {
                                       ...(!valueValid ? styles.vitalUnitInvalid : {}),
                                     }}
                                     title={canToggle ? `Switch to ${UNIT_TOGGLES[cell.unit].altUnit}` : undefined}
+                                    data-vital-unit
                                   >
                                     {cell.unit}
                                   </button>
@@ -1925,7 +2160,7 @@ export function PrescriptionPage() {
                 </div>
 
                 {/* Prescription table */}
-                <div style={styles.sectionCard}>
+                <div style={styles.sectionCard} data-section-card>
                   <div style={styles.sectionHeader}>
                     <div style={styles.sectionTitleWrap}>
                       <PillsIcon style={styles.sectionIcon} />
@@ -1947,7 +2182,7 @@ export function PrescriptionPage() {
                     </button>
                   </div>
                   {openSections.rx && (
-                    <div style={styles.rxTable}>
+                    <div style={styles.rxTable} data-rx-section>
                       {rxInteractions.length > 0 && (
                         <div style={styles.rxInteractionBanner}>
                           {rxInteractions.map((w, i) => (
@@ -1967,11 +2202,11 @@ export function PrescriptionPage() {
                         const updateField = (key: keyof RxRowDraft, value: string) =>
                           setRxRows((prev) => prev.map((r, ix) => (ix === i ? { ...r, [key]: value } : r)));
                         return (
-                          <div key={row.id ?? `draft-${i}`} style={{ ...styles.rxGroup, zIndex: rxRows.length + 5 - i }}>
+                          <div key={row.id ?? `draft-${i}`} style={{ ...styles.rxGroup, zIndex: rxRows.length + 5 - i }} data-rx-group>
                             {/* Left: serial + medicine cell — visually anchors for all tapering rows */}
-                            <div style={styles.rxGroupLeft}>
+                            <div style={styles.rxGroupLeft} data-rx-group-left>
                               <span style={styles.rxSerial}>{i + 1}</span>
-                              <div style={{ ...styles.rxMedicineCell, flex: 1 }}>
+                              <div style={{ ...styles.rxMedicineCell, flex: 1, position: "relative" }}>
                                 <div style={styles.rxMedicineInputCol}>
                                   <MedicineAutocomplete
                                     inputStyle={styles.rxMedicineInput}
@@ -1981,17 +2216,29 @@ export function PrescriptionPage() {
                                     onSelect={(name, genericName) => setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: name, genericName } : r))}
                                   />
                                 </div>
+                                {row.medicine.trim() && (
+                                  <input
+                                    type="text"
+                                    style={{
+                                      ...styles.rxGenericName,
+                                      position: "absolute",
+                                      left: spacing.s,
+                                      top: "calc(100% + 2px)",
+                                      width: "auto",
+                                      right: 8,
+                                    }}
+                                    placeholder="Unknown"
+                                    value={row.genericName}
+                                    onChange={(e) => updateField("genericName", e.target.value)}
+                                  />
+                                )}
                                 <div style={styles.rxGenericRow}>
-                                  {row.medicine && (
-                                    <span style={styles.rxGenericName}>
-                                      {row.genericName || "Unknown"}
-                                    </span>
-                                  )}
                                   <button
                                     type="button"
                                     style={styles.rxAddNoteBtn}
                                     title="Add tapering dose"
                                     onClick={() => addThenRow(i)}
+                                    data-rx-add-note-btn
                                   >
                                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                                       <line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -2002,25 +2249,25 @@ export function PrescriptionPage() {
                               </div>
                             </div>
                             {/* Right: stacked tapering rows */}
-                            <div style={styles.rxGroupRight}>
-                              <div style={styles.rxDataRow}>
-                                <div style={styles.rxDataCell}><DosagePicker value={row.dosage} onChange={(v) => updateField("dosage", v)} medicineName={row.medicine} genericName={row.genericName} /></div>
-                                <div style={styles.rxDataCell}><WhenPicker value={row.whenToTake} onChange={(v) => updateField("whenToTake", v)} /></div>
-                                <div style={styles.rxDataCell}><FrequencyPicker value={row.frequency} onChange={(v) => updateField("frequency", v)} /></div>
-                                <div style={styles.rxDataCell}><DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} /></div>
+                            <div style={styles.rxGroupRight} data-rx-group-right>
+                              <div style={styles.rxDataRow} data-rx-data-row>
+                                <div style={styles.rxDataCell} data-rx-data-cell><DosagePicker value={row.dosage} onChange={(v) => updateField("dosage", v)} medicineName={row.medicine} genericName={row.genericName} /></div>
+                                <div style={styles.rxDataCell} data-rx-data-cell><WhenPicker value={row.whenToTake} onChange={(v) => updateField("whenToTake", v)} /></div>
+                                <div style={styles.rxDataCell} data-rx-data-cell><FrequencyPicker value={row.frequency} onChange={(v) => updateField("frequency", v)} /></div>
+                                <div style={styles.rxDataCell} data-rx-data-cell><DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} /></div>
                                 <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={row.notes} onChange={(e) => updateField("notes", e.target.value)} />
-                                <button type="button" style={styles.rxDeleteBtn} onClick={() => removeRxRow(i)} title="Remove medicine">
+                                <button type="button" style={styles.rxDeleteBtn} onClick={() => removeRxRow(i)} title="Remove medicine" data-rx-delete-btn>
                                   <TrashIcon style={{ width: 16, height: 16 }} />
                                 </button>
                               </div>
                               {row.thenRows.map((thenRow, ti) => (
                                 <div key={`then-${i}-${ti}`} style={styles.rxDataRow}>
-                                  <div style={styles.rxDataCell}><DosagePicker value={thenRow.dosage} onChange={(v) => updateThenField(i, ti, "dosage", v)} medicineName={row.medicine} genericName={row.genericName} /></div>
-                                  <div style={styles.rxDataCell}><WhenPicker value={thenRow.whenToTake} onChange={(v) => updateThenField(i, ti, "whenToTake", v)} /></div>
-                                  <div style={styles.rxDataCell}><FrequencyPicker value={thenRow.frequency} onChange={(v) => updateThenField(i, ti, "frequency", v)} /></div>
-                                  <div style={styles.rxDataCell}><DurationPicker value={thenRow.duration} onChange={(v) => updateThenField(i, ti, "duration", v)} /></div>
+                                  <div style={styles.rxDataCell} data-rx-data-cell><DosagePicker value={thenRow.dosage} onChange={(v) => updateThenField(i, ti, "dosage", v)} medicineName={row.medicine} genericName={row.genericName} /></div>
+                                  <div style={styles.rxDataCell} data-rx-data-cell><WhenPicker value={thenRow.whenToTake} onChange={(v) => updateThenField(i, ti, "whenToTake", v)} /></div>
+                                  <div style={styles.rxDataCell} data-rx-data-cell><FrequencyPicker value={thenRow.frequency} onChange={(v) => updateThenField(i, ti, "frequency", v)} /></div>
+                                  <div style={styles.rxDataCell} data-rx-data-cell><DurationPicker value={thenRow.duration} onChange={(v) => updateThenField(i, ti, "duration", v)} /></div>
                                   <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={thenRow.notes} onChange={(e) => updateThenField(i, ti, "notes", e.target.value)} />
-                                  <button type="button" style={styles.rxDeleteBtn} onClick={() => removeThenRow(i, ti)} title="Remove tapering row">
+                                  <button type="button" style={styles.rxDeleteBtn} onClick={() => removeThenRow(i, ti)} title="Remove tapering row" data-rx-delete-btn>
                                     <TrashIcon style={{ width: 16, height: 16 }} />
                                   </button>
                                 </div>
@@ -2190,31 +2437,36 @@ export function PrescriptionPage() {
                           />
                         </span>
                       </div>
-                      {referOpen && (
-                        <div style={styles.referMenu}>
-                          {doctors.length === 0 ? (
-                            <div style={styles.referMenuEmpty}>No doctors in this clinic</div>
-                          ) : (
-                            doctors.map((d) => (
-                              <button
-                                key={d.id}
-                                type="button"
-                                style={styles.referMenuItem}
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  setReferDoctorId(d.id);
-                                  setReferOpen(false);
-                                }}
-                              >
-                                <span style={styles.referMenuItemName}>{d.name}</span>
-                                {(d.specialty || d.department) && (
-                                  <span style={styles.referMenuItemMeta}>{d.specialty || d.department}</span>
-                                )}
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
+                      {referOpen && (() => {
+                        // Hide the doctor who's already treating this visit
+                        // — referring to yourself isn't a referral.
+                        const referableDoctors = doctors.filter((d) => d.id !== appointmentDoctorId);
+                        return (
+                          <div style={styles.referMenu}>
+                            {referableDoctors.length === 0 ? (
+                              <div style={styles.referMenuEmpty}>No other doctors in this clinic</div>
+                            ) : (
+                              referableDoctors.map((d) => (
+                                <button
+                                  key={d.id}
+                                  type="button"
+                                  style={styles.referMenuItem}
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    setReferDoctorId(d.id);
+                                    setReferOpen(false);
+                                  }}
+                                >
+                                  <span style={styles.referMenuItemName}>{d.name}</span>
+                                  {(d.specialty || d.department) && (
+                                    <span style={styles.referMenuItemMeta}>{d.specialty || d.department}</span>
+                                  )}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                   {/* Next Review — date picker + "or ___ days" + notes field */}
@@ -2290,14 +2542,17 @@ export function PrescriptionPage() {
           shows that visit's recorded duration in a frozen Session Ended
           view — no interactive controls, can't accidentally start a new
           session for a historic record. */}
-      {visitsLoadedFor === selectedPatientId && (
+      {visitsLoadedFor === selectedPatientId && visits.length > 0 && (
         <SessionBar
           // Remount per-visit so the bar reads the persisted state for the
           // active visit rather than carrying state across visit switches.
-          key={activeVisit?.id ?? "no-visit"}
+          key={`${activeVisit?.id ?? "no-visit"}-${sessionBarEpoch}`}
           storageKey={activeVisit?.id}
           readOnly={!isEditable}
           recordedDurationSec={activeVisit?.sessionDurationSec ?? null}
+          // Drives the SessionBar's 24h "Resume" buffer in readOnly mode.
+          // After 24h since the visit's sessionEndedAt the Resume pill hides.
+          recordedEndedAtMs={activeVisit?.sessionEndedAt ? new Date(activeVisit.sessionEndedAt).getTime() : null}
           onPrint={() => handlePrintPrescription("print")}
           // Direct server-side PDF download — no preview modal, no browser
           // dialog. Same template + data as Print.
@@ -2306,6 +2561,11 @@ export function PrescriptionPage() {
           onActiveChange={setFormActive}
           onStart={handleSessionStart}
           onEnd={handleSessionEnd}
+          // Always pass onRestart and let the SessionBar's 24h-buffer
+          // logic decide whether to show the Resume pill. Restricting to
+          // today's date alone was hiding Resume for yesterday's visit
+          // even while the buffer was still active.
+          onRestart={handleSessionRestart}
         />
       )}
 
@@ -2329,6 +2589,12 @@ export function PrescriptionPage() {
           if (selectedPatient) setSelectedPatient({ ...selectedPatient, ...updated });
         }}
         onSaved={() => showToast("Patient info saved")}
+        onArchived={() => {
+          showToast("Patient archived");
+          // Drop the now-hidden patient from local selection so the queue
+          // re-fetches a fresh active-only list on next mount.
+          setSelectedPatient(null);
+        }}
         onError={(msg) => showToast(msg)}
       />
 
