@@ -90,3 +90,58 @@ body {
   min-height: 100vh;
   width: 100%;
 }
+
+/* Responsive adjustments for different DPI scaling levels */
+
+/* At 125% DPI scaling (effective viewport ~1536px) */
+@media (max-width: 1600px) {
+  [data-main-content] {
+    padding: 32px 32px 20px !important;
+  }
+}
+
+/* At 150% DPI scaling (effective viewport ~1280px) */
+@media (max-width: 1400px) {
+  [data-main-content] {
+    padding: 28px 28px 18px !important;
+  }
+
+  [data-content-area] {
+    margin-left: 95px !important; /* Collapse to narrow sidebar */
+  }
+}
+
+/* At 175% DPI scaling or tablet view (effective viewport ~1100px) */
+@media (max-width: 1200px) {
+  [data-main-content] {
+    padding: 24px 20px 16px !important;
+  }
+
+  html, body {
+    font-size: 13px;
+  }
+}
+
+/* Mobile/small tablet view */
+@media (max-width: 768px) {
+  [data-main-content] {
+    padding: 20px 16px 12px !important;
+    gap: 16px !important;
+  }
+
+  html, body {
+    font-size: 12px;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  [data-main-content] {
+    padding: 16px 12px 10px !important;
+    gap: 12px !important;
+  }
+
+  html, body {
+    font-size: 11px;
+  }
+}

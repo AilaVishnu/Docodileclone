@@ -255,7 +255,7 @@ export function QueueTable({
   }
   return (
     <div style={styles.tableContainer}>
-      <table style={styles.table}>
+      <table style={styles.table} data-queue-table>
         <colgroup>
           <col style={{ width: "40px" }} />
           <col style={{ width: "28%" }} />
@@ -325,6 +325,7 @@ export function QueueTable({
                   )}
                   <tr
                     style={{ ...styles.tr, backgroundColor: baseBg }}
+                    data-queue-row
                     onMouseEnter={(e) => {
                       if (!isCompleted && !isNoShow && !isInProgress && !isCancelled) {
                         (e.currentTarget as HTMLElement).style.backgroundColor =
@@ -336,14 +337,14 @@ export function QueueTable({
                     }}
                   >
                     {/* # */}
-                    <td style={styles.serialCell}>
+                    <td style={styles.serialCell} data-queue-col>
                       {apt.status === "IN_PROGRESS"
                         ? String(appointments.filter((a, i) => i <= index && a.status === "IN_PROGRESS").length).padStart(2, "0")
                         : "-"}
                     </td>
 
                     {/* Name + gender/age */}
-                    <td style={styles.nameCell}>
+                    <td style={styles.nameCell} data-queue-col>
                       <div style={styles.nameInner}>
                         <span style={styles.namePrimary}>{apt.patientName}</span>
                         {(apt.patientGender || apt.patientAge) && (
@@ -369,10 +370,10 @@ export function QueueTable({
                     </td>
 
                     {/* Phone */}
-                    <td style={{ ...styles.td, textAlign: "center" }}>{apt.patientPhone}</td>
+                    <td style={{ ...styles.td, textAlign: "center" }} data-queue-col>{apt.patientPhone}</td>
 
                     {/* Service */}
-                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px", maxWidth: 0 }}>
+                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px", maxWidth: 0 }} data-queue-col>
                       <div
                         title={apt.service || ""}
                         style={{
@@ -393,12 +394,12 @@ export function QueueTable({
                     </td>
 
                     {/* Type */}
-                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "8px", paddingRight: "8px" }}>
+                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "8px", paddingRight: "8px" }} data-queue-col>
                       <TypeBadge type={apt.type} />
                     </td>
 
                     {/* Time */}
-                    <td style={{ ...styles.td, textAlign: "center" }}>
+                    <td style={{ ...styles.td, textAlign: "center" }} data-queue-col>
                       <span style={styles.time}>{apt.scheduledTime}</span>
                       {apt.isWalkin && (
                         <span style={styles.walkinBadge}>Walk-in</span>
@@ -406,7 +407,7 @@ export function QueueTable({
                     </td>
 
                     {/* Status badge */}
-                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
+                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }} data-queue-col>
                       {onStatusChange ? (
                         <StatusDropdown
                           appointment={apt}
@@ -419,12 +420,12 @@ export function QueueTable({
                     </td>
 
                     {/* Pay status */}
-                    <td style={{ ...styles.payCell, textAlign: "center" }}>
+                    <td style={{ ...styles.payCell, textAlign: "center" }} data-queue-col>
                       <PayBadge status={apt.payStatus} />
                     </td>
 
                     {/* Action menu */}
-                    <td style={{ ...styles.td, padding: "14px 24px 14px 8px" }}>
+                    <td style={{ ...styles.td, padding: "14px 24px 14px 8px" }} data-queue-col>
                       {menuItems && menuItems.length > 0 ? (
                         <ActionMenu
                           appointment={apt}

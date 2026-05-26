@@ -13,6 +13,7 @@ import { ReactComponent as SearchIcon } from "../../assets/search.svg";
 import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { listPharmacyStock, bulkCreatePharmacyStock, parseInventoryCsv, createPharmacyStock, updatePharmacyStock, deletePharmacyStock, medToRequest } from "../../api/pharmacy";
+import "./PharmacyView.responsive.css";
 import { Toast } from "../../components/Toast";
 
 type ViewMode = "list" | "shelf";

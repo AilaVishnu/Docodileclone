@@ -102,11 +102,14 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       backgroundColor: colors.active.shade300,
     },
     contentArea: {
-      flex: 1,
+      marginLeft: isSidebarExpanded ? "204px" : "95px",
+      flex: "1 1 auto",
       display: "flex",
       flexDirection: "column" as const,
-      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      transition: "margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
       minWidth: 0,
+      width: "auto",
+      overflow: "hidden" as const,
     },
     mainContent: {
       padding: "40px 40px 24px",
@@ -119,6 +122,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       backgroundColor: colors.active.shade200,
       borderTopLeftRadius: "16px",
       position: "relative",
+      minWidth: 0,
     },
     title: {
       margin: 0,
@@ -179,7 +183,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         settingsSection={settingsSection}
         onSettingsSection={setSettingsSection}
       />
-      <div style={styles.contentArea}>
+      <div style={styles.contentArea} data-content-area>
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
           <TopNav
             onBuildClinic={onViewClinic}
@@ -189,7 +193,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
             isBooking={isBooking}
             onNavigate={setActiveTab}
           />
-          <main style={styles.mainContent}>
+          <main style={styles.mainContent} data-main-content>
             {renderContent()}
           </main>
         </div>

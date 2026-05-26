@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import "./styles/globals.css";
+import "./styles/responsive.css";
 import { AdminLoginPage, StaffLoginPage } from './pages/LoginPage';
 import { HomePage } from './pages/Home';
 import { BuildYourClinicPage } from './pages/BuildYourClinicPage';
