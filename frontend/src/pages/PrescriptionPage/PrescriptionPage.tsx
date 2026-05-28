@@ -42,7 +42,7 @@ import { DosagePicker } from "../../components/DosagePicker/DosagePicker";
 import { DurationPicker } from "../../components/DurationPicker/DurationPicker";
 import { AutocompleteTags } from "../../components/Autocomplete/AutocompleteTags";
 import { useDoctors } from "../../hooks/useDoctors";
-import { colors, spacing } from "../../styles/theme";
+import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { PrescriptionQueue } from "./PrescriptionQueue";
 import { Patient } from "../../hooks/usePatients";
 import { SessionBar } from "../../components/SessionBar/SessionBar";
@@ -546,6 +546,18 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   // (which scopes by treating doctor / department) can find this patient.
   const [appointmentDoctorId, setAppointmentDoctorId] = React.useState<string | null>(null);
 
+  // Slot picker — when a patient is opened without a specific appointment
+  // (e.g. from Patient Files) and has 2+ appointments today, ask which slot
+  // this consultation is for before opening/creating its visit.
+  const [slotOptions, setSlotOptions] = React.useState<
+    { id: string; scheduledTime: string | null; doctorId: string | null }[] | null
+  >(null);
+  const slotFetchedForRef = React.useRef<string | null>(null);
+  // Patient id for which the today-appointments check has finished. The
+  // auto-create effect waits on this so it never creates a visit before we
+  // know whether the doctor needs to pick a slot.
+  const [slotChecked, setSlotChecked] = React.useState<string | null>(null);
+
   // If the doctor clicked an entry in the header session-tray, route them
   // straight back to that patient's prescription form. Handled both on mount
   // (component wasn't rendered yet) and via a custom event (already mounted).
@@ -831,87 +843,137 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
     return () => clearTimeout(timer);
   }, [rxRows]);
 
-  // Auto-create today's draft when the patient has zero visits, so the
-  // form always has a row to write into. The ref-guard keeps React
-  // StrictMode (which double-invokes effects in dev) from creating a
-  // duplicate today-visit.
+  // Each appointment owns its own visit. Opening a pad from an appointment
+  // jumps to (or creates) the visit tagged with that appointment id — so a
+  // patient's two same-day appointments get two distinct visits, each with
+  // its own session, rather than reusing one stale today-visit.
   //
-  // Two short-circuits before we create anything:
-  //   1. If any existing visit has an unfinished session (started, never
-  //      ended), the doctor is returning to that work — jump to its tab
-  //      and align queueDate with its date, no new visit needed.
-  //   2. If no appointment id is in scope, the doctor opened the page
-  //      ambiently (e.g. browsing patient files) — visits should only
-  //      come from booked appointments, so don't fabricate one.
-  const autoCreatedForPatientRef = React.useRef<string | null>(null);
-  // Track whether we've already done the one-shot "jump to unfinished
-  // visit" for this patient. Without this guard the effect's activeTab
-  // dependency made every tab click snap back to the unfinished tab,
-  // so the doctor couldn't browse historic visits.
+  // The ref-guard keeps React StrictMode (double-invokes effects in dev),
+  // and the async create→refetch window, from creating a duplicate.
+  const autoCreatedForApptRef = React.useRef<string | null>(null);
+  // One-shot "jump to this appointment's visit" — after the first open we
+  // stop forcing the tab so the doctor can browse previous visits freely.
+  const apptJumpedRef = React.useRef<string | null>(null);
+  // One-shot "jump to the unfinished session" for ambient (no-appointment)
+  // opens, so the doctor resumes where they left off without it overriding
+  // their tab choice afterwards.
   const unfinishedJumpedForPatientRef = React.useRef<string | null>(null);
   React.useEffect(() => {
-    const hasTodayVisit = visits.some((v) => v.visitDate === queueDate);
-    const unfinishedIdx = visits.findIndex(
-      (v) => v.sessionStartedAt && !v.sessionEndedAt
-    );
-    if (unfinishedIdx >= 0) {
-      // Only auto-jump once per patient. After that the user controls
-      // which tab they're on; we don't override their choice.
-      if (unfinishedJumpedForPatientRef.current !== selectedPatientId) {
-        const v = visits[unfinishedIdx];
-        if (activeTab !== unfinishedIdx) setActiveTab(unfinishedIdx);
-        if (v.visitDate && queueDate !== v.visitDate) setQueueDate(v.visitDate);
-        unfinishedJumpedForPatientRef.current = selectedPatientId;
+    if (!selectedPatientId || visitsLoading || visitsLoadedFor !== selectedPatientId) return;
+    // Wait until we've checked today's appointments, and don't create
+    // anything while the slot-picker popup is open — the doctor's choice
+    // decides which appointment's visit to create/open.
+    if (slotChecked !== selectedPatientId || slotOptions) return;
+
+    // ── Appointment context: one visit per appointment ──────────────────
+    if (selectedAppointmentId) {
+      const apptIdx = visits.findIndex((v) => v.appointmentId === selectedAppointmentId);
+      if (apptIdx >= 0) {
+        // This appointment already has its visit — open it ONCE. After that
+        // the doctor controls the tab, so they can browse earlier visits.
+        if (apptJumpedRef.current !== selectedAppointmentId) {
+          if (activeTab !== apptIdx) setActiveTab(apptIdx);
+          const v = visits[apptIdx];
+          if (v.visitDate && queueDate !== v.visitDate) setQueueDate(v.visitDate);
+          apptJumpedRef.current = selectedAppointmentId;
+        }
+        autoCreatedForApptRef.current = selectedAppointmentId;
+        return;
       }
-      autoCreatedForPatientRef.current = selectedPatientId;
+      // No visit for this appointment yet — create one tagged with it.
+      // After refetch this effect re-runs and the branch above selects it.
+      if (autoCreatedForApptRef.current !== selectedAppointmentId) {
+        autoCreatedForApptRef.current = selectedAppointmentId;
+        const draft: SaveVisitRequest = {
+          visitDate: queueDate,
+          bpSystolic: null, bpDiastolic: null, bpUnit: null,
+          bmi: null, bmiUnit: null, height: null, heightUnit: null,
+          weight: null, weightUnit: null, temperature: null, temperatureUnit: null,
+          pulse: null, pulseUnit: null, waist: null, waistUnit: null,
+          hip: null, hipUnit: null, spo2: null, spo2Unit: null,
+          familyHistory: null, allergies: null, personalHistory: null, pastMedicalHistory: null,
+          complaints: null, diagnosis: null, notesForPatient: null, privateNotes: null, tests: null,
+          createdByDoctorId: appointmentDoctorId,
+          appointmentId: selectedAppointmentId,
+          referDoctorId: null,
+          reviewDate: null, reviewDays: null, reviewNotes: null,
+          sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
+          prescriptions: [],
+        };
+        void createVisit(selectedPatientId, draft)
+          .then(() => refetchVisits())
+          .catch((err: Error) => showToast(err.message || "Failed to create visit"));
+      }
       return;
     }
-    if (
-      selectedPatientId &&
-      !visitsLoading &&
-      // Only fire after a successful fetch for THIS patient to avoid
-      // creating a duplicate on every reopen.
-      visitsLoadedFor === selectedPatientId &&
-      !hasTodayVisit &&
-      // Visits only exist for booked appointments — no appointment id means
-      // we have no business creating one.
-      !!selectedAppointmentId &&
-      autoCreatedForPatientRef.current !== selectedPatientId
-    ) {
-      autoCreatedForPatientRef.current = selectedPatientId;
-      const existingCount = visits.length;
-      const draft: SaveVisitRequest = {
-        visitDate: queueDate,
-        bpSystolic: null, bpDiastolic: null, bpUnit: null,
-        bmi: null, bmiUnit: null, height: null, heightUnit: null,
-        weight: null, weightUnit: null, temperature: null, temperatureUnit: null,
-        pulse: null, pulseUnit: null, waist: null, waistUnit: null,
-        hip: null, hipUnit: null, spo2: null, spo2Unit: null,
-        familyHistory: null, allergies: null, personalHistory: null, pastMedicalHistory: null,
-        complaints: null, diagnosis: null, notesForPatient: null, privateNotes: null, tests: null,
-        createdByDoctorId: appointmentDoctorId,
-        referDoctorId: null,
-        reviewDate: null, reviewDays: null, reviewNotes: null,
-        sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
-        prescriptions: [],
-      };
-      void createVisit(selectedPatientId, draft).then(async () => {
-        await refetchVisits();
-        // Jump to today's visit tab (it lands at the end after sort).
-        if (existingCount > 0) setActiveTab(existingCount);
-      }).catch((err: Error) => {
-        showToast(err.message || "Failed to create visit");
-      });
+
+    // ── Ambient (no appointment): resume an unfinished session once ─────
+    const unfinishedIdx = visits.findIndex((v) => v.sessionStartedAt && !v.sessionEndedAt);
+    if (unfinishedIdx >= 0 && unfinishedJumpedForPatientRef.current !== selectedPatientId) {
+      const v = visits[unfinishedIdx];
+      if (activeTab !== unfinishedIdx) setActiveTab(unfinishedIdx);
+      if (v.visitDate && queueDate !== v.visitDate) setQueueDate(v.visitDate);
+      unfinishedJumpedForPatientRef.current = selectedPatientId;
     }
-  }, [selectedPatientId, visitsLoading, visitsLoadedFor, visits, refetchVisits, queueDate, activeTab, selectedAppointmentId]);
-  // Reset the auto-create guard whenever the user picks a different patient
-  // (or leaves and comes back to the same one).
+  }, [selectedPatientId, selectedAppointmentId, visitsLoading, visitsLoadedFor, visits, refetchVisits, queueDate, activeTab, appointmentDoctorId, slotChecked, slotOptions]);
+  // Reset the one-shot guards when the user leaves the patient.
   React.useEffect(() => {
     if (selectedPatientId === null) {
-      autoCreatedForPatientRef.current = null;
+      autoCreatedForApptRef.current = null;
+      apptJumpedRef.current = null;
       unfinishedJumpedForPatientRef.current = null;
+      slotFetchedForRef.current = null;
+      setSlotOptions(null);
+      setSlotChecked(null);
     }
   }, [selectedPatientId]);
+
+  // On every pad open, look up the patient's appointments for today. With
+  // 2+, ask which slot this consultation is for (popup below) — a visit is
+  // only created once the doctor picks. With exactly 1, adopt it silently.
+  // With 0, leave the ambient flow (existing visits / "No visits yet").
+  // Runs even when the queue pre-selected an appointment, so clicking
+  // either same-day card still asks which slot.
+  React.useEffect(() => {
+    if (!selectedPatientId || visitsLoadedFor !== selectedPatientId) return;
+    if (slotFetchedForRef.current === selectedPatientId) return;
+    slotFetchedForRef.current = selectedPatientId;
+    const today = todayIso();
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = localStorage.getItem("docodile_token");
+        const res = await fetch(`${API_BASE_URL}/api/tenant/appointments?date=${today}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok || cancelled) return;
+        const all: Array<{ id: string; patientId: string; scheduledTime: string | null; doctorId: string | null }> =
+          await res.json();
+        const mine = all.filter((a) => a.patientId === selectedPatientId);
+        if (cancelled) return;
+        if (mine.length >= 2) {
+          setSlotOptions(mine);
+        } else if (mine.length === 1) {
+          setSelectedAppointmentId(mine[0].id);
+          if (mine[0].doctorId) setAppointmentDoctorId(mine[0].doctorId);
+        }
+      } catch {
+        /* ignore — fall back to the ambient flow */
+      } finally {
+        if (!cancelled) setSlotChecked(selectedPatientId);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedPatientId, visitsLoadedFor]);
+
+  // Adopt the slot the doctor picked → the per-appointment auto-create
+  // effect then opens (or creates) that appointment's visit.
+  const chooseSlot = (a: { id: string; doctorId: string | null }) => {
+    setSelectedAppointmentId(a.id);
+    if (a.doctorId) setAppointmentDoctorId(a.doctorId);
+    setQueueDate(todayIso());
+    setSlotOptions(null);
+  };
 
   // When the view swaps from picker → form (or back), reset the scroll
   // position to the absolute top. The PrescriptionPage renders inside
@@ -2626,9 +2688,101 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
           onApplyObjective={(v) => setPrivateNotesValue((prev) => prev ? `${prev}\n${v}` : v)}
         />
       )}
+
+      {/* Slot picker — patient has 2+ appointments today and was opened
+          without a specific one. Asks which slot this consultation is for. */}
+      {slotOptions && (
+        <div style={slotPickerStyles.overlay}>
+          <div style={slotPickerStyles.card}>
+            <h3 style={slotPickerStyles.title}>Choose an appointment slot</h3>
+            <p style={slotPickerStyles.sub}>
+              {selectedPatient?.name ?? "This patient"} has more than one appointment
+              today. Pick the slot you're starting this consultation for.
+            </p>
+            <div style={slotPickerStyles.slots}>
+              {slotOptions.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  style={slotPickerStyles.slotBtn}
+                  onClick={() => chooseSlot(a)}
+                >
+                  {formatSlot(a.scheduledTime)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+// "25 May 2026 at 10:05 PM" for the appointment-slot picker.
+function formatSlot(iso: string | null): string {
+  if (!iso) return "Appointment";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "Appointment";
+  const datePart = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  const timePart = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  return `${datePart} at ${timePart}`;
+}
+
+const slotPickerStyles: Record<string, React.CSSProperties> = {
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1100,
+  },
+  card: {
+    backgroundColor: colors.primary100,
+    borderRadius: radii["2xl"],
+    padding: spacing["2xl"],
+    minWidth: 360,
+    maxWidth: 460,
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.s,
+    textAlign: "center",
+    boxShadow: "0 12px 40px rgba(0,0,0,0.18)",
+  },
+  title: {
+    margin: 0,
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h6,
+    fontWeight: fonts.weight.regular,
+    color: colors.neutral900,
+  },
+  sub: {
+    margin: 0,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.neutral600,
+    lineHeight: 1.5,
+  },
+  slots: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: spacing.s,
+    justifyContent: "center",
+    marginTop: spacing.s,
+  },
+  slotBtn: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.neutral900,
+    backgroundColor: colors.neutral100,
+    border: `1px solid ${colors.primary300}`,
+    borderRadius: radii.full,
+    padding: "10px 20px",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+};
 
 // AI SOAP draft modal — fetches a structured Subjective/Objective/Assessment/
 // Plan from the current visit's free-text notes + vitals via the AI service.

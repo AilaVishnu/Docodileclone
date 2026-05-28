@@ -58,6 +58,9 @@ export type VisitDTO = {
   sessionEndedAt: string | null;
   sessionDurationSec: number | null;
 
+  // The appointment this visit belongs to (null for legacy/imported visits).
+  appointmentId: string | null;
+
   prescriptions: RxRowDTO[];
 };
 
@@ -68,9 +71,10 @@ export type VisitDTO = {
 // doctor when a receptionist/admin opens View Pad on the doctor's behalf.
 export type SaveVisitRequest = Omit<
   VisitDTO,
-  "id" | "patientId" | "clinicId" | "createdByDoctorId" | "referDoctorName"
+  "id" | "patientId" | "clinicId" | "createdByDoctorId" | "referDoctorName" | "appointmentId"
 > & {
   createdByDoctorId?: string | null;
+  appointmentId?: string | null;
 };
 
 const authHeaders = (): HeadersInit => {
