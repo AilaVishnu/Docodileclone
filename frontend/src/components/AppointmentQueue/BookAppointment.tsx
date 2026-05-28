@@ -953,6 +953,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             {showTimePicker && (
               <TimePicker
                 initialTime={form.time}
+                selectedDate={form.date}
                 onSelect={(time: string) => {
                   setForm({ ...form, time });
                   setShowTimePicker(false);
