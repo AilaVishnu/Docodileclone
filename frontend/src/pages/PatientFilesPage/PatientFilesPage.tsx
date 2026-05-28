@@ -138,6 +138,10 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
   const [limit, setLimit] = useState(PAGE);
   const shown = visible.slice(0, limit);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  // Top of the page — selecting a patient scrolls here so the open file and
+  // its action buttons (which live at the top of the right pane) are in view
+  // even when the index list was scrolled far down.
+  const topRef = useRef<HTMLDivElement | null>(null);
   // Any search/filter change rebuilds the list — restart the window.
   useEffect(() => {
     setLimit(PAGE);
@@ -173,6 +177,14 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
 
   const selectedPatient = visible.find((p) => p.id === selectedId) ?? null;
 
+  // Select from the list AND jump back to the top, so the chosen patient's
+  // file + action buttons are visible regardless of how far the list was
+  // scrolled. Used only for explicit row clicks (not auto-selection).
+  const handleSelect = (id: string) => {
+    setSelectedId(id);
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const handleOpen = (patient: Patient, opts?: { initialAction?: number }) => {
     // Record where the doctor came from so the Prescription page's Back
     // button can route them back to Patient Files rather than dumping
@@ -189,7 +201,7 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
   };
 
   return (
-    <div style={styles.container}>
+    <div ref={topRef} style={styles.container}>
       <div style={styles.headerRow}>
         <h1 style={styles.title}>Patient Files</h1>
       </div>
@@ -326,7 +338,7 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
                       patient={p}
                       query={search.trim().toLowerCase()}
                       selected={p.id === selectedId}
-                      onSelect={() => setSelectedId(p.id)}
+                      onSelect={() => handleSelect(p.id)}
                     />
                   ))}
                 </tbody>
