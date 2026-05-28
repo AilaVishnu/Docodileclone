@@ -83,7 +83,10 @@ class AppointmentService(
                 gender = request.patientGender,
                 dob = request.patientDob?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() },
                 age = request.patientAge,
-                createdAt = Instant.now()
+                createdAt = Instant.now(),
+                // Next free patient number for this clinic, continuing the
+                // sequence used by imports. See V46 / PatientRepository.
+                displayNo = patientRepository.findMaxDisplayNoByClinicId(clinic.id!!) + 1
             )
             patientRepository.save(patient)
         }
@@ -228,6 +231,7 @@ class AppointmentService(
             patientGender = this.patient?.gender,
             patientDob = this.patient?.dob?.toString(),
             patientAge = this.patient?.age,
+            patientDisplayNo = this.patient?.displayNo,
             doctorId = this.doctor?.id ?: UUID.randomUUID(),
             scheduledTime = this.scheduledTime,
             isWalkin = this.isWalkin,

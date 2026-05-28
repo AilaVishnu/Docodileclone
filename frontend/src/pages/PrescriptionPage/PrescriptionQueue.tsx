@@ -39,6 +39,7 @@ type AppointmentRow = {
   patientGender: string | null;
   patientDob: string | null;
   patientAge: number | null; // months
+  patientDisplayNo: number | null; // per-clinic "T###" number
   service: string | null;
   type: string | null;
   status: string | null;
@@ -138,8 +139,9 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
     );
   }, [appointments, statusFilter, startedSet]);
 
-  // Patient T-ID is the same client-side counter used by BookAppointment —
-  // keyed by appointment id, so look up the same map here.
+  // Patient T-ID — the real per-clinic number now comes from the backend
+  // (apt.patientDisplayNo). This legacy localStorage map is kept only as a
+  // fallback for rows that predate the backend backfill (displayNo null).
   const patientIdMap = useMemo<Record<string, number>>(() => {
     try {
       return JSON.parse(localStorage.getItem("docodile_patient_map") || "{}");
@@ -166,6 +168,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
       gender: apt.patientGender,
       dob: apt.patientDob,
       age: apt.patientAge,
+      displayNo: apt.patientDisplayNo,
       lastVisitDate: null,
       treatingDoctorIds: [],
       treatingDepartments: [],
@@ -203,7 +206,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
           <PatientCard
             key={apt.id}
             apt={apt}
-            tNumber={patientIdMap[apt.id]}
+            tNumber={apt.patientDisplayNo ?? patientIdMap[apt.id]}
             started={startedSet.has(apt.patientId)}
             mode={viewMode}
             onViewPad={() => handleViewPad(apt)}
@@ -431,7 +434,7 @@ function PatientListTable({
           {appointments.map((apt, index) => {
             const ageYears =
               apt.patientAge != null ? Math.floor(apt.patientAge / 12) : null;
-            const tNum = patientIdMap[apt.id];
+            const tNum = apt.patientDisplayNo ?? patientIdMap[apt.id];
             const started = startedSet.has(apt.patientId);
             const rowBg = rowBgFor(apt.status, started);
             const group = groupKeyFor(apt, startedSet);

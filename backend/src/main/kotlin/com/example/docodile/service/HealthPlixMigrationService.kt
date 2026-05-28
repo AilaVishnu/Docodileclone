@@ -158,6 +158,23 @@ class HealthPlixMigrationService(
         val touchedVisitIds = HashSet<java.util.UUID>()
         val now = Instant.now()
 
+        // Patient numbering. Imported patients keep the numeric part of their
+        // HealthPlix id ("T960" → 960) so staff recognise them from old
+        // records. Anything missing/non-numeric, or a number already taken,
+        // falls back to the next free number above the clinic's current max.
+        // A re-run keeps existing numbers and only numbers genuinely new rows.
+        val takenDisplayNos = patientRepository.findDisplayNosByClinicId(clinicId).toHashSet()
+        var nextDisplayNo = takenDisplayNos.maxOrNull() ?: 0
+        fun numericRef(ref: String): Int? = ref.filter { it.isDigit() }.toIntOrNull()?.takeIf { it > 0 }
+        fun reserveDisplayNo(preferred: Int?): Int {
+            if (preferred != null && takenDisplayNos.add(preferred)) {
+                if (preferred > nextDisplayNo) nextDisplayNo = preferred
+                return preferred
+            }
+            do { nextDisplayNo++ } while (!takenDisplayNos.add(nextDisplayNo))
+            return nextDisplayNo
+        }
+
         fun warn(msg: String) { if (warnings.size < 50) warnings.add(msg) }
         fun skip(reason: String) {
             skipped++
@@ -173,6 +190,7 @@ class HealthPlixMigrationService(
                 name = ref,           // best we can do without the APD row
                 createdAt = now,
                 externalRef = ref,
+                displayNo = reserveDisplayNo(numericRef(ref)),
             )
             entityManager.persist(stub)
             patientByRef[ref] = stub
@@ -212,7 +230,9 @@ class HealthPlixMigrationService(
                 if (name.lowercase() in setOf("demo patient", "demo 1")) { skip("Demo/sample patient row"); continue }
 
                 val existing = patientByRef[ref]
-                val p = existing ?: Patient(clinic = clinic, externalRef = ref, createdAt = now)
+                val p = existing ?: Patient(
+                    clinic = clinic, externalRef = ref, createdAt = now, displayNo = reserveDisplayNo(numericRef(ref)),
+                )
                 p.name = name
                 p.phone = cell(row, header, "phone_number").trim().ifBlank { null }
                 p.email = cell(row, header, "email_id").trim().ifBlank { null }?.lowercase()

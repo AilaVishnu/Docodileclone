@@ -20,6 +20,9 @@ export type Patient = {
   gender: string | null;
   dob: string | null;          // ISO yyyy-MM-dd
   age: number | null;
+  // Sequential per-clinic patient number, rendered as the "T###" code.
+  // Null only for legacy rows predating the backend backfill.
+  displayNo: number | null;
   lastVisitDate: string | null;
   // Distinct doctors this patient has been seen by (from visits). Drives
   // the doctor/department filter in Patient Files without per-row fetches.

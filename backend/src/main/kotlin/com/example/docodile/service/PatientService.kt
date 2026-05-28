@@ -66,6 +66,7 @@ class PatientService(
                     gender = p.gender,
                     dob = p.dob,
                     age = p.age,
+                    displayNo = p.displayNo,
                     lastVisitDate = lastVisitMap[p.id],
                     treatingDoctorIds = doctorMap[p.id]?.toList() ?: emptyList(),
                     treatingDepartments = doctorMap[p.id]
