@@ -220,15 +220,17 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
       }
 
       try {
-        // 1. Fetch Doctors of the clinic
+        // 1. Fetch Staff (to filter doctors)
         if (doctors.length === 0) {
-          const docRes = await fetch(`${API_BASE_URL}/api/doctors`, {
+          const staffRes = await fetch(`${API_BASE_URL}/api/tenant/clinics/${clinicId}/staff`, {
             headers: { Authorization: `Bearer ${token}` },
           });
 
-          if (docRes.ok) {
-            const docData = await docRes.json();
-            const doctorList = docData.map((d: any) => ({ id: d.id, name: d.name }));
+          if (staffRes.ok) {
+            const staffData = await staffRes.json();
+            const doctorList = staffData
+              .filter((s: any) => s.role === "DOCTOR")
+              .map((s: any) => ({ id: s.id, name: s.name }));
             
             setDoctors(doctorList);
             if (doctorList.length > 0) {

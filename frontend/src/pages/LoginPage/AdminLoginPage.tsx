@@ -5,10 +5,9 @@ import AdminBg from "../../assets/admin-illo.svg";
 
 type AdminLoginPageProps = {
   onLoginSuccess?: () => void;
-  onSwitchToStaff?: () => void;
 };
 
-export function AdminLoginPage({ onLoginSuccess, onSwitchToStaff }: AdminLoginPageProps) {
+export function AdminLoginPage({ onLoginSuccess }: AdminLoginPageProps) {
   useEffect(() => {
     document.title = "Docodile | Login";
   }, []);
@@ -23,7 +22,7 @@ export function AdminLoginPage({ onLoginSuccess, onSwitchToStaff }: AdminLoginPa
         backgroundSize: "cover",
       }}
     >
-      <LoginCard mode="admin" onLoginSuccess={onLoginSuccess} onSwitchMode={onSwitchToStaff} />
+      <LoginCard mode="admin" onLoginSuccess={onLoginSuccess} />
     </div>
   );
 }

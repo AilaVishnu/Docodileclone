@@ -1,6 +1,5 @@
 import React from "react";
 import { styles } from "./PrescriptionPage.styles";
-import "./PrescriptionPage.responsive.css";
 import { pickAvatar } from "../../utils/avatar";
 // Action-list icons exported from Figma node 2059:6764 (currentColor-normalized)
 import { ReactComponent as VisitsIcon } from "../../assets/icons/visits.svg";
@@ -1930,9 +1929,9 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                     </button>
                   </div>
                   {openSections.vitals && (
-                    <div style={styles.vitalsGrid} data-vitals-grid>
+                    <div style={styles.vitalsGrid}>
                       {VITAL_COLUMNS.map((col, ci) => (
-                        <div key={ci} style={styles.vitalColumn} data-vital-column>
+                        <div key={ci} style={styles.vitalColumn}>
                           {col.map((v, ri) => {
                             const cellKey = `${ci}-${ri}`;
                             const cell = vitalState[cellKey];
@@ -1955,7 +1954,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                               : undefined;
                             return (
                               <div key={ri} style={styles.vitalCell}>
-                                <span style={styles.vitalLabel} data-vital-label>{v.label}</span>
+                                <span style={styles.vitalLabel}>{v.label}</span>
                                 <div style={styles.vitalInputRow} title={!valueValid ? rangeHint : undefined}>
                                   {isBp ? (
                                     <BpInput
@@ -1979,7 +1978,6 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                                       onChange={(e) => setVitalValue(cellKey, e.target.value)}
                                       onKeyDown={(e) => validateVitalOnEnter(e, v.label, cell.value, cell.unit)}
                                       aria-invalid={!valueValid}
-                                      data-vital-input-value
                                     />
                                   )}
                                   <button
@@ -1992,7 +1990,6 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                                       ...(!valueValid ? styles.vitalUnitInvalid : {}),
                                     }}
                                     title={canToggle ? `Switch to ${UNIT_TOGGLES[cell.unit].altUnit}` : undefined}
-                                    data-vital-unit
                                   >
                                     {cell.unit}
                                   </button>
@@ -2160,7 +2157,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                 </div>
 
                 {/* Prescription table */}
-                <div style={styles.sectionCard} data-section-card>
+                <div style={styles.sectionCard}>
                   <div style={styles.sectionHeader}>
                     <div style={styles.sectionTitleWrap}>
                       <PillsIcon style={styles.sectionIcon} />
@@ -2182,7 +2179,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                     </button>
                   </div>
                   {openSections.rx && (
-                    <div style={styles.rxTable} data-rx-section>
+                    <div style={styles.rxTable}>
                       {rxInteractions.length > 0 && (
                         <div style={styles.rxInteractionBanner}>
                           {rxInteractions.map((w, i) => (
@@ -2202,9 +2199,9 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                         const updateField = (key: keyof RxRowDraft, value: string) =>
                           setRxRows((prev) => prev.map((r, ix) => (ix === i ? { ...r, [key]: value } : r)));
                         return (
-                          <div key={row.id ?? `draft-${i}`} style={{ ...styles.rxGroup, zIndex: rxRows.length + 5 - i }} data-rx-group>
+                          <div key={row.id ?? `draft-${i}`} style={{ ...styles.rxGroup, zIndex: rxRows.length + 5 - i }}>
                             {/* Left: serial + medicine cell — visually anchors for all tapering rows */}
-                            <div style={styles.rxGroupLeft} data-rx-group-left>
+                            <div style={styles.rxGroupLeft}>
                               <span style={styles.rxSerial}>{i + 1}</span>
                               <div style={{ ...styles.rxMedicineCell, flex: 1, position: "relative" }}>
                                 <div style={styles.rxMedicineInputCol}>
@@ -2238,7 +2235,6 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                                     style={styles.rxAddNoteBtn}
                                     title="Add tapering dose"
                                     onClick={() => addThenRow(i)}
-                                    data-rx-add-note-btn
                                   >
                                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                                       <line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -2249,25 +2245,25 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                               </div>
                             </div>
                             {/* Right: stacked tapering rows */}
-                            <div style={styles.rxGroupRight} data-rx-group-right>
-                              <div style={styles.rxDataRow} data-rx-data-row>
-                                <div style={styles.rxDataCell} data-rx-data-cell><DosagePicker value={row.dosage} onChange={(v) => updateField("dosage", v)} medicineName={row.medicine} genericName={row.genericName} /></div>
-                                <div style={styles.rxDataCell} data-rx-data-cell><WhenPicker value={row.whenToTake} onChange={(v) => updateField("whenToTake", v)} /></div>
-                                <div style={styles.rxDataCell} data-rx-data-cell><FrequencyPicker value={row.frequency} onChange={(v) => updateField("frequency", v)} /></div>
-                                <div style={styles.rxDataCell} data-rx-data-cell><DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} /></div>
+                            <div style={styles.rxGroupRight}>
+                              <div style={styles.rxDataRow}>
+                                <div style={styles.rxDataCell}><DosagePicker value={row.dosage} onChange={(v) => updateField("dosage", v)} medicineName={row.medicine} genericName={row.genericName} /></div>
+                                <div style={styles.rxDataCell}><WhenPicker value={row.whenToTake} onChange={(v) => updateField("whenToTake", v)} /></div>
+                                <div style={styles.rxDataCell}><FrequencyPicker value={row.frequency} onChange={(v) => updateField("frequency", v)} /></div>
+                                <div style={styles.rxDataCell}><DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} /></div>
                                 <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={row.notes} onChange={(e) => updateField("notes", e.target.value)} />
-                                <button type="button" style={styles.rxDeleteBtn} onClick={() => removeRxRow(i)} title="Remove medicine" data-rx-delete-btn>
+                                <button type="button" style={styles.rxDeleteBtn} onClick={() => removeRxRow(i)} title="Remove medicine">
                                   <TrashIcon style={{ width: 16, height: 16 }} />
                                 </button>
                               </div>
                               {row.thenRows.map((thenRow, ti) => (
                                 <div key={`then-${i}-${ti}`} style={styles.rxDataRow}>
-                                  <div style={styles.rxDataCell} data-rx-data-cell><DosagePicker value={thenRow.dosage} onChange={(v) => updateThenField(i, ti, "dosage", v)} medicineName={row.medicine} genericName={row.genericName} /></div>
-                                  <div style={styles.rxDataCell} data-rx-data-cell><WhenPicker value={thenRow.whenToTake} onChange={(v) => updateThenField(i, ti, "whenToTake", v)} /></div>
-                                  <div style={styles.rxDataCell} data-rx-data-cell><FrequencyPicker value={thenRow.frequency} onChange={(v) => updateThenField(i, ti, "frequency", v)} /></div>
-                                  <div style={styles.rxDataCell} data-rx-data-cell><DurationPicker value={thenRow.duration} onChange={(v) => updateThenField(i, ti, "duration", v)} /></div>
+                                  <div style={styles.rxDataCell}><DosagePicker value={thenRow.dosage} onChange={(v) => updateThenField(i, ti, "dosage", v)} medicineName={row.medicine} genericName={row.genericName} /></div>
+                                  <div style={styles.rxDataCell}><WhenPicker value={thenRow.whenToTake} onChange={(v) => updateThenField(i, ti, "whenToTake", v)} /></div>
+                                  <div style={styles.rxDataCell}><FrequencyPicker value={thenRow.frequency} onChange={(v) => updateThenField(i, ti, "frequency", v)} /></div>
+                                  <div style={styles.rxDataCell}><DurationPicker value={thenRow.duration} onChange={(v) => updateThenField(i, ti, "duration", v)} /></div>
                                   <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={thenRow.notes} onChange={(e) => updateThenField(i, ti, "notes", e.target.value)} />
-                                  <button type="button" style={styles.rxDeleteBtn} onClick={() => removeThenRow(i, ti)} title="Remove tapering row" data-rx-delete-btn>
+                                  <button type="button" style={styles.rxDeleteBtn} onClick={() => removeThenRow(i, ti)} title="Remove tapering row">
                                     <TrashIcon style={{ width: 16, height: 16 }} />
                                   </button>
                                 </div>

@@ -50,7 +50,7 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val config = CorsConfiguration()
-        val allowedOrigins = System.getenv("ALLOWED_ORIGINS")?.split(",")?.map { it.trim() } ?: listOf("http://localhost:3000", "http://localhost:3001")
+        val allowedOrigins = System.getenv("ALLOWED_ORIGINS")?.split(",") ?: listOf("http://localhost:3000", "http://localhost:3001")
         config.allowedOrigins = allowedOrigins
         config.allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
         config.allowedHeaders = listOf("Authorization", "Content-Type", "*")

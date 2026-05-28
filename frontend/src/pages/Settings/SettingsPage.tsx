@@ -4,7 +4,6 @@ import { PrintTemplateEditor } from "./PrintTemplate/PrintTemplateEditor";
 import { ArchivedPatientsList } from "./ArchivedPatients/ArchivedPatientsList";
 import { ImportData } from "./ImportData/ImportData";
 import { DEFAULT_SETTINGS_SECTION, SETTINGS_SECTIONS, SettingsSection } from "./sections";
-import "./SettingsPage.responsive.css";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Settings page. The section list now lives in the SideNav as a nested

@@ -5,10 +5,9 @@ import StaffBg from "../../assets/staff-illo.svg";
 
 type StaffLoginPageProps = {
   onLoginSuccess?: () => void;
-  onSwitchToAdmin?: () => void;
 };
 
-export function StaffLoginPage({ onLoginSuccess, onSwitchToAdmin }: StaffLoginPageProps) {
+export function StaffLoginPage({ onLoginSuccess }: StaffLoginPageProps) {
   useEffect(() => {
     document.title = "Docodile | Login";
   }, []);
@@ -23,7 +22,7 @@ export function StaffLoginPage({ onLoginSuccess, onSwitchToAdmin }: StaffLoginPa
         backgroundSize: "cover",
       }}
     >
-      <LoginCard mode="staff" onLoginSuccess={onLoginSuccess} onSwitchMode={onSwitchToAdmin} />
+      <LoginCard mode="staff" onLoginSuccess={onLoginSuccess} />
     </div>
   );
 }

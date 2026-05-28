@@ -76,15 +76,15 @@ export function HomeView() {
   return (
     <div style={styles.container}>
       <div style={styles.topSection}>
-        <h1 style={styles.greeting} data-home-greeting>
+        <h1 style={styles.greeting}>
           Hello, {name} <span aria-hidden>👋</span>
         </h1>
 
-        <div style={styles.mainGrid} data-home-main-grid>
-          <div style={styles.memoSlot} data-memo-board>
+        <div style={styles.mainGrid}>
+          <div style={styles.memoSlot}>
             <MemoBoard />
           </div>
-          <div style={styles.calendarSlot} data-calendar-slot>
+          <div style={styles.calendarSlot}>
             <MyHoursCalendar />
           </div>
         </div>
@@ -92,8 +92,8 @@ export function HomeView() {
 
       {/* Full-width desk band at the bottom of the page */}
       <div style={styles.desk}>
-        <div style={styles.deskItems} data-desk-items>
-          <div style={styles.deskLeftGroup} data-desk-left-group>
+        <div style={styles.deskItems}>
+          <div style={styles.deskLeftGroup}>
             <div style={styles.papersSlot}>
               <PaperStack count={stats.totalAppointments} />
             </div>
@@ -134,7 +134,7 @@ function PaperStack({ count }: { count: number }) {
 
 function DeskClock() {
   return (
-    <div style={styles.deskClockWrap} data-deskClockWrap>
+    <div style={styles.deskClockWrap}>
       <svg
         width="140"
         height="167"
@@ -150,7 +150,7 @@ function DeskClock() {
         />
         <ellipse cx="69.9137" cy="69.8057" rx="62.4195" ry="62.1694" fill="#F9F9ED" />
       </svg>
-      <div style={styles.deskClockFace} data-deskClockFace>
+      <div style={styles.deskClockFace}>
         <AnalogClock size={130} />
       </div>
     </div>

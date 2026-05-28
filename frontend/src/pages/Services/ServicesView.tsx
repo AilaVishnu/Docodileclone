@@ -7,7 +7,6 @@ import { PlusIcon } from "../../iconsUtil";
 import { ReactComponent as SearchIcon } from "../../assets/search.svg";
 import { ReactComponent as EditPencilIcon } from "../../assets/icons/edit-pencil.svg";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
-import "./ServicesView.responsive.css";
 import {
   listServices,
   createService,

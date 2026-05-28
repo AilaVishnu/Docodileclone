@@ -13,7 +13,6 @@ import {
   ThemedHorizontalBar,
   ThemedVerticalBar,
 } from "../../components/charts";
-import "./StatsPage.responsive.css";
 
 type TabId = "overview" | "health" | "patients" | "doctors" | "clinical" | "operations" | "finance";
 type RangeId = "today" | "week" | "month" | "year" | "custom";
