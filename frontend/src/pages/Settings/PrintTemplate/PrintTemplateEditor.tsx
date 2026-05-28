@@ -842,6 +842,8 @@ const S: Record<string, React.CSSProperties> = {
     color: colors.active.shade800,
     padding: "2px 6px",
     borderRadius: radii.full,
+    flexShrink: 0,
+    whiteSpace: "nowrap",
   },
 
   // Floating context menu shown on right-click of a template tab.
