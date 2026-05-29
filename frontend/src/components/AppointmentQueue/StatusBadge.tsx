@@ -103,7 +103,8 @@ export function StatusBadge({ status, patientId, onClick }: StatusBadgeProps) {
   const cfg = liveStarted
     ? {
         ...baseCfg,
-        label: `In Progress${liveSeconds != null ? ` (${formatTimer(liveSeconds)})` : ""}`,
+        // Once the session is running, show just the live timer (no "In Progress").
+        label: formatTimer(liveSeconds ?? 0),
       }
     : baseCfg;
 
