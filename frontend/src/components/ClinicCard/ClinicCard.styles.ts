@@ -132,8 +132,10 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: colors.secondary700,
     color: colors.neutral100,
     borderRadius: radii.full,
-    padding: `${spacing["3xs"]} ${spacing["2xs"]} ${spacing["3xs"]} ${spacing.xs}`,
-    fontSize: fonts.size.xs,
+    // top / right / bottom / left — right bumped slightly (4 -> 6px) for a
+    // touch more breathing room after the ✕.
+    padding: `${spacing["3xs"]} 6px ${spacing["3xs"]} ${spacing.xs}`,
+    fontSize: fonts.size.s,
     lineHeight: fonts.lineHeight.xs,
     fontFamily: fonts.family.primary,
     fontWeight: fonts.weight.regular,
