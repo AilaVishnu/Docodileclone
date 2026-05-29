@@ -16,10 +16,14 @@ export function StaffLoginPage({ onLoginSuccess }: StaffLoginPageProps) {
     <div
       style={{
         ...styles.page,
+        // Fit the illustration to 100% width; crop vertically to the viewport.
+        // backgroundColor matches the illustration's full-canvas backdrop
+        // (#EDDFBA) so any vertical sliver on narrow-ratio monitors blends in.
+        backgroundColor: "#EDDFBA",
         backgroundImage: `url(${StaffBg})`,
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
-        backgroundSize: "cover",
+        backgroundSize: "100% auto",
       }}
     >
       <LoginCard mode="staff" onLoginSuccess={onLoginSuccess} />

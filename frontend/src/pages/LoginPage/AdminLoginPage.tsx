@@ -16,10 +16,14 @@ export function AdminLoginPage({ onLoginSuccess }: AdminLoginPageProps) {
     <div
       style={{
         ...styles.page,
+        // Fit the illustration to 100% width; crop vertically to the viewport.
+        // backgroundColor matches the illustration's full-canvas backdrop
+        // (#556536) so any vertical sliver on narrow-ratio monitors blends in.
+        backgroundColor: "#556536",
         backgroundImage: `url(${AdminBg})`,
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
-        backgroundSize: "cover",
+        backgroundSize: "100% auto",
       }}
     >
       <LoginCard mode="admin" onLoginSuccess={onLoginSuccess} />
