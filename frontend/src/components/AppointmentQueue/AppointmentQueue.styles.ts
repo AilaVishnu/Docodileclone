@@ -45,7 +45,7 @@ export const styles: Record<string, CSSProperties> = {
     borderBottom: `1px solid ${colors.primary300}`,
     color: colors.alphaBlack3,
     fontWeight: 400,
-    fontSize: fonts.size.s,
+    fontSize: fonts.size.m,
     lineHeight: "20px",
     letterSpacing: 0,
   },
@@ -57,7 +57,7 @@ export const styles: Record<string, CSSProperties> = {
 
   td: {
     padding: "14px var(--queue-cell-padx, 28px)",
-    fontSize: fonts.size.s,
+    fontSize: fonts.size.m,
     color: colors.neutral900,
     verticalAlign: "middle",
     fontWeight: 400,
@@ -67,7 +67,7 @@ export const styles: Record<string, CSSProperties> = {
   // Serial number cell — no horizontal padding so the "#" hugs the row edge.
   serialCell: {
     padding: "14px 0",
-    fontSize: fonts.size.s,
+    fontSize: fonts.size.m,
     color: colors.neutral900,
     verticalAlign: "middle",
     fontWeight: 400,
@@ -88,7 +88,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   namePrimary: {
-    fontSize: fonts.size.s,
+    fontSize: fonts.size.m,
     fontWeight: 400,
     color: colors.neutral900,
     lineHeight: "1.3",
@@ -129,7 +129,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     gap: "5px",
-    fontSize: fonts.size.s,
+    fontSize: fonts.size.m,
     fontWeight: 600,
   },
 
@@ -139,7 +139,7 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     gap: "4px",
-    fontSize: fonts.size.s,
+    fontSize: fonts.size.m,
     lineHeight: "16px",
     fontWeight: 400,
     color: colors.neutral900,
@@ -148,7 +148,7 @@ export const styles: Record<string, CSSProperties> = {
   // Time
   time: {
     fontWeight: 400,
-    fontSize: fonts.size.s,
+    fontSize: fonts.size.m,
     color: colors.neutral800,
   },
 

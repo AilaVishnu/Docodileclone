@@ -59,6 +59,14 @@ const STATUS_OPTIONS = [
   { label: "Cancel", value: "CANCELLED" },
 ];
 
+// Display phone as bare local digits: drop a leading 91 country code and any
+// spaces/symbols ("+91 98765 43210" -> "9876543210").
+function formatPhone(raw: string): string {
+  if (!raw) return raw;
+  const digits = raw.replace(/\D/g, "");
+  return digits.length > 10 && digits.startsWith("91") ? digits.slice(2) : digits;
+}
+
 function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
   appointment: Appointment;
   currentStatus: string;
@@ -353,8 +361,8 @@ export function QueueTable({
                       </div>
                     </td>
 
-                    {/* Phone */}
-                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>{apt.patientPhone}</td>
+                    {/* Phone — bare 10 digits (no +91, no mid-space) to save width */}
+                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>{formatPhone(apt.patientPhone)}</td>
 
                     {/* Service */}
                     <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px", maxWidth: 0 }}>

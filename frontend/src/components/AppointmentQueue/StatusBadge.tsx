@@ -107,6 +107,11 @@ export function StatusBadge({ status, patientId, onClick }: StatusBadgeProps) {
       }
     : baseCfg;
 
+  // Emphasize the "active" states (Waiting, At Doc / In Progress) at m (16);
+  // the other states (Booked, No Show, Completed, …) sit at s (14).
+  const badgeFontSize =
+    key === "WAITING" || key === "IN_PROGRESS" ? fonts.size.m : fonts.size.s;
+
   return (
     <span
       onClick={onClick}
@@ -118,7 +123,7 @@ export function StatusBadge({ status, patientId, onClick }: StatusBadgeProps) {
         color: cfg.color,
         borderRadius: "4px",
         padding: "4px 8px",
-        fontSize: fonts.size.xs,
+        fontSize: badgeFontSize,
         fontFamily: fonts.family.primary,
         fontWeight: fonts.weight.regular,
         lineHeight: "16px",

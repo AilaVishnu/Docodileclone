@@ -331,9 +331,8 @@ body {
     --fs-h5: 20px;
     --fs-h6: 18px;
     --fs-l:  18px;
-    --fs-m:  14px;
-    --fs-s:  13px;
-    /* --fs-xs (12px) / --fs-caption (11px) hold */
+    /* m (16) and s (14) are intentionally NOT stepped down — same in both
+       tiers, globally. xs (12) / caption (11) hold too. */
 
     --lh-h1: 60px;
     --lh-h2: 48px;
@@ -342,9 +341,7 @@ body {
     --lh-h5: 28px;
     --lh-h6: 24px;
     --lh-l:  24px;
-    --lh-m:  20px;
-    --lh-s:  18px;
-    /* --lh-xs / --lh-caption hold */
+    /* --lh-m / --lh-s / --lh-xs / --lh-caption hold */
 
     --ctrl-fs-lg: 16px;
     --ctrl-fs-md: 14px;
