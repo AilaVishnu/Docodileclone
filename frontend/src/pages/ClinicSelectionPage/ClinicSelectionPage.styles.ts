@@ -25,11 +25,15 @@ export const styles: Record<string, CSSProperties> = {
     flexWrap: "wrap",
     gap: spacing.xl,
     justifyContent: "center",
-    marginTop: spacing.xxl,
   },
 
+  // Fixed at the bottom-center so it stays out of the centering flow — the
+  // clinic cards then sit dead-center of the screen.
   buildLink: {
-    marginTop: spacing.xxl,
+    position: "fixed" as const,
+    bottom: spacing.l,
+    left: "50%",
+    transform: "translateX(-50%)",
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.s,
     color: colors.neutral900,
