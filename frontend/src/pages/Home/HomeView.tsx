@@ -242,14 +242,18 @@ const SCREEN_HEIGHT_PCT = ((249.77 - 14.97) / 340) * 100;
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    // Top section flows from the top, desk is absolutely pinned to the
-    // bottom — the visible gap between them becomes the responsive area.
-    // overflow: hidden prevents the page from scrolling when the viewport
-    // is shorter than the combined height. Negative bottom margin lets the
-    // container bleed past mainContent's 24px bottom padding so the desk
-    // strip reaches the actual viewport bottom.
+    // The home block is a CONSTANT-width, centered column (capped at
+    // --home-content-max). The side gutters between it and the screen edges
+    // are what stretch as the viewport grows — that's the responsive area.
+    // Top section flows from the top; the desk is absolutely pinned to the
+    // bottom of THIS box. overflow:hidden prevents page scroll when the
+    // viewport is short; the negative bottom margin lets the desk strip
+    // reach past mainContent's 24px bottom padding to the viewport bottom.
     position: "relative",
     width: "100%",
+    maxWidth: "var(--home-content-max)",
+    marginLeft: "auto",
+    marginRight: "auto",
     flex: 1,
     height: "calc(100% + 24px)",
     marginBottom: -24,
@@ -300,13 +304,12 @@ const styles: Record<string, React.CSSProperties> = {
 
   // ─── Full-width desk band absolutely pinned to the bottom of the viewport ───
   desk: {
-    // Absolute positioning keeps the desk locked to the bottom even when the
-    // top section's natural height exceeds the viewport — the desk simply
-    // overlaps from below. The negative left/right/bottom values bleed past
-    // mainContent's 40px horizontal and 24px bottom padding.
+    // Locked to the bottom of the capped content box (not the viewport), so
+    // the table strip is the same width as the content above it and the side
+    // gutters show the page background.
     position: "absolute",
-    left: -40,
-    right: -40,
+    left: 0,
+    right: 0,
     bottom: 0,
     display: "flex",
     flexDirection: "column",

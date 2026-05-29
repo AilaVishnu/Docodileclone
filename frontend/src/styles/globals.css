@@ -222,14 +222,15 @@ body {
   --ps-xs: 16px;
   --ps-caption: 14px;
 
-  /* Home page scaling knobs (1024-only step-downs) */
+  /* Home page knobs */
+  --home-content-max: 1356px;   /* capped, centered content; gutters stretch beyond */
   --home-memo-scale: 1;
   --home-cal-scale: 1;
   --home-clock-scale: 1;
   --home-clock-mr: 0px;
-  --home-computer-w: 480px;
+  --home-computer-w: 432px;     /* computer SVG width (screen text stays fixed) */
   --home-computer-fs: 14px;
-  --home-desk-front-h: 84px;
+  --home-desk-front-h: 28px;    /* table front strip — ~1/3 of the old 84px */
   --home-desk-left-gap: 40px;
   --home-cal-graphic-padtop: 32px;
   --home-cal-graphic-padbottom: 20px;
@@ -274,6 +275,9 @@ body {
     --input-pady: 3px;
 
     --login-card-w: 480px;
+
+    /* Home content is a touch narrower in the compact tier */
+    --home-content-max: 1200px;
 
     /* Header chrome compacts at 1200–1439 */
     --topnav-h: 56px;            /* shorter header */
