@@ -190,7 +190,7 @@ function ActionMenu({
           (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
         }}
       >
-        <ReorderDotsIcon width={14} height={14} />
+        <ReorderDotsIcon width={24} height={24} />
       </button>
       {isOpen && (
         <div
@@ -245,14 +245,14 @@ export function QueueTable({
           <col style={{ width: "9%" }} />
           <col style={{ width: "11%" }} />
           <col style={{ width: "30px" }} />
-          <col style={{ width: "14px" }} />
+          <col style={{ width: "24px" }} />
         </colgroup>
         <thead>
           <tr>
             {/* Browsers center <th> by default — set textAlign: "left" explicitly
                 on # and Name so headers match their left-aligned body cells. */}
             <th style={{ ...styles.th, textAlign: "left", paddingLeft: 0, paddingRight: 0 }}>#</th>
-            <th style={{ ...styles.th, textAlign: "left", paddingLeft: "4px", paddingRight: "4px" }}>Name</th>
+            <th style={{ ...styles.th, textAlign: "left", paddingLeft: "0", paddingRight: "4px" }}>Name</th>
             <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Phone</th>
             <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Service</th>
             <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Type</th>
@@ -415,7 +415,7 @@ export function QueueTable({
                         />
                       ) : (
                         <button style={styles.actionButton}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <circle cx="12" cy="5" r="1.5" fill="#000" />
                             <circle cx="12" cy="12" r="1.5" fill="#000" />
                             <circle cx="12" cy="19" r="1.5" fill="#000" />

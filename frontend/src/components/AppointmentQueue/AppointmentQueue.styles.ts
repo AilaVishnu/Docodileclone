@@ -75,7 +75,8 @@ export const styles: Record<string, CSSProperties> = {
 
   // Name cell with gender/age sub-detail
   nameCell: {
-    padding: "14px 4px",
+    // left 0 to tighten the gap to the # column
+    padding: "14px 4px 14px 0",
     verticalAlign: "middle",
   },
 
