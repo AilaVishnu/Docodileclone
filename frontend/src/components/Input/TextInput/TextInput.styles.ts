@@ -25,7 +25,7 @@ export const styles: Record<string, CSSProperties> = {
     outline: "none",
     backgroundColor: "transparent",
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.s,
+    fontSize: fonts.size.m,
     color: colors.neutral900,
   },
   errorContainer: {
