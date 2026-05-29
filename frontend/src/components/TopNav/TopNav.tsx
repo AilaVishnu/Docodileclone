@@ -78,8 +78,9 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       backgroundColor: colors.active.shade100,
       borderRadius: '55px',
       padding: '0 16px',
-      // Width + height + font track --topnav-* vars; vars step down at <1440.
-      width: 'clamp(var(--topnav-search-min), var(--topnav-search-ideal), var(--topnav-search-max))',
+      // Fixed width (no scaling). The flexible gap to the right-side actions
+      // is what makes the header responsive — see container justify-content.
+      width: 'var(--topnav-search-w)',
       height: 'var(--search-h)',
       boxSizing: 'border-box',
       gap: '12px',

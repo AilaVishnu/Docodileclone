@@ -162,9 +162,9 @@ body {
 
   /* TopNav (header chrome) — baseline at 1440 */
   --topnav-h: 70px;
-  --topnav-search-min: 200px;
-  --topnav-search-ideal: 30vw;
-  --topnav-search-max: 364px;
+  /* Search bar is a FIXED width; the empty space between it and the action
+     cluster on the right is what stretches/squeezes as the screen resizes. */
+  --topnav-search-w: 360px;
   --topnav-cta-padx: 16px;
   --topnav-cta-icon: 16px;
   --topnav-iconbtn: 48px;
@@ -275,6 +275,11 @@ body {
     --input-pady: 3px;
 
     --login-card-w: 480px;
+
+    /* Header chrome compacts at 1200–1439 */
+    --topnav-h: 56px;            /* shorter header */
+    --topnav-avatar: 36px;       /* smaller avatar */
+    --topnav-search-w: 300px;    /* narrower fixed search; gap absorbs the rest */
 
     /* Type scale — interval 1. Headings one rung down, body 1–2px
        smaller; xs/caption hold at the accessibility floor. */
