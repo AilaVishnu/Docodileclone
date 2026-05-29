@@ -68,8 +68,19 @@ export function HeatmapCard({
   date,
 }: HeatmapCardProps) {
   const fallback = deriveRangeFromSchedule();
-  const sh = startHour ?? fallback.startHour;
-  const eh = endHour ?? fallback.endHour;
+  let sh = startHour ?? fallback.startHour;
+  let eh = endHour ?? fallback.endHour;
+  // Expand the range to cover any bookings outside the configured clinic
+  // hours (e.g. a late / after-hours appointment) — otherwise buildGrid drops
+  // them (h >= endHour) and the card wrongly reads "No bookings".
+  const apptHours = appointments
+    .filter((a) => a.rawScheduledTime && a.status !== "CANCELLED")
+    .map((a) => new Date(a.rawScheduledTime as string).getHours())
+    .filter((h) => Number.isFinite(h));
+  if (apptHours.length) {
+    sh = Math.min(sh, ...apptHours);
+    eh = Math.max(eh, ...apptHours.map((h) => h + 1)); // eh is exclusive
+  }
   const grid = buildGrid(appointments, sh, eh);
   const total = grid.reduce(
     (sum, row) => sum + row.reduce((a, b) => a + b, 0),
