@@ -25,15 +25,15 @@ export function SideNavItem({ label, icon, active, onClick }: SideNavItemProps) 
       alignItems: 'center',
       justifyContent: 'center',
       gap: '4px',
-      // More horizontal breathing room around the icon (8px); the outer
-      // margin is trimmed to 4px to keep the short labels' width unchanged.
-      padding: '8px 8px',
+      padding: '8px 4px',
       cursor: 'pointer',
       backgroundColor: getBackgroundColor(),
       borderRadius: '8px',
-      marginLeft: '4px',
-      marginRight: '4px',
-      width: 'calc(100% - 8px)',
+      // The highlight box keeps its size; the 10px side margin gives it
+      // clear breathing room from the sidebar edges (left + right).
+      marginLeft: '10px',
+      marginRight: '10px',
+      width: 'calc(100% - 20px)',
       transition: 'background-color 0.2s ease',
       textAlign: 'center' as const,
     },

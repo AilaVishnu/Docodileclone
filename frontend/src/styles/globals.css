@@ -170,8 +170,9 @@ body {
   --topnav-iconbtn: 48px;
   --topnav-avatar: 48px;
 
-  /* SideNav — single fixed form: icon with a short label underneath. No expand. */
-  --sidenav-w: 76px;
+  /* SideNav — single fixed form: icon with a short label underneath. No expand.
+     80px = 60px highlight box + 10px breathing room on each side. */
+  --sidenav-w: 80px;
 
   /* mainContent outer padding (applied in HomePage). The top value sets the
      space above every module's <h1> title (Hello Admin / Pharmacy / etc.). */
