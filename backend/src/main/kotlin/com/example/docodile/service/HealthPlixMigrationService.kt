@@ -473,7 +473,7 @@ class HealthPlixMigrationService(
                     medicine = medicine,
                     dosage = null,                       // HealthPlix has no per-dose unit
                     whenToTake = fields["when"]?.ifBlank { null },
-                    frequency = fields["dosage"]?.ifBlank { null },   // the X-X-X-X pattern
+                    frequency = fields["dosage"]?.ifBlank { null }?.let { normalizeDosePattern(it) },   // the X-X-X-X pattern
                     duration = fields["duration"]?.ifBlank { null }?.takeIf { it != "0" },
                     notes = notes,
                 )
@@ -481,6 +481,16 @@ class HealthPlixMigrationService(
         }
         return out
     }
+
+    // HealthPlix writes the dose pattern with float segments ("1.0-1.0-1.0-0").
+    // Collapse whole-number floats to ints so it reads "1-1-1-0". Non-whole
+    // values (e.g. "0.5") and non-numeric text are left untouched.
+    private fun normalizeDosePattern(pattern: String): String =
+        pattern.split("-").joinToString("-") { seg ->
+            val t = seg.trim()
+            val d = t.toDoubleOrNull()
+            if (d != null && d == Math.floor(d) && !t.contains('e', true)) d.toLong().toString() else t
+        }
 
     /** RFC-4180 CSV parser — handles quoted fields with embedded commas + newlines. */
     private fun parseCsv(text: String): List<List<String>> {

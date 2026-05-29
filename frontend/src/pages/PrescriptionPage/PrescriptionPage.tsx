@@ -598,6 +598,38 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
   const [rxRows, setRxRows] = React.useState<RxRowDraft[]>([]);
   const [rxInteractions, setRxInteractions] = React.useState<Array<{ drug: string; interactsWith: string; comment: string }>>([]);
+
+  // Per-medicine autofill: index this patient's PAST prescriptions by medicine
+  // name (most recent wins), excluding the visit being edited. Visits arrive
+  // sorted ascending by date, so later iterations overwrite earlier ones.
+  const lastRxByMedicine = React.useMemo(() => {
+    const map = new Map<string, RxRowDTO>();
+    for (const v of visits) {
+      if (activeVisit && v.id === activeVisit.id) continue;
+      for (const rx of v.prescriptions ?? []) {
+        const key = (rx.medicine ?? "").trim().toLowerCase();
+        if (key) map.set(key, rx);
+      }
+    }
+    return map;
+  }, [visits, activeVisit]);
+
+  // When the doctor enters a medicine they've prescribed to this patient
+  // before, pre-fill that row from the last such prescription. Only fills
+  // empty fields, so it never clobbers what the doctor has already typed.
+  const autofillRxFromHistory = (rowIndex: number, medicineName: string) => {
+    const prior = lastRxByMedicine.get(medicineName.trim().toLowerCase());
+    if (!prior) return;
+    setRxRows((prev) => prev.map((r, ix) => ix !== rowIndex ? r : {
+      ...r,
+      dosage: r.dosage || (prior.dosage ?? ""),
+      whenToTake: r.whenToTake || (prior.whenToTake ?? ""),
+      frequency: r.frequency || (prior.frequency ?? ""),
+      frequencyInterval: r.frequencyInterval || (prior.frequencyInterval ?? ""),
+      duration: r.duration || (prior.duration ?? ""),
+      notes: r.notes || (prior.notes ?? ""),
+    }));
+  };
   const [reviewDays, setReviewDays] = React.useState<string>("");
   // Vital values + units (units are clickable to toggle between alternates
   // like cm↔in, kg↔lb, °C↔°F, mmHg↔kPa).
@@ -2276,8 +2308,8 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                                     inputStyle={styles.rxMedicineInput}
                                     placeholder="Medicine"
                                     value={row.medicine}
-                                    onChange={(v) => setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: v, genericName: "" } : r))}
-                                    onSelect={(name, genericName) => setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: name, genericName } : r))}
+                                    onChange={(v) => { setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: v, genericName: "" } : r)); autofillRxFromHistory(i, v); }}
+                                    onSelect={(name, genericName) => { setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: name, genericName } : r)); autofillRxFromHistory(i, name); }}
                                   />
                                 </div>
                                 {row.medicine.trim() && (
