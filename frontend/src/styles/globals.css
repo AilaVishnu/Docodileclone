@@ -98,6 +98,15 @@ body {
   min-width: 1200px;
 }
 
+/* Login is exempt from the 1200 floor — it's a centered card on a full-bleed
+   illustration that fits at any width. The login view (and only it) wraps its
+   content in .centered-layout, so drop the floor whenever that's on the page.
+   Without this, #root itself stays 1200px wide and forces horizontal scroll
+   below 1200 even though the fixed .page layer already covers the viewport. */
+body:has(.centered-layout) #root {
+  min-width: 0;
+}
+
 .centered-layout {
   display: flex;
   flex-direction: column;
@@ -151,6 +160,9 @@ body {
   /* Universal form control primitives (Select dropdown, TextInput row, …) */
   --input-h: 40px;
   --input-pady: 6px;
+
+  /* Login card width (centered modal on the login splash) */
+  --login-card-w: 520px;
 
   /* Today's Queue — right-side DoctorStatusCard + HeatmapCard width/padding */
   --queue-side-w: 246px;
@@ -274,6 +286,8 @@ body {
 
     --input-h: 32px;
     --input-pady: 3px;
+
+    --login-card-w: 480px;
 
     /* Type scale — interval 1. Headings one rung down, body 1–2px
        smaller; xs/caption hold at the accessibility floor. */

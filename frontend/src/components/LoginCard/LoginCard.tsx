@@ -124,7 +124,7 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
   };
 
   return (
-    <Card style={{ ...styles.card, width: "40vw", backgroundColor: isStaff ? colors.active.shade100 : colors.secondary50 }}>
+    <Card style={{ ...styles.card, width: "var(--login-card-w)", backgroundColor: isStaff ? colors.active.shade100 : colors.secondary50 }}>
       <h4 style={styles.title}>
         Login as {isStaff ? "Staff" : "Admin"}
       </h4>
