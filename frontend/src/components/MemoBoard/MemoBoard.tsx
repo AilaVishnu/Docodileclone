@@ -417,6 +417,8 @@ function clamp(n: number, min: number, max: number): number {
 const styles: Record<string, React.CSSProperties> = {
   wrapper: {
     width: "100%",
+    height: "100%",
+    minHeight: 0,
     display: "flex",
     flexDirection: "column",
     gap: spacing.s,
@@ -451,7 +453,9 @@ const styles: Record<string, React.CSSProperties> = {
   board: {
     position: "relative",
     width: "100%",
-    height: `${BOARD_HEIGHT}px`,
+    // Fills its column so the board height matches the calendar (grid stretch).
+    flex: 1,
+    minHeight: 0,
     borderRadius: radii.l,
     border: `8px solid ${colors.primary400}`,
     backgroundColor: colors.neutral100,

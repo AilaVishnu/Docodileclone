@@ -283,7 +283,9 @@ const styles: Record<string, React.CSSProperties> = {
     // original design exactly.
     gridTemplateColumns: "minmax(var(--home-memo-min, 640px), 1fr) var(--home-cal-w, 352px)",
     gap: "var(--home-grid-gap, 40px)",
-    alignItems: "start",
+    // Stretch both columns to the same height — the calendar defines it, and
+    // the memo board (flex-fills its column) matches the calendar's height.
+    alignItems: "stretch",
   },
   memoSlot: {
     minWidth: 0,

@@ -232,9 +232,9 @@ body {
   --home-computer-fs: 14px;
   --home-desk-front-h: 28px;    /* table front strip — ~1/3 of the old 84px */
   --home-desk-left-gap: 40px;
-  --home-cal-graphic-padtop: 32px;
-  --home-cal-graphic-padbottom: 20px;
-  --home-cal-graphic-minh: 132px;
+  --home-cal-graphic-padtop: 16px;
+  --home-cal-graphic-padbottom: 12px;
+  --home-cal-graphic-minh: 0px;
   --home-cal-month-fs: 40px; /* matches fonts.size.h3 */
   --home-cal-graphic-dir: column;
   --home-cal-graphic-gap: 2px;
