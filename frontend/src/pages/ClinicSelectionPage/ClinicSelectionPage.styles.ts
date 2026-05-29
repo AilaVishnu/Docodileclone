@@ -4,12 +4,18 @@ import { colors, fonts, spacing, strokes, radii } from "../../styles/theme";
 export const styles: Record<string, CSSProperties> = {
   page: {
     width: "100%",
-    minHeight: "100vh",
+    // Fill the locked viewport and scroll INTERNALLY (vertical only) — the
+    // browser itself never scrolls. `safe center` keeps the content centered
+    // when it fits, but falls back to top-aligned when it overflows so the
+    // top is never clipped out of reach.
+    height: "100%",
+    overflowY: "auto",
+    overflowX: "hidden",
     backgroundColor: colors.secondary200,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "safe center",
     padding: spacing.xl,
     boxSizing: "border-box",
   },

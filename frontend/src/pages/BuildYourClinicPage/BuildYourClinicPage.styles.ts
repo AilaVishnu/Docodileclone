@@ -4,16 +4,19 @@ import { colors, fonts, spacing } from "../../styles/theme";
 export const styles: Record<string, CSSProperties> = {
   page: {
     width: "100%",
-    minHeight: "100vh",
-    // Vertical padding scales with viewport — creates equal breathing room
-    // above the heading and below the CTAs at larger screens.
-    // Horizontal stays static.
-    padding: "clamp(12px, 1.56vw, 48px) 24px",
+    // Fill the locked viewport and scroll INTERNALLY (vertical only) — the
+    // browser never scrolls. `safe center` centers when content fits and
+    // falls back to top-aligned on overflow so nothing is clipped out of reach.
+    height: "100%",
+    overflowY: "auto",
+    overflowX: "hidden",
+    // Fixed padding (no viewport scaling, per the app-wide no-scaling rule).
+    padding: "24px",
     backgroundColor: colors.primary100,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: "center", // centers everything vertically — top space = bottom space
+    justifyContent: "safe center",
     boxSizing: "border-box",
   },
 
