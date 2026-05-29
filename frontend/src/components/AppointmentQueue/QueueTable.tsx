@@ -245,18 +245,21 @@ export function QueueTable({
     <div style={styles.tableContainer}>
       <table style={styles.table}>
         <colgroup>
-          <col style={{ width: "16px" }} />
-          {/* Name is the flexible column: it absorbs ALL leftover table width
-              so every other column gets its exact width (no slack inflating
-              them). This is also the responsive gap (name ↔ phone). */}
-          <col />
-          <col style={{ width: "14%" }} />
-          <col style={{ width: "10%" }} />
-          <col style={{ width: "10%" }} />
-          <col style={{ width: "10%" }} />
-          <col style={{ width: "12%" }} />
-          <col style={{ width: "30px" }} />
-          <col style={{ width: "24px" }} />
+          {/* Every real column is a fixed-width cap. The one empty spacer
+              (after Name) is the only flexible column, so it absorbs all
+              leftover width: Name stays capped at 256 (truncates), the 3-dots
+              stays exactly 24px, and the name↔phone gap stretches/squeezes as
+              the queue resizes. */}
+          <col style={{ width: "28px" }} />   {/* # */}
+          <col style={{ width: "256px" }} />  {/* Name (cap, truncates) */}
+          <col />                              {/* flexible spacer */}
+          <col style={{ width: "108px" }} />  {/* Phone */}
+          <col style={{ width: "64px" }} />   {/* Service */}
+          <col style={{ width: "96px" }} />   {/* Type */}
+          <col style={{ width: "84px" }} />   {/* Time */}
+          <col style={{ width: "152px" }} />  {/* Status */}
+          <col style={{ width: "88px" }} />   {/* Pay */}
+          <col style={{ width: "24px" }} />   {/* 3-dots */}
         </colgroup>
         <thead>
           <tr>
@@ -264,6 +267,7 @@ export function QueueTable({
                 on # and Name so headers match their left-aligned body cells. */}
             <th style={{ ...styles.th, textAlign: "left", paddingLeft: 0, paddingRight: 0 }}>#</th>
             <th style={{ ...styles.th, textAlign: "left", paddingLeft: "0", paddingRight: "4px" }}>Name</th>
+            <th style={{ borderBottom: `1px solid ${colors.primary300}`, padding: 0 }} aria-hidden />
             <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Phone</th>
             <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Service</th>
             <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Type</th>
@@ -277,7 +281,7 @@ export function QueueTable({
           {appointments.length === 0 ? (
             <tr>
               <td
-                colSpan={9}
+                colSpan={10}
                 style={{
                   ...styles.td,
                   textAlign: "center",
@@ -301,7 +305,7 @@ export function QueueTable({
               return (
                 <React.Fragment key={apt.id}>
                   {isNewGroup && (
-                    <tr><td colSpan={9} style={{ height: "40px", border: "none", padding: 0 }}>
+                    <tr><td colSpan={10} style={{ height: "40px", border: "none", padding: 0 }}>
                       <div style={{
                         height: "100%",
                         display: "flex",
@@ -360,6 +364,9 @@ export function QueueTable({
                         )}
                       </div>
                     </td>
+
+                    {/* Flexible spacer (the responsive name↔phone gap) */}
+                    <td style={{ padding: 0 }} aria-hidden />
 
                     {/* Phone — bare 10 digits (no +91, no mid-space) to save width */}
                     <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>{formatPhone(apt.patientPhone)}</td>

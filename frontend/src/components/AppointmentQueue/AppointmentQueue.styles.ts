@@ -75,9 +75,11 @@ export const styles: Record<string, CSSProperties> = {
 
   // Name cell with gender/age sub-detail
   nameCell: {
-    // left 0 to tighten the gap to the # column
+    // left 0 to tighten the gap to the # column; overflow hidden so long
+    // names truncate at the 256px column cap (set in QueueTable colgroup).
     padding: "14px 4px 14px 0",
     verticalAlign: "middle",
+    overflow: "hidden",
   },
 
   nameInner: {
@@ -85,6 +87,7 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     gap: "8px",
     whiteSpace: "nowrap" as const,
+    minWidth: 0,
   },
 
   namePrimary: {
@@ -93,6 +96,9 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral900,
     lineHeight: "1.3",
     whiteSpace: "nowrap" as const,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    minWidth: 0,
   },
 
   nameMeta: {
