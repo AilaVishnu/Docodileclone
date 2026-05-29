@@ -17,28 +17,6 @@ export const styles: Record<string, CSSProperties> = {
     boxSizing: "border-box",
   },
 
-  // Thin top row holding the top-right edit/save control (replaces the old
-  // clinic-name heading and the bottom Edit/Save button).
-  cardHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    minHeight: 32,
-  },
-
-  editIconButton: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 32,
-    height: 32,
-    borderRadius: radii.m,
-    border: "none",
-    background: "transparent",
-    color: colors.neutral700,
-    cursor: "pointer",
-  },
-
   // ─── Domain box (same as ClinicCard.domainBox) ──────────────────────────
   domainBox: {
     display: "flex",

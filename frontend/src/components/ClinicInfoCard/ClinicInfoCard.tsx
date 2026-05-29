@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, KeyboardEvent } from "react";
-import { Button } from "../Button";
 import { Tag } from "../Tag";
 import { styles } from "./ClinicInfoCard.styles";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
@@ -27,18 +26,14 @@ type ClinicInfoCardProps = {
 const isUuid = (str: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
-export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCardProps) {
+export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
   const [deptInput, setDeptInput] = useState("");
   const [deptDropdownOpen, setDeptDropdownOpen] = useState(false);
   const deptWrapRef = useRef<HTMLDivElement>(null);
   const [isSaved, setIsSaved] = useState(isUuid(clinic.id));
-  const [showErrors, setShowErrors] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     setIsSaved(isUuid(clinic.id));
-    setIsEditing(false);
-    setShowErrors(false);
   }, [clinic.id]);
 
   const { domain, name: clinicName, phone, departments, address } = clinic;
@@ -121,61 +116,15 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
 
   const isPhoneValid = validatePhone(phone);
 
-  // Most fields lock after save and unlock when the user clicks Edit Details.
-  const fieldsLocked = isSaved && !isEditing;
+  // The form is ALWAYS editable — no view/lock mode, no Save button. Edits
+  // live in state via onUpdate; persistence happens at the page level via
+  // "Next" (which validates and POSTs every clinic). Kept as a const so the
+  // existing field rows stay simple.
+  const fieldsLocked = false;
   // Domain (the subdomain/nick-name) is permanent: once saved it's locked
-  // forever, even in Edit Details mode. Front-end enforcement only — the
-  // back-end still accepts updates but the UI disallows them.
+  // forever — changing a live tenant subdomain is consequential. Front-end
+  // enforcement only.
   const domainLocked = isSaved;
-
-  const handleSave = async () => {
-    const missing = [];
-    if (!clinicName.trim()) missing.push("clinic name");
-    if (!phone.trim()) missing.push("phone number");
-    else if (!isPhoneValid) missing.push("valid phone number");
-    if (!domain.trim()) missing.push("subdomain");
-    if (!address.trim()) missing.push("clinic address");
-
-    if (missing.length > 0) {
-      setShowErrors(true);
-      onShowToast?.(`Please enter ${missing[0]}`);
-      return;
-    }
-    setShowErrors(false);
-
-    try {
-      const clinicId = isUuid(clinic.id) ? clinic.id : null;
-      const response = await fetch(`${API_BASE_URL}/api/tenant/clinic`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
-        },
-        body: JSON.stringify({
-          id: clinicId,
-          name: clinicName,
-          address,
-          phone,
-          domain,
-          speciality: departments.join(","),
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        onShowToast?.(errorData.error || "Failed to save clinic details");
-        return;
-      }
-
-      const savedClinicData = await response.json();
-      onUpdate({ id: savedClinicData.id });
-      setIsSaved(true);
-      setIsEditing(false);
-      onShowToast?.("Clinic details saved successfully!");
-    } catch (error) {
-      onShowToast?.("An error occurred while saving clinic details");
-    }
-  };
 
   const handlePhoneChange = (val: string) => {
     let digits = val.replace(/\D/g, "");
@@ -201,33 +150,11 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
 
   return (
     <div style={styles.card}>
-      {/* Top-right control: pencil to edit when viewing a saved clinic;
-          a Save button while creating or editing. Replaces the old heading
-          and the bottom Edit/Save button to reclaim vertical space. */}
-      <div style={styles.cardHeader}>
-        {fieldsLocked ? (
-          <button
-            type="button"
-            style={styles.editIconButton}
-            onClick={() => setIsEditing(true)}
-            title="Edit details"
-            aria-label="Edit details"
-          >
-            <PencilIcon />
-          </button>
-        ) : (
-          <Button size="sm" variant="dark" onClick={handleSave}>
-            Save
-          </Button>
-        )}
-      </div>
-
       {/* Clinic name */}
       <div
         style={{
           ...styles.fieldRow,
           ...(fieldsLocked ? styles.locked : {}),
-          ...(showErrors && !clinicName.trim() ? styles.fieldError : {}),
         }}
       >
         <span style={styles.fieldIcon}><BuildingIcon width={20} height={20} /></span>
@@ -246,7 +173,7 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
         style={{
           ...styles.fieldRow,
           ...(fieldsLocked ? styles.locked : {}),
-          ...((!isPhoneValid || (showErrors && !phone.trim())) ? styles.fieldError : {}),
+          ...(!isPhoneValid ? styles.fieldError : {}),
         }}
       >
         <span style={styles.fieldIcon}><PhoneIcon width={20} height={20} /></span>
@@ -314,7 +241,6 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
         style={{
           ...styles.fieldRowMultiline,
           ...(fieldsLocked ? styles.locked : {}),
-          ...(showErrors && !address.trim() ? styles.fieldError : {}),
         }}
       >
         <span style={styles.fieldIcon}><LocationIcon width={20} height={20} /></span>
@@ -385,23 +311,6 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
     </div>
   );
 }
-
-// Pencil / edit-details icon for the card's top-right control.
-const PencilIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12 20h9" />
-    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-  </svg>
-);
 
 const deptMenuStyle: React.CSSProperties = {
   position: "absolute",
