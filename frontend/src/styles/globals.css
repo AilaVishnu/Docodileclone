@@ -242,9 +242,10 @@ body {
   --home-cal-graphic-gap: 8px;
 
   /* New Appointment (BookAppointment) — column widths + input padding */
+  /* Booking block columns — FIXED widths so the block is a constant size and
+     the side gutters stretch/squeeze. Block = left + form + right + 2*gap. */
   --book-col-left: 200px;
-  --book-col-form-min: 524px;
-  --book-col-form-max: 700px;
+  --book-col-form: 560px;
   --book-col-right: 312px;
   --book-input-pady: 8px;
   --book-grid-gap: 16px;
@@ -281,6 +282,12 @@ body {
     /* Home content is a touch narrower in the compact tier */
     --home-content-max: 1200px;
     --home-cal-graphic-minh: 76px;   /* match the band's stacked height here */
+
+    /* Booking block: narrower fixed columns so it fits at 1200 with gutters */
+    --book-col-left: 180px;
+    --book-col-form: 480px;
+    --book-col-right: 280px;
+    --book-grid-gap: 12px;
 
     /* Header chrome compacts at 1200–1439 */
     --topnav-h: 56px;            /* shorter header */

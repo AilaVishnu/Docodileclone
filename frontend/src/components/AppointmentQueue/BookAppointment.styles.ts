@@ -114,9 +114,10 @@ export const styles: Record<string, CSSProperties> = {
   // ─── Main 3-column grid ──────────────────────────────────────────────────
   grid: {
     display: "grid",
-    // patient | form (grows min → max) | bill — column widths var-driven
-    // so 1024 can tighten all three at once via globals.css.
-    gridTemplateColumns: "var(--book-col-left) minmax(var(--book-col-form-min), var(--book-col-form-max)) var(--book-col-right)",
+    // patient | form | bill — all FIXED widths so the block is a constant size
+    // per tier; the side gutters absorb the extra width (justify-content center
+    // + margin auto). Columns tighten in the 1200–1439 tier via globals.css.
+    gridTemplateColumns: "var(--book-col-left) var(--book-col-form) var(--book-col-right)",
     gridTemplateRows: "auto auto auto",
     gap: "var(--book-grid-gap, 16px)",
     justifyContent: "center",
