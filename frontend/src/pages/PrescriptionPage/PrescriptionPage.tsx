@@ -1518,6 +1518,44 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
     }
   };
 
+  // Share the prescription to the patient over WhatsApp via a click-to-chat
+  // link (wa.me) — opens WhatsApp pre-filled with the Rx as text to the
+  // patient's number; the doctor taps Send. No WhatsApp API / account needed.
+  const handleShareWhatsApp = () => {
+    if (!selectedPatient) { showToast("Select a patient first"); return; }
+    const digits = (selectedPatient.phone ?? "").replace(/\D/g, "");
+    if (!digits) { showToast("This patient has no phone number on file"); return; }
+    // India default: bare 10-digit numbers get a 91 country code; longer
+    // numbers are assumed to already carry one.
+    const intl = digits.length === 10 ? `91${digits}` : digits;
+
+    const meds = rxRows
+      .filter((r) => r.medicine.trim())
+      .map((r, i) => {
+        const schedule = [r.frequency, r.whenToTake, r.frequencyInterval, r.duration]
+          .map((s) => s.trim()).filter(Boolean).join(" · ");
+        const head = `${i + 1}. ${r.medicine.trim()}${schedule ? ` — ${schedule}` : ""}`;
+        return r.notes.trim() ? `${head}\n   (${r.notes.trim()})` : head;
+      });
+    if (meds.length === 0) { showToast("Add a medicine before sharing"); return; }
+
+    const clinicName = localStorage.getItem("docodile_clinic_name") || "Clinic";
+    const lines = [
+      `*${clinicName}*`,
+      `Prescription for ${selectedPatient.name}`,
+      `Date: ${activeVisit?.visitDate ?? todayIso()}`,
+      "",
+      "Medicines:",
+      ...meds,
+    ];
+    if (reviewDate) {
+      const r = `${reviewDate.getFullYear()}-${String(reviewDate.getMonth() + 1).padStart(2, "0")}-${String(reviewDate.getDate()).padStart(2, "0")}`;
+      lines.push("", `Next review: ${r}`);
+    }
+
+    window.open(`https://wa.me/${intl}?text=${encodeURIComponent(lines.join("\n"))}`, "_blank");
+  };
+
   // ── Print prescription ──────────────────────────────────────────────────
   // Assemble a PrintVisitData payload from the current patient + visit + form
   // state and hand it to the configured print template. The template tells
@@ -2657,7 +2695,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
           // Direct server-side PDF download — no preview modal, no browser
           // dialog. Same template + data as Print.
           onDownload={() => handlePrintPrescription("download")}
-          onShare={() => showToast("Share: not wired yet")}
+          onShare={handleShareWhatsApp}
           onActiveChange={setFormActive}
           onStart={handleSessionStart}
           onEnd={handleSessionEnd}
