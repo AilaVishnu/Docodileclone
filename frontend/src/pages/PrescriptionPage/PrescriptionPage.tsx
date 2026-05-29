@@ -333,7 +333,12 @@ const todayIso = (): string => {
 // can simply show a blank Total column. Mirrors the formula used by
 // AppointmentQueue's Bill Medicines auto-quantity so the printed Rx and
 // the dispensary bill stay consistent.
-const computeRxTotal = (dosage?: string | null, frequency?: string | null, duration?: string | null): number | null => {
+// Topical / liquid / per-pack forms (creams, lotions, drops, syrups…) ship as
+// a single unit (tube/bottle/bar), so their dispense quantity is 1 — not
+// doses × days like tablets/capsules.
+const PER_PACK_FORM = /cream|lotion|gel|ointment|\boil\b|shampoo|soap|wash|serum|sunscreen|balm|paste|scrub|spray|powder|syrup|suspension|solution|drop|moisturi|conditioner|foam|emulsion|liniment|tincture/i;
+const computeRxTotal = (medicine?: string | null, dosage?: string | null, frequency?: string | null, duration?: string | null): number | null => {
+  if (medicine && PER_PACK_FORM.test(medicine)) return 1;
   const dosageMatch = (dosage ?? "").match(/([\d.]+)/);
   const unitsPerDose = dosageMatch ? parseFloat(dosageMatch[1]) : 1;
   const dosesPerDay = (frequency ?? "")
@@ -1588,7 +1593,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
         // auto-quantity so the printed Rx and the dispensary bill stay
         // consistent. Returns null when any field is unparseable (SOS,
         // "As directed") and the column shows blank.
-        totalQty: computeRxTotal(r.dosage, r.frequency, r.duration),
+        totalQty: computeRxTotal(r.medicine, r.dosage, r.frequency, r.duration),
       })),
       reviewDate: reviewDate ? `${reviewDate.getFullYear()}-${String(reviewDate.getMonth() + 1).padStart(2, "0")}-${String(reviewDate.getDate()).padStart(2, "0")}` : null,
       reviewNotes: reviewNotesValue,

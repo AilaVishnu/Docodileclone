@@ -158,7 +158,12 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
       if (unit.startsWith("y")) return n * 365;
       return n; // days / unknown unit
     };
-    const computeQty = (dosage?: string, frequency?: string, duration?: string): number | null => {
+    // Topical / liquid / per-pack forms (creams, lotions, drops, syrups…) are
+    // dispensed as ONE unit (a tube/bottle/bar) — not "doses × days" like
+    // tablets/capsules. Default those to 1; the receptionist can still adjust.
+    const PER_PACK_FORM = /cream|lotion|gel|ointment|\boil\b|shampoo|soap|wash|serum|sunscreen|balm|paste|scrub|spray|powder|syrup|suspension|solution|drop|moisturi|conditioner|foam|emulsion|liniment|tincture/i;
+    const computeQty = (name: string, dosage?: string, frequency?: string, duration?: string): number | null => {
+      if (PER_PACK_FORM.test(name)) return 1;
       const dosageMatch = (dosage ?? "").match(/([\d.]+)/);
       const unitsPerDose = dosageMatch ? parseFloat(dosageMatch[1]) : 1;
       const dosesPerDay = (frequency ?? "")
@@ -199,7 +204,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               // qty = units/dose × doses/day × days, ceiling to a whole
               // unit. The receptionist can still bump up/down in the
               // modal if the doctor wrote SOS or fractional doses.
-              qty: computeQty(p.dosage, p.frequency, p.duration) ?? 1,
+              qty: computeQty(name, p.dosage, p.frequency, p.duration) ?? 1,
             };
           });
         setBillingMedicines(rows);
