@@ -45,22 +45,22 @@ const PAY_CONFIG: Record<
   PAID: {
     color: colors.neutral900,
     label: "Paid",
-    icon: <CheckCircleIcon width={20} height={20} />,
+    icon: <CheckCircleIcon width={24} height={24} />,
   },
   DUE: {
     color: colors.neutral900,
     label: "Due",
-    icon: <DangerTriangleIcon width={20} height={20} />,
+    icon: <DangerTriangleIcon width={24} height={24} />,
   },
   UNPAID: {
     color: colors.neutral900,
     label: "Due",
-    icon: <DangerTriangleIcon width={20} height={20} />,
+    icon: <DangerTriangleIcon width={24} height={24} />,
   },
   "NO PAY": {
     color: colors.neutral900,
     label: "Due",
-    icon: <DangerTriangleIcon width={20} height={20} />,
+    icon: <DangerTriangleIcon width={24} height={24} />,
   },
 };
 
@@ -168,8 +168,8 @@ export function PayBadge({ status }: PayBadgeProps) {
     >
       <span
         style={{
-          width: 20,
-          height: 20,
+          width: 24,
+          height: 24,
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",

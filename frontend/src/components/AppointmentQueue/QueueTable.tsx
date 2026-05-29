@@ -258,17 +258,17 @@ export function QueueTable({
               the queue resizes. */}
           <col style={{ width: "28px" }} />   {/* # */}
           <col />
-          <col style={{ width: "256px" }} />  {/* Name (cap, truncates) */}
+          <col style={{ width: "var(--queue-name-w)" }} />  {/* Name (256 / 200, truncates) */}
           <col />
           <col style={{ width: "108px" }} />  {/* Phone */}
           <col />
-          <col style={{ width: "64px" }} />   {/* Service */}
+          <col style={{ width: "72px" }} />   {/* Service */}
           <col />
           <col style={{ width: "96px" }} />   {/* Type */}
           <col />
           <col style={{ width: "84px" }} />   {/* Time */}
           <col />
-          <col style={{ width: "152px" }} />  {/* Status */}
+          <col style={{ width: "98px" }} />   {/* Status */}
           <col />
           <col style={{ width: "44px" }} />   {/* Pay (icon only) */}
           <col />
@@ -418,14 +418,14 @@ export function QueueTable({
                     <td style={spacerTd} aria-hidden />
 
                     {/* Type */}
-                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
+                    <td style={{ ...styles.td, textAlign: "center", padding: "14px 4px" }}>
                       <TypeBadge type={apt.type} />
                     </td>
 
                     <td style={spacerTd} aria-hidden />
 
                     {/* Time */}
-                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
+                    <td style={{ ...styles.td, textAlign: "center", padding: "14px 4px" }}>
                       <span style={styles.time}>{apt.scheduledTime}</span>
                       {apt.isWalkin && (
                         <span style={styles.walkinBadge}>Walk-in</span>
@@ -435,7 +435,7 @@ export function QueueTable({
                     <td style={spacerTd} aria-hidden />
 
                     {/* Status badge */}
-                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
+                    <td style={{ ...styles.td, textAlign: "center", padding: "14px 4px" }}>
                       {onStatusChange ? (
                         <StatusDropdown
                           appointment={apt}

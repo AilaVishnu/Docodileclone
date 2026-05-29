@@ -194,7 +194,7 @@ body {
   --queue-stat-padl: 0px;     /* left indent on DoctorStatusCard stat rows */
   --queue-table-pad: 24px;    /* tableContainer outer padding */
   --queue-cell-padx: 28px;    /* th/td horizontal padding inside the table */
-  --paybadge-w: 80px;         /* Pay column badge width (icon + label) */
+  --queue-name-w: 256px;      /* Name column cap (truncates beyond) */
 
   /* TopNav (header chrome) — baseline at 1440 */
   --topnav-h: 70px;
@@ -314,6 +314,9 @@ body {
     --input-pady: 3px;
 
     --login-card-w: 480px;
+
+    /* Narrower Name column at 1200–1439 to buy table width */
+    --queue-name-w: 200px;
 
     /* Home content is a touch narrower in the compact tier */
     --home-content-max: 1200px;
