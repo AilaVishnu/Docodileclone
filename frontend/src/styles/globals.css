@@ -234,10 +234,12 @@ body {
   --home-desk-left-gap: 40px;
   --home-cal-graphic-padtop: 16px;
   --home-cal-graphic-padbottom: 12px;
-  --home-cal-graphic-minh: 0px;
+  /* Month + year sit side-by-side; min-height keeps the band the same overall
+     height it had when they were stacked (85px at 1440+, 76px at 1200–1439). */
+  --home-cal-graphic-minh: 85px;
   --home-cal-month-fs: var(--fs-h4); /* one step down from h3 → 32 / 26 */
-  --home-cal-graphic-dir: column;
-  --home-cal-graphic-gap: 2px;
+  --home-cal-graphic-dir: row;
+  --home-cal-graphic-gap: 8px;
 
   /* New Appointment (BookAppointment) — column widths + input padding */
   --book-col-left: 200px;
@@ -278,6 +280,7 @@ body {
 
     /* Home content is a touch narrower in the compact tier */
     --home-content-max: 1200px;
+    --home-cal-graphic-minh: 76px;   /* match the band's stacked height here */
 
     /* Header chrome compacts at 1200–1439 */
     --topnav-h: 56px;            /* shorter header */
