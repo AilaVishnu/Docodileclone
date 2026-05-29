@@ -417,8 +417,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "baseline",
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
     color: colors.neutral900,
-    // Var lets us hold a fixed size at 1024 while the computer shrinks.
-    fontSize: "var(--home-computer-fs, clamp(10px, 1.05vw, 14px))",
+    fontSize: "var(--home-computer-fs, 14px)",
   },
   // Wraps label + dots so they live in one grid cell and the dots stretch
   // to fill the remaining horizontal space before the value column.

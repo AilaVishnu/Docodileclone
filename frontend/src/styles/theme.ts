@@ -232,20 +232,21 @@ export const strokes = {
   l: "4px",
 }
 
-// Responsive breakpoints — desktop-only scope (no phone / small tablet).
+// Responsive breakpoints — desktop-only scope (no phone / tablet).
 //
-// The app degrades gracefully below 1024 but is not optimized there.
-// Two real thresholds:
-//   md (1024) — "compact desktop": small laptops, Windows laptops at 125%
-//                scaling (1366x768 → 1093 CSS px, 1920x1080 → 1536 CSS px).
-//   lg (1440) — "comfortable desktop": the design baseline. ≥1440 looks
-//                identical to what was shipped before responsive work.
+// Two intervals, one threshold:
+//   interval 1 (1200–1439) — "compact desktop": smaller laptops / scaled
+//                             displays. Type + universal controls shrink.
+//   interval 2 (1440+)      — "comfortable desktop": the design baseline.
+// md (1200) is the minimum supported viewport (see #root min-width in
+// globals.css); below it the app scrolls horizontally. lg (1440) is the
+// only real style threshold.
 //
 // Used both in JS (via useMediaQuery) and as the literal numbers behind
 // the @media rules in globals.css. Keep the two sources in sync — if you
 // change a number here, update globals.css too.
 export const breakpoints = {
-  md: 1024,
+  md: 1200,
   lg: 1440,
 } as const;
 
@@ -260,23 +261,20 @@ export const paragraphSpacing = {
 };
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Fluid spacing for responsive shells.
+// Outer shell spacing. Fixed px (no viewport scaling).
 // RULE: Use these ONLY for outer page padding, section gutters, or content
-// max-widths — never inside controls (buttons, inputs, chips) where static
-// spacing preserves visual density.
-// Baseline viewport = 1440px. Each clamp hits the baseline value at 1440
-// and reaches the ceiling around 2560px.
+// max-widths — never inside controls (buttons, inputs, chips).
 // ──────────────────────────────────────────────────────────────────────────────
 export const fluidSpacing = {
   // Outer page gutters (main content area padding)
-  outerY: "clamp(24px, 1.25vw, 32px)",   // vertical: 24 → 32
-  outerX: "clamp(40px, 2.19vw, 56px)",   // horizontal: 40 → 56
+  outerY: "24px",
+  outerX: "40px",
 
   // Section / card-to-card gutters (when stacking or grid-gapping)
-  sectionGap: "clamp(16px, 1.11vw, 24px)",
+  sectionGap: "16px",
 
-  // Card outer horizontal padding (cards inside a viewport-scaled container)
-  cardX: "clamp(16px, 1.11vw, 24px)",
+  // Card outer horizontal padding
+  cardX: "16px",
 };
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -287,14 +285,12 @@ export const layout = {
   // Content max-width. Above this viewport, extra space becomes outer gutter.
   contentMaxWidth: "1440px",
 
-  // Minimum supported viewport. Below this, layout may degrade.
-  minViewport: "1280px",
+  // Minimum supported viewport. Below this the app scrolls horizontally.
+  minViewport: "1200px",
 
-  // Common breakpoints (for future media queries)
+  // The two intervals (see `breakpoints` above).
   breakpoints: {
-    laptop: "1280px",
+    laptop: "1200px",
     desktop: "1440px",
-    wide: "1920px",
-    ultraWide: "2560px",
   },
 };

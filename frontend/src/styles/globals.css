@@ -90,6 +90,14 @@ body {
   background: var(--sunset);
 }
 
+/* Minimum supported viewport. Below 1200px the app scrolls horizontally
+   rather than reflowing — 1200 (not 1280) so a 1920×1080 screen at 150%
+   display scaling (= ~1265 CSS px after the scrollbar gutter) still fits
+   without triggering horizontal scroll. */
+#root {
+  min-width: 1200px;
+}
+
 .centered-layout {
   display: flex;
   flex-direction: column;
@@ -111,15 +119,19 @@ body {
 
 /* ─── Responsive design tokens ────────────────────────────────────────
    Variables exposed on :root so inline styles in *.styles.ts can
-   consume them via var(--name). The browser handles the resize at the
-   compositor layer — no React re-renders, no JS work. Each var has
-   three potential values keyed to our two breakpoints (md=1024,
-   lg=1440); pages opt in by reading the var instead of a hardcoded
-   number.
+   consume them via var(--name). The browser resolves them per viewport
+   at the compositor layer — no React re-renders.
 
-   Convention: the default block holds the "comfortable desktop" (lg+)
-   values that match the existing design exactly. Media-query blocks
-   override for narrower widths. Naming: --<page>-<purpose>. */
+   TWO intervals, split at 1440:
+     • interval 2 (1440+)      — the :root defaults below (1440 design).
+     • interval 1 (1200–1439)  — the @media block overrides at the end.
+   Minimum supported width is 1200px (#root min-width); below that the
+   page scrolls horizontally rather than reflowing.
+
+   Only the TYPE scale and the universal CONTROL primitives (search /
+   button / input) differ between the two intervals today. All per-screen
+   layout spacing is single-tier for now and gets tuned screen-by-screen.
+   Naming: --<page>-<purpose>. */
 :root {
   /* Home page mainGrid (memo + calendar columns) */
   --home-memo-min: 640px;
@@ -170,31 +182,32 @@ body {
   --page-pad-x: 40px;
   --page-pad-bottom: 24px;
 
-  /* ─── Type scale ────────────────────────────────────────────────────
-     Source of truth for every text token in theme.ts. Baseline values
-     match the 1440 design (clamps preserve fluid grow above 1920).
-     1024 tier (media query below) holds one-rung-down compact sizes. */
-  --fs-h1: clamp(60px, 3.125vw, 80px);
-  --fs-h2: clamp(48px, 2.5vw, 64px);
-  --fs-h3: clamp(40px, 2.08vw, 52px);
-  --fs-h4: clamp(32px, 1.67vw, 42px);
-  --fs-h5: clamp(24px, 1.25vw, 30px);
-  --fs-h6: clamp(20px, 1.04vw, 24px);
-  --fs-l:  clamp(20px, 1.04vw, 24px);
-  --fs-m:  clamp(16px, 0.83vw, 18px);
-  --fs-s:  clamp(14px, 0.73vw, 16px);
+  /* ─── Type scale — interval 2 (1440+) ───────────────────────────────
+     Source of truth for every text token in theme.ts. Fixed px, no
+     scaling. The 1200–1439 tier (media query below) holds the one-rung-
+     down "interval 1" sizes. xs/caption hold across both tiers as the
+     accessibility floor. */
+  --fs-h1: 60px;
+  --fs-h2: 48px;
+  --fs-h3: 40px;
+  --fs-h4: 32px;
+  --fs-h5: 24px;
+  --fs-h6: 20px;
+  --fs-l:  20px;
+  --fs-m:  16px;
+  --fs-s:  14px;
   --fs-xs: 12px;
   --fs-caption: 10px;
 
-  --lh-h1: clamp(72px, 3.75vw, 96px);
-  --lh-h2: clamp(56px, 2.92vw, 76px);
-  --lh-h3: clamp(48px, 2.5vw, 64px);
-  --lh-h4: clamp(44px, 2.29vw, 56px);
-  --lh-h5: clamp(34px, 1.77vw, 42px);
-  --lh-h6: clamp(28px, 1.46vw, 34px);
-  --lh-l:  clamp(28px, 1.46vw, 32px);
-  --lh-m:  clamp(22px, 1.15vw, 26px);
-  --lh-s:  clamp(20px, 1.04vw, 22px);
+  --lh-h1: 72px;
+  --lh-h2: 56px;
+  --lh-h3: 48px;
+  --lh-h4: 44px;
+  --lh-h5: 34px;
+  --lh-h6: 28px;
+  --lh-l:  28px;
+  --lh-m:  22px;
+  --lh-s:  20px;
   --lh-xs: 16px;
   --lh-caption: 14px;
 
@@ -217,13 +230,13 @@ body {
   --home-clock-scale: 1;
   --home-clock-mr: 0px;
   --home-computer-w: 480px;
-  --home-computer-fs: clamp(10px, 1.05vw, 14px);
+  --home-computer-fs: 14px;
   --home-desk-front-h: 84px;
   --home-desk-left-gap: 40px;
   --home-cal-graphic-padtop: 32px;
   --home-cal-graphic-padbottom: 20px;
   --home-cal-graphic-minh: 132px;
-  --home-cal-month-fs: clamp(40px, 2.08vw, 52px); /* matches fonts.size.h3 */
+  --home-cal-month-fs: 40px; /* matches fonts.size.h3 */
   --home-cal-graphic-dir: column;
   --home-cal-graphic-gap: 2px;
 
@@ -244,21 +257,13 @@ body {
   --book-footer-mt: 16px;
   --book-clearlink-mb: 6px;
 }
-/* Queue Pay column: hide the word at 1024, keep icon only. Native `title`
-   on PayBadge provides the tooltip with the full status. */
-@media (max-width: 1439.98px) {
-  .pay-badge-label {
-    display: none;
-  }
-}
-
+/* ─── Interval 1 (1200–1439): compact tier ───────────────────────────
+   Only the TYPE scale and the universal CONTROL primitives step down
+   here. Every per-screen layout token inherits its interval-2 (:root)
+   value until it is tuned screen-by-screen. */
 @media (max-width: 1439.98px) {
   :root {
-    --home-memo-min: 0px;
-    --home-cal-w: 280px;
-    --home-grid-gap: 24px;
-
-    /* Compact (1024 → <1440): search bars + buttons step down */
+    /* Universal control primitives (search / button / input) */
     --search-h: 32px;
     --search-icon: 16px;
     --search-fs: 14px;
@@ -267,44 +272,11 @@ body {
     --btn-md-h: 34px;
     --btn-fs: 14px;
 
-    /* Form controls (Select / TextInput) step down at 1024 — standard */
     --input-h: 32px;
     --input-pady: 3px;
 
-    /* Today's Queue side cards: narrower so the table gets more width */
-    --queue-side-w: 200px;
-    --queue-side-padx: 12px;
-    --queue-gap: 12px;          /* tighter gap between queue and side cards */
-    --queue-stat-padl: 12px;    /* nudge stat list right inside doctor card */
-    --queue-table-pad: 16px;    /* slimmer table container padding */
-    --queue-cell-padx: 16px;    /* tighter horizontal cell padding so columns fit */
-    --paybadge-w: auto;         /* Pay column shows icon only; label hidden below */
-
-    /* Tighter outer page padding at 1024 (sidebar → content and content → right edge) */
-    --page-pad-x: 24px;
-
-    /* Header chrome */
-    --topnav-h: 56px;
-    --topnav-search-min: 160px;
-    --topnav-search-ideal: 26vw;
-    --topnav-search-max: 280px;
-    --topnav-cta-padx: 12px;
-    --topnav-cta-icon: 14px;
-    --topnav-iconbtn: 40px;
-    --topnav-avatar: 40px;
-
-    /* Icon-only collapsed sidebar at 1024 (no caption labels) */
-    --sidenav-w-collapsed: 68px;
-    /* Manually-expanded sidebar at 1024 is tighter than baseline */
-    --sidenav-w-expanded: 180px;
-    --sidenav-item-pady: 10px;
-
-    /* Tighter top breathing room above the page title at 1024 */
-    --page-pad-top: 24px;
-
-    /* ─── Compact type scale at 1024 ──────────────────────────────────
-       Headings step one rung down, body shrinks 1–2 px, xs/caption hold
-       at their accessibility floor. */
+    /* Type scale — interval 1. Headings one rung down, body 1–2px
+       smaller; xs/caption hold at the accessibility floor. */
     --fs-h1: 48px;
     --fs-h2: 40px;
     --fs-h3: 32px;
@@ -314,7 +286,7 @@ body {
     --fs-l:  18px;
     --fs-m:  14px;
     --fs-s:  13px;
-    /* --fs-xs (12px) and --fs-caption (10px) hold */
+    /* --fs-xs (12px) / --fs-caption (10px) hold */
 
     --lh-h1: 60px;
     --lh-h2: 48px;
@@ -339,40 +311,5 @@ body {
     --ps-m:  18px;
     --ps-xs: 14px;
     --ps-caption: 12px;
-
-    /* Home page step-downs at 1024 */
-    --home-memo-scale: 0.8;     /* MemoBoard at 80% */
-    --home-cal-scale: 0.8;      /* MyHoursCalendar at 80% */
-    --home-clock-scale: 0.7;    /* DeskClock at 70% */
-    --home-clock-mr: 32px;      /* Pull clock left, away from the right edge */
-    --home-computer-w: 324px;   /* Computer at 67.5% (480 → 324) */
-    --home-computer-fs: 14px;   /* Stat type held at 14px (no shrink) */
-    --home-desk-front-h: 21px;  /* Desk-front strip trimmed to ~1/4 */
-    --home-desk-left-gap: 24px; /* Tighter gap between papers and computer */
-    --home-grid-gap: 16px;      /* Memo + calendar sit closer together */
-    --home-cal-scale: 0.84;             /* +5% on the previous 0.8 */
-    --home-cal-graphic-padtop: 12px;    /* A touch of air above "May 2026" */
-    --home-cal-graphic-padbottom: 10px; /* …and matching below */
-    --home-cal-graphic-minh: 0px;       /* Drop the 132px floor so padding rules */
-    --home-cal-month-fs: 20px;          /* Match "2026" size */
-    --home-cal-graphic-dir: row;        /* Month + year side-by-side */
-    --home-cal-graphic-gap: 8px;        /* Comfortable space between them */
-
-    /* New Appointment — tighter columns + slimmer input boxes */
-    --book-col-left: 180px;
-    --book-col-form-min: 460px;
-    --book-col-form-max: 600px;
-    --book-col-right: 280px;
-    --book-input-pady: 2px;
-    --book-grid-gap: 10px;             /* tighter spacing between blocks */
-    --book-form-pad-bottom: 12px;      /* breathing room below male/female */
-    --book-patient-pad: 8px;           /* slimmer patient card padding */
-    --book-patient-gap: 4px;           /* avatar sits closer to T001 */
-    --book-patient-avatar: 96px;       /* smaller avatar so card height shrinks */
-    --book-details-pad-y: 12px;        /* doctor/service top+bottom tightened */
-    --book-details-gap: 8px;           /* doctor & service rows closer */
-    --book-header-mb: 8px;             /* tighter gap between title and blocks */
-    --book-footer-mt: 8px;             /* tighter gap between blocks and CTAs */
-    --book-clearlink-mb: -4px;         /* pull "Clear & enter new patient" closer to Name */
   }
 }
