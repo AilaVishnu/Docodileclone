@@ -113,8 +113,6 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
     return unselected.filter((d) => d.toLowerCase().includes(deptInput.toLowerCase()));
   })();
 
-  const displayName = clinicName || domain || "Your Clinic";
-
   const validatePhone = (p: string) => {
     if (!p) return true;
     const regex = /^(\+91)?[6-9]\d{9}$/;
@@ -203,7 +201,26 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
 
   return (
     <div style={styles.card}>
-      <h3 style={styles.clinicName} title={displayName}>{displayName}</h3>
+      {/* Top-right control: pencil to edit when viewing a saved clinic;
+          a Save button while creating or editing. Replaces the old heading
+          and the bottom Edit/Save button to reclaim vertical space. */}
+      <div style={styles.cardHeader}>
+        {fieldsLocked ? (
+          <button
+            type="button"
+            style={styles.editIconButton}
+            onClick={() => setIsEditing(true)}
+            title="Edit details"
+            aria-label="Edit details"
+          >
+            <PencilIcon />
+          </button>
+        ) : (
+          <Button size="sm" variant="dark" onClick={handleSave}>
+            Save
+          </Button>
+        )}
+      </div>
 
       {/* Clinic name */}
       <div
@@ -365,21 +382,26 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
         )}
       </div>
 
-      {/* Save / Edit toggle */}
-      <div style={styles.buttonWrapper}>
-        {isSaved && !isEditing ? (
-          <Button size="md" variant="light" onClick={() => setIsEditing(true)} style={{ minWidth: 180 }}>
-            Edit Details
-          </Button>
-        ) : (
-          <Button size="md" variant="dark" onClick={handleSave} style={{ minWidth: 180 }}>
-            Save
-          </Button>
-        )}
-      </div>
     </div>
   );
 }
+
+// Pencil / edit-details icon for the card's top-right control.
+const PencilIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+  </svg>
+);
 
 const deptMenuStyle: React.CSSProperties = {
   position: "absolute",

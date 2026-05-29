@@ -17,17 +17,26 @@ export const styles: Record<string, CSSProperties> = {
     boxSizing: "border-box",
   },
 
-  clinicName: {
-    fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h5,
-    fontWeight: fonts.weight.regular,
-    color: colors.neutral900,
-    margin: 0,
-    marginBottom: spacing["2xs"],
-    // Truncate long display names so heading doesn't break the card
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
+  // Thin top row holding the top-right edit/save control (replaces the old
+  // clinic-name heading and the bottom Edit/Save button).
+  cardHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    minHeight: 32,
+  },
+
+  editIconButton: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 32,
+    height: 32,
+    borderRadius: radii.m,
+    border: "none",
+    background: "transparent",
+    color: colors.neutral700,
+    cursor: "pointer",
   },
 
   // ─── Domain box (same as ClinicCard.domainBox) ──────────────────────────
@@ -150,8 +159,10 @@ export const styles: Record<string, CSSProperties> = {
     resize: "none" as const,
     overflowWrap: "anywhere" as const,
     wordBreak: "break-word" as const,
-    // Address is typically multi-line — give it space for ~4 rows
-    minHeight: 96,
+    // Fixed height (~3 rows). Longer addresses scroll INSIDE this field
+    // rather than expanding the row / pushing the form taller.
+    height: 72,
+    overflowY: "auto" as const,
   },
 
   fieldError: {
