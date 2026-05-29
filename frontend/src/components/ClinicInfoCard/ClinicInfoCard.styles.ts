@@ -150,7 +150,9 @@ export const styles: Record<string, CSSProperties> = {
   // ─── Specialty row (icon + tags + add) ──────────────────────────────────
   specialtyRow: {
     display: "flex",
-    alignItems: "flex-start",
+    // Center the icon + tags/input so the "Add department" placeholder sits
+    // vertically centered in the row (not pinned to the top).
+    alignItems: "center",
     gap: spacing.xs,
     backgroundColor: colors.alphaBlack0,
     borderRadius: radii.m,
