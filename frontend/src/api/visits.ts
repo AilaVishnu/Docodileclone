@@ -14,6 +14,7 @@ export type RxRowDTO = {
   dosage?: string | null;
   whenToTake?: string | null;
   frequency?: string | null;
+  frequencyInterval?: string | null;
   duration?: string | null;
   notes?: string | null;
 };

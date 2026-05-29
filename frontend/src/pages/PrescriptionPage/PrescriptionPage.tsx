@@ -38,7 +38,7 @@ import { Autocomplete } from "../../components/Autocomplete/Autocomplete";
 import { MedicineAutocomplete } from "../../components/MedicineAutocomplete/MedicineAutocomplete";
 import { FrequencyPicker } from "../../components/FrequencyPicker/FrequencyPicker";
 import { WhenPicker } from "../../components/WhenPicker/WhenPicker";
-import { DosagePicker } from "../../components/DosagePicker/DosagePicker";
+import { FrequencyIntervalPicker } from "../../components/FrequencyIntervalPicker/FrequencyIntervalPicker";
 import { DurationPicker } from "../../components/DurationPicker/DurationPicker";
 import { AutocompleteTags } from "../../components/Autocomplete/AutocompleteTags";
 import { useDoctors } from "../../hooks/useDoctors";
@@ -246,8 +246,8 @@ const buildVitalState = (visit: VisitDTO | undefined): Record<string, VitalCellS
 };
 
 // A secondary dose line added via the "Then" plus icon on a medicine row.
-type ThenRow = { dosage: string; whenToTake: string; frequency: string; duration: string; notes: string };
-const blankThenRow = (): ThenRow => ({ dosage: "", whenToTake: "", frequency: "", duration: "", notes: "" });
+type ThenRow = { dosage: string; whenToTake: string; frequency: string; frequencyInterval: string; duration: string; notes: string };
+const blankThenRow = (): ThenRow => ({ dosage: "", whenToTake: "", frequency: "", frequencyInterval: "", duration: "", notes: "" });
 
 // Draft Rx row in component state — `id` may be null for fresh rows that
 // haven't been saved yet; otherwise carries the server-assigned UUID.
@@ -260,6 +260,7 @@ type RxRowDraft = {
   dosage: string;
   whenToTake: string;
   frequency: string;
+  frequencyInterval: string;
   duration: string;
   notes: string;
   thenRows: ThenRow[];
@@ -274,6 +275,7 @@ const blankRxRow = (position: number): RxRowDraft => ({
   dosage: "",
   whenToTake: "",
   frequency: "",
+  frequencyInterval: "",
   duration: "",
   notes: "",
   thenRows: [],
@@ -288,6 +290,7 @@ const fromRxDTO = (dto: RxRowDTO): RxRowDraft => ({
   dosage: dto.dosage ?? "",
   whenToTake: dto.whenToTake ?? "",
   frequency: dto.frequency ?? "",
+  frequencyInterval: dto.frequencyInterval ?? "",
   duration: dto.duration ?? "",
   notes: dto.notes ?? "",
   thenRows: [],
@@ -1252,7 +1255,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
       prescriptions: rxRows
         .filter((r) =>
           r.medicine || r.medicineNote || r.dosage || r.whenToTake ||
-          r.frequency || r.duration || r.notes
+          r.frequency || r.frequencyInterval || r.duration || r.notes
         )
         .map((r, i) => ({
           id: r.id,
@@ -1262,6 +1265,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
           dosage: r.dosage || null,
           whenToTake: r.whenToTake || null,
           frequency: r.frequency || null,
+          frequencyInterval: r.frequencyInterval || null,
           duration: r.duration || null,
           notes: r.notes || null,
         })),
@@ -1545,6 +1549,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
         dosage: r.dosage ?? null,
         whenToTake: r.whenToTake ?? null,
         frequency: r.frequency ?? null,
+        frequencyInterval: r.frequencyInterval ?? null,
         duration: r.duration ?? null,
         notes: r.notes ?? null,
         // Total units to dispense — mirrors the Bill Medicines modal's
@@ -2309,9 +2314,9 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                             {/* Right: stacked tapering rows */}
                             <div style={styles.rxGroupRight}>
                               <div style={styles.rxDataRow}>
-                                <div style={styles.rxDataCell}><DosagePicker value={row.dosage} onChange={(v) => updateField("dosage", v)} medicineName={row.medicine} genericName={row.genericName} /></div>
-                                <div style={styles.rxDataCell}><WhenPicker value={row.whenToTake} onChange={(v) => updateField("whenToTake", v)} /></div>
                                 <div style={styles.rxDataCell}><FrequencyPicker value={row.frequency} onChange={(v) => updateField("frequency", v)} /></div>
+                                <div style={styles.rxDataCell}><WhenPicker value={row.whenToTake} onChange={(v) => updateField("whenToTake", v)} /></div>
+                                <div style={styles.rxDataCell}><FrequencyIntervalPicker value={row.frequencyInterval} onChange={(v) => updateField("frequencyInterval", v)} /></div>
                                 <div style={styles.rxDataCell}><DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} /></div>
                                 <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={row.notes} onChange={(e) => updateField("notes", e.target.value)} />
                                 <button type="button" style={styles.rxDeleteBtn} onClick={() => removeRxRow(i)} title="Remove medicine">
@@ -2320,9 +2325,9 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                               </div>
                               {row.thenRows.map((thenRow, ti) => (
                                 <div key={`then-${i}-${ti}`} style={styles.rxDataRow}>
-                                  <div style={styles.rxDataCell}><DosagePicker value={thenRow.dosage} onChange={(v) => updateThenField(i, ti, "dosage", v)} medicineName={row.medicine} genericName={row.genericName} /></div>
-                                  <div style={styles.rxDataCell}><WhenPicker value={thenRow.whenToTake} onChange={(v) => updateThenField(i, ti, "whenToTake", v)} /></div>
                                   <div style={styles.rxDataCell}><FrequencyPicker value={thenRow.frequency} onChange={(v) => updateThenField(i, ti, "frequency", v)} /></div>
+                                  <div style={styles.rxDataCell}><WhenPicker value={thenRow.whenToTake} onChange={(v) => updateThenField(i, ti, "whenToTake", v)} /></div>
+                                  <div style={styles.rxDataCell}><FrequencyIntervalPicker value={thenRow.frequencyInterval} onChange={(v) => updateThenField(i, ti, "frequencyInterval", v)} /></div>
                                   <div style={styles.rxDataCell}><DurationPicker value={thenRow.duration} onChange={(v) => updateThenField(i, ti, "duration", v)} /></div>
                                   <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={thenRow.notes} onChange={(e) => updateThenField(i, ti, "notes", e.target.value)} />
                                   <button type="button" style={styles.rxDeleteBtn} onClick={() => removeThenRow(i, ti)} title="Remove tapering row">

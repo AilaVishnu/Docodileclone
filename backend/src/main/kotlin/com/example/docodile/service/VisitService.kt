@@ -150,6 +150,7 @@ class VisitService(
                 dosage = dto.dosage,
                 whenToTake = dto.whenToTake,
                 frequency = dto.frequency,
+                frequencyInterval = dto.frequencyInterval,
                 duration = dto.duration,
                 notes = dto.notes,
                 createdAt = Instant.now()
@@ -167,6 +168,7 @@ class VisitService(
         dosage = this.dosage,
         whenToTake = this.whenToTake,
         frequency = this.frequency,
+        frequencyInterval = this.frequencyInterval,
         duration = this.duration,
         notes = this.notes
     )
