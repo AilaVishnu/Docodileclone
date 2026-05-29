@@ -113,6 +113,34 @@ body {
   display: none;
 }
 
+/* ─── Scrollbars ──────────────────────────────────────────────────────
+   Floating thumb only — no track/background. The thumb uses the header/
+   sidebar tone (--active-shade-300, theme-aware) and sits flush at the
+   right edge. Applies to every internal scroll region (the browser
+   itself never scrolls). */
+* {
+  scrollbar-width: thin;                                 /* Firefox */
+  scrollbar-color: var(--active-shade-300) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  background: transparent;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: var(--active-shade-300);
+  border-radius: 999px;
+  /* transparent inset so the thumb reads as a floating pill, not edge-to-edge */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--active-shade-400);
+}
+
 /* ─── Responsive design tokens ────────────────────────────────────────
    Variables exposed on :root so inline styles in *.styles.ts can
    consume them via var(--name). The browser resolves them per viewport

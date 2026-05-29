@@ -103,7 +103,6 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       minHeight: 0,                       // let the flex child shrink so it can scroll
       overflowY: "auto" as const,
       overflowX: "hidden" as const,
-      scrollbarGutter: "stable",          // consistent content width across OSes
       backgroundColor: colors.active.shade200,
       borderTopLeftRadius: "16px",
       position: "relative",

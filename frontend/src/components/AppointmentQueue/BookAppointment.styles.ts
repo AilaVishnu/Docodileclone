@@ -42,7 +42,6 @@ export const styles: Record<string, CSSProperties> = {
     // fixed. Never scrolls horizontally.
     overflowY: "auto",
     overflowX: "hidden",
-    scrollbarGutter: "stable",
   },
 
   // ─── Header (back button + centered title with doctor dropdown) ──────────
