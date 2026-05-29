@@ -37,9 +37,12 @@ export const styles: Record<string, CSSProperties> = {
     // using 2xl (16) since 32 isn't on the Figma radius ladder. Ask design if
     // they want radii["3xl"] added for this.
     borderRadius: `${radii["2xl"]}px 0 0 0`,
-    // Content fits at 1024 after the recent tightening — disable scroll so
-    // we don't get a stray gutter / persistent track.
-    overflow: "hidden",
+    // When the form grows beyond the viewport (e.g. many services), THIS block
+    // scrolls vertically — the TopNav and sidebar (outside the overlay) stay
+    // fixed. Never scrolls horizontally.
+    overflowY: "auto",
+    overflowX: "hidden",
+    scrollbarGutter: "stable",
   },
 
   // ─── Header (back button + centered title with doctor dropdown) ──────────

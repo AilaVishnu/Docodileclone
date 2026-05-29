@@ -19,7 +19,7 @@ type TopNavProps = {
   onNavigate?: (tab: NavTab) => void;
 };
 
-export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, isBooking, onNavigate }: TopNavProps) {
+export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, onNavigate }: TopNavProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -228,17 +228,15 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       </div>
 
       <div style={styles.actions}>
-        {!isBooking && (
-          <Button
-            variant="primary"
-            size="sm"
-            iconLeft={<PlusIcon style={{ width: 'var(--topnav-cta-icon)', height: 'var(--topnav-cta-icon)', fill: '#fff' }} />}
-            style={{ padding: '0 var(--topnav-cta-padx)' }}
-            onClick={onNewAppointment}
-          >
-            New Appointment
-          </Button>
-        )}
+        <Button
+          variant="primary"
+          size="sm"
+          iconLeft={<PlusIcon style={{ width: 'var(--topnav-cta-icon)', height: 'var(--topnav-cta-icon)', fill: '#fff' }} />}
+          style={{ padding: '0 var(--topnav-cta-padx)' }}
+          onClick={onNewAppointment}
+        >
+          New Appointment
+        </Button>
 
         <div style={styles.iconGroup}>
           {onNavigate && <SessionTrayButton onNavigate={onNavigate} />}

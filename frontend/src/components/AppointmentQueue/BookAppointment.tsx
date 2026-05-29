@@ -24,7 +24,6 @@ import { listServices, ServiceDTO } from "../../api/services";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
 import { ReactComponent as EditPencilIcon } from "../../assets/icons/edit-pencil.svg";
 import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check.svg";
-import { ReactComponent as ArrowIcon } from "../../assets/Arrow Right.svg";
 import { pickAvatar } from "../../utils/avatar";
 
 type Doctor = {
@@ -480,7 +479,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     <div style={styles.overlay}>
       <header style={styles.header}>
         <button style={styles.backButton} onClick={() => onBack()} title="Back to Appointments">
-          <ArrowIcon style={{ width: 16, height: 16, transform: "rotate(180deg)" }} />
+          {/* Inline so the stroke weight matches the sidebar icons (1.5px @24);
+              rendered at 20px with a 2px stroke reads strong at this size. */}
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </button>
 
         <div style={styles.titleContainer}>
