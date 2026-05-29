@@ -132,8 +132,8 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: colors.secondary700,
     color: colors.neutral100,
     borderRadius: radii.full,
-    // 3px vertical, 8px horizontal (top/right/bottom/left = 3/8/3/8).
-    padding: "3px 8px",
+    // 4px vertical, 8px horizontal (top/right/bottom/left = 4/8/4/8).
+    padding: "4px 8px",
     fontSize: fonts.size.s,
     lineHeight: fonts.lineHeight.xs,
     fontFamily: fonts.family.primary,
