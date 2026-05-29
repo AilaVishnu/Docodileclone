@@ -238,12 +238,15 @@ export function QueueTable({
       <table style={styles.table}>
         <colgroup>
           <col style={{ width: "16px" }} />
-          <col style={{ width: "28%" }} />
+          {/* Name is the flexible column: it absorbs ALL leftover table width
+              so every other column gets its exact width (no slack inflating
+              them). This is also the responsive gap (name ↔ phone). */}
+          <col />
           <col style={{ width: "14%" }} />
-          <col style={{ width: "9%" }} />
-          <col style={{ width: "9%" }} />
-          <col style={{ width: "9%" }} />
-          <col style={{ width: "11%" }} />
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "12%" }} />
           <col style={{ width: "30px" }} />
           <col style={{ width: "24px" }} />
         </colgroup>
