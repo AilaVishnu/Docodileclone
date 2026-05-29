@@ -193,9 +193,8 @@ const statStyles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: "10px",
-    // Left padding var-driven so 1024 can indent the stat list slightly
-    // for better visual hierarchy against the centered name + avatar.
-    padding: "5px 0 5px var(--queue-stat-padl, 0px)",
+    // Roomier vertical rhythm so the stat list reads comfortably.
+    padding: "8px 0 8px var(--queue-stat-padl, 0px)",
   },
 
   iconWrap: {
@@ -209,9 +208,9 @@ const statStyles: Record<string, React.CSSProperties> = {
 
   text: {
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.s,
+    fontSize: fonts.size.m,
     color: colors.neutral900,
-    lineHeight: "20px",
+    lineHeight: "22px",
   },
 
   label: {

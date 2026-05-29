@@ -67,17 +67,10 @@ export function HeatmapCard({
   const sh = startHour ?? fallback.startHour;
   const eh = endHour ?? fallback.endHour;
   const grid = buildGrid(appointments, sh, eh);
-  const total = grid.reduce(
-    (sum, row) => sum + row.reduce((a, b) => a + b, 0),
-    0
-  );
 
   return (
     <div style={styles.container}>
       <p style={styles.title}>Peak Hours</p>
-      <p style={styles.subtitle}>
-        {total > 0 ? "Today's bookings, by 15-min slot" : "No bookings yet today"}
-      </p>
 
       <div style={styles.divider} />
 

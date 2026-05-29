@@ -28,9 +28,9 @@ const STATUS_CONFIG: Record<
   string,
   { bg: string; color: string; label: string }
 > = {
-  BOOKED: { bg: colors.primary200, color: colors.neutral900, label: "Booked" },
+  BOOKED: { bg: colors.active.shade300, color: colors.neutral900, label: "Booked" },
   WAITING: { bg: colors.yellow100, color: colors.neutral900, label: "Waiting" },
-  SCHEDULED: { bg: colors.primary200, color: colors.neutral900, label: "Booked" },
+  SCHEDULED: { bg: colors.active.shade300, color: colors.neutral900, label: "Booked" },
   ARRIVED: { bg: colors.primary200, color: colors.neutral900, label: "Arrived" },
   IN_PROGRESS: { bg: colors.neutral100, color: colors.neutral900, label: "At Doc" },
   COMPLETED: { bg: colors.green100, color: colors.secondary800, label: "Completed" },
@@ -160,13 +160,9 @@ export function PayBadge({ status }: PayBadgeProps) {
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        gap: "4px",
-        // Width var-driven so 1024 collapses to icon-only (no fixed 80px gap).
-        width: "var(--paybadge-w, 80px)",
-        fontSize: fonts.size.s,
-        fontFamily: fonts.family.primary,
-        fontWeight: 400,
-        lineHeight: "16px",
+        // Icon only — the Paid/Due word is dropped at all sizes; the native
+        // `title` (above) provides the label on hover.
+        width: "auto",
         color: cfg.color,
       }}
     >
@@ -182,7 +178,6 @@ export function PayBadge({ status }: PayBadgeProps) {
       >
         {cfg.icon}
       </span>
-      <span className="pay-badge-label">{cfg.label}</span>
     </span>
   );
 }

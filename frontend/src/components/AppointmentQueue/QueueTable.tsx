@@ -67,6 +67,12 @@ function formatPhone(raw: string): string {
   return digits.length > 10 && digits.startsWith("91") ? digits.slice(2) : digits;
 }
 
+// Empty flexible spacer cells placed between every column. Being the only
+// width-less columns (table-layout: fixed), they share the leftover width
+// EQUALLY, so the inter-column gaps stretch/squeeze together.
+const spacerTh: React.CSSProperties = { borderBottom: `1px solid ${colors.primary300}`, padding: 0 };
+const spacerTd: React.CSSProperties = { padding: 0 };
+
 function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
   appointment: Appointment;
   currentStatus: string;
@@ -151,14 +157,14 @@ function TypeBadge({ type }: { type: "New" | "Review" }) {
   if (type === "New") {
     return (
       <span style={styles.typeBadge}>
-        <StarOutlineIcon width={18} height={18} style={{ flexShrink: 0 }} />
+        <StarOutlineIcon className="type-badge-icon" width={18} height={18} style={{ flexShrink: 0 }} />
         New
       </span>
     );
   }
   return (
     <span style={styles.typeBadge}>
-      <RestartArrowIcon width={18} height={18} style={{ flexShrink: 0 }} />
+      <RestartArrowIcon className="type-badge-icon" width={18} height={18} style={{ flexShrink: 0 }} />
       Review
     </span>
   );
@@ -251,29 +257,43 @@ export function QueueTable({
               stays exactly 24px, and the name↔phone gap stretches/squeezes as
               the queue resizes. */}
           <col style={{ width: "28px" }} />   {/* # */}
+          <col />
           <col style={{ width: "256px" }} />  {/* Name (cap, truncates) */}
-          <col />                              {/* flexible spacer */}
+          <col />
           <col style={{ width: "108px" }} />  {/* Phone */}
+          <col />
           <col style={{ width: "64px" }} />   {/* Service */}
+          <col />
           <col style={{ width: "96px" }} />   {/* Type */}
+          <col />
           <col style={{ width: "84px" }} />   {/* Time */}
+          <col />
           <col style={{ width: "152px" }} />  {/* Status */}
-          <col style={{ width: "88px" }} />   {/* Pay */}
+          <col />
+          <col style={{ width: "44px" }} />   {/* Pay (icon only) */}
+          <col />
           <col style={{ width: "24px" }} />   {/* 3-dots */}
         </colgroup>
         <thead>
           <tr>
-            {/* Browsers center <th> by default — set textAlign: "left" explicitly
-                on # and Name so headers match their left-aligned body cells. */}
+            {/* Real header cells with empty flexible spacer <th>s between them
+                (matching the colgroup) so the inter-column gaps stretch equally. */}
             <th style={{ ...styles.th, textAlign: "left", paddingLeft: 0, paddingRight: 0 }}>#</th>
+            <th style={spacerTh} aria-hidden />
             <th style={{ ...styles.th, textAlign: "left", paddingLeft: "0", paddingRight: "4px" }}>Name</th>
-            <th style={{ borderBottom: `1px solid ${colors.primary300}`, padding: 0 }} aria-hidden />
+            <th style={spacerTh} aria-hidden />
             <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Phone</th>
+            <th style={spacerTh} aria-hidden />
             <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Service</th>
+            <th style={spacerTh} aria-hidden />
             <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Type</th>
+            <th style={spacerTh} aria-hidden />
             <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Time</th>
+            <th style={spacerTh} aria-hidden />
             <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Status</th>
+            <th style={spacerTh} aria-hidden />
             <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Pay</th>
+            <th style={spacerTh} aria-hidden />
             <th style={{ ...styles.th, paddingLeft: 0, paddingRight: 0 }}></th>
           </tr>
         </thead>
@@ -281,7 +301,7 @@ export function QueueTable({
           {appointments.length === 0 ? (
             <tr>
               <td
-                colSpan={10}
+                colSpan={17}
                 style={{
                   ...styles.td,
                   textAlign: "center",
@@ -305,7 +325,7 @@ export function QueueTable({
               return (
                 <React.Fragment key={apt.id}>
                   {isNewGroup && (
-                    <tr><td colSpan={10} style={{ height: "40px", border: "none", padding: 0 }}>
+                    <tr><td colSpan={17} style={{ height: "40px", border: "none", padding: 0 }}>
                       <div style={{
                         height: "100%",
                         display: "flex",
@@ -339,6 +359,8 @@ export function QueueTable({
                         : "-"}
                     </td>
 
+                    <td style={spacerTd} aria-hidden />
+
                     {/* Name + gender/age */}
                     <td style={styles.nameCell}>
                       <div style={styles.nameInner}>
@@ -365,11 +387,12 @@ export function QueueTable({
                       </div>
                     </td>
 
-                    {/* Flexible spacer (the responsive name↔phone gap) */}
-                    <td style={{ padding: 0 }} aria-hidden />
+                    <td style={spacerTd} aria-hidden />
 
                     {/* Phone — bare 10 digits (no +91, no mid-space) to save width */}
                     <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>{formatPhone(apt.patientPhone)}</td>
+
+                    <td style={spacerTd} aria-hidden />
 
                     {/* Service */}
                     <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px", maxWidth: 0 }}>
@@ -392,10 +415,14 @@ export function QueueTable({
                       </div>
                     </td>
 
+                    <td style={spacerTd} aria-hidden />
+
                     {/* Type */}
                     <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
                       <TypeBadge type={apt.type} />
                     </td>
+
+                    <td style={spacerTd} aria-hidden />
 
                     {/* Time */}
                     <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
@@ -404,6 +431,8 @@ export function QueueTable({
                         <span style={styles.walkinBadge}>Walk-in</span>
                       )}
                     </td>
+
+                    <td style={spacerTd} aria-hidden />
 
                     {/* Status badge */}
                     <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
@@ -418,10 +447,14 @@ export function QueueTable({
                       )}
                     </td>
 
+                    <td style={spacerTd} aria-hidden />
+
                     {/* Pay status */}
                     <td style={{ ...styles.payCell, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
                       <PayBadge status={apt.payStatus} />
                     </td>
+
+                    <td style={spacerTd} aria-hidden />
 
                     {/* Action menu — zero horizontal padding */}
                     <td style={{ ...styles.td, padding: "14px 0" }}>
