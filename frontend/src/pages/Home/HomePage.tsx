@@ -14,7 +14,6 @@ import { Button } from "../../components/Button";
 import { ChatBubble } from "../../components/Chat/ChatBubble";
 import { setPendingSessionNav } from "../../components/TopNav/SessionTrayButton";
 import { hydrateScheduleFromBackend } from "../../components/DoctorSchedule/scheduleStorage";
-import { useIsCompact } from "../../hooks/useMediaQuery";
 
 type HomePageProps = {
   onLogout: () => void;
@@ -31,16 +30,6 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
     localStorage.setItem("docodile_home_tab", tab);
     setActiveTabState(tab);
   };
-  // Side-nav auto-collapses below the comfortable-desktop breakpoint
-  // (1440). On wider viewports it stays expanded by default. The manual
-  // toggle still works within a viewport "bucket"; crossing the threshold
-  // resets to the new default — same pattern Notion / Linear use.
-  const isCompact = useIsCompact();
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(!isCompact);
-  useEffect(() => {
-    setIsSidebarExpanded(!isCompact);
-  }, [isCompact]);
-
   const [isBooking, setIsBooking] = useState(false);
 
   // Pull the canonical clinic schedule from the backend on mount and seed the
@@ -100,11 +89,10 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       backgroundColor: colors.active.shade300,
     },
     contentArea: {
-      marginLeft: isSidebarExpanded ? "var(--sidenav-w-expanded)" : "var(--sidenav-w-collapsed)",
-      width: isSidebarExpanded ? "calc(100% - var(--sidenav-w-expanded))" : "calc(100% - var(--sidenav-w-collapsed))",
+      marginLeft: "var(--sidenav-w)",
+      width: "calc(100% - var(--sidenav-w))",
       display: "flex",
       flexDirection: "column" as const,
-      transition: "margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     },
     mainContent: {
       padding: "var(--page-pad-top) var(--page-pad-x) var(--page-pad-bottom)",
@@ -174,10 +162,6 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       <SideNav
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        isExpanded={isSidebarExpanded}
-        onToggleExpand={() => setIsSidebarExpanded(!isSidebarExpanded)}
-        settingsSection={settingsSection}
-        onSettingsSection={setSettingsSection}
       />
       <div style={styles.contentArea}>
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
