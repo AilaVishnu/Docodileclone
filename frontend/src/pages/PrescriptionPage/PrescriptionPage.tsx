@@ -49,6 +49,7 @@ import { SessionBar } from "../../components/SessionBar/SessionBar";
 import {
   recordActiveSession,
   clearActiveSession,
+  clearOtherSessionsForPatient,
   consumePendingSessionNav,
   type PendingSessionNav,
 } from "../../components/TopNav/SessionTrayButton";
@@ -736,10 +737,26 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
   const endedAtMs = activeVisit?.sessionEndedAt ? new Date(activeVisit.sessionEndedAt).getTime() : null;
   const visitMs = activeVisit?.visitDate ? new Date(activeVisit.visitDate).getTime() : null;
+  // A session "happened" if it was ended or accumulated any recorded time.
+  // A visit with neither was never worked on — it should stay editable and
+  // show the idle "Start Session" state, never a bogus "Session Ended".
+  const hadSession =
+    activeVisit?.sessionEndedAt != null || (activeVisit?.sessionDurationSec ?? 0) > 0;
   const isWithinBuffer = (() => {
     if (endedAtMs != null && !Number.isNaN(endedAtMs)) {
+      // Ended with a real timestamp → resumable for 24h from that moment.
       return Date.now() - endedAtMs < ONE_DAY_MS;
     }
+    if (!hadSession) {
+      // Never started/ended. Editable only if this is the current (latest)
+      // visit, or the visit date is still within 24h. Imported historic
+      // visits (older, non-latest) stay locked — they shouldn't offer a
+      // "Start Session". Prevents a recent untouched visit from freezing
+      // into a "Session Ended" view while keeping old history read-only.
+      return isLatestVisit || (visitMs != null && !Number.isNaN(visitMs) && Date.now() - visitMs < ONE_DAY_MS);
+    }
+    // Has a recorded duration but no end timestamp (legacy data) → fall
+    // back to the visit date for the 24h lock.
     if (visitMs != null && !Number.isNaN(visitMs)) {
       return Date.now() - visitMs < ONE_DAY_MS;
     }
@@ -1491,6 +1508,10 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
     // Surface this session in the header tray so the doctor can navigate
     // back to it from any other screen until the session ends.
     if (activeVisit && selectedPatient) {
+      // One live session per patient: clear any orphaned session for this
+      // patient on a different visit tab before starting a new one. Stops
+      // a stale visit's timer from counting forever in the tray.
+      clearOtherSessionsForPatient(selectedPatient.id, activeVisit.id);
       recordActiveSession({
         visitId: activeVisit.id,
         patient: selectedPatient,
@@ -1510,8 +1531,11 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
 
   const handleSessionEnd = (totalSeconds: number) => {
     if (selectedPatient) unmarkStarted(selectedPatient.id);
-    // Drop this session from the header tray.
+    // Drop this session from the header tray. Also clear any other
+    // orphaned session for the same patient (e.g. a session left running
+    // on a different visit tab) so the tray can't show a runaway timer.
     if (activeVisit) clearActiveSession(activeVisit.id);
+    if (selectedPatient) clearOtherSessionsForPatient(selectedPatient.id, null);
     // Persist the locked-in duration on the visit so reopening the
     // prescription on any device shows the same final time.
     if (activeVisit) {

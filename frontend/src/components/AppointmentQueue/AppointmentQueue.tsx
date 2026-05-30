@@ -254,6 +254,23 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           const aptData = await aptRes.json();
           const grouped: Record<string, Appointment[]> = {};
 
+          // Client-side no-show derivation — mirrors the backend
+          // NoShowSweepJob (1am cron) so the queue doesn't show stale
+          // "Booked" pills before the nightly sweep runs. Any pending
+          // appointment (BOOKED/SCHEDULED/WAITING) whose scheduled time is
+          // before the start of today is displayed as NO_SHOW.
+          const startOfToday = new Date();
+          startOfToday.setHours(0, 0, 0, 0);
+          const PENDING_STATUSES = new Set(["BOOKED", "SCHEDULED", "WAITING"]);
+          const deriveStatus = (rawStatus: string | undefined, rawSched: string | undefined): string => {
+            const status = rawStatus || "WAITING";
+            if (!PENDING_STATUSES.has(status.toUpperCase())) return status;
+            if (!rawSched) return status;
+            const sched = new Date(rawSched);
+            if (Number.isNaN(sched.getTime())) return status;
+            return sched < startOfToday ? "NO_SHOW" : status;
+          };
+
           aptData.forEach((apt: any) => {
             if (!grouped[apt.doctorId]) {
               grouped[apt.doctorId] = [];
@@ -268,7 +285,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               scheduledTime: apt.scheduledTime ? new Date(apt.scheduledTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Walk-in",
               rawScheduledTime: apt.scheduledTime || undefined,
               isWalkin: apt.isWalkin,
-              status: apt.status || "WAITING",
+              status: deriveStatus(apt.status, apt.scheduledTime) as Appointment["status"],
               payStatus: apt.payStatus || "DUE",
               paymentMethod: apt.paymentMethod || "",
               doctorId: apt.doctorId,
