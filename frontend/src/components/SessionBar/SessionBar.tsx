@@ -280,12 +280,19 @@ export function SessionBar({
   // weight is consistent. Placed after every hook so React's rules-of-
   // hooks ordering stays the same whether the bar mounts interactive
   // or read-only.
+  //
+  // Timer display logic:
+  // - If session is within 24h window AND has Resume available: show timer (resumable session)
+  // - If session is older than 24h: hide timer, show only "Session Ended" (closed session)
   if (readOnly) {
+    const showTimer = readOnlyCanResume; // Only show timer if session can still be resumed
     return (
       <div style={{ ...styles.bar, ...styles.barIdle }}>
-        <span style={{ ...styles.timer, color: colors.primary100 }}>
-          {formatTimer(recordedDurationSec ?? 0)}
-        </span>
+        {showTimer && (
+          <span style={{ ...styles.timer, color: colors.primary100 }}>
+            {formatTimer(recordedDurationSec ?? 0)}
+          </span>
+        )}
         <span style={styles.endedCenter} aria-label="Session ended">
           Session Ended
         </span>
