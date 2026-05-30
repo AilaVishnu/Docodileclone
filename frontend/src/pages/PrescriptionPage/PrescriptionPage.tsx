@@ -54,6 +54,7 @@ import {
 } from "../../components/TopNav/SessionTrayButton";
 import { useVisits } from "../../hooks/useVisits";
 import { createVisit, updateVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
+import { listRxTemplates, saveRxTemplate, deleteRxTemplate } from "../../api/rxTemplates";
 import { markStarted, unmarkStarted } from "../../utils/sessionStarted";
 import { API_BASE_URL } from "../../apiConfig";
 import { AddReportModal, AddReportRow } from "./AddReportModal";
@@ -292,6 +293,55 @@ const fromRxDTO = (dto: RxRowDTO): RxRowDraft => ({
   notes: dto.notes ?? "",
   thenRows: [],
 });
+
+// ── Prescription templates (clinic-shared, stored on the backend) ───────────
+// A reusable clinical template — complaints/diagnosis/tests/notes/review + the
+// Rx rows. Excludes vitals and history, which are per-patient measurements and
+// shouldn't be auto-filled from a template. The backend stores `content` as an
+// opaque JSON blob of exactly this shape (minus the name).
+type RxTemplateContent = {
+  complaints: string;
+  diagnosis: string;
+  tests: string;
+  notesForPatient: string;
+  privateNotes: string;
+  reviewDays: string;
+  reviewNotes: string;
+  rxRows: RxRowDraft[];
+};
+type RxTemplate = RxTemplateContent & { name: string };
+
+const parseRxTemplate = (dto: { name: string; content: string }): RxTemplate => {
+  let c: Partial<RxTemplateContent> = {};
+  try { c = JSON.parse(dto.content) as Partial<RxTemplateContent>; } catch { /* malformed — fall back to blanks */ }
+  return {
+    name: dto.name,
+    complaints: c.complaints ?? "",
+    diagnosis: c.diagnosis ?? "",
+    tests: c.tests ?? "",
+    notesForPatient: c.notesForPatient ?? "",
+    privateNotes: c.privateNotes ?? "",
+    reviewDays: c.reviewDays ?? "",
+    reviewNotes: c.reviewNotes ?? "",
+    rxRows: Array.isArray(c.rxRows) ? c.rxRows : [],
+  };
+};
+
+const tplStyles: Record<string, React.CSSProperties> = {
+  container: { display: "flex", flexDirection: "column", gap: spacing.m, width: 460, maxWidth: "92vw" },
+  header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: spacing.s },
+  title: { margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.regular, color: colors.neutral900 },
+  subtitle: { margin: "4px 0 0", fontSize: fonts.size.s, color: colors.neutral500 },
+  close: { background: "transparent", border: "none", fontSize: 18, color: colors.neutral500, cursor: "pointer", lineHeight: 1, padding: 0 },
+  saveRow: { display: "flex", gap: spacing.s, alignItems: "center" },
+  input: { flex: 1, height: 40, boxSizing: "border-box", padding: `0 ${spacing.s}`, border: `1px solid ${colors.neutral300}`, borderRadius: radii.m, backgroundColor: colors.neutral150, fontFamily: fonts.family.primary, fontSize: fonts.control.md, color: colors.neutral900, outline: "none" },
+  saveBtn: { flexShrink: 0, height: 40, padding: "0 20px", border: "none", borderRadius: radii.full, backgroundColor: colors.primary700, color: colors.neutral100, fontFamily: fonts.family.primary, fontSize: fonts.control.md, cursor: "pointer" },
+  list: { display: "flex", flexDirection: "column", gap: spacing.xs, maxHeight: 280, overflowY: "auto" },
+  empty: { fontFamily: fonts.family.primary, fontSize: fonts.size.s, color: colors.neutral500, textAlign: "center", margin: `${spacing.m} 0` },
+  item: { display: "flex", alignItems: "center", gap: spacing.xs, backgroundColor: colors.neutral150, borderRadius: radii.m, paddingRight: spacing.xs },
+  itemName: { flex: 1, textAlign: "left", background: "transparent", border: "none", cursor: "pointer", padding: `10px ${spacing.s}`, fontFamily: fonts.family.primary, fontSize: fonts.control.md, color: colors.neutral900, borderRadius: radii.m },
+  itemDelete: { flexShrink: 0, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", color: colors.red100, cursor: "pointer", fontSize: 14, borderRadius: radii.s },
+};
 
 const rewindBtnStyle = (_disabled: boolean): React.CSSProperties => ({
   background: "none",
@@ -862,6 +912,64 @@ export function PrescriptionPage() {
   // Toggle between the table layout (default) and the card grid layout
   // (Figma node 2143:11610). Driven by the list/widget icons in the tabs row.
   const [viewMode, setViewMode] = React.useState<"list" | "grid">("list");
+  // Prescription templates (clinic-shared, backend-stored).
+  const [showTemplates, setShowTemplates] = React.useState(false);
+  const [templateName, setTemplateName] = React.useState("");
+  const [savedTemplates, setSavedTemplates] = React.useState<RxTemplate[]>([]);
+  const [templatesBusy, setTemplatesBusy] = React.useState(false);
+
+  const refreshTemplates = () =>
+    listRxTemplates()
+      .then((rows) => setSavedTemplates(rows.map(parseRxTemplate)))
+      .catch((e: Error) => showToast(e.message || "Couldn't load templates"));
+
+  const openTemplates = () => {
+    setShowTemplates(true);
+    void refreshTemplates();
+  };
+
+  const handleSaveTemplate = () => {
+    const name = templateName.trim();
+    if (!name) { showToast("Enter a template name"); return; }
+    const content: string = JSON.stringify({
+      complaints: complaintsValue,
+      diagnosis: diagnosisValue,
+      tests: testsValue,
+      notesForPatient: notesForPatientValue,
+      privateNotes: privateNotesValue,
+      reviewDays,
+      reviewNotes: reviewNotesValue,
+      rxRows,
+    });
+    setTemplatesBusy(true);
+    saveRxTemplate(name, content)
+      .then(() => { setTemplateName(""); showToast(`Saved template "${name}"`); return refreshTemplates(); })
+      .catch((e: Error) => showToast(e.message || "Couldn't save template"))
+      .finally(() => setTemplatesBusy(false));
+  };
+
+  const handleLoadTemplate = (t: RxTemplate) => {
+    setComplaintsValue(t.complaints);
+    setDiagnosisValue(t.diagnosis);
+    setTestsValue(t.tests);
+    setNotesForPatientValue(t.notesForPatient);
+    setPrivateNotesValue(t.privateNotes);
+    setReviewDays(t.reviewDays);
+    setReviewNotesValue(t.reviewNotes);
+    // Reset ids/positions so loaded rows save as fresh Rx rows on this visit.
+    setRxRows(t.rxRows.map((r, i) => ({ ...r, id: null, position: i + 1, thenRows: r.thenRows ?? [] })));
+    setShowTemplates(false);
+    showToast(`Loaded "${t.name}"`);
+  };
+
+  const handleDeleteTemplate = (name: string) => {
+    setTemplatesBusy(true);
+    deleteRxTemplate(name)
+      .then(() => refreshTemplates())
+      .catch((e: Error) => showToast(e.message || "Couldn't delete template"))
+      .finally(() => setTemplatesBusy(false));
+  };
+
   // Tuning button dropdown items — open/close + outside-click handling lives
   // inside <PopoverMenu>, so we just declare the actions here.
   const tuningMenuItems = [
@@ -889,9 +997,7 @@ export function PrescriptionPage() {
     },
     {
       label: "Saved templates",
-      onClick: () => {
-        // TODO: open Saved Templates picker once the backend exists.
-      },
+      onClick: openTemplates,
     },
   ];
 
@@ -1887,7 +1993,9 @@ export function PrescriptionPage() {
                         >
                           <RewindIcon width={20} height={20} />
                         </button>
-                        <MicIcon width={20} height={20} />
+                        <button type="button" title="Prescription templates" onClick={openTemplates} style={rewindBtnStyle(false)}>
+                          <MicIcon width={20} height={20} />
+                        </button>
                       </span>
                     </div>
                   </div>
@@ -1918,7 +2026,9 @@ export function PrescriptionPage() {
                         >
                           <RewindIcon width={20} height={20} />
                         </button>
-                        <MicIcon width={20} height={20} />
+                        <button type="button" title="Prescription templates" onClick={openTemplates} style={rewindBtnStyle(false)}>
+                          <MicIcon width={20} height={20} />
+                        </button>
                       </span>
                     </div>
                   </div>
@@ -2065,7 +2175,9 @@ export function PrescriptionPage() {
                           >
                             <RewindIcon width={20} height={20} />
                           </button>
-                          <MicIcon width={20} height={20} />
+                          <button type="button" title="Prescription templates" onClick={openTemplates} style={rewindBtnStyle(false)}>
+                            <MicIcon width={20} height={20} />
+                          </button>
                         </span>
                         <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
                       </div>
@@ -2102,7 +2214,9 @@ export function PrescriptionPage() {
                         >
                           <RewindIcon width={20} height={20} />
                         </button>
-                        <MicIcon width={20} height={20} />
+                        <button type="button" title="Prescription templates" onClick={openTemplates} style={rewindBtnStyle(false)}>
+                          <MicIcon width={20} height={20} />
+                        </button>
                       </span>
                     </div>
                   </div>
@@ -2152,7 +2266,9 @@ export function PrescriptionPage() {
                         >
                           <RewindIcon width={20} height={20} />
                         </button>
-                        <MicIcon width={20} height={20} />
+                        <button type="button" title="Prescription templates" onClick={openTemplates} style={rewindBtnStyle(false)}>
+                          <MicIcon width={20} height={20} />
+                        </button>
                       </span>
                     </div>
                     <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
@@ -2308,6 +2424,50 @@ export function PrescriptionPage() {
           onEnd={handleSessionEnd}
         />
       )}
+
+      {/* Prescription templates — save the current Rx + clinical fields under a
+          name, or load a saved one to auto-fill. Clinic-shared (backend). */}
+      <Modal isOpen={showTemplates} onClose={() => setShowTemplates(false)}>
+        <div style={tplStyles.container}>
+          <header style={tplStyles.header}>
+            <div>
+              <h2 style={tplStyles.title}>Prescription templates</h2>
+              <p style={tplStyles.subtitle}>Save this prescription, or pick a saved one to auto-fill.</p>
+            </div>
+            <button type="button" onClick={() => setShowTemplates(false)} aria-label="Close" style={tplStyles.close}>✕</button>
+          </header>
+
+          <div style={tplStyles.saveRow}>
+            <input
+              style={tplStyles.input}
+              placeholder="Template Name"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSaveTemplate(); }}
+            />
+            <button type="button" style={tplStyles.saveBtn} onClick={handleSaveTemplate} disabled={templatesBusy}>
+              Save
+            </button>
+          </div>
+
+          <div style={tplStyles.list}>
+            {savedTemplates.length === 0 ? (
+              <p style={tplStyles.empty}>No saved templates yet. Fill the prescription, type a name, and Save.</p>
+            ) : (
+              savedTemplates.map((t) => (
+                <div key={t.name} style={tplStyles.item}>
+                  <button type="button" style={tplStyles.itemName} onClick={() => handleLoadTemplate(t)} title="Load this template">
+                    {t.name}
+                  </button>
+                  <button type="button" style={tplStyles.itemDelete} onClick={() => handleDeleteTemplate(t.name)} disabled={templatesBusy} title="Delete template">
+                    ✕
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </Modal>
 
       {/* Add File modal. Drag-drop or click-to-choose, multi-file, per-file
           metadata (name, category, investigation date, tie-to-visit, notes).
