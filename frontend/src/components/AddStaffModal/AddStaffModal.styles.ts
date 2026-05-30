@@ -90,6 +90,16 @@ export const confirmStyles: Record<string, CSSProperties> = {
     margin: 0,
   },
 
+  message: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    color: colors.neutral700,
+    margin: 0,
+    lineHeight: 1.5,
+    textAlign: "center",
+    maxWidth: "320px",
+  },
+
   actions: {
     display: "flex",
     gap: spacing.m,

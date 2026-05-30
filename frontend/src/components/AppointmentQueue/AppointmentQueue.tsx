@@ -233,10 +233,13 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
 
           if (staffRes.ok) {
             const staffData = await staffRes.json();
+            // Exclude deactivated doctors — they keep their clinic membership
+            // (for the Deactivated list) but must not be bookable for future
+            // appointments. Only active doctors appear in the queue/booking.
             const doctorList = staffData
-              .filter((s: any) => s.role === "DOCTOR")
+              .filter((s: any) => s.role === "DOCTOR" && s.active !== false)
               .map((s: any) => ({ id: s.id, name: s.name }));
-            
+
             setDoctors(doctorList);
             if (doctorList.length > 0) {
               setActiveDoctorId(doctorList[0].id);
