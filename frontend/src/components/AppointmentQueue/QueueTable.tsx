@@ -111,17 +111,20 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
       />
       {isOpen && (
         <div style={{
+          // Unified menu spec — see also TopNav.dropdown and actionMenu styles.
           position: "absolute",
           top: "calc(100% + 4px)",
           left: "50%",
           transform: "translateX(-50%)",
           backgroundColor: colors.neutral100,
           borderRadius: "12px",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
           zIndex: 100,
-          minWidth: "150px",
-          padding: "6px",
-          border: `1px solid #e5e7eb`,
+          minWidth: "160px",
+          padding: "12px 8px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "4px",
         }}>
           {STATUS_OPTIONS.map((opt) => (
             <div
@@ -130,15 +133,16 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
                 onStatusChange(appointment.id, opt.value);
                 setIsOpen(false);
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.neutral150; }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.active.shade200; }}
               onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
               style={{
-                padding: "10px 14px",
+                padding: "10px 16px",
                 cursor: "pointer",
                 borderRadius: "8px",
                 fontSize: fonts.size.s,
-                fontWeight: 500,
                 color: colors.neutral900,
+                fontFamily: fonts.family.primary,
+                transition: "background-color 0.15s",
               }}
             >
               {opt.label}
@@ -222,7 +226,7 @@ function ActionMenu({
                 setIsOpen(false);
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = colors.neutral150;
+                e.currentTarget.style.backgroundColor = colors.active.shade200;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = "transparent";
@@ -418,14 +422,14 @@ export function QueueTable({
                     <td style={spacerTd} aria-hidden />
 
                     {/* Type */}
-                    <td style={{ ...styles.td, textAlign: "center", padding: "14px 4px" }}>
+                    <td style={{ ...styles.td, textAlign: "center", padding: "10px 4px" }}>
                       <TypeBadge type={apt.type} />
                     </td>
 
                     <td style={spacerTd} aria-hidden />
 
                     {/* Time */}
-                    <td style={{ ...styles.td, textAlign: "center", padding: "14px 4px" }}>
+                    <td style={{ ...styles.td, textAlign: "center", padding: "10px 4px" }}>
                       <span style={styles.time}>{apt.scheduledTime}</span>
                       {apt.isWalkin && (
                         <span style={styles.walkinBadge}>Walk-in</span>
@@ -435,7 +439,7 @@ export function QueueTable({
                     <td style={spacerTd} aria-hidden />
 
                     {/* Status badge */}
-                    <td style={{ ...styles.td, textAlign: "center", padding: "14px 4px" }}>
+                    <td style={{ ...styles.td, textAlign: "center", padding: "10px 4px" }}>
                       {onStatusChange ? (
                         <StatusDropdown
                           appointment={apt}
@@ -457,7 +461,7 @@ export function QueueTable({
                     <td style={spacerTd} aria-hidden />
 
                     {/* Action menu — zero horizontal padding */}
-                    <td style={{ ...styles.td, padding: "14px 0" }}>
+                    <td style={{ ...styles.td, padding: "10px 0" }}>
                       {menuItems && menuItems.length > 0 ? (
                         <ActionMenu
                           appointment={apt}

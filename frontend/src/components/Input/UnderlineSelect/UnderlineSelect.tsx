@@ -64,19 +64,22 @@ export function UnderlineSelect({
       {isOpen && (
         <div
           style={{
+            // Unified menu spec — see TopNav.dropdown, actionMenu, StatusDropdown.
             position: "absolute",
             top: "calc(100% + 8px)",
             left: "50%",
             transform: "translateX(-50%)",
             backgroundColor: colors.neutral100,
-            border: `1px solid ${colors.neutral300}`,
             borderRadius: "12px",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
             zIndex: 1000,
             minWidth: "200px",
             maxHeight: "240px",
             overflowY: "auto",
-            padding: "6px",
+            padding: "12px 8px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
           }}
         >
           {normalizedOptions.map((option) => (
@@ -87,22 +90,20 @@ export function UnderlineSelect({
                 setIsOpen(false);
               }}
               style={{
-                padding: "10px 14px",
+                padding: "10px 16px",
                 cursor: "pointer",
                 borderRadius: "8px",
                 fontFamily: fonts.family.primary,
-                fontSize: fonts.size.m,
+                fontSize: fonts.size.s,
                 color: colors.neutral900,
                 backgroundColor: "transparent",
                 transition: "background-color 0.15s",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = colors.active.shade100;
-                e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
+                e.currentTarget.style.backgroundColor = colors.active.shade200;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = "transparent";
-                e.currentTarget.style.boxShadow = "none";
               }}
             >
               {option.label}

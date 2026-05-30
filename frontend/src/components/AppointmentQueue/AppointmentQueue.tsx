@@ -5,6 +5,7 @@ import { styles } from "./AppointmentQueue.styles";
 import { DatePicker } from "./DatePicker";
 import { colors } from "../../styles/theme";
 import { BookAppointment, EditAppointmentData } from "./BookAppointment";
+import { PageHeader } from "../PageHeader/PageHeader";
 import { BillMedicinesModal } from "./BillMedicinesModal";
 import { DoctorStatusCard } from "./DoctorStatusCard";
 import { HeatmapCard } from "./HeatmapCard";
@@ -249,55 +250,37 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
 
   return (
     <div style={styles.container}>
-      <header style={{ ...styles.header, marginBottom: "24px", position: "relative" }}>
-        <div style={{ flex: 1 }} />
-        <h1 style={{ ...styles.title, position: "absolute", left: "50%", transform: "translateX(-50%)", zIndex: showDatePicker ? 1100 : "auto" }}>
-          <span
-            onClick={() => setShowDatePicker(!showDatePicker)}
-            style={{
-              textDecoration: "underline",
-              cursor: "pointer",
-              color: colors.neutral900,
-              position: "relative",
-              display: "inline-block",
-            }}
-          >
-            {dateText}
-            {showDatePicker && (
-              <DatePicker
-                selectedDate={selectedDate}
-                onSelect={(date) => {
-                  setSelectedDate(date);
-                  setShowDatePicker(false);
-                }}
-                onClose={() => setShowDatePicker(false)}
-                style={{
-                  top: "calc(100% + 12px)",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                }}
-                showDoneButton
-              />
-            )}
-          </span> Queue
-        </h1>
-
-        {showDatePicker && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
-              zIndex: 1050,
-            }}
-            onClick={() => setShowDatePicker(false)}
-          />
-        )}
-
-        <div style={{ display: "flex", gap: "12px" }}>
-          {/* Internal booking trigger removed in favor of TopNav trigger */}
-        </div>
-      </header>
+      <PageHeader
+        style={{ marginBottom: "24px" }}
+        title={
+          <>
+            <span
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              style={{
+                textDecoration: "underline",
+                cursor: "pointer",
+                color: colors.neutral900,
+                position: "relative",
+                display: "inline-block",
+                zIndex: showDatePicker ? 1100 : "auto",
+              }}
+            >
+              {dateText}
+              {showDatePicker && (
+                <DatePicker
+                  selectedDate={selectedDate}
+                  onSelect={(date) => {
+                    setSelectedDate(date);
+                    setShowDatePicker(false);
+                  }}
+                  onClose={() => setShowDatePicker(false)}
+                  showDoneButton
+                />
+              )}
+            </span> Queue
+          </>
+        }
+      />
 
       {(isBooking || editingAppointment) && (
         <BookAppointment

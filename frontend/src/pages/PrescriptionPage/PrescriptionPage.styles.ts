@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes, fluidSpacing } from "../../styles/theme";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Prescription page — baseline scaffold per Figma node 2057:6224
@@ -9,16 +9,43 @@ import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const styles: Record<string, CSSProperties> = {
+  // Acts as its OWN scroll container (mirroring AppointmentQueue.container
+   // and PrescriptionQueue.page) so the sticky <PageHeader/> can hug the very
+   // top of main. paddingBottom 80 reserves room for the floating SessionBar.
   page: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,
-    width: "100%",
-    // Reserve room at the bottom so the floating SessionBar (fixed-
-    // positioned ~60px tall + 20px from viewport bottom) never covers
-    // the last form fields. Extra room lets the doctor scroll past the
-    // last row comfortably.
-    paddingBottom: 80,
+    padding: `0 ${fluidSpacing.outerX} 80px`,
+    overflowY: "auto",
+    overflowX: "hidden",
+  },
+
+  // Inner tabs ("All" / "Reports" / "Files") for the Files view — matches the
+  // Rx Pad home filter-pill style (PrescriptionQueue.styles.tab), including
+  // the tier-responsive --rxq-tab-padx variable for horizontal padding.
+  listTab: {
+    height: 40,
+    padding: `${spacing.xs} var(--rxq-tab-padx, 16px)`,
+    borderRadius: radii.xl,
+    border: "none",
+    backgroundColor: colors.alphaBlack0,
+    color: colors.alphaBlack3,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.m,
+    lineHeight: fonts.lineHeight.m,
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+  },
+  listTabActive: {
+    backgroundColor: colors.neutral100,
+    color: colors.neutral900,
   },
 
   // Header uses the same column grid as the body so the title (column 2)
