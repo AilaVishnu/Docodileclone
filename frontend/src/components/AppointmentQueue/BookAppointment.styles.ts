@@ -29,7 +29,10 @@ export const styles: Record<string, CSSProperties> = {
     bottom: 0,
     backgroundColor: colors.active.shade200,
     zIndex: 2000,
-    padding: `var(--page-pad-top) ${fluidSpacing.outerX} ${fluidSpacing.outerY}`,
+    // No TOP padding: the sticky <PageHeader/> is the first child and must hug
+    // the very top (touching the TopNav). Its own internal padding provides the
+    // header's breathing room; the flex gap below spaces it from the grid.
+    padding: `0 ${fluidSpacing.outerX} ${fluidSpacing.outerY}`,
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,
@@ -44,74 +47,10 @@ export const styles: Record<string, CSSProperties> = {
     overflowX: "hidden",
   },
 
-  // ─── Header (back button + centered title with doctor dropdown) ──────────
-  header: {
-    display: "flex",
-    alignItems: "center",
-    position: "relative",
-    marginBottom: "var(--book-header-mb, 20px)",
-    // Cap at content max-width, center in viewport
-    width: "100%",
-    maxWidth: layout.contentMaxWidth,
-    marginLeft: "auto",
-    marginRight: "auto",
-  },
-  backButton: {
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "32px",
-    height: "32px",
-    borderRadius: radii.full,
-    border: `${strokes.xs} solid ${colors.neutral300}`,
-    backgroundColor: "transparent",
-    padding: 0,
-    position: "absolute",
-    left: 0,
-  },
-  titleContainer: {
-    display: "flex",
-    alignItems: "center",
-    gap: spacing.xs,
-    flex: 1,
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: fonts.size.h5,
-    color: colors.neutral900,
-    fontFamily: fonts.family.secondary,
-    margin: 0,
-    display: "flex",
-    alignItems: "center",
-    gap: spacing.xs,
-    fontWeight: fonts.weight.regular,
-  },
-  clickableDoctor: {
-    textDecoration: "underline",
-    cursor: "pointer",
-    color: colors.neutral900,
-    fontWeight: fonts.weight.regular,
-  },
-  doctorDropdown: {
-    appearance: "none" as const,
-    WebkitAppearance: "none" as const,
-    background: "none",
-    border: "none",
-    borderBottom: `${strokes.m} solid ${colors.neutral900}`,
-    fontFamily: fonts.family.secondary,
-    // Was h4 (32) — inconsistent with title (h5 24). They sit on the same
-    // visual line, so matching to h5.
-    fontSize: fonts.size.h5,
-    fontWeight: fonts.weight.regular,
-    color: colors.neutral900,
-    cursor: "pointer",
-    outline: "none",
-    padding: `0 ${spacing["2xs"]}`,
-    marginLeft: spacing.xs,
-    textDecoration: "underline",
-    textUnderlineOffset: "4px",
-  },
+  // ─── Header ──────────────────────────────────────────────────────────────
+  // Moved to the shared <PageHeader/> component (components/PageHeader). The
+  // old inline header / backButton / title styles were removed when this page
+  // adopted the sticky app-bar.
 
   // ─── Main 3-column grid ──────────────────────────────────────────────────
   grid: {

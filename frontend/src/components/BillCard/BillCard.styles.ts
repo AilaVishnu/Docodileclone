@@ -14,7 +14,7 @@ export const styles: Record<string, CSSProperties> = {
     gap: "12px",
     padding: "24px",
     backgroundColor: colors.neutral100,
-    borderRadius: "16px 16px 0 0",
+    borderRadius: "12px 12px 0 0",
     flex: 1,
   },
 
@@ -139,8 +139,14 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   methodRow: {
-    display: "flex",
-    gap: "16px",
+    // 2×2 grid (Cash | Card / UPI | Waive). `auto auto` lets each column size
+    // to its widest label, then centers the pair within the card. Since every
+    // label puts the radio first, the two radios in each column line up
+    // vertically across rows.
+    display: "grid",
+    gridTemplateColumns: "auto auto",
+    columnGap: "32px",
+    rowGap: "8px",
     justifyContent: "center",
   },
 
