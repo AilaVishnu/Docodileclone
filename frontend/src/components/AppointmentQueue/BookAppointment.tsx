@@ -15,6 +15,8 @@ import {
   PlusIcon
 } from "../../iconsUtil";
 import { Card } from "../Card/Card";
+import { PageHeader } from "../PageHeader/PageHeader";
+import { Switch } from "../Switch/Switch";
 import { BillCard } from "../BillCard/BillCard";
 import { UnderlineSelect } from "../Input/UnderlineSelect/UnderlineSelect";
 import { Select } from "../Input/Select/Select";
@@ -140,6 +142,9 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const [toastMessage, setToastMessage] = useState("");
   const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
   const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
+  // "Advanced" toggle in the page header — reveals extra fields. Wiring the
+  // extra fields is deferred; for now this state is set but unused.
+  const [isAdvanced, setIsAdvanced] = useState(false);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const monthInputRef = React.useRef<HTMLInputElement>(null);
   const [allPatients, setAllPatients] = useState<any[]>([]);
@@ -477,33 +482,32 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
   return (
     <div style={styles.overlay}>
-      <header style={styles.header}>
-        <button style={styles.backButton} onClick={() => onBack()} title="Back to Appointments">
-          {/* Inline at 20px with a 1.5px stroke to match the sidebar icon weight. */}
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-
-        <div style={styles.titleContainer}>
-          <h2 style={styles.title}>
-            {editingAppointment ? (
-              "Edit Appointment"
-            ) : (
-              <>
-                Book an appointment for{" "}
-                <UnderlineSelect
-                  options={doctors.map(d => ({ label: d.name, value: d.id }))}
-                  value={selectedDoctorId}
-                  onChange={(val) => setSelectedDoctorId(val)}
-                  placeholder="Select Doctor"
-                  fontSize={fonts.size.h5}
-                />
-              </>
-            )}
-          </h2>
-        </div>
-      </header>
+      <PageHeader
+        onBack={() => onBack()}
+        backLabel="Back to Appointments"
+        title={
+          editingAppointment ? (
+            "Edit Appointment"
+          ) : (
+            <>
+              Book an appointment for{" "}
+              <UnderlineSelect
+                options={doctors.map(d => ({ label: d.name, value: d.id }))}
+                value={selectedDoctorId}
+                onChange={(val) => setSelectedDoctorId(val)}
+                placeholder="Select Doctor"
+                fontSize={fonts.size.h5}
+              />
+            </>
+          )
+        }
+        actions={
+          <label style={{ display: "inline-flex", alignItems: "center", gap: spacing.xs, cursor: "pointer", fontSize: fonts.size.s, color: colors.neutral900, fontFamily: fonts.family.primary, userSelect: "none" }}>
+            Advanced
+            <Switch checked={isAdvanced} onChange={setIsAdvanced} size="sm" ariaLabel="Advanced booking mode" />
+          </label>
+        }
+      />
 
       <div style={styles.grid}>
         {/* Patient ID Card — avatar above the ID. Avatar reacts to the gender +

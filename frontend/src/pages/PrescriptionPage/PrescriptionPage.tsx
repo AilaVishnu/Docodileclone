@@ -1,6 +1,7 @@
 import React from "react";
 import { styles } from "./PrescriptionPage.styles";
 import { pickAvatar } from "../../utils/avatar";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
 // Action-list icons exported from Figma node 2059:6764 (currentColor-normalized)
 import { ReactComponent as VisitsIcon } from "../../assets/icons/visits.svg";
 import { ReactComponent as PulseIcon } from "../../assets/icons/pulse.svg";
@@ -11,6 +12,7 @@ import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check-s
 import { ReactComponent as LetterIcon } from "../../assets/icons/letter.svg";
 import { ReactComponent as VideocameraIcon } from "../../assets/icons/videocamera.svg";
 import { ReactComponent as PenIcon } from "../../assets/icons/pen.svg";
+import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
 // Main content section icons exported from Figma node 2057:6283
 import { ReactComponent as HeartPulseIcon } from "../../assets/icons/heart-pulse.svg";
 import { ReactComponent as HourglassIcon } from "../../assets/icons/hourglass-line.svg";
@@ -42,7 +44,7 @@ import { DosagePicker } from "../../components/DosagePicker/DosagePicker";
 import { DurationPicker } from "../../components/DurationPicker/DurationPicker";
 import { AutocompleteTags } from "../../components/Autocomplete/AutocompleteTags";
 import { useDoctors } from "../../hooks/useDoctors";
-import { colors } from "../../styles/theme";
+import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { PrescriptionQueue } from "./PrescriptionQueue";
 import { Patient } from "../../hooks/usePatients";
 import { SessionBar } from "../../components/SessionBar/SessionBar";
@@ -374,10 +376,11 @@ const todayIso = (): string => {
 };
 
 // Format the secondary line of the patient identity card. Shape:
-// "(M|25)  9876543210" — gender shortened to M/F if needed; phone trailing.
-// Falls back gracefully when fields are missing.
-const formatPatientMeta = (
-  p: { gender: string | null; age: number | null; phone: string | null } | null
+// "M|64" — gender shortened, age joined with a pipe. Backend stores age in
+// months (consistent with PrescriptionQueue / queue list view); we convert
+// to years here. Phone is no longer included; it lives in Quick Actions.
+const formatPatientGenderAge = (
+  p: { gender: string | null; age: number | null } | null
 ): string => {
   if (!p) return "";
   const genderShort = (() => {
@@ -387,9 +390,9 @@ const formatPatientMeta = (
     if (g.startsWith("f")) return "F";
     return p.gender;
   })();
-  const ageStr = p.age != null ? String(p.age) : "";
-  const head = genderShort || ageStr ? `(${[genderShort, ageStr].filter(Boolean).join("|")})` : "";
-  return [head, p.phone ?? ""].filter(Boolean).join("  ");
+  const ageYears = p.age != null ? Math.floor(p.age / 12) : null;
+  const ageStr = ageYears != null ? String(ageYears) : "";
+  return [genderShort, ageStr].filter(Boolean).join("|");
 };
 
 // Figma node 2059:6764 — patient-context action list.
@@ -407,13 +410,6 @@ const ACTION_META: ActionMeta[] = [
   { icon: <FileIcon style={styles.actionIcon} />, label: "Files" },
   { icon: <HistoryIcon style={styles.actionIcon} />, label: "Timeline" },
   { icon: <BillCheckIcon style={styles.actionIcon} />, label: "Bills" },
-];
-
-// Figma node 2073:3264 — contact/edit card. Three rows, no active state.
-const CONTACT_ACTIONS: { icon: React.ReactNode; label: string }[] = [
-  { icon: <LetterIcon style={styles.actionIcon} />, label: "Email Patient" },
-  { icon: <VideocameraIcon style={styles.actionIcon} />, label: "Video Call Patient" },
-  { icon: <PenIcon style={styles.actionIcon} />, label: "Edit Patient Info" },
 ];
 
 // Figma node 2143:10730 — Reports view, swapped in when "Reports" is active.
@@ -1046,6 +1042,8 @@ export function PrescriptionPage() {
 
   const [showAddModal, setShowAddModal] = React.useState(false);
   const [showEditPatient, setShowEditPatient] = React.useState(false);
+  // AI Summary popover (opened from the ✨ button in the slim icon rail).
+  const [showAiSummary, setShowAiSummary] = React.useState(false);
   // The currently-open file row. null = list view.
   const [viewerOpen, setViewerOpen] = React.useState<ListRow | null>(null);
   const handleAddRows = (rows: AddReportRow[]) => {
@@ -1468,128 +1466,46 @@ export function PrescriptionPage() {
 
   return (
     <div ref={pageRootRef} style={styles.page}>
-      {/* Header — title + subtitle swap based on which left-rail action is
-          active. Reports view also surfaces an "+ Add Report" pill on the
-          right (Figma node 2143:11171). */}
-      <header style={styles.header}>
-        <div style={styles.headerLeft}>
-          <button
-            type="button"
-            style={styles.backButton}
-            aria-label="Back to patients"
-            onClick={() => {
-              setSelectedPatient(null);
-              setSelectedAppointmentId(null);
-            }}
-          >
-            <ArrowLeftIcon width={24} height={24} />
-          </button>
-        </div>
-        <div style={styles.headerRight}>
-          <div style={styles.headerTitleGroup}>
-            <h2 style={styles.title}>{headerTitle}</h2>
-            <p style={styles.subtitle}>{headerSubtitle}</p>
-          </div>
-          {listViewConfig && (
-            <button
-              type="button"
-              style={{
-                ...styles.addReportButton,
-                ...(canEditForm ? null : { opacity: 0.55, cursor: "not-allowed" }),
-              }}
-              onClick={() => setShowAddModal(true)}
-              disabled={!canEditForm}
-              title={!canEditForm ? (isLatestVisit ? "Start a session to upload" : "Past visits are read-only") : undefined}
-            >
-              <span style={styles.addReportPlus}>+</span>
-              <span>{listViewConfig.addLabel}</span>
-            </button>
-          )}
-          {/* Save button removed — saves are now auto-triggered every 30s
-              while a session is running, plus on End Session. */}
-        </div>
-      </header>
-
-      <div style={styles.body}>
-        {/* ─── Left column ──────────────────────────────────────────── */}
-        <aside style={styles.leftColumn}>
-          <div style={styles.patientWrapper}>
-            <div style={styles.avatar}>
+      {/* Sticky page header — on the patient chart the PATIENT is the context,
+          so the centered title is the patient identity (avatar + T--- eyebrow
+          + name) rather than the module name. Contact/edit actions sit at the
+          top-right as icon-only buttons. */}
+      <PageHeader
+        wrapTitle={false}
+        title={
+          <div style={styles.headerPatient}>
+            <div style={styles.headerAvatar}>
               <img
                 src={pickAvatar({
                   gender: selectedPatient?.gender,
-                  // backend stores age in months; the picker buckets in years
-                  ageYears:
-                    selectedPatient?.age != null
-                      ? Math.floor(selectedPatient.age / 12)
-                      : null,
+                  ageYears: selectedPatient?.age != null ? Math.floor(selectedPatient.age / 12) : null,
                 })}
                 alt=""
-                width={72}
-                height={72}
+                width={40}
+                height={40}
                 style={{ display: "block", objectFit: "contain" }}
               />
             </div>
-            <div style={styles.patientCard}>
-              <p style={styles.patientPrimary}>{selectedPatient?.name ?? ""}</p>
-              <p style={styles.patientSecondary}>
-                {formatPatientMeta(selectedPatient)}
-              </p>
-            </div>
+            {/* Inline: "T--- Ramesh (M|64)" — T-number muted, name dark. */}
+            <span style={styles.headerName}>
+              <span style={styles.headerTId}>T---</span>
+              {selectedPatient?.name ?? ""}
+              {(() => {
+                const meta = formatPatientGenderAge(selectedPatient);
+                return meta ? ` (${meta})` : "";
+              })()}
+            </span>
           </div>
+        }
+        onBack={() => {
+          setSelectedPatient(null);
+          setSelectedAppointmentId(null);
+        }}
+        backLabel="Back to patients"
+      />
 
-          <div style={styles.actionList}>
-            {ACTION_META.map((a, i) => {
-              const isActive = activeAction === i;
-              return (
-                <div
-                  key={a.label}
-                  style={{
-                    ...styles.actionRow,
-                    ...(isActive ? styles.actionRowActive : {}),
-                  }}
-                  onClick={() => setActiveAction(i)}
-                >
-                  {a.icon}
-                  <span style={styles.actionLabel}>{a.label}</span>
-                  <span
-                    style={{
-                      ...styles.actionBadge,
-                      ...(isActive ? styles.actionBadgeActive : {}),
-                    }}
-                  >
-                    {countFor(i)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* AI Summary card — Figma node 2143:11160. Static cream tile with
-              a serif heading and a paragraph-s body summarizing the patient. */}
-          <div style={styles.aiSummaryCard}>
-            <h4 style={styles.aiSummaryTitle}>AI Summary</h4>
-            <p style={styles.aiSummaryBody}>{AI_SUMMARY_TEXT}</p>
-          </div>
-
-          <div style={styles.shareCard}>
-            {CONTACT_ACTIONS.map((a) => (
-              <div
-                key={a.label}
-                style={{ ...styles.actionRow, cursor: a.label === "Edit Patient Info" ? "pointer" : "default" }}
-                onClick={a.label === "Edit Patient Info" ? () => setShowEditPatient(true) : undefined}
-                role={a.label === "Edit Patient Info" ? "button" : undefined}
-                tabIndex={a.label === "Edit Patient Info" ? 0 : undefined}
-                onKeyDown={a.label === "Edit Patient Info" ? (e) => { if (e.key === "Enter" || e.key === " ") setShowEditPatient(true); } : undefined}
-              >
-                {a.icon}
-                <span style={styles.actionLabel}>{a.label}</span>
-              </div>
-            ))}
-          </div>
-        </aside>
-
-        {/* ─── Right area — content swapped via activeAction. Locked
+      <div style={styles.body}>
+        {/* ─── Form area — content swapped via activeAction. Locked
               behind the session: until the user clicks Start on the
               SessionBar, pointer-events are blocked and the content fades
               very slightly so the form reads as "frozen". */}
@@ -1614,21 +1530,23 @@ export function PrescriptionPage() {
 
           {comingSoonLabel ? (
             <div style={styles.comingSoon}>
-              <h3 style={styles.comingSoonTitle}>{comingSoonLabel}</h3>
+              {/* Section title moved into the sticky <PageHeader/>; only the
+                  "Coming soon" body remains here. */}
               <p style={styles.comingSoonBody}>Coming soon</p>
             </div>
           ) : listViewConfig ? (
             <>
-              {/* List-view tabs — same pill style as the visit tabs but with
-                the category filters from the active config. */}
+              {/* List-view tabs — styled to match the Rx Pad home page
+                filter pills (View all / At Doc / …) with tier-responsive
+                horizontal padding. */}
               <div style={styles.tabsBar}>
                 {listViewConfig.tabs.map((label, i) => (
                   <div
                     key={label}
-                    style={{ ...styles.tab, ...(activeListTab === i ? styles.tabActive : styles.tabInactive) }}
+                    style={{ ...styles.listTab, ...(activeListTab === i ? styles.listTabActive : null) }}
                     onClick={() => setActiveListTab(i)}
                   >
-                    <span style={styles.tabLabel}>{label}</span>
+                    {label}
                   </div>
                 ))}
                 <div style={styles.reportViewToggle}>
@@ -1636,25 +1554,29 @@ export function PrescriptionPage() {
                     type="button"
                     style={{
                       ...styles.reportViewToggleButton,
-                      ...(viewMode === "list" ? styles.reportViewToggleButtonActive : {}),
+                      // Both states are neutral900 to match the sidebar's
+                      // icon tone; the active state adds a white pill bg.
+                      color: colors.neutral900,
+                      ...(viewMode === "list" ? { backgroundColor: colors.neutral100 } : {}),
                     }}
                     onClick={() => setViewMode("list")}
                     aria-label="List view"
                     aria-pressed={viewMode === "list"}
                   >
-                    <ListSortIcon width={24} height={24} />
+                    <ListSortIcon width={24} height={24} strokeWidth={1.5} />
                   </button>
                   <button
                     type="button"
                     style={{
                       ...styles.reportViewToggleButton,
-                      ...(viewMode === "grid" ? styles.reportViewToggleButtonActive : {}),
+                      color: colors.neutral900,
+                      ...(viewMode === "grid" ? { backgroundColor: colors.neutral100 } : {}),
                     }}
                     onClick={() => setViewMode("grid")}
                     aria-label="Grid view"
                     aria-pressed={viewMode === "grid"}
                   >
-                    <WidgetIcon width={24} height={24} />
+                    <WidgetIcon width={24} height={24} strokeWidth={1.5} />
                   </button>
                 </div>
               </div>
@@ -1669,6 +1591,35 @@ export function PrescriptionPage() {
                     <span style={{ textAlign: "center" }}>Category</span>
                     <span style={{ textAlign: "center" }}>{listViewConfig.dateColumn}</span>
                     <span style={{ textAlign: "center" }}>Actions</span>
+                  </div>
+                  {/* "+ Add file" affordance — replaces the page-header CTA.
+                      In list view it sits as a row at the top of the list. */}
+                  <div
+                    role="button"
+                    tabIndex={canEditForm ? 0 : -1}
+                    onClick={() => canEditForm && setShowAddModal(true)}
+                    onKeyDown={(e) => {
+                      if (!canEditForm) return;
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setShowAddModal(true);
+                      }
+                    }}
+                    style={{
+                      ...styles.reportRow,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: spacing.xs,
+                      color: colors.neutral900,
+                      border: `1px dashed ${colors.primary300}`,
+                      cursor: canEditForm ? "pointer" : "not-allowed",
+                      opacity: canEditForm ? 1 : 0.55,
+                    }}
+                    title={!canEditForm ? (isLatestVisit ? "Start a session to upload" : "Past visits are read-only") : undefined}
+                  >
+                    <span style={{ fontSize: fonts.size.h5, lineHeight: 1, fontFamily: fonts.family.primary }}>+</span>
+                    <span style={{ fontSize: fonts.size.m, fontFamily: fonts.family.primary }}>{listViewConfig.addLabel}</span>
                   </div>
                   {displayRows.map((r, i) => (
                     <div
@@ -1703,6 +1654,35 @@ export function PrescriptionPage() {
                    inner tile (file thumbnail placeholder + mic chip) and
                    name + date + size below. Kebab handle in top-right. */
                 <div style={styles.reportsGrid}>
+                  {/* "+ Add file" tile — replaces the page-header CTA.
+                      In grid view it sits as a dashed-bordered card at the
+                      start of the grid. */}
+                  <div
+                    role="button"
+                    tabIndex={canEditForm ? 0 : -1}
+                    onClick={() => canEditForm && setShowAddModal(true)}
+                    onKeyDown={(e) => {
+                      if (!canEditForm) return;
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setShowAddModal(true);
+                      }
+                    }}
+                    style={{
+                      ...styles.reportCard,
+                      backgroundColor: "transparent",
+                      border: `1px dashed ${colors.primary300}`,
+                      cursor: canEditForm ? "pointer" : "not-allowed",
+                      opacity: canEditForm ? 1 : 0.55,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: spacing.xs,
+                    }}
+                    title={!canEditForm ? (isLatestVisit ? "Start a session to upload" : "Past visits are read-only") : undefined}
+                  >
+                    <span style={{ fontSize: fonts.size.h2, lineHeight: 1, fontFamily: fonts.family.primary, color: colors.neutral900 }}>+</span>
+                    <span style={{ fontSize: fonts.size.m, fontFamily: fonts.family.primary, color: colors.neutral900 }}>{listViewConfig.addLabel}</span>
+                  </div>
                   {displayRows.map((r, i) => (
                     <div
                       key={r.id ?? i}
@@ -1859,6 +1839,9 @@ export function PrescriptionPage() {
                                     onClick={canToggle ? () => toggleVitalUnit(cellKey) : undefined}
                                     style={{
                                       ...styles.vitalUnit,
+                                      // Clickable toggles get a black stroke + text;
+                                      // pure-display units (cm/bpm/%) keep cream/grey.
+                                      ...(canToggle ? styles.vitalUnitClickable : null),
                                       width: v.unitWidth ?? 44,
                                       cursor: canToggle ? "pointer" : "default",
                                       ...(!valueValid ? styles.vitalUnitInvalid : {}),
@@ -2422,6 +2405,10 @@ export function PrescriptionPage() {
           onActiveChange={setFormActive}
           onStart={handleSessionStart}
           onEnd={handleSessionEnd}
+          // Lifted above the new bottom nav/actions bar so the two stack
+          // instead of overlapping (the session timer is planned for removal;
+          // the nav bar will then drop to the standard 20px bottom).
+          bottomOffset={88}
         />
       )}
 
@@ -2468,6 +2455,75 @@ export function PrescriptionPage() {
           </div>
         </div>
       </Modal>
+
+      {/* ─── Floating bottom bar — section nav (left) + contact actions
+          (right) + AI summary. Patient record navigation moved here from the
+          left rail so the form spans the full content width. */}
+      <div style={styles.bottomBar}>
+        <div style={styles.bottomNav} role="tablist" aria-label="Patient record sections">
+          {ACTION_META.map((a, i) => {
+            const isActive = activeAction === i;
+            const count = countFor(i);
+            return (
+              <button
+                key={a.label}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                style={{ ...styles.bottomNavItem, ...(isActive ? styles.bottomNavItemActive : {}) }}
+                onClick={() => setActiveAction(i)}
+              >
+                {a.icon}
+                <span>{a.label}</span>
+                {count > 0 && (
+                  <span style={{ ...styles.bottomNavBadge, ...(isActive ? styles.bottomNavBadgeActive : {}) }}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={styles.bottomDivider} aria-hidden />
+
+        <div style={styles.bottomActions}>
+          {selectedPatient?.phone && (
+            <a href={`tel:${selectedPatient.phone}`} style={styles.bottomActionBtn} title={selectedPatient.phone} aria-label={`Call ${selectedPatient.phone}`}>
+              <PhoneIcon style={styles.actionIcon} />
+            </a>
+          )}
+          <button type="button" style={styles.bottomActionBtn} title="Email Patient" aria-label="Email Patient">
+            <LetterIcon style={styles.actionIcon} />
+          </button>
+          <button type="button" style={styles.bottomActionBtn} title="Video Call Patient" aria-label="Video Call Patient">
+            <VideocameraIcon style={styles.actionIcon} />
+          </button>
+          <button type="button" style={styles.bottomActionBtn} title="Edit Patient Info" aria-label="Edit Patient Info" onClick={() => setShowEditPatient(true)}>
+            <PenIcon style={styles.actionIcon} />
+          </button>
+          <button
+            type="button"
+            style={{ ...styles.bottomActionBtn, ...(showAiSummary ? { backgroundColor: colors.primary100 } : {}) }}
+            title="AI Summary"
+            aria-label="AI Summary"
+            aria-expanded={showAiSummary}
+            onClick={() => setShowAiSummary((v) => !v)}
+          >
+            <span style={{ fontSize: 18, lineHeight: 1 }}>✨</span>
+          </button>
+        </div>
+      </div>
+
+      {showAiSummary && (
+        <>
+          <div style={styles.aiPopoverBackdrop} onClick={() => setShowAiSummary(false)} />
+          <div style={styles.aiPopover} role="dialog" aria-label="AI Summary">
+            <h4 style={styles.aiSummaryTitle}>AI Summary</h4>
+            <p style={styles.aiSummaryBody}>{AI_SUMMARY_TEXT}</p>
+          </div>
+        </>
+      )}
 
       {/* Add File modal. Drag-drop or click-to-choose, multi-file, per-file
           metadata (name, category, investigation date, tie-to-visit, notes).

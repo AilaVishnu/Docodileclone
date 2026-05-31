@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { styles } from "./AppointmentQueue.styles";
 import { fonts, colors } from "../../styles/theme";
 import { StatusBadge, PayBadge } from "./StatusBadge";
@@ -111,17 +111,20 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
       />
       {isOpen && (
         <div style={{
+          // Unified menu spec — see also TopNav.dropdown and actionMenu styles.
           position: "absolute",
           top: "calc(100% + 4px)",
           left: "50%",
           transform: "translateX(-50%)",
           backgroundColor: colors.neutral100,
           borderRadius: "12px",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
           zIndex: 100,
-          minWidth: "150px",
-          padding: "6px",
-          border: `1px solid #e5e7eb`,
+          minWidth: "160px",
+          padding: "12px 8px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "4px",
         }}>
           {STATUS_OPTIONS.map((opt) => (
             <div
@@ -130,15 +133,16 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
                 onStatusChange(appointment.id, opt.value);
                 setIsOpen(false);
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.neutral150; }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.active.shade200; }}
               onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
               style={{
-                padding: "10px 14px",
+                padding: "10px 16px",
                 cursor: "pointer",
                 borderRadius: "8px",
                 fontSize: fonts.size.s,
-                fontWeight: 500,
                 color: colors.neutral900,
+                fontFamily: fonts.family.primary,
+                transition: "background-color 0.15s",
               }}
             >
               {opt.label}
@@ -222,7 +226,7 @@ function ActionMenu({
                 setIsOpen(false);
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = colors.neutral150;
+                e.currentTarget.style.backgroundColor = colors.active.shade200;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = "transparent";
@@ -244,6 +248,21 @@ export function QueueTable({
   menuItems,
   onStatusChange,
 }: QueueTableProps) {
+  // Patient T-id map — same localStorage-backed counter that BookAppointment
+  // and PrescriptionQueue use. Keyed by appointment id; missing keys render
+  // a "T---" placeholder so the column stays uniform width.
+  const patientIdMap = useMemo<Record<string, number>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("docodile_patient_map") || "{}");
+    } catch {
+      return {};
+    }
+  }, []);
+  const tIdFor = (aptId: string) => {
+    const n = patientIdMap[aptId];
+    return n ? `T${String(n).padStart(3, "0")}` : "T---";
+  };
+
   if (appointments.length === 0) {
     return <ZeroQueue />;
   }
@@ -256,7 +275,7 @@ export function QueueTable({
               leftover width: Name stays capped at 256 (truncates), the 3-dots
               stays exactly 24px, and the name↔phone gap stretches/squeezes as
               the queue resizes. */}
-          <col style={{ width: "28px" }} />   {/* # */}
+          <col style={{ width: "48px" }} />   {/* # (T-number e.g. T001) */}
           <col />
           <col style={{ width: "var(--queue-name-w)" }} />  {/* Name (256 / 200, truncates) */}
           <col />
@@ -352,39 +371,25 @@ export function QueueTable({
                       (e.currentTarget as HTMLElement).style.backgroundColor = baseBg;
                     }}
                   >
-                    {/* # */}
+                    {/* # — T-number (e.g. T001). Falls back to "T---" when
+                        the appointment is not in the local id map. */}
                     <td style={styles.serialCell}>
-                      {apt.status === "IN_PROGRESS"
-                        ? String(appointments.filter((a, i) => i <= index && a.status === "IN_PROGRESS").length).padStart(2, "0")
-                        : "-"}
+                      {tIdFor(apt.id)}
                     </td>
 
                     <td style={spacerTd} aria-hidden />
 
-                    {/* Name + gender/age */}
+                    {/* Name — "<name> (M|64)" all in one style. */}
                     <td style={styles.nameCell}>
-                      <div style={styles.nameInner}>
-                        <span style={styles.namePrimary}>{apt.patientName}</span>
-                        {(apt.patientGender || apt.patientAge) && (
-                          <span style={styles.nameMeta}>
-                            {apt.patientGender && (
-                              <span>{apt.patientGender.charAt(0).toUpperCase()}</span>
-                            )}
-                            {apt.patientGender && apt.patientAge && (
-                              <span style={styles.nameMetaDot}>|</span>
-                            )}
-                            {apt.patientAge != null && apt.patientAge > 0 && (() => {
-                              const years = Math.floor(apt.patientAge / 12);
-                              const months = apt.patientAge % 12;
-                              let label = "";
-                              if (years > 0 && months > 0) label = `${years}y ${months}m`;
-                              else if (years > 0) label = `${years}y`;
-                              else label = `${months}m`;
-                              return <span>{label}</span>;
-                            })()}
-                          </span>
-                        )}
-                      </div>
+                      <span style={styles.namePrimary}>
+                        {apt.patientName}
+                        {(() => {
+                          const g = apt.patientGender ? apt.patientGender.charAt(0).toUpperCase() : "";
+                          const years = apt.patientAge != null && apt.patientAge > 0 ? Math.floor(apt.patientAge / 12) : null;
+                          const parts = [g, years != null ? String(years) : ""].filter(Boolean);
+                          return parts.length ? ` (${parts.join("|")})` : "";
+                        })()}
+                      </span>
                     </td>
 
                     <td style={spacerTd} aria-hidden />
@@ -418,14 +423,14 @@ export function QueueTable({
                     <td style={spacerTd} aria-hidden />
 
                     {/* Type */}
-                    <td style={{ ...styles.td, textAlign: "center", padding: "14px 4px" }}>
+                    <td style={{ ...styles.td, textAlign: "center", padding: "10px 4px" }}>
                       <TypeBadge type={apt.type} />
                     </td>
 
                     <td style={spacerTd} aria-hidden />
 
                     {/* Time */}
-                    <td style={{ ...styles.td, textAlign: "center", padding: "14px 4px" }}>
+                    <td style={{ ...styles.td, textAlign: "center", padding: "10px 4px" }}>
                       <span style={styles.time}>{apt.scheduledTime}</span>
                       {apt.isWalkin && (
                         <span style={styles.walkinBadge}>Walk-in</span>
@@ -435,7 +440,7 @@ export function QueueTable({
                     <td style={spacerTd} aria-hidden />
 
                     {/* Status badge */}
-                    <td style={{ ...styles.td, textAlign: "center", padding: "14px 4px" }}>
+                    <td style={{ ...styles.td, textAlign: "center", padding: "10px 4px" }}>
                       {onStatusChange ? (
                         <StatusDropdown
                           appointment={apt}
@@ -457,7 +462,7 @@ export function QueueTable({
                     <td style={spacerTd} aria-hidden />
 
                     {/* Action menu — zero horizontal padding */}
-                    <td style={{ ...styles.td, padding: "14px 0" }}>
+                    <td style={{ ...styles.td, padding: "10px 0" }}>
                       {menuItems && menuItems.length > 0 ? (
                         <ActionMenu
                           appointment={apt}

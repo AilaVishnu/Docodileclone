@@ -118,10 +118,9 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       top: '56px',
       right: 0,
       backgroundColor: colors.neutral100,
-      borderRadius: radii.m,
+      borderRadius: radii.xl,
       boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-      border: `1px solid ${colors.neutral200}`,
-      padding: spacing.xs,
+      padding: `${spacing.s} ${spacing.xs}`,
       minWidth: '200px',
       display: 'flex',
       flexDirection: 'column' as const,
@@ -143,7 +142,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       width: '100%',
     },
     dropdownItemHover: {
-      backgroundColor: colors.active.shade100,
+      backgroundColor: colors.active.shade200,
     },
     dropdownItemDestructive: {
       color: colors.red200,

@@ -66,6 +66,12 @@ type SessionBarProps = {
    * this device's localStorage.
    */
   recordedDurationSec?: number | null;
+  /**
+   * Override the bar's distance from the viewport bottom (px). Defaults to
+   * the standard 20px. The prescription page raises this so the bar floats
+   * ABOVE the new bottom nav/actions bar instead of colliding with it.
+   */
+  bottomOffset?: number;
 };
 
 // Wall-clock based session state. Total elapsed time is reconstructed
@@ -117,7 +123,11 @@ export function SessionBar({
   storageKey,
   readOnly = false,
   recordedDurationSec = null,
+  bottomOffset,
 }: SessionBarProps) {
+  // Optional bottom override so the host can lift the bar above other
+  // floating UI (e.g. the prescription page's bottom nav/actions bar).
+  const barPos = bottomOffset != null ? { bottom: bottomOffset } : null;
   // Restore previous state if the visit had one — covers Pause + navigate
   // away + come back, plus reopening a visit that ended earlier. Skipped
   // entirely in readOnly mode so historic-visit tabs don't pull stale
@@ -236,7 +246,7 @@ export function SessionBar({
   // or read-only.
   if (readOnly) {
     return (
-      <div style={{ ...styles.bar, ...styles.barIdle }}>
+      <div style={{ ...styles.bar, ...styles.barIdle, ...barPos }}>
         <span style={{ ...styles.timer, color: colors.primary100 }}>
           {formatTimer(recordedDurationSec ?? 0)}
         </span>
@@ -260,7 +270,7 @@ export function SessionBar({
 
   return (
     <>
-    <div style={{ ...styles.bar, ...styles.barIdle }}>
+    <div style={{ ...styles.bar, ...styles.barIdle, ...barPos }}>
       <span
         style={{
           ...styles.timer,

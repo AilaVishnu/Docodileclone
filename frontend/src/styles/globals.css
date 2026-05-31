@@ -196,6 +196,9 @@ body {
   --queue-cell-padx: 28px;    /* th/td horizontal padding inside the table */
   --queue-name-w: 256px;      /* Name column cap (truncates beyond) */
 
+  /* Rx Pad ("Today's Queue") — filter tab pills (View all / At Doc / …) */
+  --rxq-tab-padx: 16px;       /* horizontal padding inside each tab pill */
+
   /* TopNav (header chrome) — baseline at 1440 */
   --topnav-h: 70px;
   /* Search bar is a FIXED width; the empty space between it and the action
@@ -317,6 +320,10 @@ body {
 
     /* Narrower Name column at 1200–1439 to buy table width */
     --queue-name-w: 200px;
+
+    /* Rx Pad tab pills compact slightly at 1200–1439 so the row breathes
+       (At Doc / In Progress / Waiting / Completed + the view-mode toggle). */
+    --rxq-tab-padx: 12px;
 
     /* Home content is a touch narrower in the compact tier */
     --home-content-max: 1200px;

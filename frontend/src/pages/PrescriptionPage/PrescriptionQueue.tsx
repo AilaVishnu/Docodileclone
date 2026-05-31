@@ -8,6 +8,7 @@ import { loadStartedSet } from "../../utils/sessionStarted";
 import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { ReactComponent as RestartIcon } from "../../assets/icons/restart-24.svg";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { styles } from "./PrescriptionQueue.styles";
 
@@ -44,7 +45,7 @@ type PrescriptionQueueProps = {
 const TAB_ITEMS: { id: StatusFilter; label: string }[] = [
   { id: "all", label: "View all" },
   { id: "AT_DOC", label: "At Doc" },
-  { id: "IN_PROGRESS", label: "In Progress" },
+  { id: "IN_PROGRESS", label: "Ongoing" },
   { id: "WAITING", label: "Waiting" },
   { id: "COMPLETED", label: "Completed" },
 ];
@@ -199,49 +200,37 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
 
   return (
     <div style={styles.page}>
-      <h1 style={{ ...styles.title, zIndex: showDatePicker ? 1100 : "auto", position: "relative" }}>
-        <span
-          onClick={() => setShowDatePicker((v) => !v)}
-          style={{
-            textDecoration: "underline",
-            cursor: "pointer",
-            color: colors.neutral900,
-            position: "relative",
-            display: "inline-block",
-          }}
-        >
-          {dateLabel}
-          {showDatePicker && (
-            <DatePicker
-              selectedDate={selectedDate}
-              onSelect={(d) => {
-                setSelectedDate(d);
-                setShowDatePicker(false);
-              }}
-              onClose={() => setShowDatePicker(false)}
+      <PageHeader
+        title={
+          <>
+            <span
+              onClick={() => setShowDatePicker((v) => !v)}
               style={{
-                top: "calc(100% + 12px)",
-                left: "50%",
-                transform: "translateX(-50%)",
+                textDecoration: "underline",
+                cursor: "pointer",
+                color: colors.neutral900,
+                position: "relative",
+                display: "inline-block",
+                zIndex: showDatePicker ? 1100 : "auto",
               }}
-              showDoneButton
-            />
-          )}
-        </span>{" "}
-        Queue
-      </h1>
-
-      {showDatePicker && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            zIndex: 1050,
-          }}
-          onClick={() => setShowDatePicker(false)}
-        />
-      )}
+            >
+              {dateLabel}
+              {showDatePicker && (
+                <DatePicker
+                  selectedDate={selectedDate}
+                  onSelect={(d) => {
+                    setSelectedDate(d);
+                    setShowDatePicker(false);
+                  }}
+                  onClose={() => setShowDatePicker(false)}
+                  showDoneButton
+                />
+              )}
+            </span>{" "}
+            Queue
+          </>
+        }
+      />
 
       <div style={styles.controls}>
         <div style={styles.tabs} role="tablist" aria-label="Filter by status">
@@ -270,7 +259,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
             aria-label="List view"
             aria-pressed={viewMode === "list"}
           >
-            <ListSortIcon width={20} height={20} />
+            <ListSortIcon width={20} height={20} strokeWidth={1.5} />
           </button>
           <button
             type="button"
@@ -279,7 +268,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
             aria-label="Grid view"
             aria-pressed={viewMode === "grid"}
           >
-            <WidgetIcon width={20} height={20} />
+            <WidgetIcon width={20} height={20} strokeWidth={1.5} />
           </button>
         </div>
       </div>
@@ -331,25 +320,16 @@ function PatientCard({
       />
       <div style={isList ? styles.cardListBody : styles.cardBody}>
         <p style={styles.cardTitle}>
-          <span style={styles.cardTitleName}>{tId}: {apt.patientName}</span>
-          {meta && (
-            <>
-              <br />
-              <span style={styles.cardTitleMeta}>{meta}</span>
-            </>
-          )}
+          {/* Two lines: T-number on top, then "<name> (M|64)". Both truncate
+              with an ellipsis instead of wrapping. */}
+          <span style={{ ...styles.cardTitleName, display: "block", maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tId}</span>
+          <span style={{ ...styles.cardTitleMeta, display: "block", maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {apt.patientName}{meta ? ` ${meta}` : ""}
+          </span>
         </p>
         <div style={styles.cardRows}>
           <CardRow label="Service" value={abbreviateService(apt.service)} />
-          <CardRow
-            label="Type"
-            value={
-              <span style={styles.typeRow}>
-                <RestartIcon width={18} height={18} />
-                {apt.type ?? "—"}
-              </span>
-            }
-          />
+          <CardRow label="Type" value={apt.type ?? "—"} />
           <CardRow label="Time" value={time} />
           <CardRow
             label="Status"
@@ -365,6 +345,11 @@ function PatientCard({
 }
 
 // ─── List view (Appointment Queue-style table) ───────────────────────────────
+
+// Spacer cells between data columns — bottom border continues across the row
+// so the row underline reads as a single line. Mirrors the QueueTable pattern.
+const spacerTh: React.CSSProperties = { borderBottom: `1px solid ${colors.primary300}`, padding: 0 };
+const spacerTd: React.CSSProperties = { padding: 0 };
 
 function PatientListTable({
   appointments,
@@ -383,26 +368,43 @@ function PatientListTable({
   return (
     <div style={styles.tableWrap}>
       <table style={styles.table}>
+        {/* Spacer-cell pattern matches AppointmentQueue's QueueTable —
+            fixed widths for every data column, one flexible spacer absorbs
+            leftover width, the rest are uniform inter-column gaps. */}
         <colgroup>
-          <col style={{ width: 48 }} />
-          <col style={{ width: "26%" }} />
-          <col style={{ width: "16%" }} />
-          <col style={{ width: "12%" }} />
-          <col style={{ width: "10%" }} />
-          <col style={{ width: "10%" }} />
-          <col style={{ width: "12%" }} />
-          <col style={{ width: 120 }} />
+          <col style={{ width: "48px" }} />        {/* # (T-number, e.g. T001) */}
+          <col />                                   {/* flex spacer — absorbs leftover */}
+          <col style={{ width: "var(--queue-name-w)" }} />  {/* Name (256 / 200, truncates) */}
+          <col />
+          <col style={{ width: "108px" }} />       {/* Phone */}
+          <col />
+          <col style={{ width: "72px" }} />        {/* Service */}
+          <col />
+          <col style={{ width: "96px" }} />        {/* Type */}
+          <col />
+          <col style={{ width: "84px" }} />        {/* Time */}
+          <col />
+          <col style={{ width: "98px" }} />        {/* Status */}
+          <col />
+          <col style={{ width: "120px" }} />       {/* View Pad button */}
         </colgroup>
         <thead>
           <tr>
-            <th style={styles.th}>#</th>
-            <th style={styles.th}>Name</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Phone</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Service</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Type</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Time</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Status</th>
-            <th style={styles.th} />
+            <th style={{ ...styles.th, textAlign: "left", paddingLeft: 0, paddingRight: 0 }}>#</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "left", paddingLeft: 0, paddingRight: "4px" }}>Name</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Phone</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Service</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Type</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Time</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Status</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, paddingLeft: 0, paddingRight: 0 }} />
           </tr>
         </thead>
         <tbody>
@@ -420,7 +422,7 @@ function PatientListTable({
               <React.Fragment key={apt.id}>
                 {isNewGroup && (
                   <tr>
-                    <td colSpan={8} style={{ height: 40, border: "none", padding: 0 }}>
+                    <td colSpan={15} style={{ height: 40, border: "none", padding: 0 }}>
                       <div
                         style={{
                           height: "100%",
@@ -441,52 +443,68 @@ function PatientListTable({
                   </tr>
                 )}
                 <tr style={{ ...styles.tr, backgroundColor: rowBg }}>
-                <td style={styles.tdSerial}>
-                  {tNum
-                    ? `T${String(tNum).padStart(3, "0")}`
-                    : String(index + 1).padStart(2, "0")}
-                </td>
-                <td style={styles.tdName}>
-                  <span style={styles.tdNameInner}>
-                    <span style={styles.tdNamePrimary}>{apt.patientName}</span>
-                    {(apt.patientGender || ageYears != null) && (
-                      <span style={styles.tdNameMeta}>
-                        {apt.patientGender
-                          ? apt.patientGender.charAt(0).toUpperCase()
-                          : "?"}
-                        {ageYears != null && (
-                          <>
-                            <span style={styles.tdNameDivider}>|</span>
-                            {ageYears}y
-                          </>
-                        )}
-                      </span>
-                    )}
-                  </span>
-                </td>
-                <td style={{ ...styles.td, textAlign: "center" }}>
-                  {apt.patientPhone ?? "—"}
-                </td>
-                <td style={{ ...styles.td, textAlign: "center" }}>
-                  {abbreviateService(apt.service)}
-                </td>
-                <td style={{ ...styles.td, textAlign: "center" }}>
-                  <span style={styles.typeRow}>
-                    <RestartIcon width={18} height={18} />
-                    {apt.type ?? "—"}
-                  </span>
-                </td>
-                <td style={{ ...styles.td, textAlign: "center" }}>
-                  {formatTime(apt.scheduledTime)}
-                </td>
-                <td style={{ ...styles.td, textAlign: "center" }}>
-                  <StatusPill status={apt.status} started={started} />
-                </td>
-                <td style={{ ...styles.td, textAlign: "center" }}>
-                  <Button variant="dark" size="sm" onClick={() => onViewPad(apt)}>
-                    View Pad
-                  </Button>
-                </td>
+                  {/* # — T-number with "T---" placeholder when the patient
+                      isn't yet in the local id map (no fallback to a row
+                      index — keep the column uniformly T-prefixed). */}
+                  <td style={{ ...styles.tdSerial, paddingLeft: 0, paddingRight: 0 }}>
+                    {tNum ? `T${String(tNum).padStart(3, "0")}` : "T---"}
+                  </td>
+                  <td style={spacerTd} aria-hidden />
+
+                  {/* Name — "<name> (M|64)" inline, single font style. */}
+                  <td style={{ ...styles.tdName, paddingLeft: 0, paddingRight: "4px" }}>
+                    <span style={styles.tdNamePrimary}>
+                      {apt.patientName}
+                      {(() => {
+                        const g = apt.patientGender ? apt.patientGender.charAt(0).toUpperCase() : "";
+                        const parts = [g, ageYears != null ? String(ageYears) : ""].filter(Boolean);
+                        return parts.length ? ` (${parts.join("|")})` : "";
+                      })()}
+                    </span>
+                  </td>
+                  <td style={spacerTd} aria-hidden />
+
+                  {/* Phone */}
+                  <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
+                    {apt.patientPhone ?? "—"}
+                  </td>
+                  <td style={spacerTd} aria-hidden />
+
+                  {/* Service */}
+                  <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
+                    {abbreviateService(apt.service)}
+                  </td>
+                  <td style={spacerTd} aria-hidden />
+
+                  {/* Type — RestartIcon hides at the 1200–1439 tier via the
+                      .type-badge-icon CSS rule in globals.css (shared with
+                      AppointmentQueue's TypeBadge). */}
+                  <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
+                    <span style={styles.typeRow}>
+                      <RestartIcon className="type-badge-icon" width={18} height={18} />
+                      {apt.type ?? "—"}
+                    </span>
+                  </td>
+                  <td style={spacerTd} aria-hidden />
+
+                  {/* Time */}
+                  <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
+                    {formatTime(apt.scheduledTime)}
+                  </td>
+                  <td style={spacerTd} aria-hidden />
+
+                  {/* Status */}
+                  <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
+                    <StatusPill status={apt.status} started={started} />
+                  </td>
+                  <td style={spacerTd} aria-hidden />
+
+                  {/* View Pad */}
+                  <td style={{ ...styles.td, textAlign: "center", paddingLeft: 0, paddingRight: 0 }}>
+                    <Button variant="dark" size="sm" onClick={() => onViewPad(apt)}>
+                      View Pad
+                    </Button>
+                  </td>
                 </tr>
               </React.Fragment>
             );
@@ -498,10 +516,19 @@ function PatientListTable({
 }
 
 function CardRow({ label, value }: { label: string; value: React.ReactNode }) {
+  // Text values (Service / Type / Time) truncate with an ellipsis inside the
+  // 80px column. Skip the truncation for ReactNode values (Status pill) so
+  // the pill's own min-width is not clipped by the column.
+  const isText = typeof value === "string" || typeof value === "number";
+  const truncate: React.CSSProperties = {
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  };
   return (
     <div style={styles.row}>
-      <span style={styles.rowLabel}>{label}</span>
-      <span style={styles.rowValue}>{value}</span>
+      <span style={{ ...styles.rowLabel, ...truncate }}>{label}</span>
+      <span style={{ ...styles.rowValue, ...(isText ? truncate : {}) }}>{value}</span>
     </div>
   );
 }
@@ -530,7 +557,7 @@ function StatusPill({
   if (!variant) return <span style={pillStyles.fallback}>{status}</span>;
   const META: Record<PillKey, { bg: string; label: string }> = {
     AT_DOC: { bg: colors.neutral100, label: "At Doc" },
-    IN_PROGRESS: { bg: colors.secondary100, label: "In Progress" },
+    IN_PROGRESS: { bg: colors.secondary100, label: "Ongoing" },
     WAITING: { bg: colors.yellow100, label: "Waiting" },
     COMPLETED: { bg: colors.green100, label: "Completed" },
   };
@@ -548,17 +575,18 @@ const pillStyles: Record<string, React.CSSProperties> = {
     borderRadius: radii.xs,
     color: colors.neutral900,
     fontFamily: fonts.family.primary,
-    // control.xs (static 12px) so the pill text never grows with the
-    // page-level fluid type ramp; matches Figma 566:10941 caption.
-    fontSize: fonts.control.xs,
-    lineHeight: fonts.lineHeight.xs,
+    // Matches the queue row's <StatusBadge/>: paragraph-s (14px) at
+    // line-height 16. Was control.xs (12) — bumped so the card pill reads
+    // at the same weight as the row badge.
+    fontSize: fonts.size.s,
+    lineHeight: "16px",
     fontWeight: fonts.weight.regular,
   },
   fallback: {
     color: colors.neutral500,
     fontFamily: fonts.family.primary,
-    fontSize: fonts.control.xs,
-    lineHeight: fonts.lineHeight.xs,
+    fontSize: fonts.size.s,
+    lineHeight: "16px",
   },
 };
 
