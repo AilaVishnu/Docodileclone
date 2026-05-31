@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.UUID
 
 // Thrown when a booking would violate the "one appointment per patient
@@ -48,15 +50,20 @@ class AppointmentService(
 
         // Find existing patient by phone within this clinic, or create a new one.
         // The phone column stores whatever string the user typed ("+91 99999
-        // 99999", "9999999999", "+91-99999-99999", etc.) and an exact-string
-        // lookup treated all of those as different patients — so booking the
-        // same person twice silently created duplicate Patient rows. Match
-        // on the digits-only suffix instead so any reasonable formatting of
-        // the same number is recognised as the same patient.
+        // 99999", "9999999999", "+91-99999-99999", etc.), so we match on the
+        // digits-only suffix — any reasonable formatting of the same number
+        // resolves to the same patient.
+        //
+        // A phone number is NOT unique per patient: families routinely share
+        // one mobile. So phone alone can't identify the person — we also
+        // require the name to match. Booking "Sita" on a number already held
+        // by "Ravi" therefore creates a new patient for Sita instead of
+        // overwriting Ravi's record.
         val reqDigits = normalizePhone(request.patientPhone)
         val existingPatient = reqDigits?.let { digits ->
             patientRepository.findAllByClinicId(clinic.id!!)
                 .filter { normalizePhone(it.phone) == digits }
+                .filter { it.name.trim().equals(request.patientName.trim(), ignoreCase = true) }
                 .minByOrNull { it.createdAt ?: Instant.EPOCH }
         }
         val savedPatient = if (existingPatient != null) {
@@ -76,25 +83,36 @@ class AppointmentService(
                 gender = request.patientGender,
                 dob = request.patientDob?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() },
                 age = request.patientAge,
-                createdAt = Instant.now()
+                createdAt = Instant.now(),
+                // Next free patient number for this clinic, continuing the
+                // sequence used by imports. See V46 / PatientRepository.
+                displayNo = patientRepository.findMaxDisplayNoByClinicId(clinic.id!!) + 1
             )
             patientRepository.save(patient)
         }
 
         // One appointment per patient per day, per clinic. Blocks both the
-        // soft-FE-only path and any direct API call. Storage-side guard is
-        // the partial unique index added in V25; this check just lets us
-        // surface a friendly 409 instead of letting the constraint trip.
-        val dayStart = request.scheduledTime.toLocalDate().atStartOfDay()
-        val dayEnd = request.scheduledTime.toLocalDate().atTime(23, 59, 59)
-        val sameDay = appointmentRepository
-            .findAllByClinicIdAndPatientIdAndScheduledTimeBetween(
-                clinic.id!!, savedPatient.id!!, dayStart, dayEnd,
-            )
-        if (sameDay.isNotEmpty()) {
-            throw DuplicateAppointmentException(
-                "${savedPatient.name} already has an appointment on ${request.scheduledTime.toLocalDate()}",
-            )
+        // soft-FE-only path and any direct API call. The DB-side UNIQUE
+        // index was relaxed in V44 — same-day duplicates are allowed when
+        // the caller passes `force = true`, which the booking UI sets
+        // after the staff explicitly confirms the second appointment.
+        if (!request.force) {
+            val dayStart = request.scheduledTime.toLocalDate().atStartOfDay()
+            val dayEnd = request.scheduledTime.toLocalDate().atTime(23, 59, 59)
+            val sameDay = appointmentRepository
+                .findAllByClinicIdAndPatientIdAndScheduledTimeBetween(
+                    clinic.id!!, savedPatient.id!!, dayStart, dayEnd,
+                )
+            if (sameDay.isNotEmpty()) {
+                val timeFmt = DateTimeFormatter.ofPattern("hh:mm a", Locale.ENGLISH)
+                val times = sameDay
+                    .mapNotNull { it.scheduledTime?.format(timeFmt) }
+                    .joinToString(", ")
+                val suffix = if (times.isNotEmpty()) " at $times" else ""
+                throw DuplicateAppointmentException(
+                    "${savedPatient.name} already has an appointment on ${request.scheduledTime.toLocalDate()}$suffix",
+                )
+            }
         }
 
         val appointment = Appointment(
@@ -121,6 +139,20 @@ class AppointmentService(
     fun updateAppointment(appointmentId: UUID, request: BookAppointmentRequest): AppointmentDTO {
         val appointment = appointmentRepository.findById(appointmentId)
             .orElseThrow { IllegalArgumentException("Appointment not found") }
+
+        // Server-side enforcement of the edit window — mirrors the
+        // BookAppointment modal's readOnly gates so a direct API call
+        // can't bypass them. COMPLETED locks instantly; any other
+        // status respects the 24h window from createdAt.
+        if (appointment.status?.uppercase() == "COMPLETED") {
+            throw IllegalArgumentException("Appointment is completed and locked.")
+        }
+        appointment.createdAt?.let { created ->
+            val ageMs = java.time.Duration.between(created, java.time.Instant.now()).toMillis()
+            if (ageMs > 24L * 60 * 60 * 1000) {
+                throw IllegalArgumentException("Edit window closed (24h after booking). This appointment is locked.")
+            }
+        }
 
         val doctor = appUserRepository.findById(request.doctorId)
             .orElseThrow { IllegalArgumentException("Doctor not found") }
@@ -152,6 +184,26 @@ class AppointmentService(
     }
 
     @Transactional
+    fun updatePayment(
+        appointmentId: UUID,
+        payStatus: String,
+        paymentMethod: String?,
+        pharmacyAmount: java.math.BigDecimal? = null,
+        discountAmount: java.math.BigDecimal? = null,
+    ): AppointmentDTO {
+        val appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow { IllegalArgumentException("Appointment not found") }
+        appointment.payStatus = payStatus
+        appointment.paymentMethod = paymentMethod
+        // Only overwrite pharmacy_amount / discount when the caller passes
+        // a value (null = "don't touch"). Lets independent flows update
+        // payment status without nuking each other's fields.
+        if (pharmacyAmount != null) appointment.pharmacyAmount = pharmacyAmount
+        if (discountAmount != null) appointment.discountAmount = discountAmount
+        return appointmentRepository.save(appointment).toDTO()
+    }
+
+    @Transactional
     fun updateStatus(appointmentId: UUID, status: String): AppointmentDTO {
         val appointment = appointmentRepository.findById(appointmentId)
             .orElseThrow { IllegalArgumentException("Appointment not found") }
@@ -179,6 +231,7 @@ class AppointmentService(
             patientGender = this.patient?.gender,
             patientDob = this.patient?.dob?.toString(),
             patientAge = this.patient?.age,
+            patientDisplayNo = this.patient?.displayNo,
             doctorId = this.doctor?.id ?: UUID.randomUUID(),
             scheduledTime = this.scheduledTime,
             isWalkin = this.isWalkin,
@@ -188,7 +241,9 @@ class AppointmentService(
             payStatus = this.payStatus,
             paymentMethod = this.paymentMethod,
             notes = this.notes,
-            fee = this.fee
+            fee = this.fee,
+            patientArchived = this.patient?.archived ?: false,
+            createdAt = this.createdAt
         )
     }
 }

@@ -14,6 +14,10 @@ export type Staff = {
   qualification: string;
   medicalCouncil: string;
   experienceYears: string;
+  /** False once the staff member has been removed/deactivated from the
+   *  clinic. They stay on record (history) but are hidden from booking and
+   *  login, and surface in the "Deactivated" list for reactivation. */
+  active: boolean;
 };
 
 export type Clinic = {

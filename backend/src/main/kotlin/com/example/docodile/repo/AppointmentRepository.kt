@@ -2,6 +2,7 @@ package com.example.docodile.repo
 
 import com.example.docodile.domain.Appointment
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.time.LocalDateTime
@@ -48,4 +49,20 @@ interface AppointmentRepository : JpaRepository<Appointment, UUID> {
         start: LocalDateTime,
         end: LocalDateTime
     ): List<Appointment>
+
+    // Bulk-flip every still-pending appointment whose scheduled time falls
+    // before `cutoff` to NO_SHOW. Run nightly by NoShowSweepJob; returns
+    // the number of rows touched so the job can log a useful number.
+    // Matches BOOKED / SCHEDULED / WAITING case-insensitively — anything
+    // that means "patient hasn't been seen yet" gets flipped.
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        UPDATE Appointment a
+           SET a.status = 'NO_SHOW'
+         WHERE UPPER(a.status) IN ('BOOKED', 'SCHEDULED', 'WAITING')
+           AND a.scheduledTime < :cutoff
+        """
+    )
+    fun markBookedBeforeAsNoShow(@Param("cutoff") cutoff: LocalDateTime): Int
 }

@@ -1,6 +1,8 @@
 import React from "react";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { PrintTemplateEditor } from "./PrintTemplate/PrintTemplateEditor";
+import { ArchivedPatientsList } from "./ArchivedPatients/ArchivedPatientsList";
+import { ImportData } from "./ImportData/ImportData";
 import { DEFAULT_SETTINGS_SECTION, SETTINGS_SECTIONS, SettingsSection } from "./sections";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -20,6 +22,8 @@ const META = Object.fromEntries(
 
 const SUBS: Partial<Record<SettingsSection, string>> = {
   "print-template": "Configure how prescriptions look when printed. Defaults to the template marked as default.",
+  "archived-patients": "Patients you've archived from the active list. Restore one to bring them back into the patient picker and queues.",
+  "import-data": "Migrate your records from another platform into Docodile. Pick the system you're coming from to get the matching importer.",
 };
 
 export function SettingsPage({ section }: SettingsPageProps) {
@@ -38,7 +42,9 @@ export function SettingsPage({ section }: SettingsPageProps) {
 
       <div>
         {active === "print-template" && <PrintTemplateEditor />}
-        {active !== "print-template" && (
+        {active === "archived-patients" && <ArchivedPatientsList />}
+        {active === "import-data" && <ImportData />}
+        {active !== "print-template" && active !== "archived-patients" && active !== "import-data" && (
           <div style={S.placeholder}>
             <h3 style={{ margin: 0, color: colors.neutral900 }}>Coming soon</h3>
             <p style={{ margin: 0, color: colors.neutral500, fontSize: fonts.size.s }}>

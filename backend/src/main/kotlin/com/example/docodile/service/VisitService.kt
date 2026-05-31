@@ -29,17 +29,10 @@ class VisitService(
     fun listForPatient(patientId: UUID): List<VisitDTO> {
         val clinicId = currentUser.clinicId()
 
-        // Collect all patient UUIDs that share the same phone number so that
-        // visits created before the find-or-create fix (which gave the same
-        // person different UUIDs on each booking) are all returned together.
-        val phone = patientRepository.findById(patientId).orElse(null)?.phone
-        val patientIds: List<UUID> = if (!phone.isNullOrBlank()) {
-            patientRepository.findAllByClinicIdAndPhone(clinicId, phone).map { it.id }
-        } else {
-            listOf(patientId)
-        }
-
-        return visitRepository.findAllByClinicIdAndPatientIdInOrderByVisitDateAsc(clinicId, patientIds)
+        // Strictly this patient's own visits. A phone number can be shared
+        // across a family, so visit history must never be merged by phone —
+        // each patient row owns its own history.
+        return visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAsc(clinicId, patientId)
             .map { it.toDTO(loadRxRows(it.id)) }
     }
 
@@ -142,6 +135,9 @@ class VisitService(
         visit.sessionStartedAt = r.sessionStartedAt
         visit.sessionEndedAt = r.sessionEndedAt
         visit.sessionDurationSec = r.sessionDurationSec
+        // Tag the visit with its appointment on create; never null it out
+        // on a later update that omits the field.
+        if (r.appointmentId != null) visit.appointmentId = r.appointmentId
     }
 
     private fun saveRxRows(visit: Visit, rows: List<RxRowDTO>): List<RxRow> =
@@ -154,6 +150,7 @@ class VisitService(
                 dosage = dto.dosage,
                 whenToTake = dto.whenToTake,
                 frequency = dto.frequency,
+                frequencyInterval = dto.frequencyInterval,
                 duration = dto.duration,
                 notes = dto.notes,
                 createdAt = Instant.now()
@@ -171,6 +168,7 @@ class VisitService(
         dosage = this.dosage,
         whenToTake = this.whenToTake,
         frequency = this.frequency,
+        frequencyInterval = this.frequencyInterval,
         duration = this.duration,
         notes = this.notes
     )
@@ -207,6 +205,7 @@ class VisitService(
         sessionStartedAt = this.sessionStartedAt,
         sessionEndedAt = this.sessionEndedAt,
         sessionDurationSec = this.sessionDurationSec,
+        appointmentId = this.appointmentId,
         prescriptions = rxRows
     )
 }

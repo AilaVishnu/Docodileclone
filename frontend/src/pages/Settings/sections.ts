@@ -8,6 +8,8 @@
 
 export type SettingsSection =
   | "print-template"
+  | "archived-patients"
+  | "import-data"
   | "profile"
   | "clinic"
   | "users"
@@ -21,11 +23,13 @@ export type SettingsSectionMeta = {
 };
 
 export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
-  { id: "print-template", label: "Print template", ready: true,  group: "Workflow" },
-  { id: "profile",         label: "Profile",        ready: false, group: "Account" },
-  { id: "clinic",          label: "Clinic",         ready: false, group: "Account" },
-  { id: "users",           label: "Users",          ready: false, group: "Account" },
-  { id: "billing",         label: "Billing",        ready: false, group: "Account" },
+  { id: "print-template",     label: "Print template",     ready: true,  group: "Workflow" },
+  { id: "archived-patients",  label: "Archived patients",  ready: true,  group: "Workflow" },
+  { id: "import-data",        label: "Import data",        ready: true,  group: "Workflow" },
+  { id: "profile",            label: "Profile",            ready: false, group: "Account" },
+  { id: "clinic",             label: "Clinic",             ready: false, group: "Account" },
+  { id: "users",              label: "Users",              ready: false, group: "Account" },
+  { id: "billing",            label: "Billing",            ready: false, group: "Account" },
 ];
 
 export const DEFAULT_SETTINGS_SECTION: SettingsSection = "print-template";

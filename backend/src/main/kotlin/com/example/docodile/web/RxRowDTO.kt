@@ -12,6 +12,7 @@ data class RxRowDTO(
     val dosage: String? = null,
     val whenToTake: String? = null,
     val frequency: String? = null,
+    val frequencyInterval: String? = null,
     val duration: String? = null,
     val notes: String? = null
 )

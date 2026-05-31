@@ -1,8 +1,15 @@
-import React, { CSSProperties, useEffect, useRef, useState } from "react";
+import React, { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 import { API_BASE_URL } from "../../apiConfig";
+import { listPharmacyStock } from "../../api/pharmacy";
 
 type Drug = { id: string; name: string; genericName: string };
+
+// One row in the pharmacy suggestion list. Multiple batches of the same
+// medicine collapse into a single entry — the dropdown shows total units
+// across batches so the doctor sees what's actually on hand, not how many
+// rows the inventory table has.
+type StockSuggestion = { name: string; totalUnits: number };
 
 type MedicineAutocompleteProps = {
   value: string;
@@ -18,6 +25,10 @@ export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, i
   const [drugs, setDrugs] = useState<Drug[]>([]);
   const [frequent, setFrequent] = useState<Drug[]>([]);
   const [loading, setLoading] = useState(false);
+  // Pharmacy inventory for the current clinic — fetched once on mount and
+  // filtered client-side as the doctor types. Cheap because clinics carry
+  // a few hundred SKUs at most.
+  const [stock, setStock] = useState<StockSuggestion[]>([]);
 
   // Load frequently used medicines once on mount.
   useEffect(() => {
@@ -31,6 +42,43 @@ export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, i
       )
       .catch(() => {});
   }, []);
+
+  // Pull this clinic's pharmacy inventory once and roll multiple batches
+  // of the same medicine into a single total — surfaced ABOVE the generic
+  // drug DB matches so the doctor sees what's actually on the shelf first.
+  useEffect(() => {
+    listPharmacyStock()
+      .then((meds) => {
+        const totals = new Map<string, number>();
+        for (const m of meds) {
+          const key = m.name.trim();
+          if (!key) continue;
+          totals.set(key, (totals.get(key) ?? 0) + (m.unitsInStock ?? 0));
+        }
+        setStock(Array.from(totals.entries()).map(([name, totalUnits]) => ({ name, totalUnits })));
+      })
+      .catch(() => {});
+  }, []);
+
+  // Filter inventory by the typed query. Substring match on name, case-
+  // insensitive — same UX as the search-by-name behavior in the pharmacy
+  // inventory page. Empty query returns nothing (frequent list handles
+  // the "just-focused" state).
+  const stockMatches = useMemo<StockSuggestion[]>(() => {
+    const q = value.trim().toLowerCase();
+    if (!q) return [];
+    return stock
+      .filter((s) => s.name.toLowerCase().includes(q))
+      .sort((a, b) => {
+        // Exact / prefix matches first, then by units desc so well-stocked
+        // items take precedence over near-empty ones with the same prefix.
+        const aPref = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+        const bPref = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+        if (aPref !== bPref) return aPref - bPref;
+        return b.totalUnits - a.totalUnits;
+      })
+      .slice(0, 8);
+  }, [stock, value]);
 
   // Search when value changes.
   useEffect(() => {
@@ -65,6 +113,22 @@ export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, i
     onChange(d.name);
     onSelect?.(d.name, d.genericName);
     setOpen(false);
+  };
+
+  const handleSelectStock = (s: StockSuggestion) => {
+    onChange(s.name);
+    // No generic name from inventory rows — pass empty so any cached
+    // generic on the row is cleared if the doctor picked a different med.
+    onSelect?.(s.name, "");
+    setOpen(false);
+  };
+
+  // Stock colour reflects what's actually safe to prescribe today —
+  // mirrors the pharmacy "Attention" thresholds.
+  const stockColor = (units: number): string => {
+    if (units <= 0) return colors.red200;
+    if (units < 30) return colors.primary700;
+    return colors.green200;
   };
 
   const showFrequent = open && !value.trim() && frequent.length > 0;
@@ -105,8 +169,27 @@ export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, i
 
       {showSearch && (
         <div style={styles.menu}>
+          {stockMatches.length > 0 && (
+            <>
+              <p style={styles.sectionLabel}>In Stock</p>
+              {stockMatches.map((s) => (
+                <button
+                  key={`stock-${s.name}`}
+                  type="button"
+                  style={styles.stockItem}
+                  onMouseDown={(e) => { e.preventDefault(); handleSelectStock(s); }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.active.shade100)}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
+                  <span style={styles.drugName}>{s.name}</span>
+                  <span style={{ ...styles.stockCount, color: stockColor(s.totalUnits) }}>{s.totalUnits}</span>
+                </button>
+              ))}
+            </>
+          )}
+          {drugs.length > 0 && stockMatches.length > 0 && <p style={styles.sectionLabel}>Other matches</p>}
           {loading && <div style={styles.hint}>Searching…</div>}
-          {!loading && drugs.length === 0 && <div style={styles.hint}>No matches</div>}
+          {!loading && drugs.length === 0 && stockMatches.length === 0 && <div style={styles.hint}>No matches</div>}
           {drugs.map((d) => <DrugButton key={d.id} d={d} />)}
         </div>
       )}
@@ -171,5 +254,28 @@ const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.xs,
     color: colors.neutral500,
     fontStyle: "italic",
+  },
+  // Inventory row — drug name on the left, units count badge on the right.
+  // Colour of the count reflects stock health (red/orange/green).
+  stockItem: {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    textAlign: "left",
+    padding: `${spacing.xs} ${spacing.s}`,
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    borderRadius: radii.xs,
+    transition: "background-color 0.1s ease",
+    gap: spacing.s,
+  },
+  stockCount: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    fontWeight: fonts.weight.semibold,
+    fontVariantNumeric: "tabular-nums",
   },
 };

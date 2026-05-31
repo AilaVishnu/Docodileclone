@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { styles } from "./BookAppointment.styles";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
-import { DatePicker } from "./DatePicker";
+import { DatePicker } from "../DatePicker/DatePicker";
 import { TimePicker } from "./TimePicker";
 import {
   StethoscopeIcon,
@@ -21,6 +21,8 @@ import { BillCard } from "../BillCard/BillCard";
 import { UnderlineSelect } from "../Input/UnderlineSelect/UnderlineSelect";
 import { Select } from "../Input/Select/Select";
 import { Toast } from "../Toast";
+import { Button } from "../Button";
+import { confirmStyles } from "../AddStaffModal/AddStaffModal.styles";
 import { API_BASE_URL } from "../../apiConfig";
 import { listServices, ServiceDTO } from "../../api/services";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
@@ -49,6 +51,11 @@ export type EditAppointmentData = {
   paymentMethod?: string;
   notes?: string;
   fee?: number;
+  // When set, every input renders disabled and the save action is
+  // suppressed — useful for viewing the booking details of completed
+  // or out-of-window appointments without allowing edits.
+  readOnly?: boolean;
+  readOnlyReason?: string;
 };
 
 type BookAppointmentProps = {
@@ -140,6 +147,12 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const [submitting, setSubmitting] = useState(false);
   const [dobDigits, setDobDigits] = useState("");
   const [toastMessage, setToastMessage] = useState("");
+  // Same-day-duplicate confirmation. Holds the in-flight booking args
+  // (payStatus, successMessage) plus the prompt message — drives the
+  // "Are you sure?" dialog rendered near the bottom of the JSX.
+  const [pendingDupe, setPendingDupe] = useState<
+    { payStatus: string; successMessage?: string; message: string } | null
+  >(null);
   const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
   const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
   // "Advanced" toggle in the page header — reveals extra fields. Wiring the
@@ -324,7 +337,12 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     return cleaned.length === 10;
   };
 
-  const handleBook = async (payStatus: string, successMessage?: string) => {
+  const handleBook = async (payStatus: string, successMessage?: string, force: boolean = false) => {
+    // Payment method is only required when the booking is being marked
+    // Paid right now. "Book Now Pay Later" keeps the bill open and
+    // shouldn't force the receptionist to pick a channel they don't yet
+    // know — the patient settles at the counter later.
+    const requiresPaymentMethod = payStatus === "Paid";
     const newErrors: Record<string, boolean> = {
       name: !form.name.trim(),
       email: !!form.email.trim() && !isValidEmail(form.email),
@@ -333,7 +351,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       doctor: !activeDoctor,
       services: form.services.length === 0,
       time: !form.time,
-      paymentMethod: !form.paymentMethod,
+      paymentMethod: requiresPaymentMethod && !form.paymentMethod,
     };
     setErrors(newErrors);
     const firstError =
@@ -353,8 +371,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
     setSubmitting(true);
     try {
-      // Duplicate check — block if this phone already has an appointment on the selected date.
-      if (!editingAppointment) {
+      // Duplicate check — surface a confirm prompt if this patient (phone
+      // AND name, matching the backend's resolution rule) already has an
+      // appointment on the selected date. `force` skips this on the
+      // re-submit triggered by the confirmation modal.
+      if (!editingAppointment && !force) {
         const dateStr = `${form.date.getFullYear()}-${String(form.date.getMonth() + 1).padStart(2, "0")}-${String(form.date.getDate()).padStart(2, "0")}`;
         const aptsRes = await fetch(`${API_BASE_URL}/api/tenant/appointments?date=${dateStr}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("docodile_token")}` },
@@ -362,11 +383,29 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         if (aptsRes.ok) {
           const apts: any[] = await aptsRes.json();
           const phoneClean = form.phone.replace(/\D/g, "").slice(-10);
-          const duplicate = phoneClean
-            ? apts.find((a) => (a.patientPhone ?? "").replace(/\D/g, "").slice(-10) === phoneClean)
-            : null;
-          if (duplicate) {
-            setToastMessage(`${form.name} already has an appointment on ${formatDate(form.date)}`);
+          const nameClean = form.name.trim().toLowerCase();
+          const duplicates = phoneClean
+            ? apts.filter((a) =>
+                (a.patientPhone ?? "").replace(/\D/g, "").slice(-10) === phoneClean &&
+                (a.patientName ?? "").trim().toLowerCase() === nameClean
+              )
+            : [];
+          if (duplicates.length > 0) {
+            const fmtT = (iso: string) => {
+              const d = new Date(iso);
+              return Number.isNaN(d.getTime())
+                ? ""
+                : d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+            };
+            const timeStr = duplicates
+              .map((a: any) => fmtT(a.scheduledTime))
+              .filter(Boolean)
+              .join(", ");
+            setPendingDupe({
+              payStatus,
+              successMessage,
+              message: `${form.name} already has an appointment on ${formatDate(form.date)}${timeStr ? ` at ${timeStr}` : ""}. Add another?`,
+            });
             return;
           }
         }
@@ -396,10 +435,18 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         type: form.type,
         service: form.services.join(" + "),
         isWalkin: false,
-        paymentMethod: form.paymentMethod,
+        // "Book Now Pay Later" leaves the payment channel undecided —
+        // even if the receptionist accidentally clicked a Cash/Card/UPI
+        // radio in the UI, we discard it here so the appointment row
+        // doesn't carry a misleading method until it's actually paid.
+        paymentMethod: payStatus === "Paid" ? form.paymentMethod : null,
         notes: form.note || null,
         fee: total > 0 ? total : null,
         payStatus,
+        // Tells the backend to skip its own same-day duplicate check.
+        // Only true on the second submit after the user confirmed the
+        // duplicate in the modal below.
+        force,
       };
 
       const url = editingAppointment
@@ -444,6 +491,18 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       } else {
         try {
           const err = await res.json();
+          // 409 from the backend = same-day duplicate the client check
+          // missed (stale data / direct API call). Same prompt either way.
+          if (res.status === 409 && err?.duplicate && !editingAppointment) {
+            // Backend caught a duplicate the client check missed (e.g. stale
+            // data). Same confirm dialog as above.
+            setPendingDupe({
+              payStatus,
+              successMessage,
+              message: err.error || `${form.name} already has an appointment on ${formatDate(form.date)}. Add another?`,
+            });
+            return;
+          }
           setToastMessage(err.error || err.message || "Failed to book appointment");
         } catch {
           setToastMessage(`Failed to book appointment (${res.status})`);
@@ -509,7 +568,38 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         }
       />
 
-      <div style={styles.grid}>
+      {editingAppointment?.readOnly && (
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          margin: `0 ${spacing.xl}`,
+        }}>
+          <div style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: spacing.xs,
+            padding: `${spacing["2xs"]} ${spacing.m}`,
+            backgroundColor: colors.primary200,
+            color: colors.primary800,
+            borderRadius: 999,
+            fontFamily: fonts.family.primary,
+            fontSize: fonts.size.xs,
+            fontWeight: fonts.weight.medium,
+            lineHeight: fonts.lineHeight.s,
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <span>{editingAppointment.readOnlyReason ?? "This appointment is locked — view only."}</span>
+          </div>
+        </div>
+      )}
+
+      <div style={{
+        ...styles.grid,
+        ...(editingAppointment?.readOnly ? { pointerEvents: "none" as const, opacity: 0.85 } : {}),
+      }}>
         {/* Patient ID Card — avatar above the ID. Avatar reacts to the gender +
             age the user has filled in below. */}
         <Card style={{ ...styles.card, ...styles.patientIdCard }}>
@@ -869,6 +959,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             {showTimePicker && (
               <TimePicker
                 initialTime={form.time}
+                selectedDate={form.date}
                 onSelect={(time: string) => {
                   setForm({ ...form, time });
                   setShowTimePicker(false);
@@ -975,13 +1066,13 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         <div style={styles.footerButtonGroup}>
           {editingAppointment ? (
             <>
-              {isDirty && (
+              {!editingAppointment.readOnly && isDirty && (
                 <button style={styles.pillButtonPrimary} onClick={() => handleBook(editingAppointment.payStatus || "Unpaid")} disabled={submitting}>
                   <EditPencilIcon width={18} height={18} style={{ color: colors.neutral100 }} />
                   {submitting ? "Saving..." : "Save Edits"}
                 </button>
               )}
-              {editingAppointment.payStatus?.toUpperCase() !== "PAID" && (
+              {!editingAppointment.readOnly && editingAppointment.payStatus?.toUpperCase() !== "PAID" && (
                 <button style={styles.pillButtonPayDue} onClick={() => handleBook("Paid", "Payment is done")} disabled={submitting}>
                   <BillCheckIcon width={20} height={20} style={{ color: colors.neutral100 }} />
                   {submitting ? "Saving..." : "Pay Due"}
@@ -1015,6 +1106,36 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         isVisible={!!toastMessage}
         onClose={() => setToastMessage("")}
       />
+
+      {pendingDupe && (
+        <div style={confirmStyles.overlay}>
+          <div style={confirmStyles.dialog}>
+            <h4 style={confirmStyles.title}>Are you sure?</h4>
+            <p style={{
+              margin: 0,
+              fontFamily: fonts.family.primary,
+              fontSize: fonts.control.sm,
+              color: colors.neutral600,
+              textAlign: "center",
+              lineHeight: 1.5,
+            }}>
+              {pendingDupe.message}
+            </p>
+            <div style={confirmStyles.actions}>
+              <Button variant="dangerLight" size="sm" onClick={() => setPendingDupe(null)}>
+                Nope
+              </Button>
+              <Button variant="dark" size="sm" onClick={() => {
+                const p = pendingDupe;
+                setPendingDupe(null);
+                if (p) void handleBook(p.payStatus, p.successMessage, true);
+              }}>
+                Yes, add anyway
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

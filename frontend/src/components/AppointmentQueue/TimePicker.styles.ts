@@ -158,7 +158,25 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.m,
     fontWeight: 500,
     cursor: "pointer",
-    width: "100%",
+    flex: 1,
     marginTop: "4px",
+  },
+
+  actionsRow: {
+    display: "flex",
+    gap: "8px",
+  },
+
+  nowButton: {
+    backgroundColor: "transparent",
+    color: colors.neutral900,
+    border: `1px solid ${colors.neutral300}`,
+    borderRadius: "999px",
+    padding: "10px 18px",
+    fontSize: fonts.size.m,
+    fontWeight: 500,
+    cursor: "pointer",
+    marginTop: "4px",
+    whiteSpace: "nowrap" as const,
   },
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { usePatients, Patient } from "../../hooks/usePatients";
 import { useDoctors } from "../../hooks/useDoctors";
@@ -7,7 +7,7 @@ import { fetchPatientSummary, generatePatientSummary, parsePatientSummary, Patie
 import { ReactComponent as SearchIcon } from "../../assets/search.svg";
 import { ReactComponent as PrescriptionIconSVG } from "../../assets/prescription.svg";
 import { Select } from "../../components/Input/Select/Select";
-import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
+import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { styles as queueStyles } from "../../components/AppointmentQueue/AppointmentQueue.styles";
 import { setPendingSessionNav } from "../../components/TopNav/SessionTrayButton";
 import type { NavTab } from "../../components/SideNav";
@@ -130,6 +130,39 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
     return list;
   }, [patients, search, sort, dateFrom, dateTo, doctors, department, doctorId]);
 
+  // ── Progressive rendering ──────────────────────────────────────────────
+  // A clinic can have thousands of patients; rendering every row at once is
+  // the visible lag on each page open. Render a small initial batch and
+  // grow it as a sentinel near the list end scrolls into view.
+  const PAGE = 60;
+  const [limit, setLimit] = useState(PAGE);
+  const shown = visible.slice(0, limit);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  // Top of the page — selecting a patient scrolls here so the open file and
+  // its action buttons (which live at the top of the right pane) are in view
+  // even when the index list was scrolled far down.
+  const topRef = useRef<HTMLDivElement | null>(null);
+  // Any search/filter change rebuilds the list — restart the window.
+  useEffect(() => {
+    setLimit(PAGE);
+  }, [search, sort, dateFrom, dateTo, department, doctorId]);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || limit >= visible.length) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setLimit((n) => Math.min(n + PAGE, visible.length));
+        }
+      },
+      // Grow a little before the sentinel is actually on screen so the
+      // next batch is ready by the time the user scrolls to it.
+      { rootMargin: "600px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [limit, visible.length]);
+
   // Keep selection valid as filters change. If the current selection vanishes
   // from `visible`, fall back to the first item.
   useEffect(() => {
@@ -144,13 +177,31 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
 
   const selectedPatient = visible.find((p) => p.id === selectedId) ?? null;
 
-  const handleOpen = (patient: Patient) => {
-    setPendingSessionNav({ patient, appointmentId: null });
+  // Select from the list AND jump back to the top, so the chosen patient's
+  // file + action buttons are visible regardless of how far the list was
+  // scrolled. Used only for explicit row clicks (not auto-selection).
+  const handleSelect = (id: string) => {
+    setSelectedId(id);
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleOpen = (patient: Patient, opts?: { initialAction?: number }) => {
+    // Record where the doctor came from so the Prescription page's Back
+    // button can route them back to Patient Files rather than dumping
+    // them on the prescription home picker. `initialAction` lets a
+    // specific left-rail tab (Visits/Files/Timeline/Bills) be pre-
+    // selected when the doctor jumps in for a specific reason.
+    setPendingSessionNav({
+      patient,
+      appointmentId: null,
+      returnTab: "Patient Files",
+      initialAction: opts?.initialAction,
+    });
     onNavigate?.("Prescription");
   };
 
   return (
-    <div style={styles.container}>
+    <div ref={topRef} style={styles.container}>
       <div style={styles.headerRow}>
         <h1 style={styles.title}>Patient Files</h1>
       </div>
@@ -262,6 +313,7 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
                 {search ? `No files match “${search}”.` : "No patient files."}
               </p>
             ) : (
+              <>
               <table style={queueStyles.table}>
                 <colgroup>
                   <col style={{ width: "10%" }} />
@@ -280,17 +332,21 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {visible.map((p) => (
+                  {shown.map((p) => (
                     <IndexRow
                       key={p.id}
                       patient={p}
                       query={search.trim().toLowerCase()}
                       selected={p.id === selectedId}
-                      onSelect={() => setSelectedId(p.id)}
+                      onSelect={() => handleSelect(p.id)}
                     />
                   ))}
                 </tbody>
               </table>
+              {limit < visible.length && (
+                <div ref={sentinelRef} style={{ height: 1 }} />
+              )}
+              </>
             )}
           </div>
 
@@ -303,7 +359,11 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
             real content on top of it. */}
         <div style={styles.openPane}>
           {selectedPatient ? (
-            <OpenFile patient={selectedPatient} onOpenChart={() => handleOpen(selectedPatient)} />
+            <OpenFile
+              patient={selectedPatient}
+              onOpenChart={() => handleOpen(selectedPatient)}
+              onOpenBills={() => handleOpen(selectedPatient, { initialAction: 3 })}
+            />
           ) : (
             <div style={styles.openEmpty}>Select a patient to view their file</div>
           )}
@@ -353,7 +413,7 @@ function IndexRow({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const code = shortCode(patient.id);
+  const code = patientCode(patient);
   const ageShort = genderAgeShort(patient);
   const phone = patient.phone ?? "—";
   const email = patient.email ?? "—";
@@ -410,7 +470,7 @@ function matchesQuery(p: Patient, q: string): MatchField | null {
   if (p.name.toLowerCase().includes(q)) return "name";
   if ((p.phone ?? "").toLowerCase().includes(q)) return "phone";
   if ((p.email ?? "").toLowerCase().includes(q)) return "email";
-  if (shortCode(p.id).toLowerCase().includes(q)) return "code";
+  if (patientCode(p).toLowerCase().includes(q)) return "code";
   return null;
 }
 
@@ -493,8 +553,8 @@ function DateTrigger({
 // The folder visual fills the pane, with rich content on top: code+name as
 // the heading, AI summary, smart chips, contact/demographics, recent visits
 // as cards, action buttons. This is where the cabinet design gets to breathe.
-function OpenFile({ patient, onOpenChart }: { patient: Patient; onOpenChart: () => void }) {
-  const code = shortCode(patient.id);
+function OpenFile({ patient, onOpenChart, onOpenBills }: { patient: Patient; onOpenChart: () => void; onOpenBills?: () => void }) {
+  const code = patientCode(patient);
   const ageShort = genderAgeShort(patient);
   const metaLine = [
     ageShort !== "—" ? `(${ageShort})` : null,
@@ -549,23 +609,26 @@ function OpenFile({ patient, onOpenChart }: { patient: Patient; onOpenChart: () 
       {/* Buttons pinned to the top-right corner of the card, straddling the right edge */}
       <div style={{ ...styles.iconColumn, position: "absolute", right: "-35px", top: "60px" }}>
         <IconAction
-          label="Call"
+          label={patient.phone ? `Call ${patient.phone}` : "No phone on file"}
           href={patient.phone ? `tel:${patient.phone}` : undefined}
+          onClick={patient.phone ? undefined : () => window.alert("No phone number on file for this patient.")}
           icon={<PhoneIconSVG style={styles.iconActionGlyph} />}
         />
         <IconAction
-          label="Email"
+          label={patient.email ? `Email ${patient.email}` : "No email on file"}
           href={patient.email ? `mailto:${patient.email}` : undefined}
+          onClick={patient.email ? undefined : () => window.alert("No email on file for this patient.")}
           icon={<LetterIconSVG style={styles.iconActionGlyph} />}
         />
         <IconAction
-          label="Book appointment"
+          label="Open chart / book visit"
           onClick={onOpenChart}
           tone="secondary"
           icon={<CalendarIconSVG style={styles.iconActionGlyph} />}
         />
         <IconAction
-          label="Generate bill"
+          label="Open Bills"
+          onClick={onOpenBills}
           tone="secondary"
           icon={<BillingIconSVG style={styles.iconActionGlyph} />}
         />
@@ -752,13 +815,19 @@ function CalendarIconSVG({ style }: { style?: React.CSSProperties }) {
   );
 }
 
+// Linear / Money / Bill — Figma node 2500:5141. A banknote with wavy top
+// and bottom edges and three evenly-spaced lines. The outline path keeps
+// the design's exact geometry, translated to sit centred in a 24×24 box.
 function BillingIconSVG({ style }: { style?: React.CSSProperties }) {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
-      <path d="M6 2h12a1 1 0 0 1 1 1v17.5l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5V3a1 1 0 0 1 1-1z" />
-      <line x1="9" y1="9" x2="15" y2="9" />
-      <line x1="9" y1="13" x2="15" y2="13" />
-      <line x1="9" y1="17" x2="13" y2="17" />
+      <path
+        transform="translate(2.25 1.82)"
+        d="M15.375 19.1779C16.0166 18.6076 16.9834 18.6076 17.625 19.1779C18.0609 19.5654 18.75 19.2559 18.75 18.6727V1.68292C18.75 1.09969 18.0609 0.790248 17.625 1.17772C16.9834 1.74802 16.0166 1.74802 15.375 1.17772C14.7334 0.607425 13.7666 0.607425 13.125 1.17772C12.4834 1.74802 11.5166 1.74802 10.875 1.17772C10.2334 0.607425 9.26659 0.607425 8.625 1.17772C7.98341 1.74802 7.01659 1.74802 6.375 1.17772C5.73341 0.607425 4.76659 0.607425 4.125 1.17772C3.48341 1.74802 2.51659 1.74802 1.875 1.17772C1.43909 0.790248 0.75 1.09969 0.75 1.68292V18.6727C0.75 19.2559 1.43909 19.5654 1.875 19.1779C2.51659 18.6076 3.48341 18.6076 4.125 19.1779C4.76659 19.7482 5.73341 19.7482 6.375 19.1779C7.01659 18.6076 7.98341 18.6076 8.625 19.1779C9.26659 19.7482 10.2334 19.7482 10.875 19.1779C11.5166 18.6076 12.4834 18.6076 13.125 19.1779C13.7666 19.7482 14.7334 19.7482 15.375 19.1779Z"
+      />
+      <line x1="7.5" y1="8.5" x2="16.5" y2="8.5" />
+      <line x1="7.5" y1="12" x2="16.5" y2="12" />
+      <line x1="7.5" y1="15.5" x2="16.5" y2="15.5" />
     </svg>
   );
 }
@@ -820,9 +889,16 @@ function byLastVisit(desc: boolean) {
   };
 }
 
-// Stable 2–3 digit "T" code derived from the UUID — same patient always gets
-// the same code regardless of sort order. Pure presentational shorthand;
-// when the backend returns a real chart number, swap this helper.
+// Patient's display code. Uses the real per-clinic sequential number from the
+// backend ("T###"); falls back to the UUID-hash code for any legacy row that
+// predates the backend backfill (displayNo null).
+function patientCode(p: Pick<Patient, "id" | "displayNo">): string {
+  if (p.displayNo != null) return `T${p.displayNo.toString().padStart(3, "0")}`;
+  return shortCode(p.id);
+}
+
+// Stable 2–3 digit "T" code derived from the UUID — fallback only, for rows
+// without a real displayNo. Same patient always gets the same code.
 function shortCode(id: string): string {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;

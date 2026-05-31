@@ -12,6 +12,9 @@ type HeatmapCardProps = {
   /** Optional override; if absent, derived from doctor's saved schedule. */
   startHour?: number;
   endHour?: number;
+  /** Date the heatmap represents — drives the subtitle so past/future
+   *  queue views read accurately instead of always saying "Today's". */
+  date?: Date;
 };
 
 function deriveRangeFromSchedule() {
@@ -62,15 +65,47 @@ export function HeatmapCard({
   appointments,
   startHour,
   endHour,
+  date,
 }: HeatmapCardProps) {
   const fallback = deriveRangeFromSchedule();
-  const sh = startHour ?? fallback.startHour;
-  const eh = endHour ?? fallback.endHour;
+  let sh = startHour ?? fallback.startHour;
+  let eh = endHour ?? fallback.endHour;
+  // Expand the range to cover any bookings outside the configured clinic
+  // hours (e.g. a late / after-hours appointment) — otherwise buildGrid drops
+  // them (h >= endHour) and the card wrongly reads "No bookings".
+  const apptHours = appointments
+    .filter((a) => a.rawScheduledTime && a.status !== "CANCELLED")
+    .map((a) => new Date(a.rawScheduledTime as string).getHours())
+    .filter((h) => Number.isFinite(h));
+  if (apptHours.length) {
+    sh = Math.min(sh, ...apptHours);
+    eh = Math.max(eh, ...apptHours.map((h) => h + 1)); // eh is exclusive
+  }
   const grid = buildGrid(appointments, sh, eh);
+  const total = grid.reduce(
+    (sum, row) => sum + row.reduce((a, b) => a + b, 0),
+    0
+  );
+
+  // Build a context label that matches the queue date the heatmap was
+  // computed for — "today" only when the parent passed today's date.
+  const today = new Date();
+  const isToday = date ? (
+    date.getFullYear() === today.getFullYear()
+      && date.getMonth() === today.getMonth()
+      && date.getDate() === today.getDate()
+  ) : true;
+  const dayLabel = !date ? "Today's"
+    : isToday ? "Today's"
+    : date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+  const subtitle = total > 0
+    ? `${dayLabel} bookings, by 15-min slot`
+    : `No bookings on ${dayLabel.replace(/'s$/, "")}`;
 
   return (
     <div style={styles.container}>
       <p style={styles.title}>Peak Hours</p>
+      <p style={styles.subtitle}>{subtitle}</p>
 
       <div style={styles.divider} />
 

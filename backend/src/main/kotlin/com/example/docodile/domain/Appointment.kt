@@ -50,6 +50,20 @@ class Appointment(
 
     var fee: BigDecimal? = null,
 
+    // Latest pharmacy bill total for this visit. Set by the Bill
+    // Medicines flow; null when the patient hasn't been billed for meds
+    // yet. Kept separate from `fee` so the Finance dashboard can split
+    // consultation vs dispensary revenue.
+    @Column(name = "pharmacy_amount")
+    var pharmacyAmount: BigDecimal? = null,
+
+    // Rupee discount applied at payment time (Pay Due / waiver). The
+    // booking `fee` stays as the original quoted amount; collected
+    // revenue is (fee + pharmacy_amount - discount_amount) for PAID
+    // rows. Null when no discount was applied.
+    @Column(name = "discount_amount")
+    var discountAmount: BigDecimal? = null,
+
     var notes: String? = null,
 
     @Column(name = "created_at")

@@ -14,9 +14,17 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
-    show-sql: true
+    # Off by default — logging every SQL statement is a heavy drag on bulk
+    # operations (the HealthPlix import flushes tens of thousands of rows).
+    show-sql: false
     properties:
       hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+      # Batch INSERT/UPDATE statements so bulk loads (e.g. the HealthPlix
+      # data migration — thousands of rows) flush in grouped round-trips
+      # instead of one statement per row.
+      hibernate.jdbc.batch_size: 50
+      hibernate.order_inserts: true
+      hibernate.order_updates: true
     defer-datasource-initialization: true
   flyway:
     enabled: true

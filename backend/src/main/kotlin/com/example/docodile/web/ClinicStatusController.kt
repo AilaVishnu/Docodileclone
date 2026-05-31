@@ -65,6 +65,16 @@ class ClinicStatusController(
         return ResponseEntity.noContent().build()
     }
 
+    @PatchMapping("/clinics/{clinicId}/staff/{staffId}/reactivate")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    fun reactivateStaff(
+        @PathVariable clinicId: UUID,
+        @PathVariable staffId: UUID
+    ): ResponseEntity<Void> {
+        clinicStatusService.reactivateStaff(clinicId, staffId)
+        return ResponseEntity.noContent().build()
+    }
+
     @GetMapping("/appointments")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun getAppointments(
@@ -81,9 +91,12 @@ class ClinicStatusController(
         return try {
             ResponseEntity.ok(appointmentService.bookAppointment(request))
         } catch (e: DuplicateAppointmentException) {
-            // 409 — same patient already has an appointment that day.
-            ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(mapOf("error" to (e.message ?: "Duplicate appointment")))
+            // 409 + duplicate flag lets the booking UI distinguish "already
+            // booked today" (where it can prompt to add anyway) from any
+            // other booking failure.
+            ResponseEntity.status(HttpStatus.CONFLICT).body(
+                mapOf("error" to (e.message ?: "Duplicate appointment"), "duplicate" to true)
+            )
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
         }
@@ -111,6 +124,37 @@ class ClinicStatusController(
         return try {
             val status = body["status"] ?: throw IllegalArgumentException("Status is required")
             ResponseEntity.ok(appointmentService.updateStatus(appointmentId, status))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
+        }
+    }
+
+    // Payment + pay-status update — called by the Bill Medicines flow
+    // after Charge & Bill / Mark Waived. `payStatus` is the new label
+    // (PAID / WAIVED / DUE) and `paymentMethod` is the channel
+    // (Cash/Card/UPI/Waive). Storing both keeps the queue's Pay pill
+    // accurate without a separate billing table.
+    @PatchMapping("/appointments/{appointmentId}/payment")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
+    fun updateAppointmentPayment(
+        @PathVariable appointmentId: UUID,
+        @RequestBody body: Map<String, Any?>
+    ): ResponseEntity<Any> {
+        return try {
+            val payStatus = body["payStatus"]?.toString() ?: throw IllegalArgumentException("payStatus is required")
+            val paymentMethod = body["paymentMethod"]?.toString()
+            // pharmacyAmount / discountAmount arrive as JSON numbers —
+            // Kotlin's Map<String, Any?> surfaces them as Number; convert
+            // defensively for either Number or String.
+            fun parseMoney(key: String): java.math.BigDecimal? = when (val v = body[key]) {
+                null -> null
+                is Number -> java.math.BigDecimal(v.toString())
+                is String -> if (v.isBlank()) null else java.math.BigDecimal(v)
+                else -> null
+            }
+            val pharmacyAmount = parseMoney("pharmacyAmount")
+            val discountAmount = parseMoney("discountAmount")
+            ResponseEntity.ok(appointmentService.updatePayment(appointmentId, payStatus, paymentMethod, pharmacyAmount, discountAmount))
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
         }

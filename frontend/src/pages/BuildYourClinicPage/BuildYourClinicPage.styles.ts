@@ -166,4 +166,44 @@ export const styles: Record<string, CSSProperties> = {
     zIndex: 3,
     transform: "scaleX(-1)",
   },
+
+  deactivatedSection: {
+    marginTop: spacing.l,
+    width: "100%",
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: spacing.s,
+  },
+  deactivatedTitle: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.xs,
+    fontWeight: fonts.weight.medium,
+    color: colors.neutral700,
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.5,
+  },
+  deactivatedRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.m,
+    padding: `${spacing.s} ${spacing.m}`,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.5)",
+  },
+  deactivatedInfo: {
+    display: "flex",
+    flexDirection: "column" as const,
+  },
+  deactivatedName: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    fontWeight: fonts.weight.medium,
+    color: colors.neutral900,
+  },
+  deactivatedRole: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.xs,
+    color: colors.neutral700,
+  },
 };

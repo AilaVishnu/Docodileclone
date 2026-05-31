@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { colors, fonts } from "../../../styles/theme";
+import { colors, fonts, radii } from "../../../styles/theme";
 
 type UnderlineSelectOption = {
   label: string;
@@ -44,21 +44,33 @@ export function UnderlineSelect({
     <div ref={containerRef} style={{ position: "relative", display: "inline-block" }}>
       <span
         onClick={() => setIsOpen(!isOpen)}
-        onMouseEnter={() => {}}
-        onMouseLeave={() => {}}
         style={{
-          fontFamily: fonts.family.secondary,
-          fontSize,
-          fontWeight: 400,
-          color: colors.neutral900,
-          textDecoration: "underline",
-          textUnderlineOffset: "4px",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
           cursor: "pointer",
           userSelect: "none",
-          transition: "opacity 0.15s",
         }}
       >
-        {selectedOption ? selectedOption.label : placeholder}
+        <span
+          style={{
+            fontFamily: fonts.family.secondary,
+            fontSize,
+            fontWeight: 400,
+            color: colors.neutral900,
+            textDecoration: "underline",
+            textUnderlineOffset: "4px",
+          }}
+        >
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <svg
+          width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.neutral600}
+          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 160ms", flexShrink: 0 }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
       </span>
 
       {isOpen && (
@@ -67,14 +79,13 @@ export function UnderlineSelect({
             // Unified menu spec — see TopNav.dropdown, actionMenu, StatusDropdown.
             position: "absolute",
             top: "calc(100% + 8px)",
-            left: "50%",
-            transform: "translateX(-50%)",
+            left: 0,
             backgroundColor: colors.neutral100,
             borderRadius: "12px",
             boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
             zIndex: 1000,
             minWidth: "200px",
-            maxHeight: "240px",
+            maxHeight: "260px",
             overflowY: "auto",
             padding: "12px 8px",
             display: "flex",

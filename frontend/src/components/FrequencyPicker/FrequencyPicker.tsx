@@ -2,11 +2,26 @@ import React, { CSSProperties, useEffect, useRef, useState } from "react";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 
 const ALL_OPTIONS = [
+  // 3-slot patterns — morning / noon / night
   "1-0-0",
   "0-0-1",
   "1-0-1",
   "1-1-1",
   "0-1-0",
+  // 4-slot patterns — morning / noon / evening / night
+  "1-1-1-1",
+  "1-1-1-0",
+  "1-1-0-1",
+  "1-0-1-1",
+  "0-1-1-1",
+  "1-1-0-0",
+  "1-0-1-0",
+  "0-1-0-1",
+  "1-0-0-1",
+  "1-0-0-0",
+  "0-1-0-0",
+  "0-0-1-0",
+  "0-0-0-1",
   "Once a day",
   "Twice a day",
   "Thrice a day",

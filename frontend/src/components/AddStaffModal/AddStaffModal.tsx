@@ -300,7 +300,7 @@ export function AddStaffModal({
       <div style={styles.footer}>
         {initialData ? (
           <button style={styles.deleteButton} onClick={() => setShowDeleteConfirm(true)}>
-            Delete Staff
+            Remove Staff
           </button>
         ) : (
           <div />
@@ -321,7 +321,11 @@ export function AddStaffModal({
     {showDeleteConfirm && (
       <div style={confirmStyles.overlay}>
         <div style={confirmStyles.dialog}>
-          <h4 style={confirmStyles.title}>Are you sure?</h4>
+          <h4 style={confirmStyles.title}>Remove this staff member?</h4>
+          <p style={confirmStyles.message}>
+            They'll be removed from this clinic and can no longer log in or be
+            booked. Their past appointments and prescriptions stay on record.
+          </p>
           <div style={confirmStyles.actions}>
             <Button variant="dangerLight" size="sm" onClick={() => setShowDeleteConfirm(false)}>
               Nope

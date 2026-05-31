@@ -69,7 +69,15 @@ export function Tabs({
                 ...(item.rightSlot ? { display: "inline-flex", alignItems: "center", gap: 8 } : null),
               }}
             >
-              <span>{item.label}</span>
+              <span
+                style={
+                  item.rightSlot
+                    ? { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }
+                    : undefined
+                }
+              >
+                {item.label}
+              </span>
               {item.rightSlot}
             </button>
           );

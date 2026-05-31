@@ -35,6 +35,12 @@ class RxRow(
 
     var frequency: String? = null,
 
+    // Dosing interval (daily / weekly / monthly / stat / sos …) — the
+    // "Frequency" dropdown on the pad. Distinct from `frequency` (the 1-0-1
+    // per-day pattern). See V47.
+    @Column(name = "frequency_interval")
+    var frequencyInterval: String? = null,
+
     var duration: String? = null,
 
     var notes: String? = null,

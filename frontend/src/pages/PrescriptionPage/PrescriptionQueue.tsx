@@ -3,14 +3,26 @@ import { API_BASE_URL } from "../../apiConfig";
 import { Patient } from "../../hooks/usePatients";
 import { pickAvatar } from "../../utils/avatar";
 import { Button } from "../../components/Button";
-import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
+import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { loadStartedSet } from "../../utils/sessionStarted";
 import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { ReactComponent as RestartIcon } from "../../assets/icons/restart-24.svg";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
+import { ReactComponent as StarIcon } from "../../assets/icons/star.svg";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { styles } from "./PrescriptionQueue.styles";
+import { Toast } from "../../components/Toast";
+
+// Pick the icon that fits the appointment type. New patient = filled
+// star (first-time visit); everything else (Review, follow-up) uses
+// the restart/refresh glyph to signal a repeat.
+function TypeIcon({ type, className }: { type: string | null | undefined; className?: string }) {
+  const isNew = (type ?? "").trim().toLowerCase() === "new";
+  return isNew
+    ? <StarIcon className={className} width={18} height={18} />
+    : <RestartIcon className={className} width={18} height={18} />;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal landing of the Prescription page — Figma 2282:17378.
@@ -28,11 +40,13 @@ type AppointmentRow = {
   patientGender: string | null;
   patientDob: string | null;
   patientAge: number | null; // months
+  patientDisplayNo: number | null; // per-clinic "T###" number
   service: string | null;
   type: string | null;
   status: string | null;
   scheduledTime: string | null;
   doctorId: string;
+  patientArchived?: boolean;
 };
 
 type StatusFilter = "all" | "AT_DOC" | "IN_PROGRESS" | "WAITING" | "COMPLETED";
@@ -64,6 +78,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
   // this device. Loaded on mount and on every fetch (so transitions made
   // inside the form propagate back when the user returns to the queue).
   const [startedSet, setStartedSet] = useState<Set<string>>(loadStartedSet);
+  const [toastMsg, setToastMsg] = useState<string>("");
   useEffect(() => {
     setStartedSet(loadStartedSet());
   }, [appointments]);
@@ -125,8 +140,9 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
     );
   }, [appointments, statusFilter, startedSet]);
 
-  // Patient T-ID is the same client-side counter used by BookAppointment —
-  // keyed by appointment id, so look up the same map here.
+  // Patient T-ID — the real per-clinic number now comes from the backend
+  // (apt.patientDisplayNo). This legacy localStorage map is kept only as a
+  // fallback for rows that predate the backend backfill (displayNo null).
   const patientIdMap = useMemo<Record<string, number>>(() => {
     try {
       return JSON.parse(localStorage.getItem("docodile_patient_map") || "{}");
@@ -136,6 +152,13 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
   }, []);
 
   const handleViewPad = (apt: AppointmentRow) => {
+    // Archived patients stay visible in the queue (the receptionist still
+    // needs to see who was scheduled) but the doctor can't open the pad —
+    // archiving is the signal to stop adding to that patient's chart.
+    if (apt.patientArchived) {
+      setToastMsg(`${apt.patientName} is archived — restore the patient to continue.`);
+      return;
+    }
     // Just open the form; the "started" flag now flips when the doctor
     // clicks Start Session inside the form (handled by PrescriptionPage).
     const patient: Patient = {
@@ -146,6 +169,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
       gender: apt.patientGender,
       dob: apt.patientDob,
       age: apt.patientAge,
+      displayNo: apt.patientDisplayNo,
       lastVisitDate: null,
       treatingDoctorIds: [],
       treatingDepartments: [],
@@ -183,7 +207,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
           <PatientCard
             key={apt.id}
             apt={apt}
-            tNumber={patientIdMap[apt.id]}
+            tNumber={apt.patientDisplayNo ?? patientIdMap[apt.id]}
             started={startedSet.has(apt.patientId)}
             mode={viewMode}
             onViewPad={() => handleViewPad(apt)}
@@ -274,6 +298,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
       </div>
 
       {renderCards()}
+      <Toast message={toastMsg} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
     </div>
   );
 }
@@ -329,7 +354,15 @@ function PatientCard({
         </p>
         <div style={styles.cardRows}>
           <CardRow label="Service" value={abbreviateService(apt.service)} />
-          <CardRow label="Type" value={apt.type ?? "—"} />
+          <CardRow
+            label="Type"
+            value={
+              <span style={styles.typeRow}>
+                <TypeIcon type={apt.type} />
+                {apt.type ?? "—"}
+              </span>
+            }
+          />
           <CardRow label="Time" value={time} />
           <CardRow
             label="Status"
@@ -411,7 +444,7 @@ function PatientListTable({
           {appointments.map((apt, index) => {
             const ageYears =
               apt.patientAge != null ? Math.floor(apt.patientAge / 12) : null;
-            const tNum = patientIdMap[apt.id];
+            const tNum = apt.patientDisplayNo ?? patientIdMap[apt.id];
             const started = startedSet.has(apt.patientId);
             const rowBg = rowBgFor(apt.status, started);
             const group = groupKeyFor(apt, startedSet);
@@ -476,12 +509,12 @@ function PatientListTable({
                   </td>
                   <td style={spacerTd} aria-hidden />
 
-                  {/* Type — RestartIcon hides at the 1200–1439 tier via the
-                      .type-badge-icon CSS rule in globals.css (shared with
-                      AppointmentQueue's TypeBadge). */}
+                  {/* Type — star icon for "New" appointments (Prescription's
+                      TypeIcon); hides at the 1200–1439 tier via the
+                      .type-badge-icon CSS rule in globals.css. */}
                   <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
                     <span style={styles.typeRow}>
-                      <RestartIcon className="type-badge-icon" width={18} height={18} />
+                      <TypeIcon type={apt.type} className="type-badge-icon" />
                       {apt.type ?? "—"}
                     </span>
                   </td>

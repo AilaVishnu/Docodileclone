@@ -3,8 +3,13 @@ import { API_BASE_URL } from "../apiConfig";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Patients in the current clinic (with last-visit-date attached). Used by
-// the Prescription-page patient picker. Filtered server-side by the JWT's
-// clinicId — same multi-tenant pattern as useDoctors.
+// the Prescription-page patient picker and the Patient Files page. Filtered
+// server-side by the JWT's clinicId — same multi-tenant pattern as useDoctors.
+//
+// A module-level cache makes leaving the page and coming back instant: the
+// cached rows render immediately while a fresh fetch revalidates in the
+// background (stale-while-revalidate). The cache is keyed by clinic id, so a
+// different logged-in clinic never briefly sees another clinic's patients.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type Patient = {
@@ -15,6 +20,9 @@ export type Patient = {
   gender: string | null;
   dob: string | null;          // ISO yyyy-MM-dd
   age: number | null;
+  // Sequential per-clinic patient number, rendered as the "T###" code.
+  // Null only for legacy rows predating the backend backfill.
+  displayNo: number | null;
   lastVisitDate: string | null;
   // Distinct doctors this patient has been seen by (from visits). Drives
   // the doctor/department filter in Patient Files without per-row fetches.
@@ -32,15 +40,23 @@ type UsePatientsResult = {
   error: string | null;
 };
 
+let cache: { clinicId: string | null; data: Patient[] } | null = null;
+
 export function usePatients(refreshKey?: number): UsePatientsResult {
-  const [data, setData] = useState<Patient[]>([]);
-  const [loading, setLoading] = useState(true);
+  const clinicId = localStorage.getItem("docodile_clinic_id");
+  const cached = cache && cache.clinicId === clinicId ? cache.data : null;
+
+  const [data, setData] = useState<Patient[]>(cached ?? []);
+  const [loading, setLoading] = useState(cached === null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
     (async () => {
-      setLoading(true);
+      // Only surface the loading state when there's nothing cached to show;
+      // otherwise revalidate quietly behind the rows already on screen.
+      const hasCache = cache !== null && cache.clinicId === clinicId;
+      if (!hasCache) setLoading(true);
       setError(null);
       try {
         const token = localStorage.getItem("docodile_token");
@@ -49,17 +65,19 @@ export function usePatients(refreshKey?: number): UsePatientsResult {
           signal: controller.signal,
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        setData(await res.json());
+        const json: Patient[] = await res.json();
+        cache = { clinicId, data: json };
+        setData(json);
       } catch (e) {
         if ((e as Error).name === "AbortError") return;
         setError((e as Error).message);
-        setData([]);
+        if (cache === null || cache.clinicId !== clinicId) setData([]);
       } finally {
         setLoading(false);
       }
     })();
     return () => controller.abort();
-  }, [refreshKey]);
+  }, [refreshKey, clinicId]);
 
   return { data, loading, error };
 }

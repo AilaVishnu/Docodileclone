@@ -61,6 +61,30 @@ export function clearActiveSession(visitId: string) {
     delete map[visitId];
     writeMap(META_KEY, map);
   }
+  // Also flip the persisted timer state to ended so the tray's
+  // state-based filter drops it even if some other code path re-adds
+  // the meta entry. Belt-and-suspenders against orphaned counters.
+  const stateMap = readMap<SessionState>(STATE_KEY);
+  const st = stateMap[visitId];
+  if (st && !st.ended) {
+    stateMap[visitId] = { ...st, ended: true, runStartedAtMs: null };
+    writeMap(STATE_KEY, stateMap);
+  }
+}
+
+// Clear every active session belonging to a patient EXCEPT one visit
+// (the one we're keeping live). A patient can only be in one live
+// session at a time; switching visit tabs and ending one used to leave
+// the other visit's session running in the tray forever. Pass the visit
+// being kept as `exceptVisitId`, or null to clear all of the patient's.
+export function clearOtherSessionsForPatient(patientId: string, exceptVisitId: string | null) {
+  const metaMap = readMap<ActiveSessionMeta>(META_KEY);
+  for (const visitId of Object.keys(metaMap)) {
+    if (visitId === exceptVisitId) continue;
+    if (metaMap[visitId]?.patient?.id === patientId) {
+      clearActiveSession(visitId);
+    }
+  }
 }
 
 // Snapshot of all sessions still considered live (i.e. not ended in their
@@ -85,11 +109,32 @@ function listActiveSessions(): Array<{ meta: ActiveSessionMeta; state: SessionSt
 
 // Set when the doctor clicks a tray item — picked up by PrescriptionPage on
 // next mount so it can pre-select the right patient/appointment.
-export type PendingSessionNav = { patient: Patient; appointmentId: string | null };
+export type PendingSessionNav = {
+  patient: Patient;
+  appointmentId: string | null;
+  // Sidebar tab to return to when the user hits Back from the
+  // Prescription page. Lets callers (Patient Files etc.) bring the
+  // doctor back where they came from instead of the prescription home.
+  returnTab?: NavTab;
+  // Left-rail action to land on inside the chart (0=Visits, 1=Files,
+  // 2=Timeline, 3=Bills). Defaults to Visits when omitted.
+  initialAction?: number;
+};
+
+// Short-lived in-memory cache so a quick StrictMode remount (or any
+// remount within the same JS tick) can still see the pending nav after
+// localStorage has been wiped. Cleared 1s after writing — long enough
+// for any same-event remount, short enough to not leak into a real
+// later navigation.
+let memNav: PendingSessionNav | null = null;
+let memNavClearTimer: number | null = null;
 
 export function setPendingSessionNav(nav: PendingSessionNav) {
   try {
     localStorage.setItem(PENDING_NAV_KEY, JSON.stringify(nav));
+    memNav = nav;
+    if (memNavClearTimer != null) window.clearTimeout(memNavClearTimer);
+    memNavClearTimer = window.setTimeout(() => { memNav = null; memNavClearTimer = null; }, 1000);
     window.dispatchEvent(new CustomEvent("docodile:session-nav", { detail: nav }));
   } catch {
     /* ignore */
@@ -99,11 +144,19 @@ export function setPendingSessionNav(nav: PendingSessionNav) {
 export function consumePendingSessionNav(): PendingSessionNav | null {
   try {
     const raw = localStorage.getItem(PENDING_NAV_KEY);
-    if (!raw) return null;
-    localStorage.removeItem(PENDING_NAV_KEY);
-    return JSON.parse(raw) as PendingSessionNav;
+    if (raw) {
+      localStorage.removeItem(PENDING_NAV_KEY);
+      const parsed = JSON.parse(raw) as PendingSessionNav;
+      memNav = parsed;
+      if (memNavClearTimer != null) window.clearTimeout(memNavClearTimer);
+      memNavClearTimer = window.setTimeout(() => { memNav = null; memNavClearTimer = null; }, 1000);
+      return parsed;
+    }
+    // Storage empty — fall back to the in-memory cache so a StrictMode
+    // double-mount can still see the freshly cleared value.
+    return memNav;
   } catch {
-    return null;
+    return memNav;
   }
 }
 
