@@ -748,12 +748,11 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
       return Date.now() - endedAtMs < ONE_DAY_MS;
     }
     if (!hadSession) {
-      // Never started/ended. Editable only if this is the current (latest)
-      // visit, or the visit date is still within 24h. Imported historic
-      // visits (older, non-latest) stay locked — they shouldn't offer a
-      // "Start Session". Prevents a recent untouched visit from freezing
-      // into a "Session Ended" view while keeping old history read-only.
-      return isLatestVisit || (visitMs != null && !Number.isNaN(visitMs) && Date.now() - visitMs < ONE_DAY_MS);
+      // Never started/ended → startable only while the visit date is still
+      // within 24h (i.e. today's / a just-created visit). Older visits —
+      // including imported historic records — stay read-only and never offer
+      // a "Start Session"; a new consultation should create a new visit.
+      return visitMs != null && !Number.isNaN(visitMs) && Date.now() - visitMs < ONE_DAY_MS;
     }
     // Has a recorded duration but no end timestamp (legacy data) → fall
     // back to the visit date for the 24h lock.
