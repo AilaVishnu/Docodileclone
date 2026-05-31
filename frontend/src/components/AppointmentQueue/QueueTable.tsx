@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { styles } from "./AppointmentQueue.styles";
 import { fonts, colors } from "../../styles/theme";
 import { StatusBadge, PayBadge } from "./StatusBadge";
@@ -248,6 +248,21 @@ export function QueueTable({
   menuItems,
   onStatusChange,
 }: QueueTableProps) {
+  // Patient T-id map — same localStorage-backed counter that BookAppointment
+  // and PrescriptionQueue use. Keyed by appointment id; missing keys render
+  // a "T---" placeholder so the column stays uniform width.
+  const patientIdMap = useMemo<Record<string, number>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("docodile_patient_map") || "{}");
+    } catch {
+      return {};
+    }
+  }, []);
+  const tIdFor = (aptId: string) => {
+    const n = patientIdMap[aptId];
+    return n ? `T${String(n).padStart(3, "0")}` : "T---";
+  };
+
   if (appointments.length === 0) {
     return <ZeroQueue />;
   }
@@ -260,7 +275,7 @@ export function QueueTable({
               leftover width: Name stays capped at 256 (truncates), the 3-dots
               stays exactly 24px, and the name↔phone gap stretches/squeezes as
               the queue resizes. */}
-          <col style={{ width: "28px" }} />   {/* # */}
+          <col style={{ width: "48px" }} />   {/* # (T-number e.g. T001) */}
           <col />
           <col style={{ width: "var(--queue-name-w)" }} />  {/* Name (256 / 200, truncates) */}
           <col />
@@ -356,39 +371,25 @@ export function QueueTable({
                       (e.currentTarget as HTMLElement).style.backgroundColor = baseBg;
                     }}
                   >
-                    {/* # */}
+                    {/* # — T-number (e.g. T001). Falls back to "T---" when
+                        the appointment is not in the local id map. */}
                     <td style={styles.serialCell}>
-                      {apt.status === "IN_PROGRESS"
-                        ? String(appointments.filter((a, i) => i <= index && a.status === "IN_PROGRESS").length).padStart(2, "0")
-                        : "-"}
+                      {tIdFor(apt.id)}
                     </td>
 
                     <td style={spacerTd} aria-hidden />
 
-                    {/* Name + gender/age */}
+                    {/* Name — "<name> (M|64)" all in one style. */}
                     <td style={styles.nameCell}>
-                      <div style={styles.nameInner}>
-                        <span style={styles.namePrimary}>{apt.patientName}</span>
-                        {(apt.patientGender || apt.patientAge) && (
-                          <span style={styles.nameMeta}>
-                            {apt.patientGender && (
-                              <span>{apt.patientGender.charAt(0).toUpperCase()}</span>
-                            )}
-                            {apt.patientGender && apt.patientAge && (
-                              <span style={styles.nameMetaDot}>|</span>
-                            )}
-                            {apt.patientAge != null && apt.patientAge > 0 && (() => {
-                              const years = Math.floor(apt.patientAge / 12);
-                              const months = apt.patientAge % 12;
-                              let label = "";
-                              if (years > 0 && months > 0) label = `${years}y ${months}m`;
-                              else if (years > 0) label = `${years}y`;
-                              else label = `${months}m`;
-                              return <span>{label}</span>;
-                            })()}
-                          </span>
-                        )}
-                      </div>
+                      <span style={styles.namePrimary}>
+                        {apt.patientName}
+                        {(() => {
+                          const g = apt.patientGender ? apt.patientGender.charAt(0).toUpperCase() : "";
+                          const years = apt.patientAge != null && apt.patientAge > 0 ? Math.floor(apt.patientAge / 12) : null;
+                          const parts = [g, years != null ? String(years) : ""].filter(Boolean);
+                          return parts.length ? ` (${parts.join("|")})` : "";
+                        })()}
+                      </span>
                     </td>
 
                     <td style={spacerTd} aria-hidden />

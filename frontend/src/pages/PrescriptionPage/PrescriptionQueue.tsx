@@ -45,7 +45,7 @@ type PrescriptionQueueProps = {
 const TAB_ITEMS: { id: StatusFilter; label: string }[] = [
   { id: "all", label: "View all" },
   { id: "AT_DOC", label: "At Doc" },
-  { id: "IN_PROGRESS", label: "In Progress" },
+  { id: "IN_PROGRESS", label: "Ongoing" },
   { id: "WAITING", label: "Waiting" },
   { id: "COMPLETED", label: "Completed" },
 ];
@@ -320,12 +320,12 @@ function PatientCard({
       />
       <div style={isList ? styles.cardListBody : styles.cardBody}>
         <p style={styles.cardTitle}>
-          {/* Block-level spans so each piece sits on its own line; name
-              truncates with an ellipsis instead of wrapping to a 2nd line. */}
-          <span style={{ ...styles.cardTitleName, display: "block", maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tId}: {apt.patientName}</span>
-          {meta && (
-            <span style={{ ...styles.cardTitleMeta, display: "block", maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{meta}</span>
-          )}
+          {/* Two lines: T-number on top, then "<name> (M|64)". Both truncate
+              with an ellipsis instead of wrapping. */}
+          <span style={{ ...styles.cardTitleName, display: "block", maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tId}</span>
+          <span style={{ ...styles.cardTitleMeta, display: "block", maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {apt.patientName}{meta ? ` ${meta}` : ""}
+          </span>
         </p>
         <div style={styles.cardRows}>
           <CardRow label="Service" value={abbreviateService(apt.service)} />
@@ -372,7 +372,7 @@ function PatientListTable({
             fixed widths for every data column, one flexible spacer absorbs
             leftover width, the rest are uniform inter-column gaps. */}
         <colgroup>
-          <col style={{ width: "28px" }} />        {/* # */}
+          <col style={{ width: "48px" }} />        {/* # (T-number, e.g. T001) */}
           <col />                                   {/* flex spacer — absorbs leftover */}
           <col style={{ width: "var(--queue-name-w)" }} />  {/* Name (256 / 200, truncates) */}
           <col />
@@ -443,31 +443,23 @@ function PatientListTable({
                   </tr>
                 )}
                 <tr style={{ ...styles.tr, backgroundColor: rowBg }}>
-                  {/* # */}
+                  {/* # — T-number with "T---" placeholder when the patient
+                      isn't yet in the local id map (no fallback to a row
+                      index — keep the column uniformly T-prefixed). */}
                   <td style={{ ...styles.tdSerial, paddingLeft: 0, paddingRight: 0 }}>
-                    {tNum
-                      ? `T${String(tNum).padStart(3, "0")}`
-                      : String(index + 1).padStart(2, "0")}
+                    {tNum ? `T${String(tNum).padStart(3, "0")}` : "T---"}
                   </td>
                   <td style={spacerTd} aria-hidden />
 
-                  {/* Name */}
+                  {/* Name — "<name> (M|64)" inline, single font style. */}
                   <td style={{ ...styles.tdName, paddingLeft: 0, paddingRight: "4px" }}>
-                    <span style={styles.tdNameInner}>
-                      <span style={styles.tdNamePrimary}>{apt.patientName}</span>
-                      {(apt.patientGender || ageYears != null) && (
-                        <span style={styles.tdNameMeta}>
-                          {apt.patientGender
-                            ? apt.patientGender.charAt(0).toUpperCase()
-                            : "?"}
-                          {ageYears != null && (
-                            <>
-                              <span style={styles.tdNameDivider}>|</span>
-                              {ageYears}y
-                            </>
-                          )}
-                        </span>
-                      )}
+                    <span style={styles.tdNamePrimary}>
+                      {apt.patientName}
+                      {(() => {
+                        const g = apt.patientGender ? apt.patientGender.charAt(0).toUpperCase() : "";
+                        const parts = [g, ageYears != null ? String(ageYears) : ""].filter(Boolean);
+                        return parts.length ? ` (${parts.join("|")})` : "";
+                      })()}
                     </span>
                   </td>
                   <td style={spacerTd} aria-hidden />
@@ -565,7 +557,7 @@ function StatusPill({
   if (!variant) return <span style={pillStyles.fallback}>{status}</span>;
   const META: Record<PillKey, { bg: string; label: string }> = {
     AT_DOC: { bg: colors.neutral100, label: "At Doc" },
-    IN_PROGRESS: { bg: colors.secondary100, label: "In Progress" },
+    IN_PROGRESS: { bg: colors.secondary100, label: "Ongoing" },
     WAITING: { bg: colors.yellow100, label: "Waiting" },
     COMPLETED: { bg: colors.green100, label: "Completed" },
   };

@@ -273,6 +273,7 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral900,
     verticalAlign: "middle" as const,
     textAlign: "left" as const,
+    whiteSpace: "nowrap" as const,
   },
   // <td> can't be display:flex without breaking vertical-align; the inner
   // span handles the flex layout for name + (M|25) meta.

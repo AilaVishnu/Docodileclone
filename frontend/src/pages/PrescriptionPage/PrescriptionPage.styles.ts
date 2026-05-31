@@ -3,7 +3,7 @@ import { colors, fonts, radii, spacing, strokes, fluidSpacing } from "../../styl
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Prescription page — baseline scaffold per Figma node 2057:6224
-// Two-column layout: patient/context pane on the left (308px fixed),
+// Two-column layout: patient/context pane on the left (246px fixed),
 // visit-form area on the right (grows).
 // All sections rendered as Cards to match the existing design system.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -21,7 +21,9 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,
-    padding: `0 ${fluidSpacing.outerX} 80px`,
+    // Extra bottom room so the two stacked floating bars (session pill +
+    // the nav/actions bar) never cover the last form rows.
+    padding: `0 ${fluidSpacing.outerX} 160px`,
     overflowY: "auto",
     overflowX: "hidden",
   },
@@ -48,11 +50,11 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral900,
   },
 
-  // Header uses the same column grid as the body so the title (column 2)
-  // aligns with the right area's left edge — i.e. above the visit tabs.
+  // (Old inline header grid — no longer used; <PageHeader/> took over.
+   // Left here in case anything still references the styles.header key.)
   header: {
     display: "grid",
-    gridTemplateColumns: "308px minmax(0, 1fr)",
+    gridTemplateColumns: "246px minmax(0, 1fr)",
     gap: spacing.m,
     alignItems: "start",
   },
@@ -98,18 +100,248 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.s,
     color: colors.neutral500,
   },
+  // Single column — the section nav + contact actions live in a floating
+  // bottom bar now, so the form spans the FULL content width. Page
+  // responsiveness = the form stretching / squeezing.
   body: {
-    display: "grid",
-    gridTemplateColumns: "308px minmax(0, 1fr)",
-    gap: spacing.m,
-    alignItems: "start",
+    display: "block",
+    width: "100%",
   },
 
   // ── Left column ──────────────────────────────────────────────────────────
+  // Slim icon rail — sticks below the sticky header while the long form
+  // scrolls, so Visits / Files / Timeline / Bills stay reachable.
   leftColumn: {
+    position: "sticky" as const,
+    top: spacing.m,
+    alignSelf: "start" as const,
     display: "flex",
     flexDirection: "column",
-    gap: spacing.m,
+    gap: spacing.s,
+  },
+
+  // ── Icon rail (Figma-adjacent; mirrors the app's main 80px sidebar) ──────
+  iconNav: {
+    backgroundColor: colors.primary100,
+    borderRadius: radii.m,
+    padding: spacing["2xs"],
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing["3xs"],
+  },
+  railItem: {
+    position: "relative" as const,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing["3xs"],
+    padding: `${spacing.xs} ${spacing["2xs"]}`,
+    borderRadius: radii.s,
+    border: "none",
+    backgroundColor: "transparent",
+    color: colors.neutral700,
+    cursor: "pointer",
+    width: "100%",
+    minHeight: 56,
+  },
+  railItemActive: {
+    backgroundColor: colors.primary700,
+    color: colors.neutral100,
+  },
+  railIconWrap: {
+    position: "relative" as const,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 24,
+    height: 24,
+  },
+  railLabel: {
+    fontSize: fonts.size.xs,
+    lineHeight: fonts.lineHeight.xs,
+    fontFamily: fonts.family.primary,
+    color: "inherit",
+    textAlign: "center" as const,
+  },
+  // Count badge — small pill anchored to the top-right of the rail icon.
+  railBadge: {
+    position: "absolute" as const,
+    top: -6,
+    right: -10,
+    minWidth: 16,
+    height: 16,
+    paddingLeft: 4,
+    paddingRight: 4,
+    borderRadius: radii.full,
+    backgroundColor: colors.primary200,
+    color: colors.neutral700,
+    fontSize: 10,
+    lineHeight: "16px",
+    fontFamily: fonts.family.primary,
+    textAlign: "center" as const,
+    boxSizing: "border-box" as const,
+  },
+  railBadgeActive: {
+    backgroundColor: colors.primary100,
+    color: colors.primary700,
+  },
+
+  // AI Summary trigger — a ✨ button in the rail; opens the popover panel.
+  railAiBtn: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing["3xs"],
+    padding: `${spacing.xs} ${spacing["2xs"]}`,
+    borderRadius: radii.m,
+    border: `${strokes.xs} solid ${colors.primary300}`,
+    backgroundColor: colors.primary100,
+    color: colors.neutral900,
+    cursor: "pointer",
+    width: "100%",
+    minHeight: 56,
+  },
+  railAiBtnActive: {
+    borderColor: colors.primary500,
+  },
+
+  // AI Summary popover — floats above the bottom bar, near the ✨ button.
+  aiPopover: {
+    position: "fixed" as const,
+    bottom: 84,
+    right: fluidSpacing.outerX,
+    width: 320,
+    maxHeight: 360,
+    overflowY: "auto" as const,
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.l,
+    boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+    padding: spacing.m,
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.xs,
+    zIndex: 1200,
+  },
+  aiPopoverBackdrop: {
+    position: "fixed" as const,
+    inset: 0,
+    zIndex: 1199,
+  },
+
+  // ── Header patient identity (centered in the sticky bar) ─────────────────
+  headerPatient: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.s,
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.full,
+    overflow: "hidden",
+    backgroundColor: colors.primary300,
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // Single inline line: "T--- Ramesh (M|64)". T--- is muted, name is dark.
+  headerName: {
+    fontSize: fonts.size.l,
+    fontFamily: fonts.family.secondary,
+    fontWeight: fonts.weight.regular,
+    color: colors.neutral900,
+    whiteSpace: "nowrap" as const,
+  },
+  headerTId: {
+    color: colors.neutral500,
+    marginRight: spacing["2xs"],
+  },
+
+  // ── Floating bottom bar — section nav (left) + contact actions (right) ───
+  // Mirrors the SessionBar's centered-floating-pill treatment. Sits stacked
+  // just below the (lifted) session pill.
+  bottomBar: {
+    position: "fixed" as const,
+    bottom: spacing.l,
+    // Viewport-centered, matching the SessionBar so the two pills align.
+    left: "50%",
+    transform: "translateX(-50%)",
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.s,
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.xl,
+    boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+    padding: `${spacing["2xs"]} ${spacing.s}`,
+    zIndex: 1090,
+  },
+  bottomNav: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing["3xs"],
+  },
+  bottomNavItem: {
+    position: "relative" as const,
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.xs,
+    padding: `${spacing.xs} ${spacing.s}`,
+    borderRadius: radii.m,
+    border: "none",
+    backgroundColor: "transparent",
+    color: colors.neutral700,
+    cursor: "pointer",
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    whiteSpace: "nowrap" as const,
+  },
+  bottomNavItemActive: {
+    backgroundColor: colors.primary700,
+    color: colors.neutral100,
+  },
+  bottomNavBadge: {
+    minWidth: 18,
+    height: 18,
+    paddingLeft: 5,
+    paddingRight: 5,
+    borderRadius: radii.full,
+    backgroundColor: colors.primary200,
+    color: colors.neutral700,
+    fontSize: 11,
+    lineHeight: "18px",
+    textAlign: "center" as const,
+    boxSizing: "border-box" as const,
+  },
+  bottomNavBadgeActive: {
+    backgroundColor: colors.primary100,
+    color: colors.primary700,
+  },
+  bottomDivider: {
+    width: 1,
+    alignSelf: "stretch",
+    backgroundColor: colors.neutral200,
+    margin: `${spacing["2xs"]} ${spacing["2xs"]}`,
+  },
+  bottomActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing["3xs"],
+  },
+  bottomActionBtn: {
+    width: 36,
+    height: 36,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radii.m,
+    border: "none",
+    backgroundColor: "transparent",
+    color: colors.neutral900,
+    cursor: "pointer",
+    padding: 0,
   },
   // Patient identity block — avatar overlaps the top of the text tile so the
   // circle sits half-in, half-out of the card. Wrapper has no bg; the tile
@@ -140,7 +372,9 @@ export const styles: Record<string, CSSProperties> = {
   patientCard: {
     backgroundColor: colors.primary100,
     borderRadius: radii.xl,
-    padding: `${spacing["3xl"]} ${spacing.m} ${spacing.m}`,
+    // Horizontal padding trimmed one step (m 16 → s 12) so the identity
+    // line has more room inside the narrower 246px left column.
+    padding: `${spacing["3xl"]} ${spacing.s} ${spacing.m}`,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -166,7 +400,10 @@ export const styles: Record<string, CSSProperties> = {
     fontWeight: fonts.weight.regular,
     color: colors.neutral900,
     textAlign: "center",
-    whiteSpace: "nowrap" as const,
+    // Allow the "<name> (M|64)" line to wrap onto a second line when it
+    // would overflow the 246px left column — no truncation.
+    whiteSpace: "normal" as const,
+    overflowWrap: "anywhere" as const,
   },
 
   // Figma node 2059:6764 — left-rail action list ("Visits / Reports / Files /
@@ -174,7 +411,8 @@ export const styles: Record<string, CSSProperties> = {
   actionList: {
     backgroundColor: colors.primary100,
     borderRadius: radii.m,
-    padding: `${spacing.m} ${spacing.l}`,
+    // Horizontal padding trimmed one step (l 20 → m 16).
+    padding: spacing.m,
     display: "flex",
     flexDirection: "column",
     gap: spacing.xs,
@@ -221,6 +459,12 @@ export const styles: Record<string, CSSProperties> = {
   actionLabel: {
     flex: 1,
   },
+  // Quick Actions (phone / email / video / edit) — secondary affordances,
+  // so the labels read one rung smaller than the primary nav above
+  // (size.s 14 vs. size.m 16).
+  shareActionRow: {
+    fontSize: fonts.size.s,
+  },
   actionCount: {
     color: colors.neutral500,
     fontSize: fonts.size.xs,
@@ -231,7 +475,8 @@ export const styles: Record<string, CSSProperties> = {
   shareCard: {
     backgroundColor: colors.primary100,
     borderRadius: radii.m,
-    padding: `${spacing.m} ${spacing.l}`,
+    // Horizontal padding trimmed one step (l 20 → m 16) — matches actionList.
+    padding: spacing.m,
     display: "flex",
     flexDirection: "column",
     gap: spacing.xs,
@@ -315,16 +560,17 @@ export const styles: Record<string, CSSProperties> = {
     color: "inherit",
   },
 
-  // Figma node 2057:6284 — section card. Solid primary300 border (no shadow),
-  // radii.m, padding l/m. Title is Libertinus Serif Semi-Bold.
+  // Section block — no longer a bordered card. Each section sits as a
+  // vertical strip with a thin bottom-border line as the divider; the form
+  // sheet's white background shows through. This buys back the horizontal
+  // padding the boxes used to eat, so vitals/history/rx inputs get more
+  // breathing room on the row.
   sectionCard: {
-    backgroundColor: colors.neutral100,
-    border: `${strokes.xs} solid ${colors.primary300}`,
-    borderRadius: radii.m,
-    padding: `${spacing.m} ${spacing.l}`,
     display: "flex",
     flexDirection: "column",
     gap: spacing.l,
+    padding: `${spacing.m} 0`,
+    borderBottom: `${strokes.xs} solid ${colors.primary300}`,
   },
   sectionHeader: {
     display: "flex",
@@ -476,9 +722,12 @@ export const styles: Record<string, CSSProperties> = {
     padding: `0 ${spacing["3xs"]}`,
     userSelect: "none" as const,
   },
-  // Figma node 2057:6296 — unit pill: white bg, 1px primary300 cream border,
-  // right-rounded corners, neutral500 grey text. Clickable to toggle between
-  // alternate units (cm↔in, kg↔lb, °C↔°F, mmHg↔kPa).
+  // Figma node 2057:6296 — unit pill: white bg, right-rounded corners.
+  // Two variants:
+  //   • Static units (cm / bpm / % …) — cream primary300 border, grey
+  //     neutral500 text. Pure display, not interactive.
+  //   • Clickable toggles (cm↔in, kg↔lb, °C↔°F, mmHg↔kPa, kg/m² calc)
+  //     — black neutral900 border + black text, signalling the affordance.
   vitalUnit: {
     height: "100%",
     padding: spacing.xs,
@@ -496,6 +745,14 @@ export const styles: Record<string, CSSProperties> = {
     whiteSpace: "nowrap" as const,
     boxSizing: "border-box" as const,
     outline: "none",
+  },
+  // Variant applied when the pill is clickable (canToggle === true).
+  // Border is primary500 (lighter peach) so the affordance reads as
+  // interactive without competing with the darker CTA peach above; text
+  // is neutral800 — slightly softer than 900 against the cream page.
+  vitalUnitClickable: {
+    color: colors.neutral800,
+    borderColor: colors.primary500,
   },
 
   // 2x2 text-field grid (Chief Complaints — legacy)
@@ -557,7 +814,8 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,
-    paddingLeft: spacing.l,
+    // No left inset — Tests / Diet / Treatment Plan / Next Review align
+    // flush with the section strips above.
   },
   noteRow: {
     display: "flex",
@@ -785,7 +1043,8 @@ export const styles: Record<string, CSSProperties> = {
   aiSummaryCard: {
     backgroundColor: colors.primary100,
     borderRadius: radii.xl,
-    padding: spacing.l,
+    // Horizontal padding trimmed one step (l 20 → m 16); vertical stays at 20.
+    padding: `${spacing.l} ${spacing.m}`,
     display: "flex",
     flexDirection: "column",
     gap: spacing.xs,
@@ -881,14 +1140,17 @@ export const styles: Record<string, CSSProperties> = {
   // Private Notes) two-column textarea cards. Each card has a header row
   // (icon + title + kebab handle) and a cream textarea field with the
   // dictate icons docked at its bottom-right corner.
+  // 2-column row (50/50): (Complaints, Diagnosis) and (Notes for Patient,
+  // Private Notes). Section-strip styling (vertical padding + thin bottom
+  // line) sits on the row wrapper so the pair shares one divider — not two
+  // stacked borders. Flush left/right with no inset, aligning with Vitals
+  // / History / Rx above.
   noteCardsRow: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
     columnGap: spacing.m,
-    // Match sectionCard's 20px L/R padding so the Complaints column lines
-    // up vertically with the History / Vitals / Rx section content above
-    // it (icon at the same x; right edge flush with the cards above).
-    padding: `0 ${spacing.l}`,
+    padding: `${spacing.m} 0`,
+    borderBottom: `${strokes.xs} solid ${colors.primary300}`,
   },
   noteCard: {
     display: "flex",

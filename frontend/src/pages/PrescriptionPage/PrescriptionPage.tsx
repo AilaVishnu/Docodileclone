@@ -12,6 +12,7 @@ import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check-s
 import { ReactComponent as LetterIcon } from "../../assets/icons/letter.svg";
 import { ReactComponent as VideocameraIcon } from "../../assets/icons/videocamera.svg";
 import { ReactComponent as PenIcon } from "../../assets/icons/pen.svg";
+import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
 // Main content section icons exported from Figma node 2057:6283
 import { ReactComponent as HeartPulseIcon } from "../../assets/icons/heart-pulse.svg";
 import { ReactComponent as HourglassIcon } from "../../assets/icons/hourglass-line.svg";
@@ -325,10 +326,11 @@ const todayIso = (): string => {
 };
 
 // Format the secondary line of the patient identity card. Shape:
-// "(M|25)  9876543210" — gender shortened to M/F if needed; phone trailing.
-// Falls back gracefully when fields are missing.
-const formatPatientMeta = (
-  p: { gender: string | null; age: number | null; phone: string | null } | null
+// "M|64" — gender shortened, age joined with a pipe. Backend stores age in
+// months (consistent with PrescriptionQueue / queue list view); we convert
+// to years here. Phone is no longer included; it lives in Quick Actions.
+const formatPatientGenderAge = (
+  p: { gender: string | null; age: number | null } | null
 ): string => {
   if (!p) return "";
   const genderShort = (() => {
@@ -338,9 +340,9 @@ const formatPatientMeta = (
     if (g.startsWith("f")) return "F";
     return p.gender;
   })();
-  const ageStr = p.age != null ? String(p.age) : "";
-  const head = genderShort || ageStr ? `(${[genderShort, ageStr].filter(Boolean).join("|")})` : "";
-  return [head, p.phone ?? ""].filter(Boolean).join("  ");
+  const ageYears = p.age != null ? Math.floor(p.age / 12) : null;
+  const ageStr = ageYears != null ? String(ageYears) : "";
+  return [genderShort, ageStr].filter(Boolean).join("|");
 };
 
 // Figma node 2059:6764 — patient-context action list.
@@ -358,13 +360,6 @@ const ACTION_META: ActionMeta[] = [
   { icon: <FileIcon style={styles.actionIcon} />, label: "Files" },
   { icon: <HistoryIcon style={styles.actionIcon} />, label: "Timeline" },
   { icon: <BillCheckIcon style={styles.actionIcon} />, label: "Bills" },
-];
-
-// Figma node 2073:3264 — contact/edit card. Three rows, no active state.
-const CONTACT_ACTIONS: { icon: React.ReactNode; label: string }[] = [
-  { icon: <LetterIcon style={styles.actionIcon} />, label: "Email Patient" },
-  { icon: <VideocameraIcon style={styles.actionIcon} />, label: "Video Call Patient" },
-  { icon: <PenIcon style={styles.actionIcon} />, label: "Edit Patient Info" },
 ];
 
 // Figma node 2143:10730 — Reports view, swapped in when "Reports" is active.
@@ -941,6 +936,8 @@ export function PrescriptionPage() {
 
   const [showAddModal, setShowAddModal] = React.useState(false);
   const [showEditPatient, setShowEditPatient] = React.useState(false);
+  // AI Summary popover (opened from the ✨ button in the slim icon rail).
+  const [showAiSummary, setShowAiSummary] = React.useState(false);
   // The currently-open file row. null = list view.
   const [viewerOpen, setViewerOpen] = React.useState<ListRow | null>(null);
   const handleAddRows = (rows: AddReportRow[]) => {
@@ -1363,13 +1360,37 @@ export function PrescriptionPage() {
 
   return (
     <div ref={pageRootRef} style={styles.page}>
-      {/* Sticky page header — same standard as BookAppointment + the queue
-          views. Title is the module name ("Rx Pad"); section-specific titles
-          and subtitles (Visits / Files / Timeline / Bills) have been dropped
-          per design. The "+ Add file" CTA that used to live here now sits as
-          an in-list affordance inside the Files view (see below). */}
+      {/* Sticky page header — on the patient chart the PATIENT is the context,
+          so the centered title is the patient identity (avatar + T--- eyebrow
+          + name) rather than the module name. Contact/edit actions sit at the
+          top-right as icon-only buttons. */}
       <PageHeader
-        title="Rx Pad"
+        wrapTitle={false}
+        title={
+          <div style={styles.headerPatient}>
+            <div style={styles.headerAvatar}>
+              <img
+                src={pickAvatar({
+                  gender: selectedPatient?.gender,
+                  ageYears: selectedPatient?.age != null ? Math.floor(selectedPatient.age / 12) : null,
+                })}
+                alt=""
+                width={40}
+                height={40}
+                style={{ display: "block", objectFit: "contain" }}
+              />
+            </div>
+            {/* Inline: "T--- Ramesh (M|64)" — T-number muted, name dark. */}
+            <span style={styles.headerName}>
+              <span style={styles.headerTId}>T---</span>
+              {selectedPatient?.name ?? ""}
+              {(() => {
+                const meta = formatPatientGenderAge(selectedPatient);
+                return meta ? ` (${meta})` : "";
+              })()}
+            </span>
+          </div>
+        }
         onBack={() => {
           setSelectedPatient(null);
           setSelectedAppointmentId(null);
@@ -1378,85 +1399,7 @@ export function PrescriptionPage() {
       />
 
       <div style={styles.body}>
-        {/* ─── Left column ──────────────────────────────────────────── */}
-        <aside style={styles.leftColumn}>
-          <div style={styles.patientWrapper}>
-            <div style={styles.avatar}>
-              <img
-                src={pickAvatar({
-                  gender: selectedPatient?.gender,
-                  // backend stores age in months; the picker buckets in years
-                  ageYears:
-                    selectedPatient?.age != null
-                      ? Math.floor(selectedPatient.age / 12)
-                      : null,
-                })}
-                alt=""
-                width={72}
-                height={72}
-                style={{ display: "block", objectFit: "contain" }}
-              />
-            </div>
-            <div style={styles.patientCard}>
-              <p style={styles.patientPrimary}>{selectedPatient?.name ?? ""}</p>
-              <p style={styles.patientSecondary}>
-                {formatPatientMeta(selectedPatient)}
-              </p>
-            </div>
-          </div>
-
-          <div style={styles.actionList}>
-            {ACTION_META.map((a, i) => {
-              const isActive = activeAction === i;
-              return (
-                <div
-                  key={a.label}
-                  style={{
-                    ...styles.actionRow,
-                    ...(isActive ? styles.actionRowActive : {}),
-                  }}
-                  onClick={() => setActiveAction(i)}
-                >
-                  {a.icon}
-                  <span style={styles.actionLabel}>{a.label}</span>
-                  <span
-                    style={{
-                      ...styles.actionBadge,
-                      ...(isActive ? styles.actionBadgeActive : {}),
-                    }}
-                  >
-                    {countFor(i)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* AI Summary card — Figma node 2143:11160. Static cream tile with
-              a serif heading and a paragraph-s body summarizing the patient. */}
-          <div style={styles.aiSummaryCard}>
-            <h4 style={styles.aiSummaryTitle}>AI Summary</h4>
-            <p style={styles.aiSummaryBody}>{AI_SUMMARY_TEXT}</p>
-          </div>
-
-          <div style={styles.shareCard}>
-            {CONTACT_ACTIONS.map((a) => (
-              <div
-                key={a.label}
-                style={{ ...styles.actionRow, cursor: a.label === "Edit Patient Info" ? "pointer" : "default" }}
-                onClick={a.label === "Edit Patient Info" ? () => setShowEditPatient(true) : undefined}
-                role={a.label === "Edit Patient Info" ? "button" : undefined}
-                tabIndex={a.label === "Edit Patient Info" ? 0 : undefined}
-                onKeyDown={a.label === "Edit Patient Info" ? (e) => { if (e.key === "Enter" || e.key === " ") setShowEditPatient(true); } : undefined}
-              >
-                {a.icon}
-                <span style={styles.actionLabel}>{a.label}</span>
-              </div>
-            ))}
-          </div>
-        </aside>
-
-        {/* ─── Right area — content swapped via activeAction. Locked
+        {/* ─── Form area — content swapped via activeAction. Locked
               behind the session: until the user clicks Start on the
               SessionBar, pointer-events are blocked and the content fades
               very slightly so the form reads as "frozen". */}
@@ -1790,6 +1733,9 @@ export function PrescriptionPage() {
                                     onClick={canToggle ? () => toggleVitalUnit(cellKey) : undefined}
                                     style={{
                                       ...styles.vitalUnit,
+                                      // Clickable toggles get a black stroke + text;
+                                      // pure-display units (cm/bpm/%) keep cream/grey.
+                                      ...(canToggle ? styles.vitalUnitClickable : null),
                                       width: v.unitWidth ?? 44,
                                       cursor: canToggle ? "pointer" : "default",
                                       ...(!valueValid ? styles.vitalUnitInvalid : {}),
@@ -2343,7 +2289,80 @@ export function PrescriptionPage() {
           onActiveChange={setFormActive}
           onStart={handleSessionStart}
           onEnd={handleSessionEnd}
+          // Lifted above the new bottom nav/actions bar so the two stack
+          // instead of overlapping (the session timer is planned for removal;
+          // the nav bar will then drop to the standard 20px bottom).
+          bottomOffset={88}
         />
+      )}
+
+      {/* ─── Floating bottom bar — section nav (left) + contact actions
+          (right) + AI summary. Patient record navigation moved here from the
+          left rail so the form spans the full content width. */}
+      <div style={styles.bottomBar}>
+        <div style={styles.bottomNav} role="tablist" aria-label="Patient record sections">
+          {ACTION_META.map((a, i) => {
+            const isActive = activeAction === i;
+            const count = countFor(i);
+            return (
+              <button
+                key={a.label}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                style={{ ...styles.bottomNavItem, ...(isActive ? styles.bottomNavItemActive : {}) }}
+                onClick={() => setActiveAction(i)}
+              >
+                {a.icon}
+                <span>{a.label}</span>
+                {count > 0 && (
+                  <span style={{ ...styles.bottomNavBadge, ...(isActive ? styles.bottomNavBadgeActive : {}) }}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={styles.bottomDivider} aria-hidden />
+
+        <div style={styles.bottomActions}>
+          {selectedPatient?.phone && (
+            <a href={`tel:${selectedPatient.phone}`} style={styles.bottomActionBtn} title={selectedPatient.phone} aria-label={`Call ${selectedPatient.phone}`}>
+              <PhoneIcon style={styles.actionIcon} />
+            </a>
+          )}
+          <button type="button" style={styles.bottomActionBtn} title="Email Patient" aria-label="Email Patient">
+            <LetterIcon style={styles.actionIcon} />
+          </button>
+          <button type="button" style={styles.bottomActionBtn} title="Video Call Patient" aria-label="Video Call Patient">
+            <VideocameraIcon style={styles.actionIcon} />
+          </button>
+          <button type="button" style={styles.bottomActionBtn} title="Edit Patient Info" aria-label="Edit Patient Info" onClick={() => setShowEditPatient(true)}>
+            <PenIcon style={styles.actionIcon} />
+          </button>
+          <button
+            type="button"
+            style={{ ...styles.bottomActionBtn, ...(showAiSummary ? { backgroundColor: colors.primary100 } : {}) }}
+            title="AI Summary"
+            aria-label="AI Summary"
+            aria-expanded={showAiSummary}
+            onClick={() => setShowAiSummary((v) => !v)}
+          >
+            <span style={{ fontSize: 18, lineHeight: 1 }}>✨</span>
+          </button>
+        </div>
+      </div>
+
+      {showAiSummary && (
+        <>
+          <div style={styles.aiPopoverBackdrop} onClick={() => setShowAiSummary(false)} />
+          <div style={styles.aiPopover} role="dialog" aria-label="AI Summary">
+            <h4 style={styles.aiSummaryTitle}>AI Summary</h4>
+            <p style={styles.aiSummaryBody}>{AI_SUMMARY_TEXT}</p>
+          </div>
+        </>
       )}
 
       {/* Add File modal. Drag-drop or click-to-choose, multi-file, per-file
