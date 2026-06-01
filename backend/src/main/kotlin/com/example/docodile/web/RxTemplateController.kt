@@ -11,11 +11,12 @@ import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.*
 import java.time.Instant
 
-data class RxTemplateDTO(val name: String, val content: String)
-data class RxTemplateRequest(val name: String = "", val content: String = "")
+data class RxTemplateDTO(val name: String, val content: String, val kind: String)
+data class RxTemplateRequest(val name: String = "", val content: String = "", val kind: String = "")
 
-// Clinic-shared prescription templates. `content` is an opaque JSON blob the
-// frontend owns; the backend only stores/returns it, keyed by name per clinic.
+// Per-section, clinic-shared templates. `kind` scopes a template to a single
+// card (complaints / diagnosis / tests / notes_for_patient / private_notes /
+// rx) — saving from one section only surfaces in that section's Load list.
 @RestController
 @RequestMapping("/api/tenant/rx-templates")
 class RxTemplateController(
@@ -25,37 +26,43 @@ class RxTemplateController(
 ) {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
-    fun list(): List<RxTemplateDTO> =
-        repo.findAllByClinicIdOrderByNameAsc(currentUser.clinicId())
-            .map { RxTemplateDTO(it.name, it.content) }
+    fun list(@RequestParam kind: String): List<RxTemplateDTO> {
+        val k = kind.trim()
+        if (k.isBlank()) throw IllegalArgumentException("kind is required")
+        return repo.findAllByClinicIdAndKindOrderByNameAsc(currentUser.clinicId(), k)
+            .map { RxTemplateDTO(it.name, it.content, it.kind) }
+    }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     @Transactional
     fun save(@RequestBody req: RxTemplateRequest): ResponseEntity<RxTemplateDTO> {
         val name = req.name.trim()
+        val kind = req.kind.trim()
         if (name.isBlank()) throw IllegalArgumentException("Template name is required")
         if (name.length > 160) throw IllegalArgumentException("Template name too long (max 160)")
+        if (kind.isBlank()) throw IllegalArgumentException("kind is required")
         if (req.content.isBlank()) throw IllegalArgumentException("Template is empty")
         val clinicId = currentUser.clinicId()
-        // Upsert by (clinic, name): re-saving the same name overwrites.
-        val existing = repo.findByClinicIdAndName(clinicId, name)
+        // Upsert by (clinic, kind, name): re-saving the same name in the same
+        // section overwrites; the same name in a different section is a new row.
+        val existing = repo.findByClinicIdAndKindAndName(clinicId, kind, name)
         val saved = if (existing != null) {
             existing.content = req.content
             repo.save(existing)
         } else {
             val clinic = clinicEntityRepository.findById(clinicId)
                 .orElseThrow { IllegalArgumentException("Clinic not found") }
-            repo.save(RxTemplate(clinic = clinic, name = name, content = req.content, createdAt = Instant.now()))
+            repo.save(RxTemplate(clinic = clinic, kind = kind, name = name, content = req.content, createdAt = Instant.now()))
         }
-        return ResponseEntity.status(HttpStatus.CREATED).body(RxTemplateDTO(saved.name, saved.content))
+        return ResponseEntity.status(HttpStatus.CREATED).body(RxTemplateDTO(saved.name, saved.content, saved.kind))
     }
 
     @DeleteMapping
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     @Transactional
-    fun delete(@RequestParam name: String): ResponseEntity<Void> {
-        val existing = repo.findByClinicIdAndName(currentUser.clinicId(), name.trim())
+    fun delete(@RequestParam name: String, @RequestParam kind: String): ResponseEntity<Void> {
+        val existing = repo.findByClinicIdAndKindAndName(currentUser.clinicId(), kind.trim(), name.trim())
             ?: return ResponseEntity.notFound().build()
         repo.delete(existing)
         return ResponseEntity.noContent().build()

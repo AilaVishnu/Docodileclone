@@ -304,33 +304,17 @@ const fromRxDTO = (dto: RxRowDTO): RxRowDraft => ({
 // Rx rows. Excludes vitals and history, which are per-patient measurements and
 // shouldn't be auto-filled from a template. The backend stores `content` as an
 // opaque JSON blob of exactly this shape (minus the name).
-type RxTemplateContent = {
-  complaints: string;
-  diagnosis: string;
-  tests: string;
-  notesForPatient: string;
-  privateNotes: string;
-  reviewDays: string;
-  reviewNotes: string;
-  rxRows: RxRowDraft[];
-};
-type RxTemplate = RxTemplateContent & { name: string };
+// Per-section template kinds. Each card / footer has its own list — saving
+// from one card only surfaces in that card's Load list.
+type TemplateKind =
+  | "complaints"
+  | "diagnosis"
+  | "tests"
+  | "notes_for_patient"
+  | "private_notes"
+  | "rx";
 
-const parseRxTemplate = (dto: { name: string; content: string }): RxTemplate => {
-  let c: Partial<RxTemplateContent> = {};
-  try { c = JSON.parse(dto.content) as Partial<RxTemplateContent>; } catch { /* malformed — fall back to blanks */ }
-  return {
-    name: dto.name,
-    complaints: c.complaints ?? "",
-    diagnosis: c.diagnosis ?? "",
-    tests: c.tests ?? "",
-    notesForPatient: c.notesForPatient ?? "",
-    privateNotes: c.privateNotes ?? "",
-    reviewDays: c.reviewDays ?? "",
-    reviewNotes: c.reviewNotes ?? "",
-    rxRows: Array.isArray(c.rxRows) ? c.rxRows : [],
-  };
-};
+type SavedTemplate = { name: string; content: string };
 
 const tplStyles: Record<string, React.CSSProperties> = {
   container: { display: "flex", flexDirection: "column", gap: spacing.m, width: 460, maxWidth: "92vw" },
@@ -1204,60 +1188,86 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   // Toggle between the table layout (default) and the card grid layout
   // (Figma node 2143:11610). Driven by the list/widget icons in the tabs row.
   const [viewMode, setViewMode] = React.useState<"list" | "grid">("list");
-  // Prescription templates (clinic-shared, backend-stored).
+  // Per-section prescription templates (clinic-shared, backend-stored).
+  // Each card / footer has its own kind; saving from a kind only surfaces in
+  // that kind's Load list. The same modal serves both modes (load vs save),
+  // driven by `templatesKind` for which section it's scoped to.
   const [showTemplates, setShowTemplates] = React.useState(false);
+  const [templatesMode, setTemplatesMode] = React.useState<"load" | "save">("load");
+  const [templatesKind, setTemplatesKind] = React.useState<TemplateKind>("rx");
   const [templateName, setTemplateName] = React.useState("");
-  const [savedTemplates, setSavedTemplates] = React.useState<RxTemplate[]>([]);
+  const [savedTemplates, setSavedTemplates] = React.useState<SavedTemplate[]>([]);
   const [templatesBusy, setTemplatesBusy] = React.useState(false);
 
-  const refreshTemplates = () =>
-    listRxTemplates()
-      .then((rows) => setSavedTemplates(rows.map(parseRxTemplate)))
+  // What goes into `content` for each kind — only the relevant section's data,
+  // so a "Complaints" template stays a complaints blob and a load is scoped.
+  const buildTemplateContent = (kind: TemplateKind): string => {
+    switch (kind) {
+      case "complaints": return JSON.stringify({ complaints: complaintsValue });
+      case "diagnosis": return JSON.stringify({ diagnosis: diagnosisValue });
+      case "tests": return JSON.stringify({ tests: testsValue });
+      case "notes_for_patient": return JSON.stringify({ notesForPatient: notesForPatientValue });
+      case "private_notes": return JSON.stringify({ privateNotes: privateNotesValue });
+      case "rx": return JSON.stringify({ rxRows });
+    }
+  };
+
+  // Apply a loaded template's content to ONLY the kind's section, leaving
+  // every other field alone. Malformed JSON falls back to blanks.
+  const applyTemplateContent = (kind: TemplateKind, content: string) => {
+    let c: Record<string, unknown> = {};
+    try { c = JSON.parse(content) as Record<string, unknown>; } catch { /* keep blanks */ }
+    switch (kind) {
+      case "complaints": setComplaintsValue(typeof c.complaints === "string" ? c.complaints : ""); break;
+      case "diagnosis": setDiagnosisValue(typeof c.diagnosis === "string" ? c.diagnosis : ""); break;
+      case "tests": setTestsValue(typeof c.tests === "string" ? c.tests : ""); break;
+      case "notes_for_patient": setNotesForPatientValue(typeof c.notesForPatient === "string" ? c.notesForPatient : ""); break;
+      case "private_notes": setPrivateNotesValue(typeof c.privateNotes === "string" ? c.privateNotes : ""); break;
+      case "rx": {
+        const rows = Array.isArray(c.rxRows) ? (c.rxRows as RxRowDraft[]) : [];
+        // Reset ids/positions so loaded rows save as fresh Rx rows on this visit.
+        setRxRows(rows.map((r, i) => ({ ...r, id: null, position: i + 1, thenRows: r.thenRows ?? [] })));
+        break;
+      }
+    }
+  };
+
+  const refreshTemplates = (kind: TemplateKind) =>
+    listRxTemplates(kind)
+      .then((rows) => setSavedTemplates(rows.map((r) => ({ name: r.name, content: r.content }))))
       .catch((e: Error) => showToast(e.message || "Couldn't load templates"));
 
-  const openTemplates = () => {
+  const openTemplates = (mode: "load" | "save", kind: TemplateKind) => {
+    setTemplatesMode(mode);
+    setTemplatesKind(kind);
+    setTemplateName("");
     setShowTemplates(true);
-    void refreshTemplates();
+    void refreshTemplates(kind);
   };
 
   const handleSaveTemplate = () => {
     const name = templateName.trim();
     if (!name) { showToast("Enter a template name"); return; }
-    const content: string = JSON.stringify({
-      complaints: complaintsValue,
-      diagnosis: diagnosisValue,
-      tests: testsValue,
-      notesForPatient: notesForPatientValue,
-      privateNotes: privateNotesValue,
-      reviewDays,
-      reviewNotes: reviewNotesValue,
-      rxRows,
-    });
+    const kind = templatesKind;
+    const content = buildTemplateContent(kind);
     setTemplatesBusy(true);
-    saveRxTemplate(name, content)
-      .then(() => { setTemplateName(""); showToast(`Saved template "${name}"`); return refreshTemplates(); })
+    saveRxTemplate(name, content, kind)
+      .then(() => { setTemplateName(""); setShowTemplates(false); showToast(`Saved template "${name}"`); return refreshTemplates(kind); })
       .catch((e: Error) => showToast(e.message || "Couldn't save template"))
       .finally(() => setTemplatesBusy(false));
   };
 
-  const handleLoadTemplate = (t: RxTemplate) => {
-    setComplaintsValue(t.complaints);
-    setDiagnosisValue(t.diagnosis);
-    setTestsValue(t.tests);
-    setNotesForPatientValue(t.notesForPatient);
-    setPrivateNotesValue(t.privateNotes);
-    setReviewDays(t.reviewDays);
-    setReviewNotesValue(t.reviewNotes);
-    // Reset ids/positions so loaded rows save as fresh Rx rows on this visit.
-    setRxRows(t.rxRows.map((r, i) => ({ ...r, id: null, position: i + 1, thenRows: r.thenRows ?? [] })));
+  const handleLoadTemplate = (t: SavedTemplate) => {
+    applyTemplateContent(templatesKind, t.content);
     setShowTemplates(false);
     showToast(`Loaded "${t.name}"`);
   };
 
   const handleDeleteTemplate = (name: string) => {
+    const kind = templatesKind;
     setTemplatesBusy(true);
-    deleteRxTemplate(name)
-      .then(() => refreshTemplates())
+    deleteRxTemplate(name, kind)
+      .then(() => refreshTemplates(kind))
       .catch((e: Error) => showToast(e.message || "Couldn't delete template"))
       .finally(() => setTemplatesBusy(false));
   };
@@ -1286,10 +1296,6 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
         setNotesForPatientValue("");
         setPrivateNotesValue("");
       },
-    },
-    {
-      label: "Saved templates",
-      onClick: openTemplates,
     },
   ];
 
@@ -2440,7 +2446,11 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                         <ChatSquareCallIcon style={styles.sectionIcon} />
                         <h3 style={styles.sectionTitle}>Complaints</h3>
                       </div>
-                      <ReorderIcon style={styles.reorderHandle} width={24} height={24} />
+                      <PopoverMenu
+                        trigger={<ReorderIcon style={styles.reorderHandle} width={24} height={24} />}
+                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "complaints") }]}
+                        ariaLabel="Template options"
+                      />
                     </div>
                     <div style={styles.noteCardField}>
                       <AutocompleteTags
@@ -2461,10 +2471,10 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                         >
                           <RewindIcon width={20} height={20} />
                         </button>
-                        <button type="button" title="Prescription templates" onClick={openTemplates} style={rewindBtnStyle(false)}>
+                        <button type="button" title="Load template" onClick={() => openTemplates("load", "complaints")} style={rewindBtnStyle(false)}>
                           <MicIcon width={20} height={20} />
                         </button>
-                      </span>
+                                              </span>
                     </div>
                   </div>
                   <div style={styles.noteCard}>
@@ -2473,7 +2483,11 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                         <MagniferBugIcon style={styles.sectionIcon} />
                         <h3 style={styles.sectionTitle}>Diagnosis</h3>
                       </div>
-                      <ReorderIcon style={styles.reorderHandle} width={24} height={24} />
+                      <PopoverMenu
+                        trigger={<ReorderIcon style={styles.reorderHandle} width={24} height={24} />}
+                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "diagnosis") }]}
+                        ariaLabel="Template options"
+                      />
                     </div>
                     <div style={styles.noteCardField}>
                       <AutocompleteTags
@@ -2494,10 +2508,10 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                         >
                           <RewindIcon width={20} height={20} />
                         </button>
-                        <button type="button" title="Prescription templates" onClick={openTemplates} style={rewindBtnStyle(false)}>
+                        <button type="button" title="Load template" onClick={() => openTemplates("load", "diagnosis")} style={rewindBtnStyle(false)}>
                           <MicIcon width={20} height={20} />
                         </button>
-                      </span>
+                                              </span>
                     </div>
                   </div>
                 </div>
@@ -2654,11 +2668,15 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                           >
                             <RewindIcon width={20} height={20} />
                           </button>
-                          <button type="button" title="Prescription templates" onClick={openTemplates} style={rewindBtnStyle(false)}>
+                          <button type="button" title="Load template" onClick={() => openTemplates("load", "rx")} style={rewindBtnStyle(false)}>
                             <MicIcon width={20} height={20} />
                           </button>
-                        </span>
-                        <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
+                                                  </span>
+                        <PopoverMenu
+                        trigger={<ReorderIcon style={styles.reorderHandle} width={20} height={20} />}
+                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "rx") }]}
+                        ariaLabel="Template options"
+                      />
                       </div>
                     </div>
                   )}
@@ -2674,7 +2692,11 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                         <DocumentIcon style={styles.sectionIcon} />
                         <h3 style={styles.sectionTitle}>Notes for Patient</h3>
                       </div>
-                      <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
+                      <PopoverMenu
+                        trigger={<ReorderIcon style={styles.reorderHandle} width={20} height={20} />}
+                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "notes_for_patient") }]}
+                        ariaLabel="Template options"
+                      />
                     </div>
                     <div style={styles.noteCardField}>
                       <textarea
@@ -2693,10 +2715,10 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                         >
                           <RewindIcon width={20} height={20} />
                         </button>
-                        <button type="button" title="Prescription templates" onClick={openTemplates} style={rewindBtnStyle(false)}>
+                        <button type="button" title="Load template" onClick={() => openTemplates("load", "notes_for_patient")} style={rewindBtnStyle(false)}>
                           <MicIcon width={20} height={20} />
                         </button>
-                      </span>
+                                              </span>
                     </div>
                   </div>
                   <div style={{ ...styles.noteCard, ...styles.noteCardPrivate }}>
@@ -2705,7 +2727,11 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                         <UsersIcon style={styles.sectionIcon} />
                         <h3 style={styles.sectionTitle}>Private Notes</h3>
                       </div>
-                      <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
+                      <PopoverMenu
+                        trigger={<ReorderIcon style={styles.reorderHandle} width={20} height={20} />}
+                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "private_notes") }]}
+                        ariaLabel="Template options"
+                      />
                     </div>
                     <div style={{ ...styles.noteCardField, ...styles.noteCardFieldPrivate }}>
                       <textarea
@@ -2745,12 +2771,16 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                         >
                           <RewindIcon width={20} height={20} />
                         </button>
-                        <button type="button" title="Prescription templates" onClick={openTemplates} style={rewindBtnStyle(false)}>
+                        <button type="button" title="Load template" onClick={() => openTemplates("load", "tests")} style={rewindBtnStyle(false)}>
                           <MicIcon width={20} height={20} />
                         </button>
-                      </span>
+                                              </span>
                     </div>
-                    <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
+                    <PopoverMenu
+                        trigger={<ReorderIcon style={styles.reorderHandle} width={20} height={20} />}
+                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "tests") }]}
+                        ariaLabel="Template options"
+                      />
                   </div>
                   {/* Refer to — dropdown of doctors in the current clinic
                 (fetched from /api/doctors, which filters by the caller's
@@ -2923,41 +2953,50 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
         <div style={tplStyles.container}>
           <header style={tplStyles.header}>
             <div>
-              <h2 style={tplStyles.title}>Prescription templates</h2>
-              <p style={tplStyles.subtitle}>Save this prescription, or pick a saved one to auto-fill.</p>
+              <h2 style={tplStyles.title}>
+                {templatesMode === "save" ? "Save as template" : "Load template"}
+              </h2>
+              <p style={tplStyles.subtitle}>
+                {templatesMode === "save"
+                  ? "Name this prescription so you can reuse it later."
+                  : "Pick a saved template to auto-fill the prescription."}
+              </p>
             </div>
             <button type="button" onClick={() => setShowTemplates(false)} aria-label="Close" style={tplStyles.close}>✕</button>
           </header>
 
-          <div style={tplStyles.saveRow}>
-            <input
-              style={tplStyles.input}
-              placeholder="Template Name"
-              value={templateName}
-              onChange={(e) => setTemplateName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") handleSaveTemplate(); }}
-            />
-            <button type="button" style={tplStyles.saveBtn} onClick={handleSaveTemplate} disabled={templatesBusy}>
-              Save
-            </button>
-          </div>
-
-          <div style={tplStyles.list}>
-            {savedTemplates.length === 0 ? (
-              <p style={tplStyles.empty}>No saved templates yet. Fill the prescription, type a name, and Save.</p>
-            ) : (
-              savedTemplates.map((t) => (
-                <div key={t.name} style={tplStyles.item}>
-                  <button type="button" style={tplStyles.itemName} onClick={() => handleLoadTemplate(t)} title="Load this template">
-                    {t.name}
-                  </button>
-                  <button type="button" style={tplStyles.itemDelete} onClick={() => handleDeleteTemplate(t.name)} disabled={templatesBusy} title="Delete template">
-                    ✕
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
+          {templatesMode === "save" ? (
+            <div style={tplStyles.saveRow}>
+              <input
+                style={tplStyles.input}
+                placeholder="Template Name"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSaveTemplate(); }}
+                autoFocus
+              />
+              <button type="button" style={tplStyles.saveBtn} onClick={handleSaveTemplate} disabled={templatesBusy}>
+                Save
+              </button>
+            </div>
+          ) : (
+            <div style={tplStyles.list}>
+              {savedTemplates.length === 0 ? (
+                <p style={tplStyles.empty}>No saved templates yet.</p>
+              ) : (
+                savedTemplates.map((t) => (
+                  <div key={t.name} style={tplStyles.item}>
+                    <button type="button" style={tplStyles.itemName} onClick={() => handleLoadTemplate(t)} title="Load this template">
+                      {t.name}
+                    </button>
+                    <button type="button" style={tplStyles.itemDelete} onClick={() => handleDeleteTemplate(t.name)} disabled={templatesBusy} title="Delete template">
+                      ✕
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
       </Modal>
 
