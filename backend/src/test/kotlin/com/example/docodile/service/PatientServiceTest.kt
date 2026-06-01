@@ -42,7 +42,7 @@ class PatientServiceTest {
         val patients = listOf(Patient(id = UUID.randomUUID(), name = "Alice"))
 
         `when`(currentUser.clinicId()).thenReturn(clinicId)
-        `when`(patientRepository.findAllByClinicId(clinicId)).thenReturn(patients)
+        `when`(patientRepository.findAllByClinicIdAndArchivedFalse(clinicId)).thenReturn(patients)
 
         val result = patientService.listPatients()
 

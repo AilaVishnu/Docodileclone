@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.*
+import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
@@ -30,6 +31,51 @@ class PatientController(
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun list(): List<PatientWithLastVisitDTO> = patientService.listPatientsWithLastVisit()
+
+    // Archived patients — preserved in DB but hidden from the main list.
+    // No last-visit join here; archived list is a simple roster for a
+    // future "restore" UI.
+    @GetMapping("/archived")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
+    fun listArchived(): List<Map<String, Any?>> = patientService.listArchived().map { p ->
+        mapOf(
+            "id" to p.id,
+            "name" to p.name,
+            "phone" to p.phone,
+            "gender" to p.gender,
+            "archivedAt" to p.archivedAt
+        )
+    }
+
+    @PostMapping("/{patientId}/archive")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
+    @Transactional
+    fun archive(@PathVariable patientId: UUID): ResponseEntity<Void> {
+        val clinicId = currentUser.clinicId()
+        val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
+            ?: return ResponseEntity.notFound().build()
+        if (!patient.archived) {
+            patient.archived = true
+            patient.archivedAt = Instant.now()
+            patientRepository.save(patient)
+        }
+        return ResponseEntity.noContent().build()
+    }
+
+    @PostMapping("/{patientId}/unarchive")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
+    @Transactional
+    fun unarchive(@PathVariable patientId: UUID): ResponseEntity<Void> {
+        val clinicId = currentUser.clinicId()
+        val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
+            ?: return ResponseEntity.notFound().build()
+        if (patient.archived) {
+            patient.archived = false
+            patient.archivedAt = null
+            patientRepository.save(patient)
+        }
+        return ResponseEntity.noContent().build()
+    }
 
     @PatchMapping("/{patientId}")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")

@@ -15,7 +15,7 @@ class TokenServiceTest {
     fun setup() {
         jwtProperties = JwtProperties().apply {
             secret = "mysecretkeymustbeatleast32characterslongforsafehmacsha256"
-            expirationMs = 86400000
+            expirationMs = 3600000
         }
         tokenService = TokenService(jwtProperties)
     }

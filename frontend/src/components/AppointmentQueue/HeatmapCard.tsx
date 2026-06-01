@@ -12,6 +12,9 @@ type HeatmapCardProps = {
   /** Optional override; if absent, derived from doctor's saved schedule. */
   startHour?: number;
   endHour?: number;
+  /** Date the heatmap represents — drives the subtitle so past/future
+   *  queue views read accurately instead of always saying "Today's". */
+  date?: Date;
 };
 
 function deriveRangeFromSchedule() {
@@ -62,6 +65,7 @@ export function HeatmapCard({
   appointments,
   startHour,
   endHour,
+  date,
 }: HeatmapCardProps) {
   const fallback = deriveRangeFromSchedule();
   const sh = startHour ?? fallback.startHour;
@@ -72,12 +76,25 @@ export function HeatmapCard({
     0
   );
 
+  // Build a context label that matches the queue date the heatmap was
+  // computed for — "today" only when the parent passed today's date.
+  const today = new Date();
+  const isToday = date ? (
+    date.getFullYear() === today.getFullYear()
+      && date.getMonth() === today.getMonth()
+      && date.getDate() === today.getDate()
+  ) : true;
+  const dayLabel = !date ? "Today's"
+    : isToday ? "Today's"
+    : date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+  const subtitle = total > 0
+    ? `${dayLabel} bookings, by 15-min slot`
+    : `No bookings on ${dayLabel.replace(/'s$/, "")}`;
+
   return (
     <div style={styles.container}>
       <p style={styles.title}>Peak Hours</p>
-      <p style={styles.subtitle}>
-        {total > 0 ? "Today's bookings, by 15-min slot" : "No bookings yet today"}
-      </p>
+      <p style={styles.subtitle}>{subtitle}</p>
 
       <div style={styles.divider} />
 

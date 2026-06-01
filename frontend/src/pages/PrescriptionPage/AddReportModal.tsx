@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Modal } from "../../components/Modal/Modal";
 import { Select } from "../../components/Input/Select/Select";
-import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
+import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import type { VisitDTO } from "../../api/visits";
 import { API_BASE_URL } from "../../apiConfig";

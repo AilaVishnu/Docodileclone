@@ -222,9 +222,15 @@ class AIService(
             }
             Each bullet < 100 chars. Focus on what changed or what needs
             attention; skip filler.
+            All money values are in Indian Rupees — always write the
+            currency as ₹ (Unicode U+20B9). NEVER use $, USD, or any
+            other currency symbol.
         """.trimIndent()
         return try {
-            openAI.complete(systemPrompt, payload)
+            // Belt-and-suspenders: strip any stray $ the model might still
+            // emit and force the rupee sign. The prompt asks for ₹ but
+            // older / smaller models occasionally fall back to USD.
+            openAI.complete(systemPrompt, payload).replace('$', '₹')
         } catch (e: AIClientException) {
             """{"items":[],"error":"${e.message?.replace("\"","'") ?: "AI unavailable"}"}"""
         }

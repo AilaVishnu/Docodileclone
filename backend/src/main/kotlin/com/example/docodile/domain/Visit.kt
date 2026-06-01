@@ -86,5 +86,9 @@ class Visit(
     @Column(name = "session_duration_sec") var sessionDurationSec: Int? = null,
 
     @Column(name = "created_at") var createdAt: Instant? = null,
-    @Column(name = "updated_at") var updatedAt: Instant? = null
+    @Column(name = "updated_at") var updatedAt: Instant? = null,
+
+    // "<patientExternalRef>|<visitDate>" when this visit was bulk-imported.
+    // Null for visits created natively. Makes re-imports idempotent.
+    @Column(name = "external_ref") var externalRef: String? = null
 )

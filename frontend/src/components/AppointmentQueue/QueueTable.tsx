@@ -38,11 +38,25 @@ export type Appointment = {
   doctorId?: string;
   notes?: string;
   fee?: number;
+  /** Latest pharmacy bill total set by Bill Medicines. Surfaced in the
+   *  Pay Due popup so the receptionist sees consultation + medicine
+   *  charges separately. */
+  pharmacyAmount?: number;
+  /** True when the linked patient has been archived. Drives "patient is
+   *  archived" toasts in queue/pad navigation. */
+  patientArchived?: boolean;
+  /** Wall-clock ISO when the appointment was created. Used to gate the
+   *  24h "edit window" — past that, Edit Appointment is suppressed. */
+  createdAt?: string;
 };
 
 type MenuItem = {
   label: string;
   onClick: (appointment: Appointment) => void;
+  // Optional per-row gate — return false to omit this menu item for a
+  // given appointment. Lets the parent express conditional actions like
+  // "Mark as Paid" only for DUE rows without duplicating menus.
+  visible?: (appointment: Appointment) => boolean;
 };
 
 type QueueTableProps = {
@@ -69,7 +83,13 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
     appointment.patientId ? loadStartedSet().has(appointment.patientId) : false
   );
   const ref = useRef<HTMLDivElement>(null);
-  const isLocked = currentStatus === "COMPLETED" || timerStarted;
+  // Lock the status badge while the doctor's actually in a session for
+  // this patient — but only if the appointment is in flight. A stale
+  // "started" flag from a previous appointment (the flag persists in
+  // localStorage indefinitely) shouldn't block status changes on a new
+  // BOOKED / AT_DOC row.
+  const isLocked = currentStatus === "COMPLETED"
+    || (timerStarted && (currentStatus === "IN_PROGRESS" || currentStatus === "AT_DOC"));
 
   useEffect(() => {
     if (!appointment.patientId) return;
@@ -199,7 +219,7 @@ function ActionMenu({
             ...(openUpward ? { top: "auto", bottom: "100%" } : {}),
           }}
         >
-          {menuItems.map((item, i) => (
+          {menuItems.filter((item) => item.visible?.(appointment) !== false).map((item, i) => (
             <div
               key={i}
               style={styles.actionMenuItem}
