@@ -8,6 +8,7 @@ import { ClinicSelectionPage } from './pages/ClinicSelectionPage';
 import { SetupPasswordPage } from './pages/SetupPasswordPage/SetupPasswordPage';
 
 function App() {
+  const [loginMode, setLoginMode] = useState<"admin" | "staff">("admin");
   const [view, setViewState] = useState<"login" | "home" | "build" | "select">(() => {
     const token = localStorage.getItem("docodile_token");
     const sessionActive = sessionStorage.getItem("docodile_session");
@@ -27,17 +28,31 @@ function App() {
 
     // Existing session (refresh) — restore saved view
     const savedView = localStorage.getItem("docodile_view") as "login" | "home" | "build" | "select";
+    const role = localStorage.getItem("docodile_role");
+    if (role && role !== "ADMIN") {
+      return "home"; // Staff should always go straight to home
+    }
     return savedView || "select";
   });
 
   const setView = (newView: "login" | "home" | "build" | "select") => {
-    localStorage.setItem("docodile_view", newView);
-    setViewState(newView);
+    const role = localStorage.getItem("docodile_role");
+    let targetView = newView;
+    if (role && role !== "ADMIN" && (newView === "build" || newView === "select")) {
+      targetView = "home";
+    }
+    localStorage.setItem("docodile_view", targetView);
+    setViewState(targetView);
   };
 
   const handleLoginSuccess = () => {
     sessionStorage.setItem("docodile_session", "true");
-    setView("select");
+    const role = localStorage.getItem("docodile_role");
+    if (role && role !== "ADMIN") {
+      setView("home");
+    } else {
+      setView("select");
+    }
   };
 
   const handleLogout = () => {
@@ -50,6 +65,7 @@ function App() {
     localStorage.removeItem("docodile_user_id");
     localStorage.removeItem("docodile_user_email");
     sessionStorage.removeItem("docodile_session");
+    setLoginMode("admin");
     setView("login");
   };
 
@@ -101,7 +117,17 @@ function MainApp({
       {view === "login" && (
         <div className="centered-layout">
           <header className="App-header">
-            <AdminLoginPage onLoginSuccess={handleLoginSuccess} />
+            {loginMode === "staff" ? (
+              <StaffLoginPage
+                onLoginSuccess={handleLoginSuccess}
+                onSwitchToAdmin={() => setLoginMode("admin")}
+              />
+            ) : (
+              <AdminLoginPage
+                onLoginSuccess={handleLoginSuccess}
+                onSwitchToStaff={() => setLoginMode("staff")}
+              />
+            )}
           </header>
         </div>
       )}
