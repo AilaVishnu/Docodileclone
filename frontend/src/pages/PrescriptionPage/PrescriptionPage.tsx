@@ -597,6 +597,11 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   // Start Session / End Session actions can update the appointment's
   // backend status without bouncing back to the queue.
   const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(initialNav?.appointmentId ?? null);
+  // Status of the selected appointment — gates the auto-create so a visit is
+  // only generated once the patient has been sent to the doctor (AT_DOC) or
+  // is already in session (IN_PROGRESS). Opening the pad on a still-BOOKED
+  // card shows past visits without spawning a new one.
+  const [selectedAppointmentStatus, setSelectedAppointmentStatus] = React.useState<string | null>(null);
   // The date the queue was showing when the doctor clicked View Pad.
   // Used as the visit date for auto-create so past-date queues don't
   // create a visit stamped today.
@@ -610,7 +615,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   // (e.g. from Patient Files) and has 2+ appointments today, ask which slot
   // this consultation is for before opening/creating its visit.
   const [slotOptions, setSlotOptions] = React.useState<
-    { id: string; scheduledTime: string | null; doctorId: string | null }[] | null
+    { id: string; scheduledTime: string | null; doctorId: string | null; status?: string | null }[] | null
   >(null);
   const slotFetchedForRef = React.useRef<string | null>(null);
   // Patient id for which the today-appointments check has finished. The
@@ -1024,6 +1029,13 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
       }
       // No visit for this appointment yet — create one tagged with it.
       // After refetch this effect re-runs and the branch above selects it.
+      // Gate: only when the receptionist has marked the patient as sent to
+      // the doctor (AT_DOC) or they're already in session (IN_PROGRESS).
+      // On a still-BOOKED card the pad opens but no visit is auto-spawned.
+      const apptStatus = (selectedAppointmentStatus ?? "").toUpperCase();
+      if (apptStatus !== "AT_DOC" && apptStatus !== "IN_PROGRESS") {
+        return;
+      }
       if (autoCreatedForApptRef.current !== selectedAppointmentId) {
         autoCreatedForApptRef.current = selectedAppointmentId;
         const draft: SaveVisitRequest = {
@@ -1057,7 +1069,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
       if (v.visitDate && queueDate !== v.visitDate) setQueueDate(v.visitDate);
       unfinishedJumpedForPatientRef.current = selectedPatientId;
     }
-  }, [selectedPatientId, selectedAppointmentId, visitsLoading, visitsLoadedFor, visits, refetchVisits, queueDate, activeTab, appointmentDoctorId, slotChecked, slotOptions]);
+  }, [selectedPatientId, selectedAppointmentId, selectedAppointmentStatus, visitsLoading, visitsLoadedFor, visits, refetchVisits, queueDate, activeTab, appointmentDoctorId, slotChecked, slotOptions]);
   // Reset the one-shot guards when the user leaves the patient.
   React.useEffect(() => {
     if (selectedPatientId === null) {
@@ -1067,6 +1079,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
       slotFetchedForRef.current = null;
       setSlotOptions(null);
       setSlotChecked(null);
+      setSelectedAppointmentStatus(null);
     }
   }, [selectedPatientId]);
 
@@ -1089,7 +1102,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok || cancelled) return;
-        const all: Array<{ id: string; patientId: string; scheduledTime: string | null; doctorId: string | null }> =
+        const all: Array<{ id: string; patientId: string; scheduledTime: string | null; doctorId: string | null; status?: string | null }> =
           await res.json();
         const mine = all.filter((a) => a.patientId === selectedPatientId);
         if (cancelled) return;
@@ -1097,7 +1110,14 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
           setSlotOptions(mine);
         } else if (mine.length === 1) {
           setSelectedAppointmentId(mine[0].id);
+          setSelectedAppointmentStatus(mine[0].status ?? null);
           if (mine[0].doctorId) setAppointmentDoctorId(mine[0].doctorId);
+        }
+        // When the appointment was pre-selected (queue's View Pad), pick up
+        // its status from the same fetch so the auto-create gate works.
+        if (selectedAppointmentId) {
+          const match = all.find((a) => a.id === selectedAppointmentId);
+          if (match) setSelectedAppointmentStatus(match.status ?? null);
         }
       } catch {
         /* ignore — fall back to the ambient flow */
@@ -1110,8 +1130,9 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
 
   // Adopt the slot the doctor picked → the per-appointment auto-create
   // effect then opens (or creates) that appointment's visit.
-  const chooseSlot = (a: { id: string; doctorId: string | null }) => {
+  const chooseSlot = (a: { id: string; doctorId: string | null; status?: string | null }) => {
     setSelectedAppointmentId(a.id);
+    setSelectedAppointmentStatus(a.status ?? null);
     if (a.doctorId) setAppointmentDoctorId(a.doctorId);
     setQueueDate(todayIso());
     setSlotOptions(null);
@@ -1543,6 +1564,16 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   };
 
   const handleSessionStart = () => {
+    // Mirror the auto-create gate: don't let the doctor start a session on
+    // an appointment that's still BOOKED/WAITING — the receptionist must
+    // mark the patient At Doc first.
+    if (selectedAppointmentId) {
+      const apptStatus = (selectedAppointmentStatus ?? "").toUpperCase();
+      if (apptStatus && apptStatus !== "AT_DOC" && apptStatus !== "IN_PROGRESS") {
+        showToast("Mark the patient as 'At Doc' before starting the session.");
+        return;
+      }
+    }
     if (selectedPatient) markStarted(selectedPatient.id);
     // Surface this session in the header tray so the doctor can navigate
     // back to it from any other screen until the session ends.
