@@ -56,6 +56,7 @@ import {
 import { useVisits } from "../../hooks/useVisits";
 import { createVisit, updateVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
 import { listRxTemplates, saveRxTemplate, deleteRxTemplate } from "../../api/rxTemplates";
+import { fetchLatestRxForMedicine, RxLatestDTO } from "../../api/rxHistory";
 import { markStarted, unmarkStarted } from "../../utils/sessionStarted";
 import { API_BASE_URL } from "../../apiConfig";
 import { AddReportModal, AddReportRow } from "./AddReportModal";
@@ -673,9 +674,20 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   // When the doctor enters a medicine they've prescribed to this patient
   // before, pre-fill that row from the last such prescription. Only fills
   // empty fields, so it never clobbers what the doctor has already typed.
-  const autofillRxFromHistory = (rowIndex: number, medicineName: string) => {
-    const prior = lastRxByMedicine.get(medicineName.trim().toLowerCase());
-    if (!prior) return;
+  // Per-medicine clinic-wide cache for the autofill API — avoids re-fetching
+  // the same medicine within a session. Cleared on save so the doctor's just-
+  // saved edits become the new default the next time anyone prescribes it.
+  const clinicWideRxCacheRef = React.useRef<Map<string, RxLatestDTO | null>>(new Map());
+  const clinicWideRxFetchingRef = React.useRef<Set<string>>(new Set());
+
+  const applyAutofillFromRx = (rowIndex: number, prior: {
+    dosage?: string | null;
+    whenToTake?: string | null;
+    frequency?: string | null;
+    frequencyInterval?: string | null;
+    duration?: string | null;
+    notes?: string | null;
+  }) => {
     setRxRows((prev) => prev.map((r, ix) => ix !== rowIndex ? r : {
       ...r,
       dosage: r.dosage || (prior.dosage ?? ""),
@@ -685,6 +697,30 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
       duration: r.duration || (prior.duration ?? ""),
       notes: r.notes || (prior.notes ?? ""),
     }));
+  };
+
+  const autofillRxFromHistory = (rowIndex: number, medicineName: string) => {
+    const key = medicineName.trim().toLowerCase();
+    if (!key) return;
+    // 1) Same-patient match first — instant from in-memory `visits`.
+    const samePatient = lastRxByMedicine.get(key);
+    if (samePatient) { applyAutofillFromRx(rowIndex, samePatient); return; }
+    // 2) Clinic-wide latest — cached after the first lookup per medicine. The
+    // backend returns whichever patient most recently had this medicine, so
+    // the doctor's just-saved edits become the default for the next entry.
+    const cache = clinicWideRxCacheRef.current;
+    if (cache.has(key)) {
+      const cached = cache.get(key);
+      if (cached) applyAutofillFromRx(rowIndex, cached);
+      return;
+    }
+    const inflight = clinicWideRxFetchingRef.current;
+    if (inflight.has(key)) return;
+    inflight.add(key);
+    void fetchLatestRxForMedicine(medicineName.trim(), activeVisit?.id ?? null)
+      .then((res) => { cache.set(key, res); if (res) applyAutofillFromRx(rowIndex, res); })
+      .catch(() => { /* silently ignore — autofill is opportunistic */ })
+      .finally(() => { inflight.delete(key); });
   };
   const [reviewDays, setReviewDays] = React.useState<string>("");
   // Vital values + units (units are clickable to toggle between alternates
@@ -1437,6 +1473,10 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
     try {
       await updateVisit(activeVisit.id, buildSaveRequest());
       await refetchVisits();
+      // The doctor's just-saved schedule is now the clinic's latest for any
+      // medicines in this visit — clear the autofill cache so the next entry
+      // re-fetches and reflects those edits.
+      clinicWideRxCacheRef.current.clear();
       if (!opts?.silent) showToast("Visit saved");
     } catch (e) {
       // Auto-saves stay quiet on success but should still surface
