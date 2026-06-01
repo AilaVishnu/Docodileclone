@@ -337,7 +337,7 @@ const formatPatientMeta = (
     if (g.startsWith("f")) return "F";
     return p.gender;
   })();
-  const ageStr = p.age != null ? String(p.age) : "";
+  const ageStr = p.age != null ? String(Math.floor(p.age / 12)) : "";
   const head = genderShort || ageStr ? `(${[genderShort, ageStr].filter(Boolean).join("|")})` : "";
   return [head, p.phone ?? ""].filter(Boolean).join("  ");
 };
@@ -1281,7 +1281,7 @@ export function PrescriptionPage() {
     const visitIndex = visits.findIndex((vv) => vv.id === activeVisit.id);
     const data: PrintVisitData = {
       patientName: selectedPatient.name,
-      patientAge: selectedPatient.age != null ? `${selectedPatient.age}y` : null,
+      patientAge: selectedPatient.age != null ? `${Math.floor(selectedPatient.age / 12)}y` : null,
       patientGender: selectedPatient.gender,
       patientPhone: selectedPatient.phone,
       patientAddress: null, // Patient type has no address yet.
