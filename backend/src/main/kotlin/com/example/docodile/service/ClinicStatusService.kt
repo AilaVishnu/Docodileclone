@@ -24,7 +24,9 @@ class ClinicStatusService(
     private val clinicStaffRepository: ClinicStaffRepository,
     private val appUserRepository: AppUserRepository,
     private val tenantRepository: TenantRepository,
-    private val currentUser: CurrentUser
+    private val currentUser: CurrentUser,
+    private val passwordTokenService: PasswordTokenService,
+    private val emailService: EmailService,
 ) {
     fun isClinicComplete(): Boolean {
         val tenantId = currentUser.tenantId()
@@ -152,8 +154,9 @@ class ClinicStatusService(
             throw IllegalArgumentException("Phone number already exists for another staff member")
         }
 
-        val staff = if (request.id != null) {
-            appUserRepository.findById(request.id)
+        val isNew = request.id == null
+        val staff = if (!isNew) {
+            appUserRepository.findById(request.id!!)
                 .filter { it.tenant?.id == tenantId }
                 .orElseThrow { IllegalArgumentException("Staff member not found") }
         } else {
@@ -178,10 +181,19 @@ class ClinicStatusService(
             qualification = request.qualification
             medicalCouncil = request.medicalCouncil
             experienceYears = request.experienceYears
-            passwordHash = null // As requested
+            if (isNew) {
+                passwordHash = null
+                accountStatus = "PENDING_ACTIVATION"
+            }
         }
 
         val savedStaff = appUserRepository.save(staff)
+
+        if (isNew) {
+            val rawToken = passwordTokenService.generateToken(savedStaff.id)
+            val setupLink = passwordTokenService.buildSetupLink(rawToken)
+            emailService.sendWelcomeEmail(savedStaff.email, savedStaff.name ?: "", setupLink)
+        }
 
         // Ensure linked to clinic
         if (!clinicStaffRepository.existsByIdClinicIdAndIdStaffId(clinicId, savedStaff.id)) {

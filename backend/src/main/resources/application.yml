@@ -28,6 +28,23 @@ logging:
     org.flywaydb: INFO
     org.springframework.boot.autoconfigure.flyway: DEBUG
 
+spring:
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          starttls:
+            enable: true
+          auth: true
+
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
+  token-expiry-hours: ${TOKEN_EXPIRY_HOURS:24}
+
 security:
   jwt:
     secret: ${JWT_SECRET:change-me-change-me-change-me-change-me}

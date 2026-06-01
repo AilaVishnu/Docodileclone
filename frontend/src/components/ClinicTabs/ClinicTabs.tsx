@@ -14,6 +14,7 @@ export type Staff = {
   qualification: string;
   medicalCouncil: string;
   experienceYears: string;
+  accountStatus?: "ACTIVE" | "PENDING_ACTIVATION";
 };
 
 export type Clinic = {

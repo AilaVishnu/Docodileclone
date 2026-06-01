@@ -60,7 +60,8 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                     registrationNo: s.registrationNo || "",
                     qualification: s.qualification || "",
                     medicalCouncil: s.medicalCouncil || "",
-                    experienceYears: s.experienceYears != null ? String(s.experienceYears) : ""
+                    experienceYears: s.experienceYears != null ? String(s.experienceYears) : "",
+                    accountStatus: s.accountStatus ?? "ACTIVE",
                   }));
                 }
               } catch (e) {
@@ -268,7 +269,8 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           registrationNo: savedStaffData.registrationNo || "",
           qualification: savedStaffData.qualification || "",
           medicalCouncil: savedStaffData.medicalCouncil || "",
-          experienceYears: savedStaffData.experienceYears != null ? String(savedStaffData.experienceYears) : ""
+          experienceYears: savedStaffData.experienceYears != null ? String(savedStaffData.experienceYears) : "",
+          accountStatus: savedStaffData.accountStatus ?? "PENDING_ACTIVATION",
         };
 
         if (editingStaff) {
@@ -305,6 +307,21 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
     }
   };
 
+  const handleResendInvite = async (staffId: string) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/tenant/staff/${staffId}/resend-welcome`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${localStorage.getItem("docodile_token")}` },
+      });
+      if (res.ok) {
+        setToastMessage("Invite email resent");
+      } else {
+        setToastMessage("Failed to resend invite");
+      }
+    } catch {
+      setToastMessage("Failed to resend invite");
+    }
+  };
 
   return (
     <div style={styles.page}>
@@ -354,6 +371,24 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                           </StaffWindow>
                           <div style={styles.staffName}>{staff.name}</div>
                           <div style={styles.staffRole}>{staff.role}</div>
+                          {staff.accountStatus === "PENDING_ACTIVATION" && (
+                            <button
+                              style={{
+                                background: "none",
+                                border: "none",
+                                padding: 0,
+                                cursor: "pointer",
+                                fontSize: 11,
+                                color: "#CF6F2F",
+                                fontFamily: "inherit",
+                                textDecoration: "underline",
+                                marginTop: 2,
+                              }}
+                              onClick={(e) => { e.stopPropagation(); handleResendInvite(staff.id); }}
+                            >
+                              Resend invite
+                            </button>
+                          )}
                         </div>
                       ))}
 

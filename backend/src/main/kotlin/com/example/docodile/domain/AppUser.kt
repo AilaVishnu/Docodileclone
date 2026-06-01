@@ -61,6 +61,9 @@ class AppUser(
     @Column(name = "custom_role")
     var customRole: String? = null,
 
+    @Column(name = "account_status", nullable = false)
+    var accountStatus: String = "ACTIVE",
+
     @Column(name = "created_at")
     var createdAt: Instant? = null
 )

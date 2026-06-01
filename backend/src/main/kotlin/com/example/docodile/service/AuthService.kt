@@ -35,6 +35,10 @@ class AuthService(
             throw BadCredentialsException("Invalid credentials")
         }
 
+        if (user.passwordHash == null) {
+            throw BadCredentialsException("Invalid credentials")
+        }
+
         if (!passwordEncoder.matches(request.password, user.passwordHash)) {
             throw BadCredentialsException("Invalid credentials")
         }
@@ -68,6 +72,10 @@ class AuthService(
 
         val isMember = clinicStaffRepository.existsByIdClinicIdAndIdStaffId(clinic.id, user.id)
         if (!isMember) {
+            throw BadCredentialsException("Invalid credentials")
+        }
+
+        if (user.passwordHash == null) {
             throw BadCredentialsException("Invalid credentials")
         }
 

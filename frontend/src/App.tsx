@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import "./styles/globals.css";
 import { AdminLoginPage, StaffLoginPage } from './pages/LoginPage';
 import { HomePage } from './pages/Home';
 import { BuildYourClinicPage } from './pages/BuildYourClinicPage';
 import { ClinicSelectionPage } from './pages/ClinicSelectionPage';
+import { SetupPasswordPage } from './pages/SetupPasswordPage/SetupPasswordPage';
 
 function App() {
   const [view, setViewState] = useState<"login" | "home" | "build" | "select">(() => {
@@ -76,6 +78,41 @@ function App() {
     setView("select");
   };
 
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/setup-password" element={<SetupPasswordPage />} />
+        <Route path="/*" element={<MainApp
+          view={view}
+          loginMode={loginMode}
+          setLoginMode={setLoginMode}
+          handleLoginSuccess={handleLoginSuccess}
+          handleLogout={handleLogout}
+          handleNavigateToBuild={handleNavigateToBuild}
+          handleNavigateToSelection={handleNavigateToSelection}
+          setView={setView}
+        />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+type MainAppProps = {
+  view: "login" | "home" | "build" | "select";
+  loginMode: "admin" | "staff";
+  setLoginMode: (m: "admin" | "staff") => void;
+  handleLoginSuccess: () => void;
+  handleLogout: () => void;
+  handleNavigateToBuild: () => void;
+  handleNavigateToSelection: () => void;
+  setView: (v: "login" | "home" | "build" | "select") => void;
+};
+
+function MainApp({
+  view, loginMode, setLoginMode,
+  handleLoginSuccess, handleLogout,
+  handleNavigateToBuild, handleNavigateToSelection, setView,
+}: MainAppProps) {
   return (
     <div className="App">
       {view === "login" && (
