@@ -1,0 +1,1 @@
+ALTER TABLE tenant ADD COLUMN max_staff_per_clinic INTEGER NOT NULL DEFAULT 10;

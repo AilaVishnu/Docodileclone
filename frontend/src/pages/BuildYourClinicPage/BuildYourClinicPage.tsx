@@ -21,9 +21,26 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | undefined>(undefined);
   const [toastMessage, setToastMessage] = useState("");
+  const [maxClinics, setMaxClinics] = useState(0);
+  const [maxStaffPerClinic, setMaxStaffPerClinic] = useState(0);
 
   useEffect(() => {
     document.title = "Docodile | Build Your Clinic";
+
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/tenant/config`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("docodile_token")}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setMaxClinics(data.maxClinics);
+          setMaxStaffPerClinic(data.maxStaffPerClinic);
+        }
+      } catch (e) {
+        console.error("Failed to fetch tenant config:", e);
+      }
+    };
 
     const fetchClinics = async () => {
       try {
@@ -101,14 +118,15 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
       }
     };
 
+    fetchConfig();
     fetchClinics();
   }, []);
 
   const activeClinic = clinics.find(c => c.id === activeClinicId) || clinics[0];
 
   const handleAddClinic = () => {
-    if (clinics.length >= 5) {
-      setToastMessage("Maximum of 5 clinics reached");
+    if (clinics.length >= maxClinics) {
+      setToastMessage(`Maximum of ${maxClinics} clinics reached`);
       return;
     }
 
@@ -175,8 +193,8 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   };
 
   const handleOpenAddStaff = async () => {
-    if (activeClinic && activeClinic.staff.length >= 10) {
-      setToastMessage("Maximum of 10 staff members reached");
+    if (activeClinic && activeClinic.staff.length >= maxStaffPerClinic) {
+      setToastMessage(`Maximum of ${maxStaffPerClinic} staff members reached`);
       return;
     }
     if (!(await syncClinicToBackend())) return;
@@ -428,7 +446,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                       ))}
 
                       {/* Add Staff arch */}
-                      {activeClinic.staff.filter((s: Staff) => s.active).length < 10 && (
+                      {activeClinic.staff.filter((s: Staff) => s.active).length < maxStaffPerClinic && (
                         <div style={styles.staffCardWrapper}>
                           <StaffWindow dashed onClick={handleOpenAddStaff}>
                             <PlusIcon style={{ width: 32, height: 32 }} />

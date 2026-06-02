@@ -18,6 +18,8 @@ import { listPharmacyStock, deductPharmacyStock } from "../../api/pharmacy";
 type Doctor = {
   id: string;
   name: string;
+  gender?: string;
+  role?: string;
 };
 
 type BillingMedicine = {
@@ -238,7 +240,12 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
             // appointments. Only active doctors appear in the queue/booking.
             const doctorList = staffData
               .filter((s: any) => s.role === "DOCTOR" && s.active !== false)
-              .map((s: any) => ({ id: s.id, name: s.name }));
+              .map((s: any) => ({
+                id: s.id,
+                name: s.name,
+                gender: (s.gender ?? "").toLowerCase(),
+                role: "Doctor",
+              }));
 
             setDoctors(doctorList);
             if (doctorList.length > 0) {
@@ -543,7 +550,8 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           <div style={{ marginTop: "-30px", flexShrink: 0, display: "flex", flexDirection: "column" }}>
             <DoctorStatusCard
               doctorName={doctors.find(d => d.id === activeDoctorId)?.name || ""}
-              doctorGender="male"
+              doctorGender={doctors.find(d => d.id === activeDoctorId)?.gender || "male"}
+              doctorRole={doctors.find(d => d.id === activeDoctorId)?.role || "Doctor"}
               appointments={activeQueue}
             />
             <HeatmapCard appointments={activeQueue} date={selectedDate} />

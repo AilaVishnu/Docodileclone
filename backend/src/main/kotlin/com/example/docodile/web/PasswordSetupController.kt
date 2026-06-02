@@ -1,6 +1,7 @@
 package com.example.docodile.web
 
 import com.example.docodile.repo.AppUserRepository
+import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.security.CurrentUser
 import com.example.docodile.service.EmailService
 import com.example.docodile.service.PasswordTokenService
@@ -21,6 +22,7 @@ data class SetupPasswordRequest(
 class PasswordSetupController(
     private val passwordTokenService: PasswordTokenService,
     private val appUserRepository: AppUserRepository,
+    private val clinicEntityRepository: ClinicEntityRepository,
     private val passwordEncoder: PasswordEncoder,
     private val emailService: EmailService,
     private val currentUser: CurrentUser,
@@ -77,7 +79,10 @@ class PasswordSetupController(
 
         val rawToken = passwordTokenService.generateToken(user.id)
         val setupLink = passwordTokenService.buildSetupLink(rawToken)
-        emailService.sendWelcomeEmail(user.email, user.name ?: "", setupLink)
+        val clinicName = user.tenant?.id?.let {
+            clinicEntityRepository.findFirstByTenantIdOrderByCreatedAtAsc(it).orElse(null)?.name
+        } ?: "your clinic"
+        emailService.sendWelcomeEmail(user.email, user.name ?: "", clinicName, setupLink)
 
         return ResponseEntity.ok(mapOf("success" to true))
     }

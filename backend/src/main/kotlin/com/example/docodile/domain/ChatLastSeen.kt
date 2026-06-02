@@ -10,7 +10,7 @@ import java.time.Instant
 import java.util.UUID
 
 @Embeddable
-class ChatLastSeenId(
+data class ChatLastSeenId(
     @Column(name = "user_id") var userId: UUID = UUID.randomUUID(),
     @Column(name = "conversation_key") var conversationKey: String = "",
 ) : Serializable

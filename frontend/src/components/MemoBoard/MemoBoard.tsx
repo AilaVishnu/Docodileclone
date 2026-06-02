@@ -172,21 +172,7 @@ function loadMemos(): Memo[] {
 }
 
 function seedDefault(): Memo[] {
-  return [
-    {
-      id: uid(),
-      title: "",
-      text: "Have to pay clinic rent by this saturday",
-      color: COLORS[0],
-      pinColor: PIN_COLORS[0],
-      rotation: -2,
-      x: 32,
-      y: 28,
-      z: 1,
-      pinned: false,
-      createdAt: todayIso(),
-    },
-  ];
+  return [];
 }
 
 function saveMemos(memos: Memo[]) {

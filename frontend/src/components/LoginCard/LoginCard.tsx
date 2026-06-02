@@ -26,6 +26,7 @@ type LoginResponse = {
   role: string;
   clinicId?: string | null;
   clinicName?: string;
+  gender?: string | null;
 };
 
 export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps) {
@@ -89,6 +90,8 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
       const data = (await response.json()) as LoginResponse;
       localStorage.setItem("docodile_token", data.token);
       localStorage.setItem("docodile_role", data.role);
+      if (data.gender) localStorage.setItem("docodile_gender", data.gender.toLowerCase());
+      else localStorage.removeItem("docodile_gender");
       // Decode JWT payload to extract user_id and email for chat
       try {
         const payload = JSON.parse(atob(data.token.split(".")[1]));
