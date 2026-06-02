@@ -65,5 +65,11 @@ class AppUser(
     var accountStatus: String = "ACTIVE",
 
     @Column(name = "created_at")
-    var createdAt: Instant? = null
+    var createdAt: Instant? = null,
+
+    @Column(name = "failed_login_attempts", nullable = false)
+    var failedLoginAttempts: Int = 0,
+
+    @Column(name = "locked_until")
+    var lockedUntil: Instant? = null,
 )

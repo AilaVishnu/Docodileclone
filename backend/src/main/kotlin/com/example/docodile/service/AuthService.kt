@@ -11,8 +11,11 @@ import com.example.docodile.web.LoginRequest
 import com.example.docodile.web.LoginResponse
 import com.example.docodile.web.StaffLoginRequest
 import org.springframework.security.authentication.BadCredentialsException
+import org.springframework.security.authentication.LockedException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 import java.util.UUID
 
 @Service
@@ -25,6 +28,7 @@ class AuthService(
     private val currentUser: CurrentUser,
     private val auditService: AuditService,
 ) {
+    @Transactional
     fun login(request: LoginRequest): LoginResponse {
         val user = appUserRepository.findByEmail(request.email).orElse(null)
 
@@ -37,7 +41,10 @@ class AuthService(
             throw BadCredentialsException("Invalid credentials")
         }
 
+        checkAccountLockout(user)
+
         if (!passwordEncoder.matches(request.password, user.passwordHash)) {
+            recordFailedAttempt(user)
             auditService.log(
                 action   = AuditAction.LOGIN_FAILURE,
                 outcome  = "FAILURE",
@@ -47,6 +54,10 @@ class AuthService(
             )
             throw BadCredentialsException("Invalid credentials")
         }
+
+        user.failedLoginAttempts = 0
+        user.lockedUntil = null
+        appUserRepository.save(user)
 
         val tenantId = user.tenant?.id ?: throw BadCredentialsException("Invalid credentials")
         // Pick the oldest clinic in the tenant as the admin's default. This
@@ -71,6 +82,7 @@ class AuthService(
         return LoginResponse(token = token, role = user.role.name, clinicId = clinic?.id, clinicName = clinicName, gender = user.gender)
     }
 
+    @Transactional
     fun loginStaff(request: StaffLoginRequest): LoginResponse {
         val clinic = clinicEntityRepository.findByDomainIgnoreCase(request.domain.trim())
             .orElseThrow { BadCredentialsException("Invalid credentials") }
@@ -86,6 +98,8 @@ class AuthService(
             throw BadCredentialsException("Invalid credentials")
         }
 
+        checkAccountLockout(user)
+
         val isMember = clinicStaffRepository.existsByIdClinicIdAndIdStaffId(clinic.id, user.id)
         if (!isMember) {
             auditService.log(
@@ -98,6 +112,7 @@ class AuthService(
         }
 
         if (user.passwordHash == null || !passwordEncoder.matches(request.password, user.passwordHash)) {
+            recordFailedAttempt(user)
             auditService.log(
                 action   = AuditAction.LOGIN_FAILURE,
                 outcome  = "FAILURE",
@@ -107,6 +122,10 @@ class AuthService(
             )
             throw BadCredentialsException("Invalid credentials")
         }
+
+        user.failedLoginAttempts = 0
+        user.lockedUntil = null
+        appUserRepository.save(user)
 
         val tenantId = clinic.tenant?.id ?: throw BadCredentialsException("Invalid credentials")
         val token = tokenService.generateToken(user.id, tenantId, user.role.name, user.email, clinic.id)
@@ -129,6 +148,52 @@ class AuthService(
 
     fun logout() {
         auditService.log(action = AuditAction.LOGOUT)
+    }
+
+    @Transactional
+    fun unlockAccount(userId: UUID) {
+        val user = appUserRepository.findById(userId)
+            .orElseThrow { IllegalArgumentException("User not found") }
+        user.failedLoginAttempts = 0
+        user.lockedUntil = null
+        appUserRepository.save(user)
+        auditService.log(
+            action     = AuditAction.ACCOUNT_UNLOCKED,
+            entityType = "AppUser",
+            entityId   = userId,
+        )
+    }
+
+    private fun checkAccountLockout(user: com.example.docodile.domain.AppUser) {
+        val lockedUntil = user.lockedUntil ?: return
+        if (lockedUntil.isAfter(Instant.now())) {
+            val secondsRemaining = lockedUntil.epochSecond - Instant.now().epochSecond
+            throw LockedException("Account locked. Try again in $secondsRemaining seconds.")
+        }
+        // Lock has expired — clear it so the next success resets cleanly
+        user.lockedUntil = null
+        user.failedLoginAttempts = 0
+    }
+
+    private fun recordFailedAttempt(user: com.example.docodile.domain.AppUser) {
+        user.failedLoginAttempts++
+        if (user.failedLoginAttempts >= LOCKOUT_THRESHOLD) {
+            user.lockedUntil = Instant.now().plusSeconds(LOCKOUT_SECONDS)
+            auditService.log(
+                action   = AuditAction.ACCOUNT_LOCKED,
+                entityType = "AppUser",
+                entityId   = user.id,
+                actorId    = user.id,
+                tenantId   = user.tenant?.id,
+                metadata   = mapOf("failedAttempts" to user.failedLoginAttempts),
+            )
+        }
+        appUserRepository.save(user)
+    }
+
+    companion object {
+        private const val LOCKOUT_THRESHOLD = 5
+        private const val LOCKOUT_SECONDS = 15 * 60L // 15 minutes
     }
 
     fun switchClinic(targetClinicId: UUID): LoginResponse {
