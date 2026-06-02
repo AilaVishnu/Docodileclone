@@ -8,9 +8,8 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
 
-data class MfaCodeRequest(val userId: UUID, val code: String)
+data class MfaCodeRequest(val code: String)
 
 @RestController
 @RequestMapping("/auth/mfa")
@@ -18,13 +17,13 @@ class MfaController(private val mfaService: MfaService) {
 
     @PostMapping("/enroll")
     @PreAuthorize("isAuthenticated()")
-    fun beginEnrollment(@RequestBody req: MfaCodeRequest): ResponseEntity<MfaService.EnrollmentResponse> =
-        ResponseEntity.ok(mfaService.beginEnrollment(req.userId))
+    fun beginEnrollment(): ResponseEntity<MfaService.EnrollmentResponse> =
+        ResponseEntity.ok(mfaService.beginEnrollment())
 
     @PostMapping("/confirm")
     @PreAuthorize("isAuthenticated()")
     fun confirmEnrollment(@RequestBody req: MfaCodeRequest): ResponseEntity<Map<String, Any>> {
-        val ok = mfaService.confirmEnrollment(req.userId, req.code)
+        val ok = mfaService.confirmEnrollment(req.code)
         return if (ok) ResponseEntity.ok(mapOf("enrolled" to true))
         else ResponseEntity.badRequest().body(mapOf("error" to "Invalid TOTP code"))
     }
@@ -32,7 +31,7 @@ class MfaController(private val mfaService: MfaService) {
     @PostMapping("/verify")
     @PreAuthorize("isAuthenticated()")
     fun verifyCode(@RequestBody req: MfaCodeRequest): ResponseEntity<Map<String, Any>> {
-        val ok = mfaService.verifyCode(req.userId, req.code)
+        val ok = mfaService.verifyCode(req.code)
         return if (ok) ResponseEntity.ok(mapOf("verified" to true))
         else ResponseEntity.status(401).body(mapOf("error" to "Invalid MFA code"))
     }

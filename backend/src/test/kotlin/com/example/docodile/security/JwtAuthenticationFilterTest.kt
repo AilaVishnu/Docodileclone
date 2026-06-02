@@ -1,6 +1,7 @@
 package com.example.docodile.security
 
 
+import com.example.docodile.repo.RevokedTokenRepository
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -21,6 +22,9 @@ class JwtAuthenticationFilterTest {
 
     @Mock
     private lateinit var tokenService: TokenService
+
+    @Mock
+    private lateinit var revokedTokenRepository: RevokedTokenRepository
 
     @Mock
     private lateinit var request: HttpServletRequest

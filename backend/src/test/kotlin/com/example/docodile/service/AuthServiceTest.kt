@@ -4,8 +4,11 @@ import com.example.docodile.domain.*
 import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.ClinicStaffRepository
+import com.example.docodile.repo.RevokedTokenRepository
+import com.example.docodile.repo.UserSessionRepository
 import com.example.docodile.security.CurrentUser
 import com.example.docodile.security.TokenService
+import com.example.docodile.service.AuditService
 import com.example.docodile.web.LoginRequest
 import com.example.docodile.web.StaffLoginRequest
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -40,6 +43,15 @@ class AuthServiceTest {
 
     @Mock
     private lateinit var currentUser: CurrentUser
+
+    @Mock
+    private lateinit var auditService: AuditService
+
+    @Mock
+    private lateinit var revokedTokenRepository: RevokedTokenRepository
+
+    @Mock
+    private lateinit var userSessionRepository: UserSessionRepository
 
     @InjectMocks
     private lateinit var authService: AuthService

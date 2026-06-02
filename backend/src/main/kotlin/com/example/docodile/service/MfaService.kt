@@ -32,9 +32,9 @@ class MfaService(
     data class EnrollmentResponse(val secret: String, val qrUri: String, val backupCodes: List<String>)
 
     @Transactional
-    fun beginEnrollment(userId: UUID): EnrollmentResponse {
+    fun beginEnrollment(): EnrollmentResponse {
+        val userId = currentUser.userId()
         val user = appUserRepository.findById(userId)
-            .filter { it.id == currentUser.userId() }
             .orElseThrow { IllegalArgumentException("User not found") }
 
         val secret = secretGenerator.generate()
@@ -51,9 +51,9 @@ class MfaService(
     }
 
     @Transactional
-    fun confirmEnrollment(userId: UUID, code: String): Boolean {
+    fun confirmEnrollment(code: String): Boolean {
+        val userId = currentUser.userId()
         val user = appUserRepository.findById(userId)
-            .filter { it.id == currentUser.userId() }
             .orElseThrow { IllegalArgumentException("User not found") }
 
         val secret = user.totpSecret ?: throw IllegalArgumentException("MFA enrollment not started")
@@ -65,11 +65,12 @@ class MfaService(
         return true
     }
 
-    fun verifyCode(userId: UUID, code: String): Boolean {
+    fun verifyCode(code: String): Boolean {
+        val userId = currentUser.userId()
         val user = appUserRepository.findById(userId)
             .orElseThrow { IllegalArgumentException("User not found") }
 
-        if (!user.mfaEnabled) return true // MFA not required
+        if (!user.mfaEnabled) return true // MFA not required for this user
 
         val secret = user.totpSecret ?: return false
         if (verifier.isValidCode(secret, code)) {
