@@ -47,6 +47,9 @@ dependencies {
 	testImplementation 'org.springframework.security:spring-security-test'
 	testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	// In-process rate limiting for auth and data-export endpoints.
+	// Bucket4j core is framework-agnostic; no Spring Boot starter needed.
+	implementation 'com.bucket4j:bucket4j-core:8.10.1'
 	runtimeOnly("com.h2database:h2")
 	runtimeOnly("org.postgresql:postgresql")
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")

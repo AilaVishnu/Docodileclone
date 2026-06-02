@@ -1,6 +1,7 @@
 package com.example.docodile.config
 
 import com.example.docodile.security.JwtAuthenticationFilter
+import com.example.docodile.security.RateLimitFilter
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -20,7 +21,10 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
 @EnableConfigurationProperties(JwtProperties::class, EkaProperties::class, AppProperties::class)
-class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilter) {
+class SecurityConfig(
+    private val jwtAuthenticationFilter: JwtAuthenticationFilter,
+    private val rateLimitFilter: RateLimitFilter,
+) {
     @Bean
     fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
 
@@ -47,6 +51,7 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
                     .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                     .anyRequest().authenticated()
             }
+            .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter::class.java)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
 
         return http.build()
@@ -58,7 +63,7 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
         val allowedOrigins = System.getenv("ALLOWED_ORIGINS")?.split(",") ?: listOf("http://localhost:3000", "http://localhost:3001")
         config.allowedOrigins = allowedOrigins
         config.allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-        config.allowedHeaders = listOf("Authorization", "Content-Type", "*")
+        config.allowedHeaders = listOf("Authorization", "Content-Type", "X-Requested-With")
         config.allowCredentials = true
 
         val source = UrlBasedCorsConfigurationSource()
