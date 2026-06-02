@@ -45,7 +45,7 @@ class SecurityConfig(
                 it.requestMatchers(
                     "/auth/login", "/auth/staff/login",
                     "/auth/validate-token", "/auth/setup-password",
-                    "/auth/forgot-password",
+                    "/auth/forgot-password", "/auth/mfa/verify",
                     "/actuator/health", "/api/health", "/ws/**"
                 ).permitAll()
                     .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
