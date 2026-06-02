@@ -7,6 +7,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import org.hibernate.annotations.SQLRestriction
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDateTime
@@ -14,6 +15,7 @@ import java.util.UUID
 
 @Entity
 @Table(name = "appointment")
+@SQLRestriction("deleted_at IS NULL")
 class Appointment(
     @Id
     var id: UUID = UUID.randomUUID(),
@@ -67,5 +69,11 @@ class Appointment(
     var notes: String? = null,
 
     @Column(name = "created_at")
-    var createdAt: Instant? = null
+    var createdAt: Instant? = null,
+
+    @Column(name = "deleted_at")
+    var deletedAt: Instant? = null,
+
+    @Column(name = "deleted_by")
+    var deletedBy: UUID? = null,
 )

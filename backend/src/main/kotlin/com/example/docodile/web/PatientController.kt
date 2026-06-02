@@ -46,7 +46,7 @@ class PatientController(
             "name" to p.name,
             "phone" to p.phone,
             "gender" to p.gender,
-            "archivedAt" to p.archivedAt
+            "archivedAt" to p.deletedAt
         )
     }
 
@@ -57,9 +57,9 @@ class PatientController(
         val clinicId = currentUser.clinicId()
         val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
             ?: return ResponseEntity.notFound().build()
-        if (!patient.archived) {
-            patient.archived = true
-            patient.archivedAt = Instant.now()
+        if (patient.deletedAt == null) {
+            patient.deletedAt = Instant.now()
+            patient.deletedBy = currentUser.userId()
             patientRepository.save(patient)
             auditService.log(AuditAction.PATIENT_ARCHIVED, entityType = "Patient", entityId = patientId)
         }
@@ -73,9 +73,9 @@ class PatientController(
         val clinicId = currentUser.clinicId()
         val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
             ?: return ResponseEntity.notFound().build()
-        if (patient.archived) {
-            patient.archived = false
-            patient.archivedAt = null
+        if (patient.deletedAt != null) {
+            patient.deletedAt = null
+            patient.deletedBy = null
             patientRepository.save(patient)
             auditService.log(AuditAction.PATIENT_UNARCHIVED, entityType = "Patient", entityId = patientId)
         }

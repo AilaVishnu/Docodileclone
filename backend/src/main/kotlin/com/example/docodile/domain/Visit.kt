@@ -7,12 +7,14 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import org.hibernate.annotations.SQLRestriction
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
 @Entity
 @Table(name = "visit")
+@SQLRestriction("deleted_at IS NULL")
 class Visit(
     @Id
     var id: UUID = UUID.randomUUID(),
@@ -87,6 +89,8 @@ class Visit(
 
     @Column(name = "created_at") var createdAt: Instant? = null,
     @Column(name = "updated_at") var updatedAt: Instant? = null,
+    @Column(name = "deleted_at") var deletedAt: Instant? = null,
+    @Column(name = "deleted_by") var deletedBy: UUID? = null,
 
     // "<patientExternalRef>|<visitDate>" when this visit was bulk-imported.
     // Null for visits created natively. Makes re-imports idempotent.

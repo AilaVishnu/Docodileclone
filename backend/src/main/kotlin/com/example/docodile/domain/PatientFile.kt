@@ -4,12 +4,14 @@ import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import org.hibernate.annotations.SQLRestriction
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
 @Entity
 @Table(name = "patient_files")
+@SQLRestriction("deleted_at IS NULL")
 class PatientFile(
     @Id
     var id: UUID = UUID.randomUUID(),
@@ -45,5 +47,11 @@ class PatientFile(
     var fileSize: Long? = null,
 
     @Column(name = "created_at")
-    var createdAt: Instant = Instant.now()
+    var createdAt: Instant = Instant.now(),
+
+    @Column(name = "deleted_at")
+    var deletedAt: Instant? = null,
+
+    @Column(name = "deleted_by")
+    var deletedBy: UUID? = null,
 )

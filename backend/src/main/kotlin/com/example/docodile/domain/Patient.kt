@@ -39,11 +39,11 @@ class Patient(
     @Column(name = "created_at")
     var createdAt: Instant? = null,
 
-    @Column(nullable = false)
-    var archived: Boolean = false,
+    @Column(name = "deleted_at")
+    var deletedAt: Instant? = null,
 
-    @Column(name = "archived_at")
-    var archivedAt: Instant? = null,
+    @Column(name = "deleted_by")
+    var deletedBy: UUID? = null,
 
     // Source-system id when this patient was bulk-imported (e.g. the
     // HealthPlix "T428"). Null for patients created natively in Docodile.
