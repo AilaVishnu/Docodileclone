@@ -79,9 +79,10 @@ class RateLimitFilter : OncePerRequestFilter() {
             )
             .build()
 
-    private fun resolveIp(request: HttpServletRequest): String {
-        val forwarded = request.getHeader("X-Forwarded-For")
-        return if (!forwarded.isNullOrBlank()) forwarded.split(",").first().trim()
-        else request.remoteAddr ?: "unknown"
-    }
+    // Use remoteAddr (the actual TCP peer) for rate-limit keying.
+    // X-Forwarded-For is NOT used here because it is trivially spoofable by
+    // a client — trusting the left-most entry would let an attacker bypass
+    // the bucket entirely by cycling fake IPs.
+    private fun resolveIp(request: HttpServletRequest): String =
+        request.remoteAddr ?: "unknown"
 }

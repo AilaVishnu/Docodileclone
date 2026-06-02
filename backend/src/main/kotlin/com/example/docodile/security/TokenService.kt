@@ -14,11 +14,15 @@ import java.util.UUID
 class TokenService(private val props: JwtProperties) {
     private val key = Keys.hmacShaKeyFor(props.secret.toByteArray(StandardCharsets.UTF_8))
 
+    val expirationMs: Long get() = props.expirationMs
+
     fun generateToken(userId: UUID, tenantId: UUID, role: String, email: String, clinicId: UUID?): String {
         val now = Date()
         val expiry = Date(now.time + props.expirationMs)
+        val jti = UUID.randomUUID()
 
         val builder = Jwts.builder()
+            .setId(jti.toString())
             .setSubject(userId.toString())
             .setIssuedAt(now)
             .setExpiration(expiry)
@@ -32,6 +36,11 @@ class TokenService(private val props: JwtProperties) {
         }
         return builder.compact()
     }
+
+    fun extractJti(token: String): UUID? =
+        runCatching {
+            UUID.fromString(parseClaims(token).id)
+        }.getOrNull()
 
     fun validateToken(token: String): Boolean {
         return try {

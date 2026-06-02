@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
@@ -30,8 +31,17 @@ class AuthenticationController(private val authService: AuthService) {
 
     @PostMapping("/logout")
     @PreAuthorize("isAuthenticated()")
-    fun logout(): ResponseEntity<Void> {
-        authService.logout()
+    fun logout(
+        @RequestHeader("Authorization", required = false) bearerToken: String?
+    ): ResponseEntity<Void> {
+        authService.logout(bearerToken)
+        return ResponseEntity.noContent().build()
+    }
+
+    @PostMapping("/logout-all")
+    @PreAuthorize("isAuthenticated()")
+    fun logoutAll(): ResponseEntity<Void> {
+        authService.logoutAll()
         return ResponseEntity.noContent().build()
     }
 

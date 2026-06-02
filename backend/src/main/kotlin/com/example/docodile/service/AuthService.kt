@@ -1,20 +1,27 @@
 package com.example.docodile.service
 
 import com.example.docodile.domain.AuditAction
+import com.example.docodile.domain.RevokedToken
 import com.example.docodile.domain.Role
+import com.example.docodile.domain.UserSession
 import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.ClinicStaffRepository
+import com.example.docodile.repo.RevokedTokenRepository
+import com.example.docodile.repo.UserSessionRepository
 import com.example.docodile.security.CurrentUser
 import com.example.docodile.security.TokenService
 import com.example.docodile.web.LoginRequest
 import com.example.docodile.web.LoginResponse
 import com.example.docodile.web.StaffLoginRequest
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.authentication.LockedException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.context.request.ServletRequestAttributes
 import java.time.Instant
 import java.util.UUID
 
@@ -27,6 +34,8 @@ class AuthService(
     private val tokenService: TokenService,
     private val currentUser: CurrentUser,
     private val auditService: AuditService,
+    private val revokedTokenRepository: RevokedTokenRepository,
+    private val userSessionRepository: UserSessionRepository,
 ) {
     @Transactional
     fun login(request: LoginRequest): LoginResponse {
@@ -70,6 +79,8 @@ class AuthService(
             .findFirstByTenantIdOrderByCreatedAtAsc(tenantId)
             .orElse(null)
         val token = tokenService.generateToken(user.id, tenantId, user.role.name, user.email, clinic?.id)
+        val expiresAt = Instant.now().plusMillis(tokenService.expirationMs)
+        recordSession(token, user.id, expiresAt)
 
         auditService.log(
             action   = AuditAction.LOGIN_SUCCESS,
@@ -129,6 +140,8 @@ class AuthService(
 
         val tenantId = clinic.tenant?.id ?: throw BadCredentialsException("Invalid credentials")
         val token = tokenService.generateToken(user.id, tenantId, user.role.name, user.email, clinic.id)
+        val expiresAt = Instant.now().plusMillis(tokenService.expirationMs)
+        recordSession(token, user.id, expiresAt)
 
         auditService.log(
             action   = AuditAction.LOGIN_SUCCESS,
@@ -146,13 +159,65 @@ class AuthService(
         )
     }
 
-    fun logout() {
+    @Transactional
+    fun logout(bearerToken: String?) {
+        if (bearerToken != null) {
+            val token = bearerToken.removePrefix("Bearer ").trim()
+            revokeToken(token)
+        }
         auditService.log(action = AuditAction.LOGOUT)
     }
 
     @Transactional
+    fun logoutAll() {
+        val userId = currentUser.userId()
+        val now = Instant.now()
+        // Revoke all active sessions in the session table
+        val sessions = userSessionRepository.findAllByUserIdAndRevokedAtIsNull(userId)
+        sessions.forEach { s ->
+            s.revokedAt = now
+            revokedTokenRepository.save(
+                RevokedToken(jti = s.jti, userId = userId, expiresAt = s.expiresAt)
+            )
+        }
+        userSessionRepository.saveAll(sessions)
+        userSessionRepository.revokeAllForUser(userId, now)
+        auditService.log(action = AuditAction.TOKEN_REVOKED, metadata = mapOf("revokedSessions" to sessions.size))
+    }
+
+    private fun revokeToken(token: String) {
+        val jti = tokenService.extractJti(token) ?: return
+        val userId = currentUser.userId()
+        val expiresAt = runCatching {
+            tokenService.parseClaims(token).expiration?.toInstant() ?: Instant.now()
+        }.getOrElse { Instant.now() }
+        revokedTokenRepository.save(RevokedToken(jti = jti, userId = userId, expiresAt = expiresAt))
+        userSessionRepository.findByJti(jti)?.let { s ->
+            s.revokedAt = Instant.now()
+            userSessionRepository.save(s)
+        }
+        auditService.log(action = AuditAction.TOKEN_REVOKED)
+    }
+
+    private fun recordSession(token: String, userId: UUID, expiresAt: Instant) {
+        val jti = tokenService.extractJti(token) ?: return
+        val httpReq = (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)?.request
+        userSessionRepository.save(
+            UserSession(
+                userId    = userId,
+                jti       = jti,
+                ipAddress = httpReq?.remoteAddr,
+                userAgent = httpReq?.getHeader("User-Agent"),
+                expiresAt = expiresAt,
+            )
+        )
+    }
+
+    @Transactional
     fun unlockAccount(userId: UUID) {
+        val callerTenantId = currentUser.tenantId()
         val user = appUserRepository.findById(userId)
+            .filter { it.tenant?.id == callerTenantId }
             .orElseThrow { IllegalArgumentException("User not found") }
         user.failedLoginAttempts = 0
         user.lockedUntil = null
