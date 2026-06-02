@@ -14,6 +14,9 @@ data class PatientWithLastVisitDTO(
     val gender: String?,
     val dob: LocalDate?,
     val age: Int?,
+    // Sequential per-clinic patient number shown as the "T###" code. Null
+    // only for rows predating V46's backfill. See Patient.displayNo.
+    val displayNo: Int?,
     val lastVisitDate: LocalDate?,
     // Distinct doctors this patient has been seen by, derived from visits.
     // Used by the Patient Files filter to scope patients by doctor /

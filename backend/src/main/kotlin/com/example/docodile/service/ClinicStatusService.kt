@@ -97,8 +97,11 @@ class ClinicStatusService(
     }
 
     fun getStaffForClinic(clinicId: UUID): List<AppUser> {
-        val associations = clinicStaffRepository.findByClinicId(clinicId)
-        return associations.mapNotNull { it.staff }
+        // Strictly clinic-scoped — only members of THIS clinic, so a staff
+        // member never leaks into another clinic's list. Deactivated staff
+        // keep their membership (see deleteStaff), so they still appear here
+        // (with active=false) for the clinic's "Deactivated" list.
+        return clinicStaffRepository.findByClinicId(clinicId).mapNotNull { it.staff }
     }
 
     @Transactional
@@ -140,26 +143,38 @@ class ClinicStatusService(
             }
         }
 
-        // Check email uniqueness
-        val existingByEmail = appUserRepository.findByEmail(request.email.trim().lowercase())
-        if (existingByEmail.isPresent && existingByEmail.get().id != request.id) {
+        val normalizedEmail = request.email.trim().lowercase()
+        val existingByEmail = appUserRepository.findByEmail(normalizedEmail)
+            .filter { it.tenant?.id == tenantId }
+
+        // Resolve the target staff row:
+        //   - Editing (id present) → load that row.
+        //   - Adding with an email that already belongs to a tenant user →
+        //     reuse that row. This recovers a staff member who was removed
+        //     earlier (or rejoins the clinic) instead of erroring on the
+        //     unique email, keeping all their historical records intact.
+        //   - Otherwise → a brand-new account.
+        val staff = when {
+            request.id != null ->
+                appUserRepository.findById(request.id)
+                    .filter { it.tenant?.id == tenantId }
+                    .orElseThrow { IllegalArgumentException("Staff member not found") }
+            existingByEmail.isPresent -> existingByEmail.get()
+            else -> {
+                val tenant = tenantRepository.findById(tenantId)
+                    .orElseThrow { IllegalStateException("Tenant not found") }
+                AppUser(tenant = tenant, createdAt = Instant.now())
+            }
+        }
+
+        // Email must be unique to this staff row.
+        if (existingByEmail.isPresent && existingByEmail.get().id != staff.id) {
             throw IllegalArgumentException("Email already exists for another staff member")
         }
 
-        // Check phone uniqueness
-        if (appUserRepository.existsByPhone(request.phone) &&
-            (request.id == null || !appUserRepository.findById(request.id).map { it.phone == request.phone }.orElse(false))) {
+        // Phone must be unique to this staff row (allow keeping their own).
+        if (appUserRepository.existsByPhone(request.phone) && request.phone != staff.phone) {
             throw IllegalArgumentException("Phone number already exists for another staff member")
-        }
-
-        val staff = if (request.id != null) {
-            appUserRepository.findById(request.id)
-                .filter { it.tenant?.id == tenantId }
-                .orElseThrow { IllegalArgumentException("Staff member not found") }
-        } else {
-            val tenant = tenantRepository.findById(tenantId)
-                .orElseThrow { IllegalStateException("Tenant not found") }
-            AppUser(tenant = tenant, createdAt = Instant.now())
         }
 
         staff.apply {
@@ -179,6 +194,9 @@ class ClinicStatusService(
             medicalCouncil = request.medicalCouncil
             experienceYears = request.experienceYears
             passwordHash = null // As requested
+            // Adding or editing a staff member (re)activates them — covers
+            // the case where a previously-removed doctor rejoins the clinic.
+            active = true
         }
 
         val savedStaff = appUserRepository.save(staff)
@@ -208,10 +226,41 @@ class ClinicStatusService(
             .filter { it.tenant?.id == tenantId }
             .orElseThrow { IllegalArgumentException("Staff member not found") }
 
-        // Delete clinic-staff association first, then the user
-        val compositeKey = ClinicStaffId(clinicId = clinicId, staffId = staffId)
-        clinicStaffRepository.deleteById(compositeKey)
-        clinicStaffRepository.flush()
-        appUserRepository.delete(staff)
+        // Soft deactivation — never hard-delete a staff member who may own
+        // historical records. Keep the AppUser row AND the clinic membership
+        // (so they remain visible in this clinic's "Deactivated" list and can
+        // be reactivated) and just flip active=false. That hides them from the
+        // booking doctor list and blocks login, while past appointments and
+        // visits still show their name (a medical-legal requirement). Hard-
+        // deleting would also violate the NOT NULL FK on appointment.doctor_id.
+        staff.active = false
+        appUserRepository.save(staff)
+    }
+
+    @Transactional
+    fun reactivateStaff(clinicId: UUID, staffId: UUID) {
+        val tenantId = currentUser.tenantId()
+        val clinic = clinicEntityRepository.findById(clinicId)
+            .filter { it.tenant?.id == tenantId }
+            .orElseThrow { IllegalArgumentException("Clinic not found") }
+
+        val staff = appUserRepository.findById(staffId)
+            .filter { it.tenant?.id == tenantId }
+            .orElseThrow { IllegalArgumentException("Staff member not found") }
+
+        // Re-link to the clinic if the membership was ever dropped (covers
+        // accounts removed by an older hard-removal path), then reactivate.
+        if (!clinicStaffRepository.existsByIdClinicIdAndIdStaffId(clinicId, staffId)) {
+            clinicStaffRepository.save(
+                ClinicStaff(
+                    id = ClinicStaffId(clinicId = clinicId, staffId = staffId),
+                    clinic = clinic,
+                    staff = staff,
+                    createdAt = Instant.now()
+                )
+            )
+        }
+        staff.active = true
+        appUserRepository.save(staff)
     }
 }

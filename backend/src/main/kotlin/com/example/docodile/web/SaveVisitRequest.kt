@@ -62,5 +62,9 @@ data class SaveVisitRequest(
     val sessionEndedAt: Instant? = null,
     val sessionDurationSec: Int? = null,
 
+    // The appointment this visit is opened from. Set on create so each
+    // same-day appointment gets its own visit; preserved on update.
+    val appointmentId: UUID? = null,
+
     val prescriptions: List<RxRowDTO> = emptyList()
 )

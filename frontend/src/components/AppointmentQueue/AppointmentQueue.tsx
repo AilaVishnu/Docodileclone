@@ -158,7 +158,12 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
       if (unit.startsWith("y")) return n * 365;
       return n; // days / unknown unit
     };
-    const computeQty = (dosage?: string, frequency?: string, duration?: string): number | null => {
+    // Topical / liquid / per-pack forms (creams, lotions, drops, syrups…) are
+    // dispensed as ONE unit (a tube/bottle/bar) — not "doses × days" like
+    // tablets/capsules. Default those to 1; the receptionist can still adjust.
+    const PER_PACK_FORM = /cream|lotion|gel|ointment|\boil\b|shampoo|soap|wash|serum|sunscreen|balm|paste|scrub|spray|powder|syrup|suspension|solution|drop|moisturi|conditioner|foam|emulsion|liniment|tincture/i;
+    const computeQty = (name: string, dosage?: string, frequency?: string, duration?: string): number | null => {
+      if (PER_PACK_FORM.test(name)) return 1;
       const dosageMatch = (dosage ?? "").match(/([\d.]+)/);
       const unitsPerDose = dosageMatch ? parseFloat(dosageMatch[1]) : 1;
       const dosesPerDay = (frequency ?? "")
@@ -199,7 +204,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               // qty = units/dose × doses/day × days, ceiling to a whole
               // unit. The receptionist can still bump up/down in the
               // modal if the doctor wrote SOS or fractional doses.
-              qty: computeQty(p.dosage, p.frequency, p.duration) ?? 1,
+              qty: computeQty(name, p.dosage, p.frequency, p.duration) ?? 1,
             };
           });
         setBillingMedicines(rows);
@@ -228,10 +233,13 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
 
           if (staffRes.ok) {
             const staffData = await staffRes.json();
+            // Exclude deactivated doctors — they keep their clinic membership
+            // (for the Deactivated list) but must not be bookable for future
+            // appointments. Only active doctors appear in the queue/booking.
             const doctorList = staffData
-              .filter((s: any) => s.role === "DOCTOR")
+              .filter((s: any) => s.role === "DOCTOR" && s.active !== false)
               .map((s: any) => ({ id: s.id, name: s.name }));
-            
+
             setDoctors(doctorList);
             if (doctorList.length > 0) {
               setActiveDoctorId(doctorList[0].id);
@@ -249,6 +257,23 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           const aptData = await aptRes.json();
           const grouped: Record<string, Appointment[]> = {};
 
+          // Client-side no-show derivation — mirrors the backend
+          // NoShowSweepJob (1am cron) so the queue doesn't show stale
+          // "Booked" pills before the nightly sweep runs. Any pending
+          // appointment (BOOKED/SCHEDULED/WAITING) whose scheduled time is
+          // before the start of today is displayed as NO_SHOW.
+          const startOfToday = new Date();
+          startOfToday.setHours(0, 0, 0, 0);
+          const PENDING_STATUSES = new Set(["BOOKED", "SCHEDULED", "WAITING"]);
+          const deriveStatus = (rawStatus: string | undefined, rawSched: string | undefined): string => {
+            const status = rawStatus || "WAITING";
+            if (!PENDING_STATUSES.has(status.toUpperCase())) return status;
+            if (!rawSched) return status;
+            const sched = new Date(rawSched);
+            if (Number.isNaN(sched.getTime())) return status;
+            return sched < startOfToday ? "NO_SHOW" : status;
+          };
+
           aptData.forEach((apt: any) => {
             if (!grouped[apt.doctorId]) {
               grouped[apt.doctorId] = [];
@@ -263,7 +288,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               scheduledTime: apt.scheduledTime ? new Date(apt.scheduledTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Walk-in",
               rawScheduledTime: apt.scheduledTime || undefined,
               isWalkin: apt.isWalkin,
-              status: apt.status || "WAITING",
+              status: deriveStatus(apt.status, apt.scheduledTime) as Appointment["status"],
               payStatus: apt.payStatus || "DUE",
               paymentMethod: apt.paymentMethod || "",
               doctorId: apt.doctorId,
@@ -271,6 +296,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               patientGender: apt.patientGender || "",
               patientDob: apt.patientDob || "",
               patientAge: apt.patientAge || undefined,
+              patientDisplayNo: apt.patientDisplayNo ?? null,
               notes: apt.notes || "",
               fee: apt.fee || 0,
               pharmacyAmount: apt.pharmacyAmount || 0,
@@ -470,6 +496,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                     gender: apt.patientGender ?? null,
                     dob: apt.patientDob ?? null,
                     age: apt.patientAge ?? null,
+                    displayNo: apt.patientDisplayNo ?? null,
                     lastVisitDate: null,
                     treatingDoctorIds: [],
                     treatingDepartments: [],

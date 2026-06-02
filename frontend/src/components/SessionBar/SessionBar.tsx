@@ -271,8 +271,12 @@ export function SessionBar({
   // the visit is considered closed and the Resume button is suppressed.
   const interactiveCanResume =
     endedAtMs != null && Date.now() - endedAtMs < RESUME_BUFFER_MS;
+  // Use the combined endedAtMs (DB sessionEndedAt, falling back to the
+  // locally-persisted end time) rather than the DB prop alone — otherwise a
+  // session ended on this device but not yet synced to the DB column shows
+  // no Resume even though it just ended seconds ago.
   const readOnlyCanResume =
-    recordedEndedAtMs != null && Date.now() - recordedEndedAtMs < RESUME_BUFFER_MS;
+    endedAtMs != null && Date.now() - endedAtMs < RESUME_BUFFER_MS;
 
   // Read-only branch — historic visits render the recorded duration
   // alongside a centered "Session Ended" label and the print / download
@@ -280,9 +284,15 @@ export function SessionBar({
   // weight is consistent. Placed after every hook so React's rules-of-
   // hooks ordering stays the same whether the bar mounts interactive
   // or read-only.
+  //
+  // Timer display logic:
+  // - If session is within 24h window AND has Resume available: show timer (resumable session)
+  // - If session is older than 24h: hide timer, show only "Session Ended" (closed session)
   if (readOnly) {
     return (
       <div style={{ ...styles.bar, ...styles.barIdle }}>
+        {/* Historic visits always show their recorded (static) duration —
+            this is the final session length, not a running timer. */}
         <span style={{ ...styles.timer, color: colors.primary100 }}>
           {formatTimer(recordedDurationSec ?? 0)}
         </span>
@@ -318,16 +328,19 @@ export function SessionBar({
   return (
     <>
     <div style={{ ...styles.bar, ...styles.barIdle }}>
-      <span
-        style={{
-          ...styles.timer,
-          // Sage when paused (frozen). Cream otherwise — bar stays dark
-          // in every state so the timer reads cream against it.
-          color: paused ? colors.secondary400 : colors.primary100,
-        }}
-      >
-        {formatTimer(seconds)}
-      </span>
+      {/* Hide timer if session ended more than 24 hours ago (beyond resume window) */}
+      {!(ended && endedAtMs && Date.now() - endedAtMs >= RESUME_BUFFER_MS) && (
+        <span
+          style={{
+            ...styles.timer,
+            // Sage when paused (frozen). Cream otherwise — bar stays dark
+            // in every state so the timer reads cream against it.
+            color: paused ? colors.secondary400 : colors.primary100,
+          }}
+        >
+          {formatTimer(seconds)}
+        </span>
+      )}
 
       {ended ? (
         // Centered "Session Ended" text + print / download / share icons on the right.
@@ -336,10 +349,11 @@ export function SessionBar({
             Session Ended
           </span>
           <div style={styles.idleActions}>
-            {/* Interactive ended = the doctor literally just clicked End
-                on this device. Resume is always available; the 24h
-                buffer only gates the readOnly (historic) branch. */}
-            {onRestart && (
+            {/* Interactive ended: show Resume unless we have a real end
+                timestamp that's already older than 24h. A null endedAtMs
+                means "just ended on this device / legacy state" — still
+                resumable, so don't hide it. */}
+            {onRestart && !(endedAtMs != null && Date.now() - endedAtMs >= RESUME_BUFFER_MS) && (
               <button
                 type="button"
                 style={{ ...styles.pauseBtn, backgroundColor: colors.secondary400 }}

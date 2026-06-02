@@ -180,7 +180,10 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         onSettingsSection={setSettingsSection}
       />
       <div style={styles.contentArea}>
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        {/* Paint the content cream behind the panel so its rounded top-left
+            corner blends, instead of revealing the darker tan shell as a
+            notch in that corner. */}
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: colors.active.shade200 }}>
           <TopNav
             onBuildClinic={onViewClinic}
             onViewAllClinics={onViewAllClinics}

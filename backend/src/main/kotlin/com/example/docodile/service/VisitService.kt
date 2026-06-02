@@ -135,6 +135,9 @@ class VisitService(
         visit.sessionStartedAt = r.sessionStartedAt
         visit.sessionEndedAt = r.sessionEndedAt
         visit.sessionDurationSec = r.sessionDurationSec
+        // Tag the visit with its appointment on create; never null it out
+        // on a later update that omits the field.
+        if (r.appointmentId != null) visit.appointmentId = r.appointmentId
     }
 
     private fun saveRxRows(visit: Visit, rows: List<RxRowDTO>): List<RxRow> =
@@ -147,6 +150,7 @@ class VisitService(
                 dosage = dto.dosage,
                 whenToTake = dto.whenToTake,
                 frequency = dto.frequency,
+                frequencyInterval = dto.frequencyInterval,
                 duration = dto.duration,
                 notes = dto.notes,
                 createdAt = Instant.now()
@@ -164,6 +168,7 @@ class VisitService(
         dosage = this.dosage,
         whenToTake = this.whenToTake,
         frequency = this.frequency,
+        frequencyInterval = this.frequencyInterval,
         duration = this.duration,
         notes = this.notes
     )
@@ -200,6 +205,7 @@ class VisitService(
         sessionStartedAt = this.sessionStartedAt,
         sessionEndedAt = this.sessionEndedAt,
         sessionDurationSec = this.sessionDurationSec,
+        appointmentId = this.appointmentId,
         prescriptions = rxRows
     )
 }

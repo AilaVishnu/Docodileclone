@@ -13,6 +13,9 @@ data class AppointmentDTO(
     val patientGender: String?,
     val patientDob: String?,
     val patientAge: Int?,
+    // Sequential per-clinic patient number, shown as the "T###" code on the
+    // queue card. Null only for legacy rows predating V46's backfill.
+    val patientDisplayNo: Int? = null,
     val doctorId: UUID,
     val scheduledTime: LocalDateTime?,
     val isWalkin: Boolean,

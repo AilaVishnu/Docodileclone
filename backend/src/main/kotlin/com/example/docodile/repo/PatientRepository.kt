@@ -24,4 +24,14 @@ interface PatientRepository : JpaRepository<Patient, UUID> {
     // All previously-imported patients in a clinic — used by the data
     // migration importer to upsert by external_ref instead of duplicating.
     fun findAllByClinicIdAndExternalRefIsNotNull(clinicId: UUID): List<Patient>
+
+    // Highest display_no currently assigned in a clinic (0 if none). New
+    // patients continue the sequence from here. See V46.
+    @Query("SELECT COALESCE(MAX(p.displayNo), 0) FROM Patient p WHERE p.clinic.id = :clinicId")
+    fun findMaxDisplayNoByClinicId(@Param("clinicId") clinicId: UUID): Int
+
+    // Every display_no already taken in a clinic — the importer skips these
+    // when numbering new patients.
+    @Query("SELECT p.displayNo FROM Patient p WHERE p.clinic.id = :clinicId AND p.displayNo IS NOT NULL")
+    fun findDisplayNosByClinicId(@Param("clinicId") clinicId: UUID): List<Int>
 }

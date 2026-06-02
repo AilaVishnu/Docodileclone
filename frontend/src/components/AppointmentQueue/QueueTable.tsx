@@ -27,6 +27,8 @@ export type Appointment = {
   patientGender?: string;
   patientDob?: string;
   patientAge?: number;
+  /** Per-clinic sequential patient number ("T###"). */
+  patientDisplayNo?: number | null;
   type: "New" | "Review";
   service?: string;
   scheduledTime: string;

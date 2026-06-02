@@ -38,22 +38,25 @@ import { Autocomplete } from "../../components/Autocomplete/Autocomplete";
 import { MedicineAutocomplete } from "../../components/MedicineAutocomplete/MedicineAutocomplete";
 import { FrequencyPicker } from "../../components/FrequencyPicker/FrequencyPicker";
 import { WhenPicker } from "../../components/WhenPicker/WhenPicker";
-import { DosagePicker } from "../../components/DosagePicker/DosagePicker";
+import { FrequencyIntervalPicker } from "../../components/FrequencyIntervalPicker/FrequencyIntervalPicker";
 import { DurationPicker } from "../../components/DurationPicker/DurationPicker";
 import { AutocompleteTags } from "../../components/Autocomplete/AutocompleteTags";
 import { useDoctors } from "../../hooks/useDoctors";
-import { colors, spacing } from "../../styles/theme";
+import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { PrescriptionQueue } from "./PrescriptionQueue";
 import { Patient } from "../../hooks/usePatients";
 import { SessionBar } from "../../components/SessionBar/SessionBar";
 import {
   recordActiveSession,
   clearActiveSession,
+  clearOtherSessionsForPatient,
   consumePendingSessionNav,
   type PendingSessionNav,
 } from "../../components/TopNav/SessionTrayButton";
 import { useVisits } from "../../hooks/useVisits";
 import { createVisit, updateVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
+import { listRxTemplates, saveRxTemplate, deleteRxTemplate } from "../../api/rxTemplates";
+import { fetchLatestRxForMedicine, RxLatestDTO } from "../../api/rxHistory";
 import { markStarted, unmarkStarted } from "../../utils/sessionStarted";
 import { API_BASE_URL } from "../../apiConfig";
 import { AddReportModal, AddReportRow } from "./AddReportModal";
@@ -246,8 +249,8 @@ const buildVitalState = (visit: VisitDTO | undefined): Record<string, VitalCellS
 };
 
 // A secondary dose line added via the "Then" plus icon on a medicine row.
-type ThenRow = { dosage: string; whenToTake: string; frequency: string; duration: string; notes: string };
-const blankThenRow = (): ThenRow => ({ dosage: "", whenToTake: "", frequency: "", duration: "", notes: "" });
+type ThenRow = { dosage: string; whenToTake: string; frequency: string; frequencyInterval: string; duration: string; notes: string };
+const blankThenRow = (): ThenRow => ({ dosage: "", whenToTake: "", frequency: "", frequencyInterval: "", duration: "", notes: "" });
 
 // Draft Rx row in component state — `id` may be null for fresh rows that
 // haven't been saved yet; otherwise carries the server-assigned UUID.
@@ -260,6 +263,7 @@ type RxRowDraft = {
   dosage: string;
   whenToTake: string;
   frequency: string;
+  frequencyInterval: string;
   duration: string;
   notes: string;
   thenRows: ThenRow[];
@@ -274,6 +278,7 @@ const blankRxRow = (position: number): RxRowDraft => ({
   dosage: "",
   whenToTake: "",
   frequency: "",
+  frequencyInterval: "",
   duration: "",
   notes: "",
   thenRows: [],
@@ -288,10 +293,44 @@ const fromRxDTO = (dto: RxRowDTO): RxRowDraft => ({
   dosage: dto.dosage ?? "",
   whenToTake: dto.whenToTake ?? "",
   frequency: dto.frequency ?? "",
+  frequencyInterval: dto.frequencyInterval ?? "",
   duration: dto.duration ?? "",
   notes: dto.notes ?? "",
   thenRows: [],
 });
+
+// ── Prescription templates (clinic-shared, stored on the backend) ───────────
+// A reusable clinical template — complaints/diagnosis/tests/notes/review + the
+// Rx rows. Excludes vitals and history, which are per-patient measurements and
+// shouldn't be auto-filled from a template. The backend stores `content` as an
+// opaque JSON blob of exactly this shape (minus the name).
+// Per-section template kinds. Each card / footer has its own list — saving
+// from one card only surfaces in that card's Load list.
+type TemplateKind =
+  | "complaints"
+  | "diagnosis"
+  | "tests"
+  | "notes_for_patient"
+  | "private_notes"
+  | "rx";
+
+type SavedTemplate = { name: string; content: string };
+
+const tplStyles: Record<string, React.CSSProperties> = {
+  container: { display: "flex", flexDirection: "column", gap: spacing.m, width: 460, maxWidth: "92vw" },
+  header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: spacing.s },
+  title: { margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.regular, color: colors.neutral900 },
+  subtitle: { margin: "4px 0 0", fontSize: fonts.size.s, color: colors.neutral500 },
+  close: { background: "transparent", border: "none", fontSize: 18, color: colors.neutral500, cursor: "pointer", lineHeight: 1, padding: 0 },
+  saveRow: { display: "flex", gap: spacing.s, alignItems: "center" },
+  input: { flex: 1, height: 40, boxSizing: "border-box", padding: `0 ${spacing.s}`, border: `1px solid ${colors.neutral300}`, borderRadius: radii.m, backgroundColor: colors.neutral150, fontFamily: fonts.family.primary, fontSize: fonts.control.md, color: colors.neutral900, outline: "none" },
+  saveBtn: { flexShrink: 0, height: 40, padding: "0 20px", border: "none", borderRadius: radii.full, backgroundColor: colors.primary700, color: colors.neutral100, fontFamily: fonts.family.primary, fontSize: fonts.control.md, cursor: "pointer" },
+  list: { display: "flex", flexDirection: "column", gap: spacing.xs, maxHeight: 280, overflowY: "auto" },
+  empty: { fontFamily: fonts.family.primary, fontSize: fonts.size.s, color: colors.neutral500, textAlign: "center", margin: `${spacing.m} 0` },
+  item: { display: "flex", alignItems: "center", gap: spacing.xs, backgroundColor: colors.neutral150, borderRadius: radii.m, paddingRight: spacing.xs },
+  itemName: { flex: 1, textAlign: "left", background: "transparent", border: "none", cursor: "pointer", padding: `10px ${spacing.s}`, fontFamily: fonts.family.primary, fontSize: fonts.control.md, color: colors.neutral900, borderRadius: radii.m },
+  itemDelete: { flexShrink: 0, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", color: colors.red100, cursor: "pointer", fontSize: 14, borderRadius: radii.s },
+};
 
 const rewindBtnStyle = (_disabled: boolean): React.CSSProperties => ({
   background: "none",
@@ -330,7 +369,12 @@ const todayIso = (): string => {
 // can simply show a blank Total column. Mirrors the formula used by
 // AppointmentQueue's Bill Medicines auto-quantity so the printed Rx and
 // the dispensary bill stay consistent.
-const computeRxTotal = (dosage?: string | null, frequency?: string | null, duration?: string | null): number | null => {
+// Topical / liquid / per-pack forms (creams, lotions, drops, syrups…) ship as
+// a single unit (tube/bottle/bar), so their dispense quantity is 1 — not
+// doses × days like tablets/capsules.
+const PER_PACK_FORM = /cream|lotion|gel|ointment|\boil\b|shampoo|soap|wash|serum|sunscreen|balm|paste|scrub|spray|powder|syrup|suspension|solution|drop|moisturi|conditioner|foam|emulsion|liniment|tincture/i;
+const computeRxTotal = (medicine?: string | null, dosage?: string | null, frequency?: string | null, duration?: string | null): number | null => {
+  if (medicine && PER_PACK_FORM.test(medicine)) return 1;
   const dosageMatch = (dosage ?? "").match(/([\d.]+)/);
   const unitsPerDose = dosageMatch ? parseFloat(dosageMatch[1]) : 1;
   const dosesPerDay = (frequency ?? "")
@@ -537,6 +581,11 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   // Start Session / End Session actions can update the appointment's
   // backend status without bouncing back to the queue.
   const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(initialNav?.appointmentId ?? null);
+  // Status of the selected appointment — gates the auto-create so a visit is
+  // only generated once the patient has been sent to the doctor (AT_DOC) or
+  // is already in session (IN_PROGRESS). Opening the pad on a still-BOOKED
+  // card shows past visits without spawning a new one.
+  const [selectedAppointmentStatus, setSelectedAppointmentStatus] = React.useState<string | null>(null);
   // The date the queue was showing when the doctor clicked View Pad.
   // Used as the visit date for auto-create so past-date queues don't
   // create a visit stamped today.
@@ -545,6 +594,18 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   // Threaded into the visit's createdByDoctorId so the Patient Files filter
   // (which scopes by treating doctor / department) can find this patient.
   const [appointmentDoctorId, setAppointmentDoctorId] = React.useState<string | null>(null);
+
+  // Slot picker — when a patient is opened without a specific appointment
+  // (e.g. from Patient Files) and has 2+ appointments today, ask which slot
+  // this consultation is for before opening/creating its visit.
+  const [slotOptions, setSlotOptions] = React.useState<
+    { id: string; scheduledTime: string | null; doctorId: string | null; status?: string | null }[] | null
+  >(null);
+  const slotFetchedForRef = React.useRef<string | null>(null);
+  // Patient id for which the today-appointments check has finished. The
+  // auto-create effect waits on this so it never creates a visit before we
+  // know whether the doctor needs to pick a slot.
+  const [slotChecked, setSlotChecked] = React.useState<string | null>(null);
 
   // If the doctor clicked an entry in the header session-tray, route them
   // straight back to that patient's prescription form. Handled both on mount
@@ -583,6 +644,73 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
   const [rxRows, setRxRows] = React.useState<RxRowDraft[]>([]);
   const [rxInteractions, setRxInteractions] = React.useState<Array<{ drug: string; interactsWith: string; comment: string }>>([]);
+
+  // Per-medicine autofill: index this patient's PAST prescriptions by medicine
+  // name (most recent wins), excluding the visit being edited. Visits arrive
+  // sorted ascending by date, so later iterations overwrite earlier ones.
+  const lastRxByMedicine = React.useMemo(() => {
+    const map = new Map<string, RxRowDTO>();
+    for (const v of visits) {
+      if (activeVisit && v.id === activeVisit.id) continue;
+      for (const rx of v.prescriptions ?? []) {
+        const key = (rx.medicine ?? "").trim().toLowerCase();
+        if (key) map.set(key, rx);
+      }
+    }
+    return map;
+  }, [visits, activeVisit]);
+
+  // When the doctor enters a medicine they've prescribed to this patient
+  // before, pre-fill that row from the last such prescription. Only fills
+  // empty fields, so it never clobbers what the doctor has already typed.
+  // Per-medicine clinic-wide cache for the autofill API — avoids re-fetching
+  // the same medicine within a session. Cleared on save so the doctor's just-
+  // saved edits become the new default the next time anyone prescribes it.
+  const clinicWideRxCacheRef = React.useRef<Map<string, RxLatestDTO | null>>(new Map());
+  const clinicWideRxFetchingRef = React.useRef<Set<string>>(new Set());
+
+  const applyAutofillFromRx = (rowIndex: number, prior: {
+    dosage?: string | null;
+    whenToTake?: string | null;
+    frequency?: string | null;
+    frequencyInterval?: string | null;
+    duration?: string | null;
+    notes?: string | null;
+  }) => {
+    setRxRows((prev) => prev.map((r, ix) => ix !== rowIndex ? r : {
+      ...r,
+      dosage: r.dosage || (prior.dosage ?? ""),
+      whenToTake: r.whenToTake || (prior.whenToTake ?? ""),
+      frequency: r.frequency || (prior.frequency ?? ""),
+      frequencyInterval: r.frequencyInterval || (prior.frequencyInterval ?? ""),
+      duration: r.duration || (prior.duration ?? ""),
+      notes: r.notes || (prior.notes ?? ""),
+    }));
+  };
+
+  const autofillRxFromHistory = (rowIndex: number, medicineName: string) => {
+    const key = medicineName.trim().toLowerCase();
+    if (!key) return;
+    // 1) Same-patient match first — instant from in-memory `visits`.
+    const samePatient = lastRxByMedicine.get(key);
+    if (samePatient) { applyAutofillFromRx(rowIndex, samePatient); return; }
+    // 2) Clinic-wide latest — cached after the first lookup per medicine. The
+    // backend returns whichever patient most recently had this medicine, so
+    // the doctor's just-saved edits become the default for the next entry.
+    const cache = clinicWideRxCacheRef.current;
+    if (cache.has(key)) {
+      const cached = cache.get(key);
+      if (cached) applyAutofillFromRx(rowIndex, cached);
+      return;
+    }
+    const inflight = clinicWideRxFetchingRef.current;
+    if (inflight.has(key)) return;
+    inflight.add(key);
+    void fetchLatestRxForMedicine(medicineName.trim(), activeVisit?.id ?? null)
+      .then((res) => { cache.set(key, res); if (res) applyAutofillFromRx(rowIndex, res); })
+      .catch(() => { /* silently ignore — autofill is opportunistic */ })
+      .finally(() => { inflight.delete(key); });
+  };
   const [reviewDays, setReviewDays] = React.useState<string>("");
   // Vital values + units (units are clickable to toggle between alternates
   // like cm↔in, kg↔lb, °C↔°F, mmHg↔kPa).
@@ -634,10 +762,25 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
   const endedAtMs = activeVisit?.sessionEndedAt ? new Date(activeVisit.sessionEndedAt).getTime() : null;
   const visitMs = activeVisit?.visitDate ? new Date(activeVisit.visitDate).getTime() : null;
+  // A session "happened" if it was ended or accumulated any recorded time.
+  // A visit with neither was never worked on — it should stay editable and
+  // show the idle "Start Session" state, never a bogus "Session Ended".
+  const hadSession =
+    activeVisit?.sessionEndedAt != null || (activeVisit?.sessionDurationSec ?? 0) > 0;
   const isWithinBuffer = (() => {
     if (endedAtMs != null && !Number.isNaN(endedAtMs)) {
+      // Ended with a real timestamp → resumable for 24h from that moment.
       return Date.now() - endedAtMs < ONE_DAY_MS;
     }
+    if (!hadSession) {
+      // Never started/ended → startable only while the visit date is still
+      // within 24h (i.e. today's / a just-created visit). Older visits —
+      // including imported historic records — stay read-only and never offer
+      // a "Start Session"; a new consultation should create a new visit.
+      return visitMs != null && !Number.isNaN(visitMs) && Date.now() - visitMs < ONE_DAY_MS;
+    }
+    // Has a recorded duration but no end timestamp (legacy data) → fall
+    // back to the visit date for the 24h lock.
     if (visitMs != null && !Number.isNaN(visitMs)) {
       return Date.now() - visitMs < ONE_DAY_MS;
     }
@@ -831,87 +974,153 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
     return () => clearTimeout(timer);
   }, [rxRows]);
 
-  // Auto-create today's draft when the patient has zero visits, so the
-  // form always has a row to write into. The ref-guard keeps React
-  // StrictMode (which double-invokes effects in dev) from creating a
-  // duplicate today-visit.
+  // Each appointment owns its own visit. Opening a pad from an appointment
+  // jumps to (or creates) the visit tagged with that appointment id — so a
+  // patient's two same-day appointments get two distinct visits, each with
+  // its own session, rather than reusing one stale today-visit.
   //
-  // Two short-circuits before we create anything:
-  //   1. If any existing visit has an unfinished session (started, never
-  //      ended), the doctor is returning to that work — jump to its tab
-  //      and align queueDate with its date, no new visit needed.
-  //   2. If no appointment id is in scope, the doctor opened the page
-  //      ambiently (e.g. browsing patient files) — visits should only
-  //      come from booked appointments, so don't fabricate one.
-  const autoCreatedForPatientRef = React.useRef<string | null>(null);
-  // Track whether we've already done the one-shot "jump to unfinished
-  // visit" for this patient. Without this guard the effect's activeTab
-  // dependency made every tab click snap back to the unfinished tab,
-  // so the doctor couldn't browse historic visits.
+  // The ref-guard keeps React StrictMode (double-invokes effects in dev),
+  // and the async create→refetch window, from creating a duplicate.
+  const autoCreatedForApptRef = React.useRef<string | null>(null);
+  // One-shot "jump to this appointment's visit" — after the first open we
+  // stop forcing the tab so the doctor can browse previous visits freely.
+  const apptJumpedRef = React.useRef<string | null>(null);
+  // One-shot "jump to the unfinished session" for ambient (no-appointment)
+  // opens, so the doctor resumes where they left off without it overriding
+  // their tab choice afterwards.
   const unfinishedJumpedForPatientRef = React.useRef<string | null>(null);
   React.useEffect(() => {
-    const hasTodayVisit = visits.some((v) => v.visitDate === queueDate);
-    const unfinishedIdx = visits.findIndex(
-      (v) => v.sessionStartedAt && !v.sessionEndedAt
-    );
-    if (unfinishedIdx >= 0) {
-      // Only auto-jump once per patient. After that the user controls
-      // which tab they're on; we don't override their choice.
-      if (unfinishedJumpedForPatientRef.current !== selectedPatientId) {
-        const v = visits[unfinishedIdx];
-        if (activeTab !== unfinishedIdx) setActiveTab(unfinishedIdx);
-        if (v.visitDate && queueDate !== v.visitDate) setQueueDate(v.visitDate);
-        unfinishedJumpedForPatientRef.current = selectedPatientId;
+    if (!selectedPatientId || visitsLoading || visitsLoadedFor !== selectedPatientId) return;
+    // Wait until we've checked today's appointments, and don't create
+    // anything while the slot-picker popup is open — the doctor's choice
+    // decides which appointment's visit to create/open.
+    if (slotChecked !== selectedPatientId || slotOptions) return;
+
+    // ── Appointment context: one visit per appointment ──────────────────
+    if (selectedAppointmentId) {
+      const apptIdx = visits.findIndex((v) => v.appointmentId === selectedAppointmentId);
+      if (apptIdx >= 0) {
+        // This appointment already has its visit — open it ONCE. After that
+        // the doctor controls the tab, so they can browse earlier visits.
+        if (apptJumpedRef.current !== selectedAppointmentId) {
+          if (activeTab !== apptIdx) setActiveTab(apptIdx);
+          const v = visits[apptIdx];
+          if (v.visitDate && queueDate !== v.visitDate) setQueueDate(v.visitDate);
+          apptJumpedRef.current = selectedAppointmentId;
+        }
+        autoCreatedForApptRef.current = selectedAppointmentId;
+        return;
       }
-      autoCreatedForPatientRef.current = selectedPatientId;
+      // No visit for this appointment yet — create one tagged with it.
+      // After refetch this effect re-runs and the branch above selects it.
+      // Gate: only when the receptionist has marked the patient as sent to
+      // the doctor (AT_DOC) or they're already in session (IN_PROGRESS).
+      // On a still-BOOKED card the pad opens but no visit is auto-spawned.
+      const apptStatus = (selectedAppointmentStatus ?? "").toUpperCase();
+      if (apptStatus !== "AT_DOC" && apptStatus !== "IN_PROGRESS") {
+        return;
+      }
+      if (autoCreatedForApptRef.current !== selectedAppointmentId) {
+        autoCreatedForApptRef.current = selectedAppointmentId;
+        const draft: SaveVisitRequest = {
+          visitDate: queueDate,
+          bpSystolic: null, bpDiastolic: null, bpUnit: null,
+          bmi: null, bmiUnit: null, height: null, heightUnit: null,
+          weight: null, weightUnit: null, temperature: null, temperatureUnit: null,
+          pulse: null, pulseUnit: null, waist: null, waistUnit: null,
+          hip: null, hipUnit: null, spo2: null, spo2Unit: null,
+          familyHistory: null, allergies: null, personalHistory: null, pastMedicalHistory: null,
+          complaints: null, diagnosis: null, notesForPatient: null, privateNotes: null, tests: null,
+          createdByDoctorId: appointmentDoctorId,
+          appointmentId: selectedAppointmentId,
+          referDoctorId: null,
+          reviewDate: null, reviewDays: null, reviewNotes: null,
+          sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
+          prescriptions: [],
+        };
+        void createVisit(selectedPatientId, draft)
+          .then(() => refetchVisits())
+          .catch((err: Error) => showToast(err.message || "Failed to create visit"));
+      }
       return;
     }
-    if (
-      selectedPatientId &&
-      !visitsLoading &&
-      // Only fire after a successful fetch for THIS patient to avoid
-      // creating a duplicate on every reopen.
-      visitsLoadedFor === selectedPatientId &&
-      !hasTodayVisit &&
-      // Visits only exist for booked appointments — no appointment id means
-      // we have no business creating one.
-      !!selectedAppointmentId &&
-      autoCreatedForPatientRef.current !== selectedPatientId
-    ) {
-      autoCreatedForPatientRef.current = selectedPatientId;
-      const existingCount = visits.length;
-      const draft: SaveVisitRequest = {
-        visitDate: queueDate,
-        bpSystolic: null, bpDiastolic: null, bpUnit: null,
-        bmi: null, bmiUnit: null, height: null, heightUnit: null,
-        weight: null, weightUnit: null, temperature: null, temperatureUnit: null,
-        pulse: null, pulseUnit: null, waist: null, waistUnit: null,
-        hip: null, hipUnit: null, spo2: null, spo2Unit: null,
-        familyHistory: null, allergies: null, personalHistory: null, pastMedicalHistory: null,
-        complaints: null, diagnosis: null, notesForPatient: null, privateNotes: null, tests: null,
-        createdByDoctorId: appointmentDoctorId,
-        referDoctorId: null,
-        reviewDate: null, reviewDays: null, reviewNotes: null,
-        sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
-        prescriptions: [],
-      };
-      void createVisit(selectedPatientId, draft).then(async () => {
-        await refetchVisits();
-        // Jump to today's visit tab (it lands at the end after sort).
-        if (existingCount > 0) setActiveTab(existingCount);
-      }).catch((err: Error) => {
-        showToast(err.message || "Failed to create visit");
-      });
+
+    // ── Ambient (no appointment): resume an unfinished session once ─────
+    const unfinishedIdx = visits.findIndex((v) => v.sessionStartedAt && !v.sessionEndedAt);
+    if (unfinishedIdx >= 0 && unfinishedJumpedForPatientRef.current !== selectedPatientId) {
+      const v = visits[unfinishedIdx];
+      if (activeTab !== unfinishedIdx) setActiveTab(unfinishedIdx);
+      if (v.visitDate && queueDate !== v.visitDate) setQueueDate(v.visitDate);
+      unfinishedJumpedForPatientRef.current = selectedPatientId;
     }
-  }, [selectedPatientId, visitsLoading, visitsLoadedFor, visits, refetchVisits, queueDate, activeTab, selectedAppointmentId]);
-  // Reset the auto-create guard whenever the user picks a different patient
-  // (or leaves and comes back to the same one).
+  }, [selectedPatientId, selectedAppointmentId, selectedAppointmentStatus, visitsLoading, visitsLoadedFor, visits, refetchVisits, queueDate, activeTab, appointmentDoctorId, slotChecked, slotOptions]);
+  // Reset the one-shot guards when the user leaves the patient.
   React.useEffect(() => {
     if (selectedPatientId === null) {
-      autoCreatedForPatientRef.current = null;
+      autoCreatedForApptRef.current = null;
+      apptJumpedRef.current = null;
       unfinishedJumpedForPatientRef.current = null;
+      slotFetchedForRef.current = null;
+      setSlotOptions(null);
+      setSlotChecked(null);
+      setSelectedAppointmentStatus(null);
     }
   }, [selectedPatientId]);
+
+  // On every pad open, look up the patient's appointments for today. With
+  // 2+, ask which slot this consultation is for (popup below) — a visit is
+  // only created once the doctor picks. With exactly 1, adopt it silently.
+  // With 0, leave the ambient flow (existing visits / "No visits yet").
+  // Runs even when the queue pre-selected an appointment, so clicking
+  // either same-day card still asks which slot.
+  React.useEffect(() => {
+    if (!selectedPatientId || visitsLoadedFor !== selectedPatientId) return;
+    if (slotFetchedForRef.current === selectedPatientId) return;
+    slotFetchedForRef.current = selectedPatientId;
+    const today = todayIso();
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = localStorage.getItem("docodile_token");
+        const res = await fetch(`${API_BASE_URL}/api/tenant/appointments?date=${today}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok || cancelled) return;
+        const all: Array<{ id: string; patientId: string; scheduledTime: string | null; doctorId: string | null; status?: string | null }> =
+          await res.json();
+        const mine = all.filter((a) => a.patientId === selectedPatientId);
+        if (cancelled) return;
+        if (mine.length >= 2) {
+          setSlotOptions(mine);
+        } else if (mine.length === 1) {
+          setSelectedAppointmentId(mine[0].id);
+          setSelectedAppointmentStatus(mine[0].status ?? null);
+          if (mine[0].doctorId) setAppointmentDoctorId(mine[0].doctorId);
+        }
+        // When the appointment was pre-selected (queue's View Pad), pick up
+        // its status from the same fetch so the auto-create gate works.
+        if (selectedAppointmentId) {
+          const match = all.find((a) => a.id === selectedAppointmentId);
+          if (match) setSelectedAppointmentStatus(match.status ?? null);
+        }
+      } catch {
+        /* ignore — fall back to the ambient flow */
+      } finally {
+        if (!cancelled) setSlotChecked(selectedPatientId);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedPatientId, visitsLoadedFor]);
+
+  // Adopt the slot the doctor picked → the per-appointment auto-create
+  // effect then opens (or creates) that appointment's visit.
+  const chooseSlot = (a: { id: string; doctorId: string | null; status?: string | null }) => {
+    setSelectedAppointmentId(a.id);
+    setSelectedAppointmentStatus(a.status ?? null);
+    if (a.doctorId) setAppointmentDoctorId(a.doctorId);
+    setQueueDate(todayIso());
+    setSlotOptions(null);
+  };
 
   // When the view swaps from picker → form (or back), reset the scroll
   // position to the absolute top. The PrescriptionPage renders inside
@@ -979,6 +1188,90 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   // Toggle between the table layout (default) and the card grid layout
   // (Figma node 2143:11610). Driven by the list/widget icons in the tabs row.
   const [viewMode, setViewMode] = React.useState<"list" | "grid">("list");
+  // Per-section prescription templates (clinic-shared, backend-stored).
+  // Each card / footer has its own kind; saving from a kind only surfaces in
+  // that kind's Load list. The same modal serves both modes (load vs save),
+  // driven by `templatesKind` for which section it's scoped to.
+  const [showTemplates, setShowTemplates] = React.useState(false);
+  const [templatesMode, setTemplatesMode] = React.useState<"load" | "save">("load");
+  const [templatesKind, setTemplatesKind] = React.useState<TemplateKind>("rx");
+  const [templateName, setTemplateName] = React.useState("");
+  const [savedTemplates, setSavedTemplates] = React.useState<SavedTemplate[]>([]);
+  const [templatesBusy, setTemplatesBusy] = React.useState(false);
+
+  // What goes into `content` for each kind — only the relevant section's data,
+  // so a "Complaints" template stays a complaints blob and a load is scoped.
+  const buildTemplateContent = (kind: TemplateKind): string => {
+    switch (kind) {
+      case "complaints": return JSON.stringify({ complaints: complaintsValue });
+      case "diagnosis": return JSON.stringify({ diagnosis: diagnosisValue });
+      case "tests": return JSON.stringify({ tests: testsValue });
+      case "notes_for_patient": return JSON.stringify({ notesForPatient: notesForPatientValue });
+      case "private_notes": return JSON.stringify({ privateNotes: privateNotesValue });
+      case "rx": return JSON.stringify({ rxRows });
+    }
+  };
+
+  // Apply a loaded template's content to ONLY the kind's section, leaving
+  // every other field alone. Malformed JSON falls back to blanks.
+  const applyTemplateContent = (kind: TemplateKind, content: string) => {
+    let c: Record<string, unknown> = {};
+    try { c = JSON.parse(content) as Record<string, unknown>; } catch { /* keep blanks */ }
+    switch (kind) {
+      case "complaints": setComplaintsValue(typeof c.complaints === "string" ? c.complaints : ""); break;
+      case "diagnosis": setDiagnosisValue(typeof c.diagnosis === "string" ? c.diagnosis : ""); break;
+      case "tests": setTestsValue(typeof c.tests === "string" ? c.tests : ""); break;
+      case "notes_for_patient": setNotesForPatientValue(typeof c.notesForPatient === "string" ? c.notesForPatient : ""); break;
+      case "private_notes": setPrivateNotesValue(typeof c.privateNotes === "string" ? c.privateNotes : ""); break;
+      case "rx": {
+        const rows = Array.isArray(c.rxRows) ? (c.rxRows as RxRowDraft[]) : [];
+        // Reset ids/positions so loaded rows save as fresh Rx rows on this visit.
+        setRxRows(rows.map((r, i) => ({ ...r, id: null, position: i + 1, thenRows: r.thenRows ?? [] })));
+        break;
+      }
+    }
+  };
+
+  const refreshTemplates = (kind: TemplateKind) =>
+    listRxTemplates(kind)
+      .then((rows) => setSavedTemplates(rows.map((r) => ({ name: r.name, content: r.content }))))
+      .catch((e: Error) => showToast(e.message || "Couldn't load templates"));
+
+  const openTemplates = (mode: "load" | "save", kind: TemplateKind) => {
+    setTemplatesMode(mode);
+    setTemplatesKind(kind);
+    setTemplateName("");
+    setShowTemplates(true);
+    void refreshTemplates(kind);
+  };
+
+  const handleSaveTemplate = () => {
+    const name = templateName.trim();
+    if (!name) { showToast("Enter a template name"); return; }
+    const kind = templatesKind;
+    const content = buildTemplateContent(kind);
+    setTemplatesBusy(true);
+    saveRxTemplate(name, content, kind)
+      .then(() => { setTemplateName(""); setShowTemplates(false); showToast(`Saved template "${name}"`); return refreshTemplates(kind); })
+      .catch((e: Error) => showToast(e.message || "Couldn't save template"))
+      .finally(() => setTemplatesBusy(false));
+  };
+
+  const handleLoadTemplate = (t: SavedTemplate) => {
+    applyTemplateContent(templatesKind, t.content);
+    setShowTemplates(false);
+    showToast(`Loaded "${t.name}"`);
+  };
+
+  const handleDeleteTemplate = (name: string) => {
+    const kind = templatesKind;
+    setTemplatesBusy(true);
+    deleteRxTemplate(name, kind)
+      .then(() => refreshTemplates(kind))
+      .catch((e: Error) => showToast(e.message || "Couldn't delete template"))
+      .finally(() => setTemplatesBusy(false));
+  };
+
   // Tuning button dropdown items — open/close + outside-click handling lives
   // inside <PopoverMenu>, so we just declare the actions here.
   const tuningMenuItems = [
@@ -1002,12 +1295,6 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
         setTestsValue("");
         setNotesForPatientValue("");
         setPrivateNotesValue("");
-      },
-    },
-    {
-      label: "Saved templates",
-      onClick: () => {
-        // TODO: open Saved Templates picker once the backend exists.
       },
     },
   ];
@@ -1190,7 +1477,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
       prescriptions: rxRows
         .filter((r) =>
           r.medicine || r.medicineNote || r.dosage || r.whenToTake ||
-          r.frequency || r.duration || r.notes
+          r.frequency || r.frequencyInterval || r.duration || r.notes
         )
         .map((r, i) => ({
           id: r.id,
@@ -1200,6 +1487,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
           dosage: r.dosage || null,
           whenToTake: r.whenToTake || null,
           frequency: r.frequency || null,
+          frequencyInterval: r.frequencyInterval || null,
           duration: r.duration || null,
           notes: r.notes || null,
         })),
@@ -1212,6 +1500,10 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
     try {
       await updateVisit(activeVisit.id, buildSaveRequest());
       await refetchVisits();
+      // The doctor's just-saved schedule is now the clinic's latest for any
+      // medicines in this visit — clear the autofill cache so the next entry
+      // re-fetches and reflects those edits.
+      clinicWideRxCacheRef.current.clear();
       if (!opts?.silent) showToast("Visit saved");
     } catch (e) {
       // Auto-saves stay quiet on success but should still surface
@@ -1278,10 +1570,24 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   };
 
   const handleSessionStart = () => {
+    // Mirror the auto-create gate: don't let the doctor start a session on
+    // an appointment that's still BOOKED/WAITING — the receptionist must
+    // mark the patient At Doc first.
+    if (selectedAppointmentId) {
+      const apptStatus = (selectedAppointmentStatus ?? "").toUpperCase();
+      if (apptStatus && apptStatus !== "AT_DOC" && apptStatus !== "IN_PROGRESS") {
+        showToast("Mark the patient as 'At Doc' before starting the session.");
+        return;
+      }
+    }
     if (selectedPatient) markStarted(selectedPatient.id);
     // Surface this session in the header tray so the doctor can navigate
     // back to it from any other screen until the session ends.
     if (activeVisit && selectedPatient) {
+      // One live session per patient: clear any orphaned session for this
+      // patient on a different visit tab before starting a new one. Stops
+      // a stale visit's timer from counting forever in the tray.
+      clearOtherSessionsForPatient(selectedPatient.id, activeVisit.id);
       recordActiveSession({
         visitId: activeVisit.id,
         patient: selectedPatient,
@@ -1301,8 +1607,11 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
 
   const handleSessionEnd = (totalSeconds: number) => {
     if (selectedPatient) unmarkStarted(selectedPatient.id);
-    // Drop this session from the header tray.
+    // Drop this session from the header tray. Also clear any other
+    // orphaned session for the same patient (e.g. a session left running
+    // on a different visit tab) so the tray can't show a runaway timer.
     if (activeVisit) clearActiveSession(activeVisit.id);
+    if (selectedPatient) clearOtherSessionsForPatient(selectedPatient.id, null);
     // Persist the locked-in duration on the visit so reopening the
     // prescription on any device shows the same final time.
     if (activeVisit) {
@@ -1415,6 +1724,44 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
     }
   };
 
+  // Share the prescription to the patient over WhatsApp via a click-to-chat
+  // link (wa.me) — opens WhatsApp pre-filled with the Rx as text to the
+  // patient's number; the doctor taps Send. No WhatsApp API / account needed.
+  const handleShareWhatsApp = () => {
+    if (!selectedPatient) { showToast("Select a patient first"); return; }
+    const digits = (selectedPatient.phone ?? "").replace(/\D/g, "");
+    if (!digits) { showToast("This patient has no phone number on file"); return; }
+    // India default: bare 10-digit numbers get a 91 country code; longer
+    // numbers are assumed to already carry one.
+    const intl = digits.length === 10 ? `91${digits}` : digits;
+
+    const meds = rxRows
+      .filter((r) => r.medicine.trim())
+      .map((r, i) => {
+        const schedule = [r.frequency, r.whenToTake, r.frequencyInterval, r.duration]
+          .map((s) => s.trim()).filter(Boolean).join(" · ");
+        const head = `${i + 1}. ${r.medicine.trim()}${schedule ? ` — ${schedule}` : ""}`;
+        return r.notes.trim() ? `${head}\n   (${r.notes.trim()})` : head;
+      });
+    if (meds.length === 0) { showToast("Add a medicine before sharing"); return; }
+
+    const clinicName = localStorage.getItem("docodile_clinic_name") || "Clinic";
+    const lines = [
+      `*${clinicName}*`,
+      `Prescription for ${selectedPatient.name}`,
+      `Date: ${activeVisit?.visitDate ?? todayIso()}`,
+      "",
+      "Medicines:",
+      ...meds,
+    ];
+    if (reviewDate) {
+      const r = `${reviewDate.getFullYear()}-${String(reviewDate.getMonth() + 1).padStart(2, "0")}-${String(reviewDate.getDate()).padStart(2, "0")}`;
+      lines.push("", `Next review: ${r}`);
+    }
+
+    window.open(`https://wa.me/${intl}?text=${encodeURIComponent(lines.join("\n"))}`, "_blank");
+  };
+
   // ── Print prescription ──────────────────────────────────────────────────
   // Assemble a PrintVisitData payload from the current patient + visit + form
   // state and hand it to the configured print template. The template tells
@@ -1483,13 +1830,14 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
         dosage: r.dosage ?? null,
         whenToTake: r.whenToTake ?? null,
         frequency: r.frequency ?? null,
+        frequencyInterval: r.frequencyInterval ?? null,
         duration: r.duration ?? null,
         notes: r.notes ?? null,
         // Total units to dispense — mirrors the Bill Medicines modal's
         // auto-quantity so the printed Rx and the dispensary bill stay
         // consistent. Returns null when any field is unparseable (SOS,
         // "As directed") and the column shows blank.
-        totalQty: computeRxTotal(r.dosage, r.frequency, r.duration),
+        totalQty: computeRxTotal(r.medicine, r.dosage, r.frequency, r.duration),
       })),
       reviewDate: reviewDate ? `${reviewDate.getFullYear()}-${String(reviewDate.getMonth() + 1).padStart(2, "0")}-${String(reviewDate.getDate()).padStart(2, "0")}` : null,
       reviewNotes: reviewNotesValue,
@@ -2098,7 +2446,11 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                         <ChatSquareCallIcon style={styles.sectionIcon} />
                         <h3 style={styles.sectionTitle}>Complaints</h3>
                       </div>
-                      <ReorderIcon style={styles.reorderHandle} width={24} height={24} />
+                      <PopoverMenu
+                        trigger={<ReorderIcon style={styles.reorderHandle} width={24} height={24} />}
+                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "complaints") }]}
+                        ariaLabel="Template options"
+                      />
                     </div>
                     <div style={styles.noteCardField}>
                       <AutocompleteTags
@@ -2119,8 +2471,10 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                         >
                           <RewindIcon width={20} height={20} />
                         </button>
-                        <MicIcon width={20} height={20} />
-                      </span>
+                        <button type="button" title="Load template" onClick={() => openTemplates("load", "complaints")} style={rewindBtnStyle(false)}>
+                          <MicIcon width={20} height={20} />
+                        </button>
+                                              </span>
                     </div>
                   </div>
                   <div style={styles.noteCard}>
@@ -2129,7 +2483,11 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                         <MagniferBugIcon style={styles.sectionIcon} />
                         <h3 style={styles.sectionTitle}>Diagnosis</h3>
                       </div>
-                      <ReorderIcon style={styles.reorderHandle} width={24} height={24} />
+                      <PopoverMenu
+                        trigger={<ReorderIcon style={styles.reorderHandle} width={24} height={24} />}
+                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "diagnosis") }]}
+                        ariaLabel="Template options"
+                      />
                     </div>
                     <div style={styles.noteCardField}>
                       <AutocompleteTags
@@ -2150,8 +2508,10 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                         >
                           <RewindIcon width={20} height={20} />
                         </button>
-                        <MicIcon width={20} height={20} />
-                      </span>
+                        <button type="button" title="Load template" onClick={() => openTemplates("load", "diagnosis")} style={rewindBtnStyle(false)}>
+                          <MicIcon width={20} height={20} />
+                        </button>
+                                              </span>
                     </div>
                   </div>
                 </div>
@@ -2209,8 +2569,8 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                                     inputStyle={styles.rxMedicineInput}
                                     placeholder="Medicine"
                                     value={row.medicine}
-                                    onChange={(v) => setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: v, genericName: "" } : r))}
-                                    onSelect={(name, genericName) => setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: name, genericName } : r))}
+                                    onChange={(v) => { setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: v, genericName: "" } : r)); autofillRxFromHistory(i, v); }}
+                                    onSelect={(name, genericName) => { setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: name, genericName } : r)); autofillRxFromHistory(i, name); }}
                                   />
                                 </div>
                                 {row.medicine.trim() && (
@@ -2247,9 +2607,9 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                             {/* Right: stacked tapering rows */}
                             <div style={styles.rxGroupRight}>
                               <div style={styles.rxDataRow}>
-                                <div style={styles.rxDataCell}><DosagePicker value={row.dosage} onChange={(v) => updateField("dosage", v)} medicineName={row.medicine} genericName={row.genericName} /></div>
-                                <div style={styles.rxDataCell}><WhenPicker value={row.whenToTake} onChange={(v) => updateField("whenToTake", v)} /></div>
                                 <div style={styles.rxDataCell}><FrequencyPicker value={row.frequency} onChange={(v) => updateField("frequency", v)} /></div>
+                                <div style={styles.rxDataCell}><WhenPicker value={row.whenToTake} onChange={(v) => updateField("whenToTake", v)} /></div>
+                                <div style={styles.rxDataCell}><FrequencyIntervalPicker value={row.frequencyInterval} onChange={(v) => updateField("frequencyInterval", v)} /></div>
                                 <div style={styles.rxDataCell}><DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} /></div>
                                 <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={row.notes} onChange={(e) => updateField("notes", e.target.value)} />
                                 <button type="button" style={styles.rxDeleteBtn} onClick={() => removeRxRow(i)} title="Remove medicine">
@@ -2258,9 +2618,9 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                               </div>
                               {row.thenRows.map((thenRow, ti) => (
                                 <div key={`then-${i}-${ti}`} style={styles.rxDataRow}>
-                                  <div style={styles.rxDataCell}><DosagePicker value={thenRow.dosage} onChange={(v) => updateThenField(i, ti, "dosage", v)} medicineName={row.medicine} genericName={row.genericName} /></div>
-                                  <div style={styles.rxDataCell}><WhenPicker value={thenRow.whenToTake} onChange={(v) => updateThenField(i, ti, "whenToTake", v)} /></div>
                                   <div style={styles.rxDataCell}><FrequencyPicker value={thenRow.frequency} onChange={(v) => updateThenField(i, ti, "frequency", v)} /></div>
+                                  <div style={styles.rxDataCell}><WhenPicker value={thenRow.whenToTake} onChange={(v) => updateThenField(i, ti, "whenToTake", v)} /></div>
+                                  <div style={styles.rxDataCell}><FrequencyIntervalPicker value={thenRow.frequencyInterval} onChange={(v) => updateThenField(i, ti, "frequencyInterval", v)} /></div>
                                   <div style={styles.rxDataCell}><DurationPicker value={thenRow.duration} onChange={(v) => updateThenField(i, ti, "duration", v)} /></div>
                                   <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={thenRow.notes} onChange={(e) => updateThenField(i, ti, "notes", e.target.value)} />
                                   <button type="button" style={styles.rxDeleteBtn} onClick={() => removeThenRow(i, ti)} title="Remove tapering row">
@@ -2308,9 +2668,15 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                           >
                             <RewindIcon width={20} height={20} />
                           </button>
-                          <MicIcon width={20} height={20} />
-                        </span>
-                        <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
+                          <button type="button" title="Load template" onClick={() => openTemplates("load", "rx")} style={rewindBtnStyle(false)}>
+                            <MicIcon width={20} height={20} />
+                          </button>
+                                                  </span>
+                        <PopoverMenu
+                        trigger={<ReorderIcon style={styles.reorderHandle} width={20} height={20} />}
+                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "rx") }]}
+                        ariaLabel="Template options"
+                      />
                       </div>
                     </div>
                   )}
@@ -2326,7 +2692,11 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                         <DocumentIcon style={styles.sectionIcon} />
                         <h3 style={styles.sectionTitle}>Notes for Patient</h3>
                       </div>
-                      <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
+                      <PopoverMenu
+                        trigger={<ReorderIcon style={styles.reorderHandle} width={20} height={20} />}
+                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "notes_for_patient") }]}
+                        ariaLabel="Template options"
+                      />
                     </div>
                     <div style={styles.noteCardField}>
                       <textarea
@@ -2345,8 +2715,10 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                         >
                           <RewindIcon width={20} height={20} />
                         </button>
-                        <MicIcon width={20} height={20} />
-                      </span>
+                        <button type="button" title="Load template" onClick={() => openTemplates("load", "notes_for_patient")} style={rewindBtnStyle(false)}>
+                          <MicIcon width={20} height={20} />
+                        </button>
+                                              </span>
                     </div>
                   </div>
                   <div style={{ ...styles.noteCard, ...styles.noteCardPrivate }}>
@@ -2355,7 +2727,11 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                         <UsersIcon style={styles.sectionIcon} />
                         <h3 style={styles.sectionTitle}>Private Notes</h3>
                       </div>
-                      <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
+                      <PopoverMenu
+                        trigger={<ReorderIcon style={styles.reorderHandle} width={20} height={20} />}
+                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "private_notes") }]}
+                        ariaLabel="Template options"
+                      />
                     </div>
                     <div style={{ ...styles.noteCardField, ...styles.noteCardFieldPrivate }}>
                       <textarea
@@ -2395,10 +2771,16 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                         >
                           <RewindIcon width={20} height={20} />
                         </button>
-                        <MicIcon width={20} height={20} />
-                      </span>
+                        <button type="button" title="Load template" onClick={() => openTemplates("load", "tests")} style={rewindBtnStyle(false)}>
+                          <MicIcon width={20} height={20} />
+                        </button>
+                                              </span>
                     </div>
-                    <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
+                    <PopoverMenu
+                        trigger={<ReorderIcon style={styles.reorderHandle} width={20} height={20} />}
+                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "tests") }]}
+                        ariaLabel="Template options"
+                      />
                   </div>
                   {/* Refer to — dropdown of doctors in the current clinic
                 (fetched from /api/doctors, which filters by the caller's
@@ -2553,7 +2935,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
           // Direct server-side PDF download — no preview modal, no browser
           // dialog. Same template + data as Print.
           onDownload={() => handlePrintPrescription("download")}
-          onShare={() => showToast("Share: not wired yet")}
+          onShare={handleShareWhatsApp}
           onActiveChange={setFormActive}
           onStart={handleSessionStart}
           onEnd={handleSessionEnd}
@@ -2564,6 +2946,59 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
           onRestart={handleSessionRestart}
         />
       )}
+
+      {/* Prescription templates — save the current Rx + clinical fields under a
+          name, or load a saved one to auto-fill. Clinic-shared (backend). */}
+      <Modal isOpen={showTemplates} onClose={() => setShowTemplates(false)}>
+        <div style={tplStyles.container}>
+          <header style={tplStyles.header}>
+            <div>
+              <h2 style={tplStyles.title}>
+                {templatesMode === "save" ? "Save as template" : "Load template"}
+              </h2>
+              <p style={tplStyles.subtitle}>
+                {templatesMode === "save"
+                  ? "Name this prescription so you can reuse it later."
+                  : "Pick a saved template to auto-fill the prescription."}
+              </p>
+            </div>
+            <button type="button" onClick={() => setShowTemplates(false)} aria-label="Close" style={tplStyles.close}>✕</button>
+          </header>
+
+          {templatesMode === "save" ? (
+            <div style={tplStyles.saveRow}>
+              <input
+                style={tplStyles.input}
+                placeholder="Template Name"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSaveTemplate(); }}
+                autoFocus
+              />
+              <button type="button" style={tplStyles.saveBtn} onClick={handleSaveTemplate} disabled={templatesBusy}>
+                Save
+              </button>
+            </div>
+          ) : (
+            <div style={tplStyles.list}>
+              {savedTemplates.length === 0 ? (
+                <p style={tplStyles.empty}>No saved templates yet.</p>
+              ) : (
+                savedTemplates.map((t) => (
+                  <div key={t.name} style={tplStyles.item}>
+                    <button type="button" style={tplStyles.itemName} onClick={() => handleLoadTemplate(t)} title="Load this template">
+                      {t.name}
+                    </button>
+                    <button type="button" style={tplStyles.itemDelete} onClick={() => handleDeleteTemplate(t.name)} disabled={templatesBusy} title="Delete template">
+                      ✕
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </Modal>
 
       {/* Add File modal. Drag-drop or click-to-choose, multi-file, per-file
           metadata (name, category, investigation date, tie-to-visit, notes).
@@ -2626,9 +3061,101 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
           onApplyObjective={(v) => setPrivateNotesValue((prev) => prev ? `${prev}\n${v}` : v)}
         />
       )}
+
+      {/* Slot picker — patient has 2+ appointments today and was opened
+          without a specific one. Asks which slot this consultation is for. */}
+      {slotOptions && (
+        <div style={slotPickerStyles.overlay}>
+          <div style={slotPickerStyles.card}>
+            <h3 style={slotPickerStyles.title}>Choose an appointment slot</h3>
+            <p style={slotPickerStyles.sub}>
+              {selectedPatient?.name ?? "This patient"} has more than one appointment
+              today. Pick the slot you're starting this consultation for.
+            </p>
+            <div style={slotPickerStyles.slots}>
+              {slotOptions.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  style={slotPickerStyles.slotBtn}
+                  onClick={() => chooseSlot(a)}
+                >
+                  {formatSlot(a.scheduledTime)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+// "25 May 2026 at 10:05 PM" for the appointment-slot picker.
+function formatSlot(iso: string | null): string {
+  if (!iso) return "Appointment";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "Appointment";
+  const datePart = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  const timePart = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  return `${datePart} at ${timePart}`;
+}
+
+const slotPickerStyles: Record<string, React.CSSProperties> = {
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1100,
+  },
+  card: {
+    backgroundColor: colors.primary100,
+    borderRadius: radii["2xl"],
+    padding: spacing["2xl"],
+    minWidth: 360,
+    maxWidth: 460,
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.s,
+    textAlign: "center",
+    boxShadow: "0 12px 40px rgba(0,0,0,0.18)",
+  },
+  title: {
+    margin: 0,
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h6,
+    fontWeight: fonts.weight.regular,
+    color: colors.neutral900,
+  },
+  sub: {
+    margin: 0,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.neutral600,
+    lineHeight: 1.5,
+  },
+  slots: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: spacing.s,
+    justifyContent: "center",
+    marginTop: spacing.s,
+  },
+  slotBtn: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.neutral900,
+    backgroundColor: colors.neutral100,
+    border: `1px solid ${colors.primary300}`,
+    borderRadius: radii.full,
+    padding: "10px 20px",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+};
 
 // AI SOAP draft modal — fetches a structured Subjective/Objective/Assessment/
 // Plan from the current visit's free-text notes + vitals via the AI service.

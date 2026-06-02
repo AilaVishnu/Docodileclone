@@ -61,6 +61,30 @@ export function clearActiveSession(visitId: string) {
     delete map[visitId];
     writeMap(META_KEY, map);
   }
+  // Also flip the persisted timer state to ended so the tray's
+  // state-based filter drops it even if some other code path re-adds
+  // the meta entry. Belt-and-suspenders against orphaned counters.
+  const stateMap = readMap<SessionState>(STATE_KEY);
+  const st = stateMap[visitId];
+  if (st && !st.ended) {
+    stateMap[visitId] = { ...st, ended: true, runStartedAtMs: null };
+    writeMap(STATE_KEY, stateMap);
+  }
+}
+
+// Clear every active session belonging to a patient EXCEPT one visit
+// (the one we're keeping live). A patient can only be in one live
+// session at a time; switching visit tabs and ending one used to leave
+// the other visit's session running in the tray forever. Pass the visit
+// being kept as `exceptVisitId`, or null to clear all of the patient's.
+export function clearOtherSessionsForPatient(patientId: string, exceptVisitId: string | null) {
+  const metaMap = readMap<ActiveSessionMeta>(META_KEY);
+  for (const visitId of Object.keys(metaMap)) {
+    if (visitId === exceptVisitId) continue;
+    if (metaMap[visitId]?.patient?.id === patientId) {
+      clearActiveSession(visitId);
+    }
+  }
 }
 
 // Snapshot of all sessions still considered live (i.e. not ended in their

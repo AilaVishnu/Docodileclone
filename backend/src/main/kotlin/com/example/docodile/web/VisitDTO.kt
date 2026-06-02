@@ -62,5 +62,9 @@ data class VisitDTO(
     val sessionEndedAt: Instant?,
     val sessionDurationSec: Int?,
 
+    // The appointment this visit belongs to (null for legacy/imported
+    // visits). Lets the pad show the visit tied to the open appointment.
+    val appointmentId: UUID?,
+
     val prescriptions: List<RxRowDTO>
 )

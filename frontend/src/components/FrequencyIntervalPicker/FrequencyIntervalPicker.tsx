@@ -1,55 +1,26 @@
 import React, { CSSProperties, useEffect, useRef, useState } from "react";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { ReactComponent as ChevronIcon } from "../../assets/icons/chevron-up.svg";
 
-const ALL_OPTIONS = [
-  // 3-slot patterns — morning / noon / night
-  "1-0-0",
-  "0-0-1",
-  "1-0-1",
-  "1-1-1",
-  "0-1-0",
-  // 4-slot patterns — morning / noon / evening / night
-  "1-1-1-1",
-  "1-1-1-0",
-  "1-1-0-1",
-  "1-0-1-1",
-  "0-1-1-1",
-  "1-1-0-0",
-  "1-0-1-0",
-  "0-1-0-1",
-  "1-0-0-1",
-  "1-0-0-0",
-  "0-1-0-0",
-  "0-0-1-0",
-  "0-0-0-1",
-  "Once a day",
-  "Twice a day",
-  "Thrice a day",
-  "Once a week",
-  "Twice a week",
-  "Alternate days",
-  "Every 6h",
-  "Every 8h",
-  "Every 12h",
-  "Once in 10 days",
-  "Once in every 15 days",
-  "Once in 20 days",
-  "Once in 45 days",
-  "Once a month",
-  "Once in 2 months",
-  "Once in 3 months",
+// Dosing interval — how often the medicine is taken (distinct from the
+// per-day pattern handled by FrequencyPicker, e.g. 1-0-1).
+const OPTIONS = [
+  "daily",
+  "alternate day",
+  "weekly",
+  "fort night",
+  "monthly",
+  "stat",
+  "sos",
+  "weekly twice",
+  "weekly thrice",
 ];
 
 type Props = { value: string; onChange: (v: string) => void };
 
-export function FrequencyPicker({ value, onChange }: Props) {
+export function FrequencyIntervalPicker({ value, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const filtered = value.trim()
-    ? ALL_OPTIONS.filter((o) => o.toLowerCase().includes(value.toLowerCase()))
-    : ALL_OPTIONS;
 
   useEffect(() => {
     if (!open) return;
@@ -60,45 +31,37 @@ export function FrequencyPicker({ value, onChange }: Props) {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const select = (opt: string) => {
-    onChange(opt);
-    setOpen(false);
-  };
-
-  const clear = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onChange("");
-    inputRef.current?.focus();
-  };
-
   return (
     <div ref={wrapRef} style={styles.wrap}>
-      <div style={styles.inputWrap}>
-        <input
-          ref={inputRef}
-          style={styles.input}
-          placeholder="e.g 1-0-1"
-          value={value}
-          onChange={(e) => { onChange(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-        />
-        {value && (
-          <button type="button" style={styles.clearBtn} onMouseDown={clear} tabIndex={-1}>
-            ×
-          </button>
-        )}
+      <div
+        role="button"
+        style={styles.trigger}
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span style={{ ...styles.triggerText, ...(value ? { color: colors.neutral900 } : {}) }}>
+          {value || "Frequency"}
+        </span>
+        <span style={styles.chevron}>
+          <ChevronIcon
+            width={16}
+            height={16}
+            style={{ transform: open ? "rotate(0deg)" : "rotate(180deg)" }}
+          />
+        </span>
       </div>
 
-      {open && filtered.length > 0 && (
+      {open && (
         <div style={styles.menu} role="listbox">
-          {filtered.map((opt) => (
+          {OPTIONS.map((opt) => (
             <button
               key={opt}
               type="button"
               role="option"
               aria-selected={value === opt}
               style={{ ...styles.menuItem, ...(value === opt ? styles.menuItemActive : {}) }}
-              onMouseDown={(e) => { e.preventDefault(); select(opt); }}
+              onMouseDown={(e) => { e.preventDefault(); onChange(value === opt ? "" : opt); setOpen(false); }}
               onMouseEnter={(e) => { if (value !== opt) e.currentTarget.style.backgroundColor = colors.primary100; }}
               onMouseLeave={(e) => { if (value !== opt) e.currentTarget.style.backgroundColor = "transparent"; }}
             >
@@ -117,48 +80,43 @@ const styles: Record<string, CSSProperties> = {
     minWidth: 0,
     width: "100%",
   },
-  inputWrap: {
-    display: "flex",
-    alignItems: "center",
-    height: 40,
-    borderRadius: radii.m,
-    backgroundColor: colors.primary100,
-    padding: `0 ${spacing["2xs"]}`,
-    gap: spacing["3xs"],
-  },
-  input: {
-    flex: 1,
-    minWidth: 0,
-    border: "none",
-    outline: "none",
-    textAlign: "center" as const,
-    backgroundColor: "transparent",
-    fontSize: fonts.control.sm,
-    lineHeight: fonts.lineHeight.s,
-    fontFamily: fonts.family.primary,
-    color: colors.neutral900,
-    fontVariantNumeric: "tabular-nums" as const,
-  },
-  clearBtn: {
-    flexShrink: 0,
-    width: 16,
-    height: 16,
+  trigger: {
+    position: "relative" as const,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 14,
-    lineHeight: 1,
-    color: colors.neutral500,
-    background: "transparent",
-    border: "none",
+    height: 40,
+    borderRadius: radii.m,
+    overflow: "hidden",
     cursor: "pointer",
-    padding: 0,
+    backgroundColor: colors.primary100,
+    padding: `0 ${spacing.m}`,
+  },
+  triggerText: {
+    fontSize: fonts.control.sm,
+    lineHeight: fonts.lineHeight.s,
+    fontFamily: fonts.family.primary,
+    color: colors.neutral400,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap" as const,
+    textAlign: "center" as const,
+  },
+  chevron: {
+    position: "absolute" as const,
+    right: spacing.xs,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    color: colors.neutral700,
+    lineHeight: 1,
   },
   menu: {
     position: "absolute" as const,
     top: "calc(100% + 4px)",
     left: 0,
-    minWidth: 180,
+    minWidth: 200,
     backgroundColor: colors.neutral100,
     border: `${strokes.xs} solid ${colors.primary300}`,
     borderRadius: radii.m,

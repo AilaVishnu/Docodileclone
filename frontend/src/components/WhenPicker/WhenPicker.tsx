@@ -3,11 +3,17 @@ import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 import { ReactComponent as ChevronIcon } from "../../assets/icons/chevron-up.svg";
 
 const OPTIONS = [
-  "After food",
-  "Before food",
-  "With food",
-  "Empty stomach",
-  "At bedtime",
+  "Before Food",
+  "After Food",
+  "Before Breakfast",
+  "After Breakfast",
+  "Before Lunch",
+  "After Lunch",
+  "Before Dinner",
+  "After Dinner",
+  "Empty Stomach",
+  "Bed Time",
+  "SoS",
 ];
 
 type Props = { value: string; onChange: (v: string) => void };
@@ -120,6 +126,8 @@ const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: 2,
+    maxHeight: 220,
+    overflowY: "auto" as const,
   },
   menuItem: {
     width: "100%",
