@@ -1,22 +1,22 @@
 package com.example.docodile.service
 
-import com.example.docodile.repo.ClinicStaffRepository
-import com.example.docodile.repo.ClinicEntityRepository
-import com.example.docodile.repo.TenantRepository
+import com.example.docodile.domain.AuditAction
+import com.example.docodile.domain.AppUser
 import com.example.docodile.domain.ClinicEntity
-import com.example.docodile.web.ClinicDetailsRequest
+import com.example.docodile.domain.ClinicStaff
+import com.example.docodile.domain.ClinicStaffId
+import com.example.docodile.domain.Role
+import com.example.docodile.repo.AppUserRepository
+import com.example.docodile.repo.ClinicEntityRepository
+import com.example.docodile.repo.ClinicStaffRepository
+import com.example.docodile.repo.TenantRepository
 import com.example.docodile.security.CurrentUser
+import com.example.docodile.web.ClinicDetailsRequest
+import com.example.docodile.web.StaffRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
-
-import com.example.docodile.repo.AppUserRepository
-import com.example.docodile.domain.Role
-import com.example.docodile.web.StaffRequest
-import com.example.docodile.domain.AppUser
-import com.example.docodile.domain.ClinicStaff
-import com.example.docodile.domain.ClinicStaffId
 
 @Service
 class ClinicStatusService(
@@ -27,6 +27,7 @@ class ClinicStatusService(
     private val currentUser: CurrentUser,
     private val passwordTokenService: PasswordTokenService,
     private val emailService: EmailService,
+    private val auditService: AuditService,
 ) {
     fun isClinicComplete(): Boolean {
         val tenantId = currentUser.tenantId()
@@ -89,7 +90,14 @@ class ClinicStatusService(
             speciality = request.speciality
         }
 
-        return clinicEntityRepository.save(clinic)
+        val saved = clinicEntityRepository.save(clinic)
+        auditService.log(
+            action     = AuditAction.CONFIG_CHANGED,
+            entityType = "ClinicEntity",
+            entityId   = saved.id,
+            metadata   = mapOf("clinicName" to saved.name),
+        )
+        return saved
     }
 
     fun getTenantLimits(): Map<String, Int> {
@@ -239,6 +247,13 @@ class ClinicStatusService(
             clinicStaffRepository.save(association)
         }
 
+        auditService.log(
+            action     = if (isNew) AuditAction.USER_CREATED else AuditAction.USER_UPDATED,
+            entityType = "AppUser",
+            entityId   = savedStaff.id,
+            metadata   = mapOf("clinicId" to clinicId, "email" to savedStaff.email),
+        )
+
         return savedStaff
     }
 
@@ -262,6 +277,12 @@ class ClinicStatusService(
         // deleting would also violate the NOT NULL FK on appointment.doctor_id.
         staff.active = false
         appUserRepository.save(staff)
+        auditService.log(
+            action     = AuditAction.USER_DEACTIVATED,
+            entityType = "AppUser",
+            entityId   = staffId,
+            metadata   = mapOf("clinicId" to clinicId),
+        )
     }
 
     @Transactional
@@ -289,5 +310,11 @@ class ClinicStatusService(
         }
         staff.active = true
         appUserRepository.save(staff)
+        auditService.log(
+            action     = AuditAction.USER_REACTIVATED,
+            entityType = "AppUser",
+            entityId   = staffId,
+            metadata   = mapOf("clinicId" to clinicId),
+        )
     }
 }

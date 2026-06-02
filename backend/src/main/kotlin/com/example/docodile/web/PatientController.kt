@@ -1,7 +1,9 @@
 package com.example.docodile.web
 
+import com.example.docodile.domain.AuditAction
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.security.CurrentUser
+import com.example.docodile.service.AuditService
 import com.example.docodile.service.PatientService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -25,7 +27,8 @@ data class UpdatePatientRequest(
 class PatientController(
     private val patientService: PatientService,
     private val patientRepository: PatientRepository,
-    private val currentUser: CurrentUser
+    private val currentUser: CurrentUser,
+    private val auditService: AuditService,
 ) {
 
     @GetMapping
@@ -58,6 +61,7 @@ class PatientController(
             patient.archived = true
             patient.archivedAt = Instant.now()
             patientRepository.save(patient)
+            auditService.log(AuditAction.PATIENT_ARCHIVED, entityType = "Patient", entityId = patientId)
         }
         return ResponseEntity.noContent().build()
     }
@@ -73,6 +77,7 @@ class PatientController(
             patient.archived = false
             patient.archivedAt = null
             patientRepository.save(patient)
+            auditService.log(AuditAction.PATIENT_UNARCHIVED, entityType = "Patient", entityId = patientId)
         }
         return ResponseEntity.noContent().build()
     }
@@ -126,6 +131,7 @@ class PatientController(
         patient.age    = req.age
 
         patientRepository.save(patient)
+        auditService.log(AuditAction.PATIENT_UPDATED, entityType = "Patient", entityId = patientId)
         return ResponseEntity.noContent().build()
     }
 

@@ -1,5 +1,6 @@
 package com.example.docodile.service
 
+import com.example.docodile.domain.AuditAction
 import com.example.docodile.domain.Role
 import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.repo.ClinicEntityRepository
@@ -22,24 +23,28 @@ class AuthService(
     private val passwordEncoder: PasswordEncoder,
     private val tokenService: TokenService,
     private val currentUser: CurrentUser,
+    private val auditService: AuditService,
 ) {
     fun login(request: LoginRequest): LoginResponse {
-        val user = appUserRepository.findByEmail(request.email)
-            .orElseThrow { BadCredentialsException("Invalid credentials") }
+        val user = appUserRepository.findByEmail(request.email).orElse(null)
 
-        if (!user.active) {
-            throw BadCredentialsException("Invalid credentials")
-        }
-
-        if (user.role != Role.ADMIN) {
-            throw BadCredentialsException("Invalid credentials")
-        }
-
-        if (user.passwordHash == null) {
+        if (user == null || !user.active || user.role != Role.ADMIN || user.passwordHash == null) {
+            auditService.log(
+                action = AuditAction.LOGIN_FAILURE,
+                outcome = "FAILURE",
+                metadata = mapOf("email" to request.email),
+            )
             throw BadCredentialsException("Invalid credentials")
         }
 
         if (!passwordEncoder.matches(request.password, user.passwordHash)) {
+            auditService.log(
+                action   = AuditAction.LOGIN_FAILURE,
+                outcome  = "FAILURE",
+                actorId  = user.id,
+                tenantId = user.tenant?.id,
+                metadata = mapOf("email" to request.email),
+            )
             throw BadCredentialsException("Invalid credentials")
         }
 
@@ -55,6 +60,13 @@ class AuthService(
             .orElse(null)
         val token = tokenService.generateToken(user.id, tenantId, user.role.name, user.email, clinic?.id)
 
+        auditService.log(
+            action   = AuditAction.LOGIN_SUCCESS,
+            actorId  = user.id,
+            tenantId = tenantId,
+            clinicId = clinic?.id,
+        )
+
         val clinicName = clinic?.name ?: "your clinic"
         return LoginResponse(token = token, role = user.role.name, clinicId = clinic?.id, clinicName = clinicName, gender = user.gender)
     }
@@ -63,28 +75,49 @@ class AuthService(
         val clinic = clinicEntityRepository.findByDomainIgnoreCase(request.domain.trim())
             .orElseThrow { BadCredentialsException("Invalid credentials") }
 
-        val user = appUserRepository.findByEmail(request.email)
-            .orElseThrow { BadCredentialsException("Invalid credentials") }
+        val user = appUserRepository.findByEmail(request.email).orElse(null)
 
-        if (!user.active || user.role == Role.ADMIN) {
+        if (user == null || !user.active || user.role == Role.ADMIN) {
+            auditService.log(
+                action  = AuditAction.LOGIN_FAILURE,
+                outcome = "FAILURE",
+                metadata = mapOf("email" to request.email, "domain" to request.domain),
+            )
             throw BadCredentialsException("Invalid credentials")
         }
 
         val isMember = clinicStaffRepository.existsByIdClinicIdAndIdStaffId(clinic.id, user.id)
         if (!isMember) {
+            auditService.log(
+                action   = AuditAction.LOGIN_FAILURE,
+                outcome  = "FAILURE",
+                actorId  = user.id,
+                metadata = mapOf("email" to request.email, "reason" to "not_a_member"),
+            )
             throw BadCredentialsException("Invalid credentials")
         }
 
-        if (user.passwordHash == null) {
-            throw BadCredentialsException("Invalid credentials")
-        }
-
-        if (!passwordEncoder.matches(request.password, user.passwordHash)) {
+        if (user.passwordHash == null || !passwordEncoder.matches(request.password, user.passwordHash)) {
+            auditService.log(
+                action   = AuditAction.LOGIN_FAILURE,
+                outcome  = "FAILURE",
+                actorId  = user.id,
+                tenantId = clinic.tenant?.id,
+                metadata = mapOf("email" to request.email),
+            )
             throw BadCredentialsException("Invalid credentials")
         }
 
         val tenantId = clinic.tenant?.id ?: throw BadCredentialsException("Invalid credentials")
         val token = tokenService.generateToken(user.id, tenantId, user.role.name, user.email, clinic.id)
+
+        auditService.log(
+            action   = AuditAction.LOGIN_SUCCESS,
+            actorId  = user.id,
+            tenantId = tenantId,
+            clinicId = clinic.id,
+        )
+
         return LoginResponse(
             token = token,
             role = user.role.name,
@@ -92,6 +125,10 @@ class AuthService(
             clinicName = clinic.name,
             gender = user.gender
         )
+    }
+
+    fun logout() {
+        auditService.log(action = AuditAction.LOGOUT)
     }
 
     fun switchClinic(targetClinicId: UUID): LoginResponse {

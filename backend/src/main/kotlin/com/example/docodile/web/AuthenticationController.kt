@@ -25,6 +25,13 @@ class AuthenticationController(private val authService: AuthService) {
         return ResponseEntity.ok(authService.loginStaff(request))
     }
 
+    @PostMapping("/logout")
+    @PreAuthorize("isAuthenticated()")
+    fun logout(): ResponseEntity<Void> {
+        authService.logout()
+        return ResponseEntity.noContent().build()
+    }
+
     @PostMapping("/switch-clinic")
     @PreAuthorize("hasRole('ADMIN')")
     fun switchClinic(@RequestBody request: SwitchClinicRequest): ResponseEntity<LoginResponse> {
