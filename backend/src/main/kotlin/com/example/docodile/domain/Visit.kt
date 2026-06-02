@@ -90,5 +90,10 @@ class Visit(
 
     // "<patientExternalRef>|<visitDate>" when this visit was bulk-imported.
     // Null for visits created natively. Makes re-imports idempotent.
-    @Column(name = "external_ref") var externalRef: String? = null
+    @Column(name = "external_ref") var externalRef: String? = null,
+
+    // The appointment this visit was opened from. Lets a patient have a
+    // distinct visit per same-day appointment. Null for legacy/imported
+    // visits or visits created outside an appointment.
+    @Column(name = "appointment_id") var appointmentId: UUID? = null
 )

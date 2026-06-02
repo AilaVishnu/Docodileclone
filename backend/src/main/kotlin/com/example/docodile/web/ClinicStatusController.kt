@@ -65,6 +65,16 @@ class ClinicStatusController(
         return ResponseEntity.noContent().build()
     }
 
+    @PatchMapping("/clinics/{clinicId}/staff/{staffId}/reactivate")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    fun reactivateStaff(
+        @PathVariable clinicId: UUID,
+        @PathVariable staffId: UUID
+    ): ResponseEntity<Void> {
+        clinicStatusService.reactivateStaff(clinicId, staffId)
+        return ResponseEntity.noContent().build()
+    }
+
     @GetMapping("/appointments")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun getAppointments(

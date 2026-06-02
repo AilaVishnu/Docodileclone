@@ -61,6 +61,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                     qualification: s.qualification || "",
                     medicalCouncil: s.medicalCouncil || "",
                     experienceYears: s.experienceYears != null ? String(s.experienceYears) : "",
+                    active: s.active !== false,
                     accountStatus: s.accountStatus ?? "ACTIVE",
                   }));
                 }
@@ -204,22 +205,53 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
       );
 
       if (response.ok) {
-        const deletedName = editingStaff.name;
-        const updatedStaff = activeClinic.staff.filter(s => s.id !== editingStaff.id);
+        const removedName = editingStaff.name;
+        // Soft removal — keep the row but flag it inactive so it moves to the
+        // "Deactivated" list (where it can be reactivated) instead of vanishing.
+        const updatedStaff = activeClinic.staff.map(s =>
+          s.id === editingStaff.id ? { ...s, active: false } : s
+        );
         handleUpdateClinic({ staff: updatedStaff });
         setIsAddStaffOpen(false);
-        setToastMessage(`${deletedName} is deleted from your staff`);
+        setToastMessage(`${removedName} removed — moved to Deactivated`);
       } else {
         const errorData = await response.json();
-        setToastMessage(errorData.error || "Failed to delete staff member");
+        setToastMessage(errorData.error || "Failed to remove staff member");
       }
     } catch (error) {
-      console.error("Failed to delete staff", error);
-      setToastMessage("An error occurred while deleting staff member");
+      console.error("Failed to remove staff", error);
+      setToastMessage("An error occurred while removing staff member");
     }
   };
 
-  const handleSaveStaff = async (data: Omit<Staff, "id">) => {
+  const handleReactivateStaff = async (staff: Staff) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/tenant/clinics/${activeClinicId}/staff/${staff.id}/reactivate`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
+          },
+        }
+      );
+      if (response.ok) {
+        const updatedStaff = activeClinic.staff.map(s =>
+          s.id === staff.id ? { ...s, active: true } : s
+        );
+        handleUpdateClinic({ staff: updatedStaff });
+        setToastMessage(`${staff.name} reactivated`);
+      } else {
+        const errorData = await response.json().catch(() => null);
+        setToastMessage(errorData?.error || "Failed to reactivate staff member");
+      }
+    } catch (error) {
+      console.error("Failed to reactivate staff", error);
+      setToastMessage("An error occurred while reactivating staff member");
+    }
+  };
+
+  const handleSaveStaff = async (data: Omit<Staff, "id" | "active">) => {
     try {
       const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
@@ -270,6 +302,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           qualification: savedStaffData.qualification || "",
           medicalCouncil: savedStaffData.medicalCouncil || "",
           experienceYears: savedStaffData.experienceYears != null ? String(savedStaffData.experienceYears) : "",
+          active: savedStaffData.active !== false,
           accountStatus: savedStaffData.accountStatus ?? "PENDING_ACTIVATION",
         };
 
@@ -354,10 +387,12 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                   {/* Roof */}
                   <ClinicRoof style={styles.roofImage} />
 
-                  {/* House Body — grouped arches and labels */}
+                  {/* House Body — grouped arches and labels. Only active
+                      staff appear here; deactivated members move to the list
+                      below so they can be reactivated. */}
                   <div style={styles.houseBody}>
                     <div style={styles.staffList}>
-                      {activeClinic.staff.map((staff: Staff, index: number) => (
+                      {activeClinic.staff.filter((s: Staff) => s.active).map((staff: Staff, index: number) => (
                         <div key={staff.id} style={styles.staffCardWrapper}>
                           <StaffWindow colorIndex={index} onClick={() => handleEditStaff(staff)}>
                             <StaffIllustration
@@ -393,7 +428,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                       ))}
 
                       {/* Add Staff arch */}
-                      {activeClinic.staff.length < 10 && (
+                      {activeClinic.staff.filter((s: Staff) => s.active).length < 10 && (
                         <div style={styles.staffCardWrapper}>
                           <StaffWindow dashed onClick={handleOpenAddStaff}>
                             <PlusIcon style={{ width: 32, height: 32 }} />
@@ -408,6 +443,25 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                   {/* Bush */}
                   <Bush style={styles.bushRight} />
                 </div>
+
+                {/* Deactivated staff — removed members kept on record. Admin
+                    can reactivate them here; their history stays intact. */}
+                {activeClinic.staff.some((s: Staff) => !s.active) && (
+                  <div style={styles.deactivatedSection}>
+                    <div style={styles.deactivatedTitle}>Deactivated staff</div>
+                    {activeClinic.staff.filter((s: Staff) => !s.active).map((staff: Staff) => (
+                      <div key={staff.id} style={styles.deactivatedRow}>
+                        <div style={styles.deactivatedInfo}>
+                          <span style={styles.deactivatedName}>{staff.name}</span>
+                          <span style={styles.deactivatedRole}>{staff.role}</span>
+                        </div>
+                        <Button variant="dark" size="sm" onClick={() => handleReactivateStaff(staff)}>
+                          Reactivate
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : null
           }

@@ -49,5 +49,10 @@ class Patient(
     // HealthPlix "T428"). Null for patients created natively in Docodile.
     // Drives idempotent re-imports — see V41 migration.
     @Column(name = "external_ref")
-    var externalRef: String? = null
+    var externalRef: String? = null,
+
+    // Human-facing patient number, unique and sequential per clinic. Assigned
+    // in creation/import order, skipping numbers already taken — see V46.
+    @Column(name = "display_no")
+    var displayNo: Int? = null
 )

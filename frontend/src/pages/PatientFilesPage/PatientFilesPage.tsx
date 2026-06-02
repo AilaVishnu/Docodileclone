@@ -138,6 +138,10 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
   const [limit, setLimit] = useState(PAGE);
   const shown = visible.slice(0, limit);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  // Top of the page — selecting a patient scrolls here so the open file and
+  // its action buttons (which live at the top of the right pane) are in view
+  // even when the index list was scrolled far down.
+  const topRef = useRef<HTMLDivElement | null>(null);
   // Any search/filter change rebuilds the list — restart the window.
   useEffect(() => {
     setLimit(PAGE);
@@ -173,6 +177,14 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
 
   const selectedPatient = visible.find((p) => p.id === selectedId) ?? null;
 
+  // Select from the list AND jump back to the top, so the chosen patient's
+  // file + action buttons are visible regardless of how far the list was
+  // scrolled. Used only for explicit row clicks (not auto-selection).
+  const handleSelect = (id: string) => {
+    setSelectedId(id);
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const handleOpen = (patient: Patient, opts?: { initialAction?: number }) => {
     // Record where the doctor came from so the Prescription page's Back
     // button can route them back to Patient Files rather than dumping
@@ -189,7 +201,7 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
   };
 
   return (
-    <div style={styles.container}>
+    <div ref={topRef} style={styles.container}>
       <div style={styles.headerRow}>
         <h1 style={styles.title}>Patient Files</h1>
       </div>
@@ -326,7 +338,7 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
                       patient={p}
                       query={search.trim().toLowerCase()}
                       selected={p.id === selectedId}
-                      onSelect={() => setSelectedId(p.id)}
+                      onSelect={() => handleSelect(p.id)}
                     />
                   ))}
                 </tbody>
@@ -401,7 +413,7 @@ function IndexRow({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const code = shortCode(patient.id);
+  const code = patientCode(patient);
   const ageShort = genderAgeShort(patient);
   const phone = patient.phone ?? "—";
   const email = patient.email ?? "—";
@@ -458,7 +470,7 @@ function matchesQuery(p: Patient, q: string): MatchField | null {
   if (p.name.toLowerCase().includes(q)) return "name";
   if ((p.phone ?? "").toLowerCase().includes(q)) return "phone";
   if ((p.email ?? "").toLowerCase().includes(q)) return "email";
-  if (shortCode(p.id).toLowerCase().includes(q)) return "code";
+  if (patientCode(p).toLowerCase().includes(q)) return "code";
   return null;
 }
 
@@ -542,7 +554,7 @@ function DateTrigger({
 // the heading, AI summary, smart chips, contact/demographics, recent visits
 // as cards, action buttons. This is where the cabinet design gets to breathe.
 function OpenFile({ patient, onOpenChart, onOpenBills }: { patient: Patient; onOpenChart: () => void; onOpenBills?: () => void }) {
-  const code = shortCode(patient.id);
+  const code = patientCode(patient);
   const ageShort = genderAgeShort(patient);
   const metaLine = [
     ageShort !== "—" ? `(${ageShort})` : null,
@@ -877,9 +889,16 @@ function byLastVisit(desc: boolean) {
   };
 }
 
-// Stable 2–3 digit "T" code derived from the UUID — same patient always gets
-// the same code regardless of sort order. Pure presentational shorthand;
-// when the backend returns a real chart number, swap this helper.
+// Patient's display code. Uses the real per-clinic sequential number from the
+// backend ("T###"); falls back to the UUID-hash code for any legacy row that
+// predates the backend backfill (displayNo null).
+function patientCode(p: Pick<Patient, "id" | "displayNo">): string {
+  if (p.displayNo != null) return `T${p.displayNo.toString().padStart(3, "0")}`;
+  return shortCode(p.id);
+}
+
+// Stable 2–3 digit "T" code derived from the UUID — fallback only, for rows
+// without a real displayNo. Same patient always gets the same code.
 function shortCode(id: string): string {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
