@@ -35,6 +35,10 @@ class AuthService(
             throw BadCredentialsException("Invalid credentials")
         }
 
+        if (user.passwordHash == null) {
+            throw BadCredentialsException("Invalid credentials")
+        }
+
         if (!passwordEncoder.matches(request.password, user.passwordHash)) {
             throw BadCredentialsException("Invalid credentials")
         }
@@ -52,7 +56,7 @@ class AuthService(
         val token = tokenService.generateToken(user.id, tenantId, user.role.name, user.email, clinic?.id)
 
         val clinicName = clinic?.name ?: "your clinic"
-        return LoginResponse(token = token, role = user.role.name, clinicId = clinic?.id, clinicName = clinicName)
+        return LoginResponse(token = token, role = user.role.name, clinicId = clinic?.id, clinicName = clinicName, gender = user.gender)
     }
 
     fun loginStaff(request: StaffLoginRequest): LoginResponse {
@@ -71,6 +75,10 @@ class AuthService(
             throw BadCredentialsException("Invalid credentials")
         }
 
+        if (user.passwordHash == null) {
+            throw BadCredentialsException("Invalid credentials")
+        }
+
         if (!passwordEncoder.matches(request.password, user.passwordHash)) {
             throw BadCredentialsException("Invalid credentials")
         }
@@ -81,7 +89,8 @@ class AuthService(
             token = token,
             role = user.role.name,
             clinicId = clinic.id,
-            clinicName = clinic.name
+            clinicName = clinic.name,
+            gender = user.gender
         )
     }
 
@@ -104,7 +113,8 @@ class AuthService(
             token = token,
             role = user.role.name,
             clinicId = clinic.id,
-            clinicName = clinic.name
+            clinicName = clinic.name,
+            gender = user.gender
         )
     }
 }

@@ -1808,7 +1808,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
     const visitIndex = visits.findIndex((vv) => vv.id === activeVisit.id);
     const data: PrintVisitData = {
       patientName: selectedPatient.name,
-      patientAge: selectedPatient.age != null ? `${selectedPatient.age}y` : null,
+      patientAge: selectedPatient.age != null ? `${Math.floor(selectedPatient.age / 12)}y` : null,
       patientGender: selectedPatient.gender,
       patientPhone: selectedPatient.phone,
       patientAddress: null, // Patient type has no address yet.

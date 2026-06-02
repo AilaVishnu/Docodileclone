@@ -24,7 +24,9 @@ class ClinicStatusService(
     private val clinicStaffRepository: ClinicStaffRepository,
     private val appUserRepository: AppUserRepository,
     private val tenantRepository: TenantRepository,
-    private val currentUser: CurrentUser
+    private val currentUser: CurrentUser,
+    private val passwordTokenService: PasswordTokenService,
+    private val emailService: EmailService,
 ) {
     fun isClinicComplete(): Boolean {
         val tenantId = currentUser.tenantId()
@@ -54,14 +56,12 @@ class ClinicStatusService(
                 .filter { it.tenant?.id == tenantId }
                 .orElseThrow { IllegalArgumentException("Clinic not found") }
         } else {
-            // Count clinics for this tenant
-            val currentCount = clinicEntityRepository.countByTenantId(tenantId)
-            if (currentCount >= 5) {
-                throw IllegalArgumentException("You can only have up to 5 clinics")
-            }
-
             val tenant = tenantRepository.findById(tenantId)
                 .orElseThrow { IllegalStateException("Tenant not found") }
+            val currentCount = clinicEntityRepository.countByTenantId(tenantId)
+            if (currentCount >= tenant.maxClinics) {
+                throw IllegalArgumentException("You can only have up to ${tenant.maxClinics} clinics")
+            }
             ClinicEntity(tenant = tenant, createdAt = Instant.now())
         }
 
@@ -90,6 +90,12 @@ class ClinicStatusService(
         }
 
         return clinicEntityRepository.save(clinic)
+    }
+
+    fun getTenantLimits(): Map<String, Int> {
+        val tenant = tenantRepository.findById(currentUser.tenantId())
+            .orElseThrow { IllegalStateException("Tenant not found") }
+        return mapOf("maxClinics" to tenant.maxClinics, "maxStaffPerClinic" to tenant.maxStaffPerClinic)
     }
 
     fun isDomainAvailable(domain: String): Boolean {
@@ -177,6 +183,17 @@ class ClinicStatusService(
             throw IllegalArgumentException("Phone number already exists for another staff member")
         }
 
+        val isNew = request.id == null && existingByEmail.isEmpty
+
+        if (isNew) {
+            val staffCount = clinicStaffRepository.countByIdClinicId(clinicId)
+            val tenant = tenantRepository.findById(tenantId)
+                .orElseThrow { IllegalStateException("Tenant not found") }
+            if (staffCount >= tenant.maxStaffPerClinic) {
+                throw IllegalArgumentException("You can only have up to ${tenant.maxStaffPerClinic} staff members per clinic")
+            }
+        }
+
         staff.apply {
             name = request.name
             email = request.email.trim().lowercase()
@@ -197,9 +214,19 @@ class ClinicStatusService(
             // Adding or editing a staff member (re)activates them — covers
             // the case where a previously-removed doctor rejoins the clinic.
             active = true
+            if (isNew) {
+                passwordHash = null
+                accountStatus = "PENDING_ACTIVATION"
+            }
         }
 
         val savedStaff = appUserRepository.save(staff)
+
+        if (isNew) {
+            val rawToken = passwordTokenService.generateToken(savedStaff.id)
+            val setupLink = passwordTokenService.buildSetupLink(rawToken)
+            emailService.sendWelcomeEmail(savedStaff.email, savedStaff.name ?: "", clinic.name ?: "your clinic", setupLink)
+        }
 
         // Ensure linked to clinic
         if (!clinicStaffRepository.existsByIdClinicIdAndIdStaffId(clinicId, savedStaff.id)) {

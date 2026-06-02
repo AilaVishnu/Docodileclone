@@ -169,6 +169,12 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
 
   const HoverAvatar = ({ onClick }: { onClick: () => void }) => {
     const [hovered, setHovered] = useState(false);
+    const rawRole = localStorage.getItem("docodile_role") ?? "ADMIN";
+    const rawGender = localStorage.getItem("docodile_gender") ?? "male";
+    const isAdmin = rawRole === "ADMIN";
+    const displayRole = isAdmin
+      ? "Doctor"
+      : rawRole.split("_").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
     return (
       <div
         style={{ ...styles.profileAvatar, ...(hovered ? styles.profileAvatarHover : {}) }}
@@ -177,8 +183,8 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
         onMouseLeave={() => setHovered(false)}
       >
         <StaffIllustration
-          role="Doctor"
-          gender="male"
+          role={displayRole}
+          gender={(isAdmin ? "male" : rawGender) as "male" | "female" | "other"}
           width="100%"
           height="100%"
           borderRadius="0"

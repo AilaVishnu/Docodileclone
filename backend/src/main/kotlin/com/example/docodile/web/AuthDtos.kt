@@ -18,7 +18,8 @@ data class LoginResponse(
     val token: String,
     val role: String,
     val clinicId: UUID?,
-    val clinicName: String
+    val clinicName: String,
+    val gender: String?
 )
 
 data class SwitchClinicRequest(val clinicId: UUID)

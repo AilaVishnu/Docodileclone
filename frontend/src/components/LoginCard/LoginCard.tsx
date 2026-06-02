@@ -8,7 +8,7 @@ import { ReactComponent as MailIcon } from "../../assets/Letter.svg";
 import { ReactComponent as PasswordIcon } from "../../assets/Key.svg";
 import { ReactComponent as EyeIcon } from "../../assets/Eye.svg";
 import { ReactComponent as EyeClosedIcon } from "../../assets/Eye Closed.svg";
-import { colors } from "../../styles/theme";
+import { colors, fonts } from "../../styles/theme";
 import { API_BASE_URL } from "../../apiConfig";
 import { Toast } from "../Toast";
 
@@ -18,6 +18,7 @@ type LoginMode = "admin" | "staff";
 type LoginCardProps = {
   mode: LoginMode;
   onLoginSuccess?: () => void;
+  onSwitchMode?: () => void;
 };
 
 type LoginResponse = {
@@ -25,9 +26,10 @@ type LoginResponse = {
   role: string;
   clinicId?: string | null;
   clinicName?: string;
+  gender?: string | null;
 };
 
-export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
+export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps) {
   const [domain, setDomain] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -88,6 +90,8 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
       const data = (await response.json()) as LoginResponse;
       localStorage.setItem("docodile_token", data.token);
       localStorage.setItem("docodile_role", data.role);
+      if (data.gender) localStorage.setItem("docodile_gender", data.gender.toLowerCase());
+      else localStorage.removeItem("docodile_gender");
       // Decode JWT payload to extract user_id and email for chat
       try {
         const payload = JSON.parse(atob(data.token.split(".")[1]));
@@ -178,6 +182,32 @@ export function LoginCard({ mode, onLoginSuccess }: LoginCardProps) {
       >
         {isSubmitting ? "Signing in..." : "Sign in"}
       </Button>
+
+      {onSwitchMode && (
+        <div style={{ display: "flex", justifyContent: "center", marginTop: -8 }}>
+          <span
+            onClick={onSwitchMode}
+            style={{
+              fontFamily: fonts.family.primary,
+              fontSize: fonts.size.s,
+              fontWeight: fonts.weight.medium,
+              color: colors.neutral700,
+              cursor: "pointer",
+              textDecoration: "underline",
+              textUnderlineOffset: "3px",
+              transition: "color 0.2s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = isStaff ? colors.secondary800 : colors.active.shade700;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = colors.neutral700;
+            }}
+          >
+            {isStaff ? "Login as Admin" : "Login as Staff"}
+          </span>
+        </div>
+      )}
 
       <Toast
         message={toastMessage}

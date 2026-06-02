@@ -19,7 +19,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
-@EnableConfigurationProperties(JwtProperties::class, EkaProperties::class)
+@EnableConfigurationProperties(JwtProperties::class, EkaProperties::class, AppProperties::class)
 class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilter) {
     @Bean
     fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
@@ -38,7 +38,11 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
             .httpBasic { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
-                it.requestMatchers("/auth/login", "/auth/staff/login", "/actuator/health", "/api/health", "/ws/**").permitAll()
+                it.requestMatchers(
+                    "/auth/login", "/auth/staff/login",
+                    "/auth/validate-token", "/auth/setup-password",
+                    "/actuator/health", "/api/health", "/ws/**"
+                ).permitAll()
                     .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                     .anyRequest().authenticated()
             }

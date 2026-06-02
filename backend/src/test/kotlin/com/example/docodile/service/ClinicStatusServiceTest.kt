@@ -6,6 +6,8 @@ import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.ClinicStaffRepository
 import com.example.docodile.repo.TenantRepository
 import com.example.docodile.security.CurrentUser
+import com.example.docodile.service.EmailService
+import com.example.docodile.service.PasswordTokenService
 import com.example.docodile.web.ClinicDetailsRequest
 import com.example.docodile.web.StaffRequest
 import org.junit.jupiter.api.Assertions.*
@@ -34,6 +36,12 @@ class ClinicStatusServiceTest {
 
     @Mock
     private lateinit var currentUser: CurrentUser
+
+    @Mock
+    private lateinit var passwordTokenService: PasswordTokenService
+
+    @Mock
+    private lateinit var emailService: EmailService
 
     @InjectMocks
     private lateinit var clinicStatusService: ClinicStatusService

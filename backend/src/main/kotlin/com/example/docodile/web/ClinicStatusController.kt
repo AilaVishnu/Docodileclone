@@ -27,6 +27,12 @@ class ClinicStatusController(
         return mapOf("complete" to clinicStatusService.isClinicComplete())
     }
 
+    @GetMapping("/config")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    fun config(): Map<String, Any> {
+        return clinicStatusService.getTenantLimits()
+    }
+
     @PostMapping("/clinic")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     fun saveClinic(@RequestBody request: ClinicDetailsRequest): ResponseEntity<ClinicEntity> {

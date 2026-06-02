@@ -10,6 +10,7 @@ import { ReactComponent as IconUsersGroup } from "../../assets/icons/users-group
 type DoctorStatusCardProps = {
   doctorName: string;
   doctorGender?: string;
+  doctorRole?: string;
   appointments: {
     status: string;
     patientName?: string;
@@ -40,6 +41,7 @@ function StatRow({ icon, text }: StatRowProps) {
 export function DoctorStatusCard({
   doctorName,
   doctorGender,
+  doctorRole,
   appointments,
 }: DoctorStatusCardProps) {
   const inProgress = appointments.find(
@@ -60,7 +62,7 @@ export function DoctorStatusCard({
       {/* Avatar overlapping card top */}
       <div style={cardStyles.avatarWrapper}>
         <StaffIllustration
-          role="Doctor"
+          role={doctorRole || "Doctor"}
           gender={(doctorGender || "male") as "male" | "female" | "other"}
           width="56px"
           height="56px"

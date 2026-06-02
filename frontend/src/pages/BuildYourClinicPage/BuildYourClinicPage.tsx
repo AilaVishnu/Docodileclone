@@ -21,9 +21,26 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | undefined>(undefined);
   const [toastMessage, setToastMessage] = useState("");
+  const [maxClinics, setMaxClinics] = useState(0);
+  const [maxStaffPerClinic, setMaxStaffPerClinic] = useState(0);
 
   useEffect(() => {
     document.title = "Docodile | Build Your Clinic";
+
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/tenant/config`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("docodile_token")}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setMaxClinics(data.maxClinics);
+          setMaxStaffPerClinic(data.maxStaffPerClinic);
+        }
+      } catch (e) {
+        console.error("Failed to fetch tenant config:", e);
+      }
+    };
 
     const fetchClinics = async () => {
       try {
@@ -62,6 +79,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                     medicalCouncil: s.medicalCouncil || "",
                     experienceYears: s.experienceYears != null ? String(s.experienceYears) : "",
                     active: s.active !== false,
+                    accountStatus: s.accountStatus ?? "ACTIVE",
                   }));
                 }
               } catch (e) {
@@ -100,14 +118,15 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
       }
     };
 
+    fetchConfig();
     fetchClinics();
   }, []);
 
   const activeClinic = clinics.find(c => c.id === activeClinicId) || clinics[0];
 
   const handleAddClinic = () => {
-    if (clinics.length >= 5) {
-      setToastMessage("Maximum of 5 clinics reached");
+    if (clinics.length >= maxClinics) {
+      setToastMessage(`Maximum of ${maxClinics} clinics reached`);
       return;
     }
 
@@ -174,8 +193,8 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   };
 
   const handleOpenAddStaff = async () => {
-    if (activeClinic && activeClinic.staff.length >= 10) {
-      setToastMessage("Maximum of 10 staff members reached");
+    if (activeClinic && activeClinic.staff.length >= maxStaffPerClinic) {
+      setToastMessage(`Maximum of ${maxStaffPerClinic} staff members reached`);
       return;
     }
     if (!(await syncClinicToBackend())) return;
@@ -302,6 +321,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           medicalCouncil: savedStaffData.medicalCouncil || "",
           experienceYears: savedStaffData.experienceYears != null ? String(savedStaffData.experienceYears) : "",
           active: savedStaffData.active !== false,
+          accountStatus: savedStaffData.accountStatus ?? "PENDING_ACTIVATION",
         };
 
         if (editingStaff) {
@@ -338,6 +358,21 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
     }
   };
 
+  const handleResendInvite = async (staffId: string) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/tenant/staff/${staffId}/resend-welcome`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${localStorage.getItem("docodile_token")}` },
+      });
+      if (res.ok) {
+        setToastMessage("Invite email resent");
+      } else {
+        setToastMessage("Failed to resend invite");
+      }
+    } catch {
+      setToastMessage("Failed to resend invite");
+    }
+  };
 
   return (
     <div style={styles.page}>
@@ -389,11 +424,29 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                           </StaffWindow>
                           <div style={styles.staffName}>{staff.name}</div>
                           <div style={styles.staffRole}>{staff.role}</div>
+                          {staff.accountStatus === "PENDING_ACTIVATION" && (
+                            <button
+                              style={{
+                                background: "none",
+                                border: "none",
+                                padding: 0,
+                                cursor: "pointer",
+                                fontSize: 11,
+                                color: "#CF6F2F",
+                                fontFamily: "inherit",
+                                textDecoration: "underline",
+                                marginTop: 2,
+                              }}
+                              onClick={(e) => { e.stopPropagation(); handleResendInvite(staff.id); }}
+                            >
+                              Resend invite
+                            </button>
+                          )}
                         </div>
                       ))}
 
                       {/* Add Staff arch */}
-                      {activeClinic.staff.filter((s: Staff) => s.active).length < 10 && (
+                      {activeClinic.staff.filter((s: Staff) => s.active).length < maxStaffPerClinic && (
                         <div style={styles.staffCardWrapper}>
                           <StaffWindow dashed onClick={handleOpenAddStaff}>
                             <PlusIcon style={{ width: 32, height: 32 }} />
