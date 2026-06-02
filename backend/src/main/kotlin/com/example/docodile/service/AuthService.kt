@@ -17,6 +17,7 @@ import com.example.docodile.web.StaffLoginRequest
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.authentication.LockedException
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -52,7 +53,7 @@ class AuthService(
 
         checkAccountLockout(user)
 
-        if (!passwordEncoder.matches(request.password, user.passwordHash)) {
+        if (!verifyPassword(request.password, user.passwordHash!!, user)) {
             recordFailedAttempt(user)
             auditService.log(
                 action   = AuditAction.LOGIN_FAILURE,
@@ -122,7 +123,7 @@ class AuthService(
             throw BadCredentialsException("Invalid credentials")
         }
 
-        if (user.passwordHash == null || !passwordEncoder.matches(request.password, user.passwordHash)) {
+        if (user.passwordHash == null || !verifyPassword(request.password, user.passwordHash!!, user)) {
             recordFailedAttempt(user)
             auditService.log(
                 action   = AuditAction.LOGIN_FAILURE,
@@ -254,6 +255,26 @@ class AuthService(
             )
         }
         appUserRepository.save(user)
+    }
+
+    private fun verifyPassword(
+        rawPassword: String,
+        storedHash: String,
+        user: com.example.docodile.domain.AppUser,
+    ): Boolean {
+        // BCrypt hashes start with $2a$ / $2b$ / $2y$. If the stored hash is
+        // still BCrypt (from before the Argon2id migration), verify with BCrypt
+        // and transparently re-hash with Argon2id so next login uses the new algo.
+        val isBcrypt = storedHash.startsWith("\$2a\$") || storedHash.startsWith("\$2b\$") || storedHash.startsWith("\$2y\$")
+        if (isBcrypt) {
+            val bcrypt = BCryptPasswordEncoder()
+            if (!bcrypt.matches(rawPassword, storedHash)) return false
+            // Upgrade to Argon2id in-place
+            user.passwordHash = passwordEncoder.encode(rawPassword)
+            appUserRepository.save(user)
+            return true
+        }
+        return passwordEncoder.matches(rawPassword, storedHash)
     }
 
     companion object {
