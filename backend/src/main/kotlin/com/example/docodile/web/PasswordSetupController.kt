@@ -1,7 +1,9 @@
 package com.example.docodile.web
 
+import com.example.docodile.domain.Role
 import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.repo.ClinicEntityRepository
+import com.example.docodile.repo.ClinicStaffRepository
 import com.example.docodile.security.CurrentUser
 import com.example.docodile.service.EmailService
 import com.example.docodile.service.PasswordTokenService
@@ -23,6 +25,7 @@ class PasswordSetupController(
     private val passwordTokenService: PasswordTokenService,
     private val appUserRepository: AppUserRepository,
     private val clinicEntityRepository: ClinicEntityRepository,
+    private val clinicStaffRepository: ClinicStaffRepository,
     private val passwordEncoder: PasswordEncoder,
     private val emailService: EmailService,
     private val currentUser: CurrentUser,
@@ -40,6 +43,43 @@ class PasswordSetupController(
         } catch (e: Exception) {
             ResponseEntity.ok(mapOf("valid" to false, "role" to null, "name" to null))
         }
+    }
+
+    @PostMapping("/auth/forgot-password")
+    fun forgotPassword(@RequestBody request: ForgotPasswordRequest): ResponseEntity<Map<String, Any?>> {
+        val email = request.email.trim()
+        val domain = request.domain?.trim()
+
+        val user = appUserRepository.findByEmail(email).orElse(null)
+            ?: return ResponseEntity.status(404).body(mapOf("error" to "Email ID does not exist"))
+
+        if (!user.active) {
+            return ResponseEntity.status(404).body(mapOf("error" to "Email ID does not exist"))
+        }
+
+        if (domain != null) {
+            // Staff flow: validate clinic domain and membership
+            val clinic = clinicEntityRepository.findByDomainIgnoreCase(domain).orElse(null)
+                ?: return ResponseEntity.status(404).body(mapOf("error" to "Email ID does not exist"))
+            if (user.role == Role.ADMIN) {
+                return ResponseEntity.status(404).body(mapOf("error" to "Email ID does not exist"))
+            }
+            val isMember = clinicStaffRepository.existsByIdClinicIdAndIdStaffId(clinic.id, user.id)
+            if (!isMember) {
+                return ResponseEntity.status(404).body(mapOf("error" to "Email ID does not exist"))
+            }
+        } else {
+            // Admin flow: user must be an admin
+            if (user.role != Role.ADMIN) {
+                return ResponseEntity.status(404).body(mapOf("error" to "Email ID does not exist"))
+            }
+        }
+
+        val rawToken = passwordTokenService.generateToken(user.id)
+        val resetLink = passwordTokenService.buildSetupLink(rawToken)
+        emailService.sendPasswordResetEmail(user.email, user.name ?: "", resetLink)
+
+        return ResponseEntity.ok(mapOf("success" to true))
     }
 
     @PostMapping("/auth/setup-password")

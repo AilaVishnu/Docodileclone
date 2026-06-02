@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { styles } from "./LoginCard.styles";
 import { TextInput } from "../Input/TextInput";
 import { DomainInput } from "../Input/DomainInput";
@@ -14,6 +14,7 @@ import { Toast } from "../Toast";
 
 
 type LoginMode = "admin" | "staff";
+type View = "login" | "forgot";
 
 type LoginCardProps = {
   mode: LoginMode;
@@ -35,22 +36,13 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPopup, setShowPopup] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (showPopup) {
-      timer = setTimeout(() => {
-        setShowPopup(false);
-      }, 5000);
-    }
-    return () => clearTimeout(timer);
-  }, [showPopup]);
+  const [view, setView] = useState<View>("login");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotDomain, setForgotDomain] = useState("");
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
 
-  const showHelpPopup = () => {
-    setShowPopup(true);
-  };
   const isStaff = mode === "staff";
   const isDomainValid = !isStaff || domain.trim().length > 0;
   const canSubmit = email.trim().length > 0 && password.trim().length > 0 && isDomainValid;
@@ -92,7 +84,6 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
       localStorage.setItem("docodile_role", data.role);
       if (data.gender) localStorage.setItem("docodile_gender", data.gender.toLowerCase());
       else localStorage.removeItem("docodile_gender");
-      // Decode JWT payload to extract user_id and email for chat
       try {
         const payload = JSON.parse(atob(data.token.split(".")[1]));
         if (payload.user_id) localStorage.setItem("docodile_user_id", payload.user_id);
@@ -126,6 +117,120 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
       handleLogin();
     }
   };
+
+  const handleForgotPassword = async () => {
+    const emailVal = forgotEmail.trim();
+    if (!emailVal) {
+      setToastMessage("Enter a valid email address");
+      return;
+    }
+
+    if (isStaff && !forgotDomain.trim()) {
+      setToastMessage("Enter clinic domain");
+      return;
+    }
+
+    setForgotSubmitting(true);
+    try {
+      const body: Record<string, string> = { email: emailVal };
+      if (isStaff) body.domain = forgotDomain.trim();
+
+      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (response.status === 404) {
+        setToastMessage("Email ID does not exist");
+        return;
+      }
+
+      if (!response.ok) {
+        setToastMessage("Something went wrong. Please try again.");
+        return;
+      }
+
+      setToastMessage(`Password reset email sent to ${emailVal}`);
+      setForgotEmail("");
+      setForgotDomain("");
+      setView("login");
+    } catch {
+      setToastMessage("Network error. Please try again.");
+    } finally {
+      setForgotSubmitting(false);
+    }
+  };
+
+  const handleForgotKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !forgotSubmitting) {
+      handleForgotPassword();
+    }
+  };
+
+  if (view === "forgot") {
+    return (
+      <Card style={{ ...styles.card, width: "40vw", backgroundColor: isStaff ? colors.active.shade100 : colors.secondary50 }}>
+        <h4 style={styles.title}>Reset Password</h4>
+
+        {isStaff && (
+          <DomainInput
+            value={forgotDomain}
+            onChange={setForgotDomain}
+            onKeyDown={handleForgotKeyDown}
+          />
+        )}
+
+        <TextInput
+          type="email"
+          value={forgotEmail}
+          onChange={setForgotEmail}
+          placeholder="hello@example.com"
+          iconLeft={<MailIcon />}
+          onKeyDown={handleForgotKeyDown}
+        />
+
+        <Button
+          variant={isStaff ? "primary" : "secondary"}
+          size="md"
+          onClick={handleForgotPassword}
+          disabled={forgotSubmitting}
+        >
+          {forgotSubmitting ? "Sending..." : "Send Reset Link"}
+        </Button>
+
+        <div style={{ display: "flex", justifyContent: "center", marginTop: -8 }}>
+          <span
+            onClick={() => { setView("login"); setForgotEmail(""); setForgotDomain(""); }}
+            style={{
+              fontFamily: fonts.family.primary,
+              fontSize: fonts.size.s,
+              fontWeight: fonts.weight.medium,
+              color: colors.neutral700,
+              cursor: "pointer",
+              textDecoration: "underline",
+              textUnderlineOffset: "3px",
+              transition: "color 0.2s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = isStaff ? colors.secondary800 : colors.active.shade700;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = colors.neutral700;
+            }}
+          >
+            Back to Login
+          </span>
+        </div>
+
+        <Toast
+          message={toastMessage}
+          isVisible={!!toastMessage}
+          onClose={() => setToastMessage("")}
+        />
+      </Card>
+    );
+  }
 
   return (
     <Card style={{ ...styles.card, width: "40vw", backgroundColor: isStaff ? colors.active.shade100 : colors.secondary50 }}>
@@ -169,8 +274,6 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
             {showPassword ? <EyeClosedIcon /> : <EyeIcon />}
           </button>}
         />
-
-
       </div>
 
       {/* Sign in */}
@@ -227,20 +330,10 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
           </strong>
         </p>
 
-        <p style={styles.footerText} onClick={showHelpPopup}>
+        <p style={{ ...styles.footerText, cursor: "pointer" }} onClick={() => setView("forgot")}>
           <strong>Forgot Password</strong>
         </p>
       </div>
-
-      {showPopup && (
-        <div style={{
-          ...styles.supportPopup,
-          backgroundColor: isStaff ? colors.active.shade700 : colors.secondary700,
-          color: colors.neutral100,
-        }}>
-          Contact Docodile Support Team
-        </div>
-      )}
     </Card>
   );
 }

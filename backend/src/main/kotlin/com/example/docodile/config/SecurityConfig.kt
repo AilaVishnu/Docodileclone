@@ -41,6 +41,7 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
                 it.requestMatchers(
                     "/auth/login", "/auth/staff/login",
                     "/auth/validate-token", "/auth/setup-password",
+                    "/auth/forgot-password",
                     "/actuator/health", "/api/health", "/ws/**"
                 ).permitAll()
                     .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()

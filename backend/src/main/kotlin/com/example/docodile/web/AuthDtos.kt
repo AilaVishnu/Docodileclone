@@ -23,3 +23,8 @@ data class LoginResponse(
 )
 
 data class SwitchClinicRequest(val clinicId: UUID)
+
+data class ForgotPasswordRequest(
+    val email: String,
+    val domain: String? = null,
+)
