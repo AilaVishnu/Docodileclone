@@ -3,6 +3,7 @@ package com.example.docodile.web
 import com.example.docodile.domain.AuditAction
 import com.example.docodile.service.AuditService
 import com.example.docodile.service.VisitService
+import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -43,7 +44,7 @@ class VisitController(
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun create(
         @PathVariable patientId: UUID,
-        @RequestBody request: SaveVisitRequest
+        @Valid @RequestBody request: SaveVisitRequest
     ): ResponseEntity<Any> = try {
         val dto = visitService.create(patientId, request)
         auditService.log(AuditAction.PRESCRIPTION_CREATED, entityType = "Visit", entityId = patientId)
@@ -56,7 +57,7 @@ class VisitController(
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun update(
         @PathVariable visitId: UUID,
-        @RequestBody request: SaveVisitRequest
+        @Valid @RequestBody request: SaveVisitRequest
     ): ResponseEntity<Any> = try {
         val dto = visitService.update(visitId, request)
         auditService.log(AuditAction.PRESCRIPTION_UPDATED, entityType = "Visit", entityId = visitId)
