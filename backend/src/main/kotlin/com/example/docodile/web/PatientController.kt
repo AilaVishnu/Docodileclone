@@ -91,6 +91,7 @@ class PatientController(
     ): ResponseEntity<Void> {
         val clinicId = currentUser.clinicId()
         val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
+            ?.takeIf { it.deletedAt == null }
             ?: return ResponseEntity.notFound().build()
 
         // Validate inputs to match the rigour ClinicStatusService.saveStaff
