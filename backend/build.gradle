@@ -75,3 +75,10 @@ allOpen {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// Local dev defaults — only applied when running via ./gradlew bootRun.
+// Production deployments use the real JAR and still require env vars to be set.
+tasks.named('bootRun') {
+	environment 'JWT_SECRET',        System.getenv('JWT_SECRET')        ?: 'local-dev-secret-do-not-use-in-production-x'
+	environment 'POSTGRES_PASSWORD', System.getenv('POSTGRES_PASSWORD') ?: 'docodile'
+}
