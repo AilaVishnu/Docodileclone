@@ -934,33 +934,50 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             </div>
           </Card>
 
-          <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative" }}>
-            <div
-              style={{ ...styles.iconField, borderBottom: "none", cursor: "pointer", padding: 0 }}
-              onClick={() => setShowDatePicker(true)}
-            >
-              <CalendarIcon style={styles.iconFieldIcon} />
-              <span style={{ fontSize: fonts.size.m, color: form.date ? colors.neutral900 : colors.neutral400 }}>
-                {formatDate(form.date) || "Select Date"}
-              </span>
-            </div>
-            {showDatePicker && (
-              <DatePicker
-                selectedDate={form.date}
-                onSelect={(date: Date) => {
-                  setForm({ ...form, date });
-                  setShowDatePicker(false);
-                }}
-                onClose={() => setShowDatePicker(false)}
-                disablePast
-              />
-            )}
-          </Card>
+          {(() => {
+            // Walk-in date is the day the patient arrived — a historical
+            // fact, locked on edit alongside the time. New booking flow
+            // stays interactive.
+            const dateLocked = !!editingAppointment && form.isWalkin;
+            return (
+            <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative" }}>
+              <div
+                style={{ ...styles.iconField, borderBottom: "none", cursor: dateLocked ? "not-allowed" : "pointer", padding: 0, opacity: dateLocked ? 0.65 : 1 }}
+                onClick={() => { if (!dateLocked) setShowDatePicker(true); }}
+                title={dateLocked ? "Walk-in date can't be edited" : undefined}
+              >
+                <CalendarIcon style={styles.iconFieldIcon} />
+                <span style={{ fontSize: fonts.size.m, color: form.date ? colors.neutral900 : colors.neutral400 }}>
+                  {formatDate(form.date) || "Select Date"}
+                </span>
+              </div>
+              {showDatePicker && (
+                <DatePicker
+                  selectedDate={form.date}
+                  onSelect={(date: Date) => {
+                    setForm({ ...form, date });
+                    setShowDatePicker(false);
+                  }}
+                  onClose={() => setShowDatePicker(false)}
+                  disablePast
+                />
+              )}
+            </Card>
+            );
+          })()}
 
-          <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative", ...(errors.time ? { borderColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
+          {(() => {
+            // A walk-in time is the moment the patient arrived — a historical
+            // fact, not a schedulable slot. Lock the time field on edit so
+            // the receptionist can't rewrite it (the rest of the appointment
+            // stays editable). New-booking flow is unaffected.
+            const timeLocked = !!editingAppointment && form.isWalkin;
+            return (
+            <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative", ...(errors.time ? { borderColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
             <div
-              style={{ ...styles.iconField, borderBottom: "none", cursor: "pointer", padding: 0 }}
-              onClick={() => setShowTimePicker(true)}
+              style={{ ...styles.iconField, borderBottom: "none", cursor: timeLocked ? "not-allowed" : "pointer", padding: 0, opacity: timeLocked ? 0.65 : 1 }}
+              onClick={() => { if (!timeLocked) setShowTimePicker(true); }}
+              title={timeLocked ? "Walk-in time can't be edited" : undefined}
             >
               <ClockIcon style={styles.iconFieldIcon} />
               <span style={{ fontSize: fonts.size.m, color: form.time || form.isWalkin ? colors.neutral900 : colors.neutral400 }}>
@@ -987,6 +1004,8 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               />
             )}
           </Card>
+            );
+          })()}
           {errors.time && (
             <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginLeft: 4 }}>
               Please select a time
