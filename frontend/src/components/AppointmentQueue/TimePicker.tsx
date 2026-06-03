@@ -9,9 +9,14 @@ type TimePickerProps = {
   // The appointment date. When it's today, slots earlier than the current
   // wall-clock time are locked so you can't book into the past.
   selectedDate?: Date;
+  // Optional: when provided, the picker shows a "Walk-in" button. The caller
+  // is expected to set the appointment's scheduled time to the current wall
+  // clock and mark isWalkin=true; the picker just emits the intent and the
+  // current time string so the caller doesn't have to recompute it.
+  onWalkin?: (time: string) => void;
 };
 
-export function TimePicker({ initialTime, onSelect, onClose, style, selectedDate }: TimePickerProps) {
+export function TimePicker({ initialTime, onSelect, onClose, style, selectedDate, onWalkin }: TimePickerProps) {
   const now = new Date();
   const isToday = !!selectedDate &&
     selectedDate.getFullYear() === now.getFullYear() &&
@@ -143,6 +148,22 @@ export function TimePicker({ initialTime, onSelect, onClose, style, selectedDate
     onClose();
   };
 
+  // Same time as Now, but emits via the walk-in channel — caller flags the
+  // appointment as a walk-in (isWalkin=true) and renders "Walk-in" instead
+  // of the time string in the queue.
+  const handleWalkin = () => {
+    if (!onWalkin) return;
+    const now = new Date();
+    let h = now.getHours();
+    const period = h >= 12 ? "PM" : "AM";
+    h = h % 12;
+    if (h === 0) h = 12;
+    const m = now.getMinutes();
+    const formattedTime = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")} ${period}`;
+    onWalkin(formattedTime);
+    onClose();
+  };
+
   return (
     <>
       <div style={styles.backdrop} onClick={onClose} />
@@ -203,6 +224,11 @@ export function TimePicker({ initialTime, onSelect, onClose, style, selectedDate
         </div>
 
         <div style={styles.actionsRow}>
+          {onWalkin && (
+            <button type="button" style={styles.nowButton} onClick={handleWalkin}>
+              Walk-in
+            </button>
+          )}
           <button type="button" style={styles.nowButton} onClick={handleNow}>
             Now
           </button>

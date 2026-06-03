@@ -473,6 +473,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                   patientDob: apt.patientDob,
                   patientAge: apt.patientAge,
                   patientDisplayNo: apt.patientDisplayNo ?? null,
+                  isWalkin: !!apt.isWalkin,
                   service: apt.service,
                   type: apt.type,
                   scheduledTime: apt.rawScheduledTime || "",

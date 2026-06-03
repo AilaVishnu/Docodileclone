@@ -46,6 +46,9 @@ export type EditAppointmentData = {
   // it through here so the Edit Appointment header can render the same
   // T### the queue shows, instead of falling back to "T---".
   patientDisplayNo?: number | null;
+  // Sticky walk-in flag — when reopening a walk-in appointment the time
+  // pill should still read "Walk-in" instead of the wall-clock time.
+  isWalkin?: boolean;
   service?: string;
   type: string;
   scheduledTime: string;
@@ -143,6 +146,10 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       : [],
     date: initTime?.date || new Date(),
     time: initTime?.timeStr || "",
+    // Walk-in flag — when true the time pill renders "Walk-in" instead of
+    // the wall-clock time, and isWalkin=true is sent to the backend so the
+    // queue card / billing flow treats it the same as a queue-side walk-in.
+    isWalkin: !!editingAppointment?.isWalkin,
     paymentMethod: editingAppointment?.paymentMethod || "",
     note: editingAppointment?.notes || "",
     subtotal: editingAppointment?.fee || 0,
@@ -440,7 +447,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
           String(scheduledTime.getMinutes()).padStart(2, "0") + ":00",
         type: form.type,
         service: form.services.join(" + "),
-        isWalkin: false,
+        isWalkin: form.isWalkin,
         // "Book Now Pay Later" leaves the payment channel undecided —
         // even if the receptionist accidentally clicked a Cash/Card/UPI
         // radio in the UI, we discard it here so the appointment row
@@ -956,8 +963,8 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               onClick={() => setShowTimePicker(true)}
             >
               <ClockIcon style={styles.iconFieldIcon} />
-              <span style={{ fontSize: fonts.size.m, color: form.time ? colors.neutral900 : colors.neutral400 }}>
-                {form.time || "Select Time"}
+              <span style={{ fontSize: fonts.size.m, color: form.time || form.isWalkin ? colors.neutral900 : colors.neutral400 }}>
+                {form.isWalkin ? "Walk-in" : (form.time || "Select Time")}
               </span>
             </div>
             {showTimePicker && (
@@ -965,7 +972,15 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 initialTime={form.time}
                 selectedDate={form.date}
                 onSelect={(time: string) => {
-                  setForm({ ...form, time });
+                  // Manually picking a time clears the walk-in flag — the
+                  // intent is now a specific scheduled appointment.
+                  setForm({ ...form, time, isWalkin: false });
+                  setShowTimePicker(false);
+                }}
+                onWalkin={(time: string) => {
+                  // Same scheduled time as Now, but flag the appointment so
+                  // the queue / bill flow treat it as a walk-in.
+                  setForm({ ...form, time, isWalkin: true });
                   setShowTimePicker(false);
                 }}
                 onClose={() => setShowTimePicker(false)}
