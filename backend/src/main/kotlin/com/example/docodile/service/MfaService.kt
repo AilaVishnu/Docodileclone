@@ -3,7 +3,7 @@ package com.example.docodile.service
 import com.example.docodile.domain.AuditAction
 import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.security.CurrentUser
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import dev.samstevens.totp.code.CodeGenerator
 import dev.samstevens.totp.code.DefaultCodeGenerator
 import dev.samstevens.totp.code.DefaultCodeVerifier

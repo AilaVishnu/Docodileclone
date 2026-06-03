@@ -4,7 +4,7 @@ import com.example.docodile.domain.AuditAction
 import com.example.docodile.domain.AuditLog
 import com.example.docodile.repo.AuditLogRepository
 import com.example.docodile.security.CurrentUser
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.stereotype.Service
 import org.springframework.web.context.request.RequestContextHolder
