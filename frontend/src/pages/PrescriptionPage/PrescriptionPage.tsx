@@ -561,9 +561,12 @@ function AuthThumb({ fileUrl, mimeType, style }: { fileUrl: string | null | unde
 
 type PrescriptionPageProps = {
   onNavigate?: (tab: import("../../components/SideNav").NavTab) => void;
+  // Bumped by HomePage after a walk-in is created so the queue refetches
+  // and the new "At Doc" card appears without a manual reload.
+  queueRefreshKey?: number;
 };
 
-export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
+export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPageProps = {}) {
   // Drain any pending nav synchronously during the very first render so
   // the form mounts with the right patient already selected — no brief
   // flash of the patient picker before the chart opens.
@@ -1863,6 +1866,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
     return (
       <div ref={pageRootRef}>
         <PrescriptionQueue
+          refreshKey={queueRefreshKey}
           onSelect={(patient, appointmentId, date, doctorId) => {
             setQueueDate(date);
             setSelectedPatient(patient);
@@ -1893,6 +1897,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
     return (
       <div ref={pageRootRef}>
         <PrescriptionQueue
+          refreshKey={queueRefreshKey}
           onSelect={(patient, appointmentId, date, doctorId) => {
             setQueueDate(date);
             setSelectedPatient(patient);

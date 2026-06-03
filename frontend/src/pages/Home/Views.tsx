@@ -11,8 +11,8 @@ export function AppointmentsView({ isBooking, bookingKey, onBack, onEditStart, o
   );
 }
 
-export function PrescriptionView({ onNavigate }: { onNavigate?: (tab: NavTab) => void }) {
-  return <PrescriptionPage onNavigate={onNavigate} />;
+export function PrescriptionView({ onNavigate, queueRefreshKey }: { onNavigate?: (tab: NavTab) => void; queueRefreshKey?: number }) {
+  return <PrescriptionPage onNavigate={onNavigate} queueRefreshKey={queueRefreshKey} />;
 }
 
 export function PatientFilesView({ onNavigate, initialSelectedId }: { onNavigate?: (tab: NavTab) => void; initialSelectedId?: string | null }) {
