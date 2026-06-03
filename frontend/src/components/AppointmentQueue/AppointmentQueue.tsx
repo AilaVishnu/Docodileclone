@@ -273,7 +273,12 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           startOfToday.setHours(0, 0, 0, 0);
           const PENDING_STATUSES = new Set(["BOOKED", "SCHEDULED", "WAITING"]);
           const deriveStatus = (rawStatus: string | undefined, rawSched: string | undefined): string => {
-            const status = rawStatus || "WAITING";
+            // Legacy walk-in rows can carry "AT_DOC" — normalise to IN_PROGRESS
+            // so the existing StatusBadge / sort priority / filter logic apply
+            // without a new branch (At Doc is the IN_PROGRESS display label
+            // before Start Session is clicked).
+            const incoming = rawStatus?.toUpperCase() === "AT_DOC" ? "IN_PROGRESS" : rawStatus;
+            const status = incoming || "WAITING";
             if (!PENDING_STATUSES.has(status.toUpperCase())) return status;
             if (!rawSched) return status;
             const sched = new Date(rawSched);
@@ -467,6 +472,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                   patientGender: apt.patientGender,
                   patientDob: apt.patientDob,
                   patientAge: apt.patientAge,
+                  patientDisplayNo: apt.patientDisplayNo ?? null,
                   service: apt.service,
                   type: apt.type,
                   scheduledTime: apt.rawScheduledTime || "",

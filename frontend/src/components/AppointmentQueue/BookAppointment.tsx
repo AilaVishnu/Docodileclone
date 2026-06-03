@@ -42,6 +42,10 @@ export type EditAppointmentData = {
   patientGender?: string;
   patientDob?: string;
   patientAge?: number;
+  // Backend-issued per-clinic patient number (the real "T###" code). Pass
+  // it through here so the Edit Appointment header can render the same
+  // T### the queue shows, instead of falling back to "T---".
+  patientDisplayNo?: number | null;
   service?: string;
   type: string;
   scheduledTime: string;
@@ -113,10 +117,16 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     localStorage.getItem("docodile_patient_map") || "{}"
   );
   const editingPatientNumber = editingAppointment ? patientMap[editingAppointment.id] : undefined;
+  // Prefer the backend's per-clinic display_no (V46), which is the same T###
+  // the queue / Patient Files / Prescription pad all show. Fall back to the
+  // legacy localStorage map for old rows that pre-date the backfill, and
+  // finally "T---" if we truly have nothing.
   const patientId = editingAppointment
-    ? editingPatientNumber
-      ? "T" + String(editingPatientNumber).padStart(3, "0")
-      : "T---"
+    ? editingAppointment.patientDisplayNo != null
+      ? "T" + String(editingAppointment.patientDisplayNo).padStart(3, "0")
+      : editingPatientNumber
+        ? "T" + String(editingPatientNumber).padStart(3, "0")
+        : "T---"
     : overridePatientNumber
       ? "T" + String(overridePatientNumber).padStart(3, "0")
       : "T" + String(currentCounter + 1).padStart(3, "0");
@@ -1014,19 +1024,37 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                         placeholder="Select Service"
                       />
                     </div>
-                    {!servicesLocked ? (
-                      <button
-                        onClick={() => {
-                          const removed = form.services[i];
-                          const updated = form.services.filter((_, idx) => idx !== i);
-                          setForm({ ...form, services: updated });
-                          setToastMessage(`${removed} removed`);
-                        }}
-                        style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center", flexShrink: 0 }}
-                      >
-                        <TrashIcon width={20} height={20} />
-                      </button>
-                    ) : (
+                    {!servicesLocked ? (() => {
+                      // Block removing the last remaining service so every
+                      // appointment always carries at least one — the queue,
+                      // bill and dispense paths all assume a priced service.
+                      const isLast = form.services.length <= 1;
+                      return (
+                        <button
+                          onClick={() => {
+                            if (isLast) return;
+                            const removed = form.services[i];
+                            const updated = form.services.filter((_, idx) => idx !== i);
+                            setForm({ ...form, services: updated });
+                            setToastMessage(`${removed} removed`);
+                          }}
+                          disabled={isLast}
+                          title={isLast ? "At least one service is required" : "Remove service"}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: isLast ? "not-allowed" : "pointer",
+                            opacity: isLast ? 0.35 : 1,
+                            padding: "4px",
+                            display: "flex",
+                            alignItems: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <TrashIcon width={20} height={20} />
+                        </button>
+                      );
+                    })() : (
                       <div style={{ width: "28px", flexShrink: 0 }} />
                     )}
                   </div>
@@ -1066,12 +1094,10 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   {submitting ? "Saving..." : "Save Edits"}
                 </button>
               )}
-              {!editingAppointment.readOnly && editingAppointment.payStatus?.toUpperCase() !== "PAID" && (
-                <button style={styles.pillButtonPayDue} onClick={() => handleBook("Paid", "Payment is done")} disabled={submitting}>
-                  <BillCheckIcon width={20} height={20} style={{ color: colors.neutral100 }} />
-                  {submitting ? "Saving..." : "Pay Due"}
-                </button>
-              )}
+              {/* "Pay Due" button removed per product feedback — payment is
+                  handled exclusively via the queue's Mark-as-Paid kebab
+                  action / Bill Medicines flow, so an extra CTA on the Edit
+                  Appointment view was redundant. */}
             </>
           ) : (
             <>
