@@ -14,12 +14,16 @@ type TopNavProps = {
   onLogout?: () => void;
   onNewAppointment?: () => void;
   isBooking?: boolean;
+  // Overrides the default "New Appointment" CTA label. The Prescription page
+  // passes "New Prescription" since that's the user's intent there even
+  // though the action still opens the booking flow.
+  primaryActionLabel?: string;
   // Switches the active home tab. Passed from HomePage so the SessionTray
   // can route the doctor back to the Prescription form on click.
   onNavigate?: (tab: NavTab) => void;
 };
 
-export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, isBooking, onNavigate }: TopNavProps) {
+export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, isBooking, primaryActionLabel, onNavigate }: TopNavProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -240,7 +244,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
             style={{ height: '40px', fontSize: fonts.size.s, padding: '0 16px' }}
             onClick={onNewAppointment}
           >
-            New Appointment
+            {primaryActionLabel ?? "New Appointment"}
           </Button>
         )}
 
