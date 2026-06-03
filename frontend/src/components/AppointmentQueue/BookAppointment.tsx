@@ -982,20 +982,30 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         {/* Appointment Details Card */}
         <Card style={{ ...styles.card, ...styles.appointmentDetailsCard }}>
           {(() => {
-            const doctorLocked = editingAppointment?.payStatus?.toUpperCase() === "PAID";
+            // Also lock on readOnly — the row's own `pointerEvents: "auto"`
+            // overrides the parent grid's readOnly pointer-events block, so
+            // we have to re-assert it here. Same on the Service row below.
+            const paidLocked = editingAppointment?.payStatus?.toUpperCase() === "PAID";
+            const doctorLocked = paidLocked || !!editingAppointment?.readOnly;
+            // Only dim at the row level when *paid* is the lock reason —
+            // when it's just readOnly the parent grid is already at 0.85
+            // opacity, and multiplying with 0.6 here makes the text barely
+            // legible.
+            const rowOpacity = paidLocked && !editingAppointment?.readOnly ? 0.6 : 1;
             return (
               <div style={styles.appointmentRow}>
                 <div style={styles.appointmentLabelGroup}>
                   <StethoscopeIcon style={styles.appointmentIcon} />
                   <label style={styles.fieldLabel}>Doctor</label>
                 </div>
-                <div style={{ flex: 1, pointerEvents: doctorLocked ? "none" : "auto", opacity: doctorLocked ? 0.6 : 1 }}>
+                <div style={{ flex: 1, pointerEvents: doctorLocked ? "none" : "auto", opacity: rowOpacity }}>
                   <Select
                     options={doctors.map(d => ({ label: d.name, value: d.id }))}
                     value={selectedDoctorId}
                     onChange={(val: string) => setSelectedDoctorId(val)}
                     placeholder="Select Doctor"
                     error={errors.doctor}
+                    disabled={doctorLocked}
                   />
                 </div>
               </div>
@@ -1003,7 +1013,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
           })()}
 
           {(() => {
-            const servicesLocked = editingAppointment?.payStatus?.toUpperCase() === "PAID";
+            const paidLocked = editingAppointment?.payStatus?.toUpperCase() === "PAID";
+            const servicesLocked = paidLocked || !!editingAppointment?.readOnly;
+            // See doctor row above — don't multiply with parent grid's 0.85
+            // when readOnly already dims the whole thing.
+            const rowOpacity = paidLocked && !editingAppointment?.readOnly ? 0.6 : 1;
             return <>
               {form.services.map((svc, i) => (
                 <div key={i} style={styles.appointmentRow}>
@@ -1011,7 +1025,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                     <PulseIcon style={styles.appointmentIcon} />
                     <label style={styles.fieldLabel}>Service</label>
                   </div>
-                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", pointerEvents: servicesLocked ? "none" : "auto", opacity: servicesLocked ? 0.6 : 1 }}>
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", pointerEvents: servicesLocked ? "none" : "auto", opacity: rowOpacity }}>
                     <div style={{ flex: 1 }}>
                       <Select
                         options={SERVICE_OPTIONS}
@@ -1022,6 +1036,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                           setForm({ ...form, services: updated });
                         }}
                         placeholder="Select Service"
+                        disabled={servicesLocked}
                       />
                     </div>
                     {!servicesLocked ? (() => {
