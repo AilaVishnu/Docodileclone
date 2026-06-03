@@ -14,6 +14,10 @@ import { Button } from "../../components/Button";
 import { ChatBubble } from "../../components/Chat/ChatBubble";
 import { setPendingSessionNav } from "../../components/TopNav/SessionTrayButton";
 import { hydrateScheduleFromBackend } from "../../components/DoctorSchedule/scheduleStorage";
+import { NewPrescriptionModal, type NewPatientDraft } from "../PrescriptionPage/NewPrescriptionModal";
+import { createWalkinAppointment } from "../../api/walkin";
+import type { Patient } from "../../hooks/usePatients";
+import { listServices, type ServiceDTO } from "../../api/services";
 
 type HomePageProps = {
   onLogout: () => void;
@@ -48,6 +52,26 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   const [isEditing, setIsEditing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [patientFileNavId, setPatientFileNavId] = useState<string | null>(null);
+  const [showNewRxModal, setShowNewRxModal] = useState(false);
+  // Bumped after a walk-in is created so the Prescription queue refetches
+  // and shows the new "At Doc" card without a manual reload.
+  const [prescriptionRefreshKey, setPrescriptionRefreshKey] = useState(0);
+  const [walkinError, setWalkinError] = useState<string>("");
+  // Services catalog kept here so the Pick-existing walk-in path can resolve
+  // a fee for the default service ("Consultation") — without it the booking
+  // lands with fee=0 and Pay Due reads "No charges on this booking."
+  const [serviceCatalog, setServiceCatalog] = useState<ServiceDTO[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    listServices()
+      .then((list) => { if (!cancelled) setServiceCatalog(list); })
+      .catch(() => { /* leave empty — walk-in still goes through with null fee */ });
+    return () => { cancelled = true; };
+  }, []);
+  const feeFor = (serviceName: string): number | null => {
+    const match = serviceCatalog.find((s) => s.name === serviceName);
+    return match ? (Number(match.price) || 0) : null;
+  };
   // Which Settings sub-section is open. Persisted so a reload returns to the
   // user's last view inside Settings. Owned at this level because the SideNav
   // (left of the main content) needs it to highlight the active child.
@@ -59,7 +83,118 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
     setSettingsSectionState(section);
   };
 
+  // Walk-in handlers — both views (Pick existing / Add new) funnel into
+  // createWalkinAppointment which creates an implicit "now" appointment at
+  // AT_DOC and then bumps the queue refresh key so the new card shows up.
+  // The doctorId comes from the picker inside the modal so the assignment
+  // is explicit and the walk-in lands under the right doctor's tab in both
+  // the Prescription and Appointments queues.
+  const runWalkin = async (
+    doctorId: string,
+    req: {
+      name: string;
+      phone?: string | null;
+      email?: string | null;
+      gender?: string | null;
+      ageMonths?: number | null;
+      dob?: string | null;
+      service?: string | null;
+      fee?: number | null;
+    },
+  ) => {
+    setWalkinError("");
+    if (!doctorId) {
+      setWalkinError("Please pick a doctor before assigning the walk-in.");
+      return;
+    }
+    try {
+      const result = await createWalkinAppointment({
+        patientName: req.name,
+        patientPhone: req.phone ?? null,
+        patientEmail: req.email ?? null,
+        patientGender: req.gender ?? null,
+        patientAge: req.ageMonths ?? null,
+        patientDob: req.dob ?? null,
+        service: req.service ?? null,
+        fee: req.fee ?? null,
+        doctorId,
+      });
+      // Drop a pending-session-nav for the just-booked walk-in so the
+      // Prescription page auto-opens the Rx pad for this patient on the
+      // next render — same mechanism Patient Files "View Pad" uses.
+      setPendingSessionNav({
+        patient: {
+          id: result.patientId,
+          name: req.name,
+          phone: req.phone ?? null,
+          email: req.email ?? null,
+          gender: req.gender ?? null,
+          dob: req.dob ?? null,
+          age: req.ageMonths ?? null,
+          displayNo: result.patientDisplayNo,
+          lastVisitDate: null,
+          treatingDoctorIds: [],
+          treatingDepartments: [],
+        },
+        appointmentId: result.appointmentId,
+      });
+      setActiveTab("Prescription");
+      setPrescriptionRefreshKey((k) => k + 1);
+    } catch (e) {
+      setWalkinError((e as Error).message || "Couldn't create walk-in");
+    }
+  };
+
+  // "dd mm yyyy" typed by the user → ISO yyyy-MM-dd for the backend. Returns
+  // null on anything that doesn't parse to a real date, so a half-typed value
+  // doesn't blow up the create call.
+  const parseDob = (s: string): string | null => {
+    const m = s.trim().match(/^(\d{1,2})[\s/-](\d{1,2})[\s/-](\d{4})$/);
+    if (!m) return null;
+    const dd = Number(m[1]); const mm = Number(m[2]); const yyyy = Number(m[3]);
+    const d = new Date(yyyy, mm - 1, dd);
+    if (d.getFullYear() !== yyyy || d.getMonth() !== mm - 1 || d.getDate() !== dd) return null;
+    return `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+  };
+
+  const handleWalkinExisting = (p: Patient, doctorId: string, service: string, fee: number | null) =>
+    void runWalkin(doctorId, {
+      name: p.name,
+      phone: p.phone,
+      email: p.email,
+      gender: p.gender,
+      // Patient.age is stored in months — pass through so the existing row
+      // doesn't get its age field wiped by the find-or-create merge.
+      ageMonths: p.age,
+      dob: p.dob,
+      service,
+      // Modal resolves fee from its own catalog; HomePage's feeFor is a
+      // backup in case the modal had an empty catalog (e.g. /services failed).
+      fee: fee ?? feeFor(service),
+    });
+
+  const handleWalkinNew = (d: NewPatientDraft, doctorId: string) => void runWalkin(doctorId, {
+    name: d.name,
+    phone: d.phone || null,
+    email: d.email || null,
+    gender: d.gender || null,
+    // The Add view collects whole years; convert to months to match how
+    // booking persists `age` (years × 12 + months).
+    ageMonths: d.age ? Number(d.age) * 12 : null,
+    dob: parseDob(d.dob),
+    service: d.service || "Consultation",
+    // Modal resolves fee from its own copy of the catalog; fall back to the
+    // HomePage catalog if for some reason the draft fee is still null.
+    fee: d.fee ?? feeFor(d.service || "Consultation"),
+  });
+
   const handleNewAppointment = () => {
+    // On the Prescription tab the same CTA opens the pick-or-add patient
+    // modal instead of jumping into the appointment booking form.
+    if (activeTab === "Prescription") {
+      setShowNewRxModal(true);
+      return;
+    }
     // Only gate on isBooking — the "Current booking data will be discarded"
     // message only makes sense when a new-booking form is open. isEditing
     // tracks the Edit Appointment modal which has its own discard flow.
@@ -90,6 +225,13 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
     if (activeTab !== "Appointments") {
       setIsBooking(false);
       setIsEditing(false);
+    }
+    // The "New Prescription" pick/add modal belongs to the Prescription
+    // module only — close it if the user navigates away mid-flow so it
+    // doesn't pop back over a different tab.
+    if (activeTab !== "Prescription") {
+      setShowNewRxModal(false);
+      setWalkinError("");
     }
   }, [activeTab]);
 
@@ -145,7 +287,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
           setActiveTab("Prescription");
         }} />;
       case "Prescription":
-        return <PrescriptionView onNavigate={setActiveTab} />;
+        return <PrescriptionView onNavigate={setActiveTab} queueRefreshKey={prescriptionRefreshKey} />;
       case "Patient Files":
         return <PatientFilesView onNavigate={setActiveTab} initialSelectedId={patientFileNavId} />;
       case "Services":
@@ -190,6 +332,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
             onLogout={onLogout}
             onNewAppointment={handleNewAppointment}
             isBooking={isBooking}
+            primaryActionLabel={activeTab === "Prescription" ? "New Prescription" : undefined}
             onNavigate={setActiveTab}
           />
           <main style={styles.mainContent}>
@@ -217,6 +360,25 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
             <Button variant="dark" size="sm" onClick={handleConfirmNewAppointment}>
               Yes
             </Button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    <NewPrescriptionModal
+      isOpen={showNewRxModal}
+      onClose={() => setShowNewRxModal(false)}
+      onSelectPatient={handleWalkinExisting}
+      onAddPatient={handleWalkinNew}
+    />
+
+    {walkinError && (
+      <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>
+        <div style={confirmStyles.dialog}>
+          <h4 style={confirmStyles.title}>Walk-in failed</h4>
+          <p style={{ margin: 0, fontSize: fonts.size.s, color: colors.neutral600, textAlign: "center" }}>{walkinError}</p>
+          <div style={confirmStyles.actions}>
+            <Button variant="dark" size="sm" onClick={() => setWalkinError("")}>OK</Button>
           </div>
         </div>
       </div>
