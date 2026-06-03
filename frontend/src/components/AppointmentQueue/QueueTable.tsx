@@ -399,12 +399,15 @@ export function QueueTable({
                       <TypeBadge type={apt.type} />
                     </td>
 
-                    {/* Time */}
+                    {/* Time + Walk-in tag — stacked so the pill doesn't collide
+                        with the Status column when the row is narrow. */}
                     <td style={{ ...styles.td, textAlign: "center" }}>
-                      <span style={styles.time}>{apt.scheduledTime}</span>
-                      {apt.isWalkin && (
-                        <span style={styles.walkinBadge}>Walk-in</span>
-                      )}
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                        <span style={styles.time}>{apt.scheduledTime}</span>
+                        {apt.isWalkin && (
+                          <span style={styles.walkinBadge}>Walk-in</span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Status badge */}
