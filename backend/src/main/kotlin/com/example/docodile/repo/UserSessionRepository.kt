@@ -17,4 +17,9 @@ interface UserSessionRepository : JpaRepository<UserSession, UUID> {
     @Modifying
     @Query("UPDATE UserSession s SET s.revokedAt = :now WHERE s.userId = :userId AND s.revokedAt IS NULL")
     fun revokeAllForUser(@Param("userId") userId: UUID, @Param("now") now: Instant): Int
+
+    @Transactional
+    @Modifying
+    @Query("DELETE FROM UserSession s WHERE s.expiresAt < :now")
+    fun deleteExpired(@Param("now") now: Instant): Int
 }
