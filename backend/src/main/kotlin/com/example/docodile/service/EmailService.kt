@@ -98,10 +98,12 @@ class EmailService(private val mailSender: JavaMailSender) {
             helper.setTo(to)
             val status = if (approved) "Approved" else "Rejected"
             helper.setSubject("Your Data Correction Request Has Been $status")
+            val safeField = org.springframework.web.util.HtmlUtils.htmlEscape(fieldName)
+            val safeValue = org.springframework.web.util.HtmlUtils.htmlEscape(newValue)
             val body = if (approved)
-                "Your request to correct <b>$fieldName</b> to <b>$newValue</b> has been approved and applied to your record."
+                "Your request to correct <b>$safeField</b> to <b>$safeValue</b> has been approved and applied to your record."
             else
-                "Your request to correct <b>$fieldName</b> has been reviewed and was not approved."
+                "Your request to correct <b>$safeField</b> has been reviewed and was not approved."
             helper.setText("<html><body><p>$body</p><p>If you have questions, please contact your clinic.</p></body></html>", true)
             mailSender.send(msg)
             log.info("Correction complete email sent to {}", to)
