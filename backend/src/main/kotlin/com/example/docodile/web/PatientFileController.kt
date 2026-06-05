@@ -3,6 +3,7 @@ package com.example.docodile.web
 import com.example.docodile.domain.PatientFile
 import com.example.docodile.repo.PatientFileRepository
 import com.example.docodile.security.CurrentUser
+import com.example.docodile.service.EncryptionService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -28,7 +29,8 @@ data class PatientFileDTO(
 @RequestMapping("/api/patients/{patientId}/files")
 class PatientFileController(
     private val repo: PatientFileRepository,
-    private val currentUser: CurrentUser
+    private val currentUser: CurrentUser,
+    private val encryptionService: EncryptionService
 ) {
     private val allRoles = "hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','LAB','OTHER')"
 
@@ -59,7 +61,7 @@ class PatientFileController(
             investigationDate = investigationDate?.takeIf { it.isNotBlank() }?.let { LocalDate.parse(it) },
             mimeType = file.contentType,
             notes = notes?.takeIf { it.isNotBlank() },
-            fileData = file.bytes,
+            fileData = encryptionService.encrypt(file.bytes),
             fileSize = file.size
         )
         repo.save(pf)
@@ -75,7 +77,7 @@ class PatientFileController(
         val headers = HttpHeaders()
         headers.contentType = MediaType.parseMediaType(pf.mimeType ?: MediaType.APPLICATION_OCTET_STREAM_VALUE)
         headers.setContentDispositionFormData("inline", pf.name)
-        return ResponseEntity.ok().headers(headers).body(pf.fileData)
+        return ResponseEntity.ok().headers(headers).body(encryptionService.decrypt(pf.fileData))
     }
 
     @DeleteMapping("/{fileId}")

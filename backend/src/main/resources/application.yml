@@ -11,6 +11,9 @@
 # TOKEN_EXPIRY_HOURS        : 24 (password-reset link TTL)
 # MAIL_HOST / MAIL_PORT / MAIL_USERNAME / MAIL_PASSWORD : SMTP credentials
 # ALLOWED_ORIGINS           : comma-separated list of allowed CORS origins
+# FILE_ENCRYPTION_KEY    : Base64-encoded 32-byte AES-256 key for patient file encryption
+#                          Generate: openssl rand -base64 32
+#                          Optional in dev (encryption disabled if absent); REQUIRED in prod
 # ────────────────────────────────────────────────────────────────────────────────────
 
 spring:
@@ -62,6 +65,10 @@ logging:
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:3000}
   token-expiry-hours: ${TOKEN_EXPIRY_HOURS:24}
+
+file:
+  encryption:
+    key: ${FILE_ENCRYPTION_KEY:}
 
 security:
   jwt:
