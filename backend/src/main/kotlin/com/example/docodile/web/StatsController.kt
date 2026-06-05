@@ -1,10 +1,12 @@
 package com.example.docodile.web
 
+import com.example.docodile.domain.AuditAction
 import com.example.docodile.repo.AppointmentRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.repo.RxRowRepository
 import com.example.docodile.repo.VisitRepository
 import com.example.docodile.security.CurrentUser
+import com.example.docodile.service.AuditService
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
@@ -117,6 +119,7 @@ class StatsController(
     private val visitRepository: VisitRepository,
     private val rxRowRepository: RxRowRepository,
     private val currentUser: CurrentUser,
+    private val auditService: AuditService,
 ) {
 
     private fun dateTimeRange(startDate: LocalDate?, endDate: LocalDate?): Pair<LocalDateTime, LocalDateTime> {
@@ -139,6 +142,7 @@ class StatsController(
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate?,
     ): List<DoctorStatsDTO> {
         val clinicId = currentUser.clinicId()
+        auditService.log(AuditAction.DATA_EXPORT, metadata = mapOf("endpoint" to "/api/stats/doctors"))
         val (start, end) = dateTimeRange(startDate, endDate)
         val appointments = appointmentRepository.findAllByClinicIdAndScheduledTimeBetween(clinicId, start, end)
 
@@ -173,6 +177,7 @@ class StatsController(
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate?,
     ): OverviewStatsDTO {
         val clinicId = currentUser.clinicId()
+        auditService.log(AuditAction.DATA_EXPORT, metadata = mapOf("endpoint" to "/api/stats/overview"))
         val (start, end) = dateTimeRange(startDate, endDate)
         val today = LocalDate.now()
 
@@ -286,6 +291,7 @@ class StatsController(
     @GetMapping("/patients")
     fun patientsStats(): PatientsStatsDTO {
         val clinicId = currentUser.clinicId()
+        auditService.log(AuditAction.DATA_EXPORT, metadata = mapOf("endpoint" to "/api/stats/patients"))
         val today = LocalDate.now()
 
         // All patients registered to this clinic
@@ -325,6 +331,7 @@ class StatsController(
     @GetMapping("/health")
     fun healthStats(): HealthStatsDTO {
         val clinicId = currentUser.clinicId()
+        auditService.log(AuditAction.DATA_EXPORT, metadata = mapOf("endpoint" to "/api/stats/health"))
         val today = LocalDate.now()
         val thirtyAgo = today.minusDays(29)
         val start = thirtyAgo.atStartOfDay()
@@ -445,6 +452,7 @@ class StatsController(
     @GetMapping("/overdue")
     fun overdueReviews(): List<OverdueReviewDTO> {
         val clinicId = currentUser.clinicId()
+        auditService.log(AuditAction.DATA_EXPORT, metadata = mapOf("endpoint" to "/api/stats/overdue"))
         val today = LocalDate.now()
 
         val overdueVisits = visitRepository.findOverdueReviews(clinicId, today)
@@ -472,6 +480,7 @@ class StatsController(
     @GetMapping("/complaints/trend")
     fun complaintsTrend(): List<ComplaintTrendDTO> {
         val clinicId = currentUser.clinicId()
+        auditService.log(AuditAction.DATA_EXPORT, metadata = mapOf("endpoint" to "/api/stats/complaintsTrend"))
         val today = LocalDate.now()
         val sevenWeeksAgo = today.minusWeeks(7)
 
@@ -504,6 +513,7 @@ class StatsController(
     @GetMapping("/schedule")
     fun weeklySchedule(): Map<String, Map<String, Int>> {
         val clinicId = currentUser.clinicId()
+        auditService.log(AuditAction.DATA_EXPORT, metadata = mapOf("endpoint" to "/api/stats/weeklySchedule"))
         val today = LocalDate.now()
         val startOfWeek = today.with(java.time.DayOfWeek.MONDAY)
         val endOfWeek   = today.with(java.time.DayOfWeek.SUNDAY)
@@ -530,6 +540,7 @@ class StatsController(
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate?,
     ): ClinicalStatsDTO {
         val clinicId = currentUser.clinicId()
+        auditService.log(AuditAction.DATA_EXPORT, metadata = mapOf("endpoint" to "/api/stats/clinicalStats"))
         val today = LocalDate.now()
         val start = startDate ?: today
         val end = endDate ?: today
@@ -578,6 +589,7 @@ class StatsController(
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate?,
     ): FinanceStatsDTO {
         val clinicId = currentUser.clinicId()
+        auditService.log(AuditAction.DATA_EXPORT, metadata = mapOf("endpoint" to "/api/stats/financeStats"))
         val (start, end) = dateTimeRange(startDate, endDate)
         val appointments = appointmentRepository.findAllByClinicIdAndScheduledTimeBetween(clinicId, start, end)
 
@@ -677,6 +689,7 @@ class StatsController(
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate?,
     ): OperationsStatsDTO {
         val clinicId = currentUser.clinicId()
+        auditService.log(AuditAction.DATA_EXPORT, metadata = mapOf("endpoint" to "/api/stats/operationsStats"))
         val (start, end) = dateTimeRange(startDate, endDate)
         val appointments = appointmentRepository.findAllByClinicIdAndScheduledTimeBetween(clinicId, start, end)
 

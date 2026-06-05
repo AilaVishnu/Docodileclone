@@ -12,28 +12,27 @@ import org.springframework.web.filter.OncePerRequestFilter
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Enforces per-IP rate limits on auth endpoints to mitigate brute-force attacks.
- *
- * Limits:
- *  - /auth/login              → max 10 requests/minute per IP
- *  - /auth/forgot-password    → max 5 requests/hour per IP
- *
- * Buckets are stored in-process ConcurrentHashMap (suitable for single-node
- * deployments). For multi-node, replace with a Redis-backed Bucket4j ProxyManager.
- */
+// Per-IP rate limits applied before JWT authentication.
+// Limits (all keyed on TCP remoteAddr, not X-Forwarded-For):
+//   /auth/login + /auth/staff/login  : 10 req/min
+//   /auth/forgot-password            : 5 req/hr
+//   /auth/mfa/verify                 : 5 req/10 min
+//   /api/stats/**                    : 10 req/hr
+// For multi-node deployments replace ConcurrentHashMap with a Redis-backed ProxyManager.
 @Component
 class RateLimitFilter : OncePerRequestFilter() {
 
     private val loginBuckets = ConcurrentHashMap<String, Bucket>()
     private val forgotPasswordBuckets = ConcurrentHashMap<String, Bucket>()
+    private val mfaVerifyBuckets = ConcurrentHashMap<String, Bucket>()
+    private val statsBuckets = ConcurrentHashMap<String, Bucket>()
 
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
         chain: FilterChain,
     ) {
-        val ip = resolveIp(request)
+        val ip = request.remoteAddr ?: "unknown"
         val path = request.requestURI
 
         val bucket = when {
@@ -41,6 +40,10 @@ class RateLimitFilter : OncePerRequestFilter() {
                 loginBuckets.computeIfAbsent(ip) { newLoginBucket() }
             path == "/auth/forgot-password" ->
                 forgotPasswordBuckets.computeIfAbsent(ip) { newForgotPasswordBucket() }
+            path == "/auth/mfa/verify" ->
+                mfaVerifyBuckets.computeIfAbsent(ip) { newMfaVerifyBucket() }
+            path.startsWith("/api/stats/") ->
+                statsBuckets.computeIfAbsent(ip) { newStatsBucket() }
             else -> null
         }
 
@@ -61,28 +64,21 @@ class RateLimitFilter : OncePerRequestFilter() {
 
     private fun newLoginBucket(): Bucket =
         Bucket.builder()
-            .addLimit(
-                Bandwidth.builder()
-                    .capacity(10)
-                    .refillIntervally(10, Duration.ofMinutes(1))
-                    .build()
-            )
+            .addLimit(Bandwidth.builder().capacity(10).refillIntervally(10, Duration.ofMinutes(1)).build())
             .build()
 
     private fun newForgotPasswordBucket(): Bucket =
         Bucket.builder()
-            .addLimit(
-                Bandwidth.builder()
-                    .capacity(5)
-                    .refillIntervally(5, Duration.ofHours(1))
-                    .build()
-            )
+            .addLimit(Bandwidth.builder().capacity(5).refillIntervally(5, Duration.ofHours(1)).build())
             .build()
 
-    // Use remoteAddr (the actual TCP peer) for rate-limit keying.
-    // X-Forwarded-For is NOT used here because it is trivially spoofable by
-    // a client — trusting the left-most entry would let an attacker bypass
-    // the bucket entirely by cycling fake IPs.
-    private fun resolveIp(request: HttpServletRequest): String =
-        request.remoteAddr ?: "unknown"
+    private fun newMfaVerifyBucket(): Bucket =
+        Bucket.builder()
+            .addLimit(Bandwidth.builder().capacity(5).refillIntervally(5, Duration.ofMinutes(10)).build())
+            .build()
+
+    private fun newStatsBucket(): Bucket =
+        Bucket.builder()
+            .addLimit(Bandwidth.builder().capacity(10).refillIntervally(10, Duration.ofHours(1)).build())
+            .build()
 }
