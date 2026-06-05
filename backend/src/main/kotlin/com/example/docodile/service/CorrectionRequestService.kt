@@ -3,9 +3,11 @@ package com.example.docodile.service
 import com.example.docodile.domain.AuditAction
 import com.example.docodile.domain.CorrectionRequest
 import com.example.docodile.domain.CorrectionRequestStatus
+import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.repo.CorrectionRequestRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.security.CurrentUser
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -17,7 +19,11 @@ class CorrectionRequestService(
     private val patientRepository: PatientRepository,
     private val currentUser: CurrentUser,
     private val auditService: AuditService,
+    private val appUserRepository: AppUserRepository,
+    private val emailService: EmailService,
 ) {
+    private val log = LoggerFactory.getLogger(CorrectionRequestService::class.java)
+
     fun list(): List<CorrectionRequest> =
         correctionRequestRepository.findAllByClinicId(currentUser.clinicId())
 
@@ -70,7 +76,18 @@ class CorrectionRequestService(
             auditService.log(AuditAction.CORRECTION_REQUEST_REJECTED, entityType = "CorrectionRequest", entityId = requestId)
         }
 
-        return correctionRequestRepository.save(req)
+        val saved = correctionRequestRepository.save(req)
+
+        // Send notification — best effort; do not let email failure roll back the review
+        runCatching {
+            appUserRepository.findById(req.requestedBy).ifPresent { user ->
+                if (!user.email.isNullOrBlank()) {
+                    emailService.sendCorrectionComplete(user.email, req.fieldName, req.newValue, approve)
+                }
+            }
+        }.onFailure { log.warn("Could not send correction notification: {}", it.message) }
+
+        return saved
     }
 
     private fun applyCorrection(req: CorrectionRequest) {
