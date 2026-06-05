@@ -2,13 +2,18 @@ package com.example.docodile.domain
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EntityListeners
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import org.hibernate.annotations.SQLRestriction
+import org.springframework.data.annotation.LastModifiedBy
+import org.springframework.data.annotation.LastModifiedDate
+import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
+@EntityListeners(AuditingEntityListener::class)
 @Entity
 @Table(name = "patient_files")
 @SQLRestriction("deleted_at IS NULL")
@@ -54,4 +59,9 @@ class PatientFile(
 
     @Column(name = "deleted_by")
     var deletedBy: UUID? = null,
+
+    @LastModifiedDate
+    @Column(name = "updated_at") var updatedAt: Instant? = null,
+    @LastModifiedBy
+    @Column(name = "updated_by") var updatedBy: UUID? = null,
 )

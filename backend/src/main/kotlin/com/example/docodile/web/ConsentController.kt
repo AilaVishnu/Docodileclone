@@ -8,13 +8,19 @@ import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Size
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
-data class GrantConsentRequest(val purpose: String, val version: String)
+data class GrantConsentRequest(
+    @field:NotBlank val purpose: String,
+    @field:NotBlank @field:Size(max = 50) val version: String
+)
 
 @RestController
 @RequestMapping("/api/patients/{patientId}/consent")
@@ -29,7 +35,7 @@ class ConsentController(private val consentService: ConsentService) {
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun grant(
         @PathVariable patientId: UUID,
-        @RequestBody request: GrantConsentRequest,
+        @Valid @RequestBody request: GrantConsentRequest,
     ): ResponseEntity<PatientConsent> {
         val consent = consentService.grantConsent(patientId, request.purpose, request.version)
         return ResponseEntity.status(201).body(consent)

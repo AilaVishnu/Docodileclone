@@ -13,13 +13,21 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Size
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
-data class SubmitDeletionRequest(val patientId: UUID, val reason: String?)
+data class SubmitDeletionRequest(val patientId: UUID, @field:Size(max = 1000) val reason: String?)
 data class TransitionRequest(val status: String, val rejectionNote: String? = null)
-data class SubmitCorrectionRequest(val patientId: UUID, val fieldName: String, val oldValue: String?, val newValue: String)
-data class ReviewCorrectionRequest(val approve: Boolean, val rejectionNote: String? = null)
+data class SubmitCorrectionRequest(
+    val patientId: UUID,
+    @field:NotBlank @field:Size(max = 100) val fieldName: String,
+    @field:Size(max = 5000) val oldValue: String?,
+    @field:NotBlank @field:Size(max = 5000) val newValue: String
+)
+data class ReviewCorrectionRequest(val approve: Boolean, @field:Size(max = 1000) val rejectionNote: String? = null)
 
 @RestController
 @RequestMapping("/api/data-requests")
@@ -36,7 +44,7 @@ class DataWorkflowController(
 
     @PostMapping("/deletions")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
-    fun submitDeletion(@RequestBody req: SubmitDeletionRequest): ResponseEntity<DeletionRequest> =
+    fun submitDeletion(@Valid @RequestBody req: SubmitDeletionRequest): ResponseEntity<DeletionRequest> =
         ResponseEntity.status(201).body(deletionService.submit(req.patientId, req.reason))
 
     @PostMapping("/deletions/{id}/transition")
@@ -58,7 +66,7 @@ class DataWorkflowController(
 
     @PostMapping("/corrections")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
-    fun submitCorrection(@RequestBody req: SubmitCorrectionRequest): ResponseEntity<CorrectionRequest> =
+    fun submitCorrection(@Valid @RequestBody req: SubmitCorrectionRequest): ResponseEntity<CorrectionRequest> =
         ResponseEntity.status(201).body(
             correctionService.submit(req.patientId, req.fieldName, req.oldValue, req.newValue)
         )
@@ -67,7 +75,7 @@ class DataWorkflowController(
     @PreAuthorize("hasRole('ADMIN')")
     fun reviewCorrection(
         @PathVariable id: UUID,
-        @RequestBody req: ReviewCorrectionRequest,
+        @Valid @RequestBody req: ReviewCorrectionRequest,
     ): CorrectionRequest = correctionService.review(id, req.approve, req.rejectionNote)
 
     @ExceptionHandler(IllegalArgumentException::class)
