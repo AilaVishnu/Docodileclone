@@ -3,6 +3,7 @@ package com.example.docodile.service
 import com.example.docodile.domain.AuditAction
 import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.security.CurrentUser
+import com.example.docodile.security.TokenService
 import tools.jackson.databind.ObjectMapper
 import dev.samstevens.totp.code.CodeGenerator
 import dev.samstevens.totp.code.DefaultCodeGenerator
@@ -23,6 +24,7 @@ class MfaService(
     private val currentUser: CurrentUser,
     private val auditService: AuditService,
     private val objectMapper: ObjectMapper,
+    private val tokenService: TokenService,
 ) {
     private val secretGenerator = DefaultSecretGenerator()
     private val codeGenerator: CodeGenerator = DefaultCodeGenerator(HashingAlgorithm.SHA1)
@@ -79,6 +81,15 @@ class MfaService(
         }
         // Try backup codes
         return verifyAndConsumeBackupCode(user, code)
+    }
+
+    fun verifyFromPendingToken(mfaPendingToken: String, code: String): UUID? {
+        if (!tokenService.isMfaPendingToken(mfaPendingToken)) return null
+        val userId = tokenService.extractUserId(mfaPendingToken) ?: return null
+        val user = appUserRepository.findById(userId).orElse(null) ?: return null
+        if (!user.mfaEnabled) return null
+        val secret = user.totpSecret ?: return null
+        return if (verifier.isValidCode(secret, code) || verifyAndConsumeBackupCode(user, code)) userId else null
     }
 
     private fun verifyAndConsumeBackupCode(user: com.example.docodile.domain.AppUser, code: String): Boolean {

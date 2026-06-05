@@ -19,7 +19,8 @@ data class LoginResponse(
     val role: String,
     val clinicId: UUID?,
     val clinicName: String,
-    val gender: String?
+    val gender: String?,
+    val mfaPending: Boolean = false
 )
 
 data class SwitchClinicRequest(val clinicId: UUID)

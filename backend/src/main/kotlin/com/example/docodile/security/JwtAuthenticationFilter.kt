@@ -40,6 +40,12 @@ class JwtAuthenticationFilter(
             return
         }
 
+        // mfa_pending tokens are only valid for /auth/mfa/complete — reject them everywhere else
+        if (tokenService.isMfaPendingToken(token) && !request.requestURI.startsWith("/auth/mfa/complete")) {
+            filterChain.doFilter(request, response)
+            return
+        }
+
         val claims = tokenService.parseClaims(token)
         val email = claims["email"] as? String ?: ""
         val role = claims["role"] as? String

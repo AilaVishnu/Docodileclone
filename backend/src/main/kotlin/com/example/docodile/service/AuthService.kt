@@ -69,6 +69,26 @@ class AuthService(
         user.lockedUntil = null
         appUserRepository.save(user)
 
+        // If MFA is enabled, issue a short-lived pending token instead of the full JWT
+        if (user.mfaEnabled) {
+            val mfaToken = tokenService.generateMfaPendingToken(user.id)
+            auditService.log(
+                action   = AuditAction.MFA_VERIFIED,
+                outcome  = "MFA_REQUIRED",
+                actorId  = user.id,
+                tenantId = user.tenant?.id,
+                metadata = mapOf("step" to "password_ok_mfa_pending"),
+            )
+            return LoginResponse(
+                token      = mfaToken,
+                role       = user.role.name,
+                clinicId   = null,
+                clinicName = "mfa_required",
+                gender     = user.gender,
+                mfaPending = true
+            )
+        }
+
         val tenantId = user.tenant?.id ?: throw BadCredentialsException("Invalid credentials")
         // Pick the oldest clinic in the tenant as the admin's default. This
         // used to be `findAllByTenantId(...).firstOrNull()`, which has no
@@ -138,6 +158,26 @@ class AuthService(
         user.failedLoginAttempts = 0
         user.lockedUntil = null
         appUserRepository.save(user)
+
+        // If MFA is enabled, issue a short-lived pending token instead of the full JWT
+        if (user.mfaEnabled) {
+            val mfaToken = tokenService.generateMfaPendingToken(user.id)
+            auditService.log(
+                action   = AuditAction.MFA_VERIFIED,
+                outcome  = "MFA_REQUIRED",
+                actorId  = user.id,
+                tenantId = user.tenant?.id,
+                metadata = mapOf("step" to "password_ok_mfa_pending"),
+            )
+            return LoginResponse(
+                token      = mfaToken,
+                role       = user.role.name,
+                clinicId   = null,
+                clinicName = "mfa_required",
+                gender     = user.gender,
+                mfaPending = true
+            )
+        }
 
         val tenantId = clinic.tenant?.id ?: throw BadCredentialsException("Invalid credentials")
         val token = tokenService.generateToken(user.id, tenantId, user.role.name, user.email, clinic.id)
@@ -280,6 +320,30 @@ class AuthService(
     companion object {
         private const val LOCKOUT_THRESHOLD = 5
         private const val LOCKOUT_SECONDS = 15 * 60L // 15 minutes
+    }
+
+    fun completeMfaLogin(mfaPendingToken: String): LoginResponse {
+        if (!tokenService.isMfaPendingToken(mfaPendingToken)) {
+            throw BadCredentialsException("Invalid token")
+        }
+        val userId = tokenService.extractUserId(mfaPendingToken)
+            ?: throw BadCredentialsException("Invalid token")
+        val user = appUserRepository.findById(userId)
+            .orElseThrow { BadCredentialsException("Invalid credentials") }
+        val tenantId = user.tenant?.id ?: throw BadCredentialsException("Invalid credentials")
+        val clinic = clinicEntityRepository.findFirstByTenantIdOrderByCreatedAtAsc(tenantId).orElse(null)
+        val token = tokenService.generateToken(user.id, tenantId, user.role.name, user.email, clinic?.id)
+        val expiresAt = Instant.now().plusMillis(tokenService.expirationMs)
+        recordSession(token, user.id, expiresAt)
+        auditService.log(
+            action   = AuditAction.LOGIN_SUCCESS,
+            actorId  = user.id,
+            tenantId = tenantId,
+            clinicId = clinic?.id,
+            metadata = mapOf("method" to "totp"),
+        )
+        return LoginResponse(token = token, role = user.role.name, clinicId = clinic?.id,
+            clinicName = clinic?.name ?: "your clinic", gender = user.gender)
     }
 
     fun switchClinic(targetClinicId: UUID): LoginResponse {

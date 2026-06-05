@@ -37,6 +37,29 @@ class TokenService(private val props: JwtProperties) {
         return builder.compact()
     }
 
+    fun generateMfaPendingToken(userId: UUID): String {
+        val now = Date()
+        val expiry = Date(now.time + 5 * 60 * 1000L) // 5-minute window
+        return Jwts.builder()
+            .setId(UUID.randomUUID().toString())
+            .setSubject(userId.toString())
+            .setIssuedAt(now)
+            .setExpiration(expiry)
+            .claim("mfa_pending", true)
+            .claim("user_id", userId.toString())
+            .signWith(key, SignatureAlgorithm.HS256)
+            .compact()
+    }
+
+    fun isMfaPendingToken(token: String): Boolean = runCatching {
+        val claims = parseClaims(token)
+        claims["mfa_pending"] as? Boolean == true
+    }.getOrDefault(false)
+
+    fun extractUserId(token: String): UUID? = runCatching {
+        UUID.fromString(parseClaims(token)["user_id"] as? String ?: return@runCatching null)
+    }.getOrNull()
+
     fun extractJti(token: String): UUID? =
         runCatching {
             UUID.fromString(parseClaims(token).id)
