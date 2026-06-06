@@ -1,5 +1,7 @@
 package com.example.docodile.web
 
+import com.example.docodile.service.ConsentRequiredException
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -26,4 +28,8 @@ class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgument(ex: IllegalArgumentException): ResponseEntity<Map<String, String>> =
         ResponseEntity.badRequest().body(mapOf("error" to (ex.message ?: "Invalid request")))
+
+    @ExceptionHandler(ConsentRequiredException::class)
+    fun handleConsentRequired(ex: ConsentRequiredException): ResponseEntity<Map<String, String>> =
+        ResponseEntity.status(HttpStatus.FORBIDDEN).body(mapOf("error" to (ex.message ?: "Consent required")))
 }

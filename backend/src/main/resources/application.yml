@@ -70,6 +70,13 @@ file:
   encryption:
     key: ${FILE_ENCRYPTION_KEY:}
 
+consent:
+  enforcement:
+    # When true, patient data access is blocked (HTTP 403) if no active consent
+    # record exists. Keep false until the frontend consent-capture flow is built
+    # and existing patients have been back-consented; then flip to true in prod.
+    enabled: ${CONSENT_ENFORCEMENT_ENABLED:false}
+
 security:
   jwt:
     # JWT_SECRET must be set in the environment — no default is provided.

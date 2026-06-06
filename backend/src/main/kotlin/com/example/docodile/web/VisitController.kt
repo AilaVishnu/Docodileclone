@@ -2,6 +2,7 @@ package com.example.docodile.web
 
 import com.example.docodile.domain.AuditAction
 import com.example.docodile.service.AuditService
+import com.example.docodile.service.ConsentService
 import com.example.docodile.service.VisitService
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
@@ -21,11 +22,13 @@ import java.util.UUID
 class VisitController(
     private val visitService: VisitService,
     private val auditService: AuditService,
+    private val consentService: ConsentService,
 ) {
 
     @GetMapping("/patients/{patientId}/visits")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun listForPatient(@PathVariable patientId: UUID): List<VisitDTO> {
+        consentService.checkConsent(patientId)
         auditService.log(AuditAction.PATIENT_ACCESS, entityType = "Patient", entityId = patientId)
         return visitService.listForPatient(patientId)
     }
@@ -46,6 +49,7 @@ class VisitController(
         @PathVariable patientId: UUID,
         @Valid @RequestBody request: SaveVisitRequest
     ): ResponseEntity<Any> = try {
+        consentService.checkConsent(patientId)
         val dto = visitService.create(patientId, request)
         auditService.log(AuditAction.PRESCRIPTION_CREATED, entityType = "Visit", entityId = patientId)
         ResponseEntity.ok(dto)
