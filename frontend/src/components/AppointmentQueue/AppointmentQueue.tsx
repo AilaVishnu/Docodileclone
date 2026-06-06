@@ -185,9 +185,20 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((visits: any[]) => {
-        // visits are sorted ASC; last entry is the most recent
-        const latest = visits[visits.length - 1];
-        const rows: BillingMedicine[] = (latest?.prescriptions ?? [])
+        // Bill the visit tied to *this* appointment, not "the patient's
+        // most recent visit". Otherwise a fresh walk-in (no Rx added yet)
+        // would leak medicines from the patient's previous visit into the
+        // bill. V45 links visits → appointments via appointment_id; rows
+        // that pre-date the migration fall back to a same-day match.
+        const apt = medsBillingApt;
+        const sameDay = (iso?: string | null): boolean => {
+          if (!iso || !apt?.rawScheduledTime) return false;
+          return iso.slice(0, 10) === apt.rawScheduledTime.slice(0, 10);
+        };
+        const matching =
+          visits.find((v: any) => v.appointmentId && apt?.id && v.appointmentId === apt.id) ??
+          visits.find((v: any) => sameDay(v.visitDate));
+        const rows: BillingMedicine[] = (matching?.prescriptions ?? [])
           .filter((p: any) => p.medicine)
           .map((p: any, i: number) => {
             const name = p.medicine as string;
