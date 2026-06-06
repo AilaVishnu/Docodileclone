@@ -15,6 +15,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.security.SecureRandom
+import java.time.Instant
 import java.util.Base64
 import java.util.UUID
 
@@ -83,13 +84,54 @@ class MfaService(
         return verifyAndConsumeBackupCode(user, code)
     }
 
+    @Transactional
     fun verifyFromPendingToken(mfaPendingToken: String, code: String): UUID? {
         if (!tokenService.isMfaPendingToken(mfaPendingToken)) return null
         val userId = tokenService.extractUserId(mfaPendingToken) ?: return null
         val user = appUserRepository.findById(userId).orElse(null) ?: return null
         if (!user.mfaEnabled) return null
+
+        // Account lockout applies to MFA brute force too: if the account is locked,
+        // reject regardless of the code supplied.
+        val lockedUntil = user.lockedUntil
+        if (lockedUntil != null && lockedUntil.isAfter(Instant.now())) {
+            auditService.log(
+                action     = AuditAction.LOGIN_FAILURE,
+                outcome    = "ACCOUNT_LOCKED",
+                actorId    = userId,
+                tenantId   = user.tenant?.id,
+                metadata   = mapOf("stage" to "mfa"),
+            )
+            return null
+        }
+
         val secret = user.totpSecret ?: return null
-        return if (verifier.isValidCode(secret, code) || verifyAndConsumeBackupCode(user, code)) userId else null
+        if (verifier.isValidCode(secret, code) || verifyAndConsumeBackupCode(user, code)) {
+            // Success — clear any accumulated MFA failure count.
+            if (user.failedLoginAttempts != 0 || user.lockedUntil != null) {
+                user.failedLoginAttempts = 0
+                user.lockedUntil = null
+                appUserRepository.save(user)
+            }
+            return userId
+        }
+
+        // Failed TOTP / backup code — count it toward the same lockout threshold
+        // as failed passwords (5 attempts → 15-minute lock).
+        user.failedLoginAttempts++
+        if (user.failedLoginAttempts >= LOCKOUT_THRESHOLD) {
+            user.lockedUntil = Instant.now().plusSeconds(LOCKOUT_SECONDS)
+            auditService.log(
+                action     = AuditAction.ACCOUNT_LOCKED,
+                entityType = "AppUser",
+                entityId   = userId,
+                actorId    = userId,
+                tenantId   = user.tenant?.id,
+                metadata   = mapOf("failedAttempts" to user.failedLoginAttempts, "stage" to "mfa"),
+            )
+        }
+        appUserRepository.save(user)
+        return null
     }
 
     private fun verifyAndConsumeBackupCode(user: com.example.docodile.domain.AppUser, code: String): Boolean {
@@ -117,5 +159,11 @@ class MfaService(
             random.nextBytes(bytes)
             Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
         }
+    }
+
+    companion object {
+        // Mirrors AuthService password-lockout policy.
+        private const val LOCKOUT_THRESHOLD = 5
+        private const val LOCKOUT_SECONDS = 15 * 60L
     }
 }

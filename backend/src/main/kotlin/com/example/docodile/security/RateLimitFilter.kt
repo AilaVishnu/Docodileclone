@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
 //   /auth/login + /auth/staff/login  : 10 req/min
 //   /auth/forgot-password            : 5 req/hr
 //   /auth/mfa/verify                 : 5 req/10 min
+//   /auth/mfa/complete               : 5 req/10 min (TOTP brute-force on pending token)
 //   /api/stats/**                    : 10 req/hr
 // For multi-node deployments replace ConcurrentHashMap with a Redis-backed ProxyManager.
 @Component
@@ -40,7 +41,7 @@ class RateLimitFilter : OncePerRequestFilter() {
                 loginBuckets.computeIfAbsent(ip) { newLoginBucket() }
             path == "/auth/forgot-password" ->
                 forgotPasswordBuckets.computeIfAbsent(ip) { newForgotPasswordBucket() }
-            path == "/auth/mfa/verify" ->
+            path == "/auth/mfa/verify" || path == "/auth/mfa/complete" ->
                 mfaVerifyBuckets.computeIfAbsent(ip) { newMfaVerifyBucket() }
             path.startsWith("/api/stats/") ->
                 statsBuckets.computeIfAbsent(ip) { newStatsBucket() }
