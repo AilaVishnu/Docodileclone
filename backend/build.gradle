@@ -84,9 +84,12 @@ tasks.named('test') {
 // Local dev defaults — only applied when running via ./gradlew bootRun.
 // Production deployments use the real JAR and still require env vars to be set.
 tasks.named('bootRun') {
-	environment 'JWT_SECRET',           System.getenv('JWT_SECRET')           ?: 'local-dev-secret-do-not-use-in-production-x'
-	environment 'POSTGRES_PASSWORD',    System.getenv('POSTGRES_PASSWORD')    ?: 'docodile'
-	environment 'FILE_ENCRYPTION_KEY',  System.getenv('FILE_ENCRYPTION_KEY')  ?: ''
+	environment 'JWT_SECRET',            System.getenv('JWT_SECRET')            ?: 'local-dev-secret-do-not-use-in-production-x'
+	environment 'POSTGRES_PASSWORD',     System.getenv('POSTGRES_PASSWORD')     ?: 'docodile'
+	environment 'FILE_ENCRYPTION_KEY',   System.getenv('FILE_ENCRYPTION_KEY')   ?: ''
+	// Local dev runs the `local` profile (mail → localhost mailcatcher, encryption off).
+	// Production leaves the profile unset and runs the base config.
+	environment 'SPRING_PROFILES_ACTIVE', System.getenv('SPRING_PROFILES_ACTIVE') ?: 'local'
 }
 
 // ─── Test coverage (JaCoCo) ─────────────────────────────────────────────────
