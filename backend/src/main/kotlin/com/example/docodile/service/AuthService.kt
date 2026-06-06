@@ -322,12 +322,28 @@ class AuthService(
         private const val LOCKOUT_SECONDS = 15 * 60L // 15 minutes
     }
 
+    @Transactional
     fun completeMfaLogin(mfaPendingToken: String): LoginResponse {
         if (!tokenService.isMfaPendingToken(mfaPendingToken)) {
             throw BadCredentialsException("Invalid token")
         }
         val userId = tokenService.extractUserId(mfaPendingToken)
             ?: throw BadCredentialsException("Invalid token")
+
+        // Single-use: revoke the pending token immediately so it cannot be
+        // replayed within its 5-minute / 30-second-TOTP window. If its jti is
+        // already revoked, this token has been used — reject.
+        val jti = tokenService.extractJti(mfaPendingToken)
+        if (jti != null) {
+            if (revokedTokenRepository.existsByJti(jti)) {
+                throw BadCredentialsException("Invalid token")
+            }
+            val pendingExpiry = runCatching {
+                tokenService.parseClaims(mfaPendingToken).expiration?.toInstant() ?: Instant.now()
+            }.getOrElse { Instant.now() }
+            revokedTokenRepository.save(RevokedToken(jti = jti, userId = userId, expiresAt = pendingExpiry))
+        }
+
         val user = appUserRepository.findById(userId)
             .orElseThrow { BadCredentialsException("Invalid credentials") }
         val tenantId = user.tenant?.id ?: throw BadCredentialsException("Invalid credentials")

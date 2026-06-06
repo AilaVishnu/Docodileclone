@@ -27,9 +27,17 @@ class ConsentService(
     /**
      * Returns true if the patient has at least one active (non-withdrawn) consent
      * for the given purpose in the current clinic.
+     *
+     * Fails CLOSED: if the clinic context cannot be resolved from the token
+     * (e.g. an ADMIN token issued without a clinic_id claim), this returns false
+     * — a request with no clinic context has no confirmed consent.
      */
     fun hasActiveConsent(patientId: UUID, purpose: String): Boolean {
-        val clinicId = runCatching { currentUser.clinicId() }.getOrNull() ?: return true
+        val clinicId = runCatching { currentUser.clinicId() }.getOrNull()
+        if (clinicId == null) {
+            log.warn("CONSENT_CHECK: no clinic context in token for patient={} — failing closed", patientId)
+            return false
+        }
         return consentRepository
             .findAllByPatientIdAndClinicId(patientId, clinicId)
             .any { it.purpose == purpose && it.withdrawnAt == null }

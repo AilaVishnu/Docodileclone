@@ -37,6 +37,8 @@ class VisitController(
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun get(@PathVariable visitId: UUID): ResponseEntity<Any> = try {
         val dto = visitService.get(visitId)
+        // Gate after fetch — the visit carries the patientId needed for the check.
+        consentService.checkConsent(dto.patientId)
         auditService.log(AuditAction.PATIENT_ACCESS, entityType = "Visit", entityId = visitId)
         ResponseEntity.ok(dto)
     } catch (e: IllegalArgumentException) {
@@ -63,6 +65,8 @@ class VisitController(
         @PathVariable visitId: UUID,
         @Valid @RequestBody request: SaveVisitRequest
     ): ResponseEntity<Any> = try {
+        // Gate on the existing visit's patient before mutating.
+        consentService.checkConsent(visitService.get(visitId).patientId)
         val dto = visitService.update(visitId, request)
         auditService.log(AuditAction.PRESCRIPTION_UPDATED, entityType = "Visit", entityId = visitId)
         ResponseEntity.ok(dto)
@@ -73,6 +77,7 @@ class VisitController(
     @DeleteMapping("/visits/{visitId}")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR')")
     fun delete(@PathVariable visitId: UUID): ResponseEntity<Any> = try {
+        consentService.checkConsent(visitService.get(visitId).patientId)
         visitService.delete(visitId)
         auditService.log(AuditAction.PRESCRIPTION_DELETED, entityType = "Visit", entityId = visitId)
         ResponseEntity.noContent().build()
