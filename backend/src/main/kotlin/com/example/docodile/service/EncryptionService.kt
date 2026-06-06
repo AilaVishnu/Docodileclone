@@ -98,6 +98,10 @@ class EncryptionService(
         return cipher.doFinal(ciphertext)
     }
 
+    /** True if [data] carries the ENC1 magic header (i.e. is already encrypted). */
+    fun isEncrypted(data: ByteArray): Boolean =
+        data.size >= MAGIC.size && data.take(MAGIC.size) == MAGIC.asList()
+
     private fun aad(fileId: UUID, clinicId: UUID): ByteArray =
         "$fileId|$clinicId".toByteArray(Charsets.UTF_8)
 
