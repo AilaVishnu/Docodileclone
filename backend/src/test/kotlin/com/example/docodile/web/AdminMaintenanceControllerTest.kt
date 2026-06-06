@@ -14,7 +14,10 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 
 @WebMvcTest(AdminMaintenanceController::class)
-@org.springframework.context.annotation.Import(com.example.docodile.security.JwtAuthenticationFilter::class)
+@org.springframework.context.annotation.Import(
+    com.example.docodile.security.JwtAuthenticationFilter::class,
+    MethodSecurityTestConfig::class,
+)
 class AdminMaintenanceControllerTest @Autowired constructor(
     private val mockMvc: MockMvc,
 ) {
@@ -45,10 +48,20 @@ class AdminMaintenanceControllerTest @Autowired constructor(
     }
 
     @Test
-    @org.junit.jupiter.api.Disabled("@PreAuthorize not enforced in @WebMvcTest slice — covered by integration tests")
     @WithMockUser(roles = ["DOCTOR"])
-    fun `backfill as non-admin returns 403`() {
-        mockMvc.perform(post("/api/admin/encryption/backfill").with(csrf()))
-            .andExpect(status().isForbidden)
+    fun `backfill as non-admin is denied by method security`() {
+        // @PreAuthorize("hasRole('ADMIN')") denies a DOCTOR. In a @WebMvcTest slice
+        // the AuthorizationDeniedException surfaces wrapped in a ServletException
+        // (the full SecurityConfig chain that maps it to HTTP 403 isn't loaded here).
+        // Assert the denial fires and the action never runs.
+        val ex = org.junit.jupiter.api.Assertions.assertThrows(Exception::class.java) {
+            mockMvc.perform(post("/api/admin/encryption/backfill").with(csrf()))
+        }
+        org.junit.jupiter.api.Assertions.assertTrue(
+            generateSequence(ex as Throwable?) { it.cause }
+                .any { it is org.springframework.security.authorization.AuthorizationDeniedException },
+            "expected an AuthorizationDeniedException in the cause chain",
+        )
+        org.mockito.Mockito.verify(backfillService, org.mockito.Mockito.never()).run()
     }
 }

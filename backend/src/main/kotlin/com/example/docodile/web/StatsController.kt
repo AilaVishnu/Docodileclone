@@ -600,8 +600,14 @@ class StatsController(
         val revenue = paid.sumOf {
             (it.fee ?: BigDecimal.ZERO) + (it.pharmacyAmount ?: BigDecimal.ZERO) - (it.discountAmount ?: BigDecimal.ZERO)
         }.toLong().coerceAtLeast(0L)
+        // Outstanding dues = money still owed. Excludes PAID (collected) AND WAIVED
+        // (forgiven — not collectable), matching dueCount below. A WAIVED bill is not
+        // an outstanding due, so it must not inflate this total.
         val outstanding = appointments
-            .filter { it.payStatus?.uppercase() != "PAID" && (it.fee ?: BigDecimal.ZERO) > BigDecimal.ZERO }
+            .filter {
+                val ps = it.payStatus?.uppercase()
+                ps != "PAID" && ps != "WAIVED" && (it.fee ?: BigDecimal.ZERO) > BigDecimal.ZERO
+            }
             .mapNotNull { it.fee }.fold(BigDecimal.ZERO, BigDecimal::add).toLong()
         val avgPerVisit = if (paid.isNotEmpty()) revenue / paid.size else 0L
 

@@ -332,12 +332,6 @@ class StatsControllerTest @Autowired constructor(
     // ── /finance ──────────────────────────────────────────────────────────
 
     @Test
-    @org.junit.jupiter.api.Disabled(
-        "KNOWN BUG (fix in next iteration): /finance outstandingDues includes WAIVED " +
-        "bills. Test asserts dues=400 (only the UNPAID bill); code returns 700 because " +
-        "the outstanding sum filters only `!= PAID`, while dueCount in the same method " +
-        "correctly excludes WAIVED. Re-enable once the outstanding calc also excludes WAIVED."
-    )
     @WithMockUser(roles = ["ADMIN"])
     fun `finance computes collected revenue, dues and bill counts`() {
         stubClinic()

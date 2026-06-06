@@ -19,7 +19,10 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import java.util.*
 
 @WebMvcTest(DataWorkflowController::class)
-@org.springframework.context.annotation.Import(com.example.docodile.security.JwtAuthenticationFilter::class)
+@org.springframework.context.annotation.Import(
+    com.example.docodile.security.JwtAuthenticationFilter::class,
+    MethodSecurityTestConfig::class,
+)
 class DataWorkflowControllerTest @Autowired constructor(
     private val mockMvc: MockMvc,
 ) {
@@ -80,11 +83,20 @@ class DataWorkflowControllerTest @Autowired constructor(
     }
 
     @Test
-    @org.junit.jupiter.api.Disabled("@PreAuthorize not enforced in @WebMvcTest slice — covered by integration tests")
     @WithMockUser(roles = ["DOCTOR"])
-    fun `list deletions as non-admin returns 403`() {
-        mockMvc.perform(get("/api/data-requests/deletions"))
-            .andExpect(status().isForbidden)
+    fun `list deletions as non-admin is denied by method security`() {
+        // @PreAuthorize denies a DOCTOR. In a @WebMvcTest slice the
+        // AuthorizationDeniedException surfaces wrapped in a ServletException
+        // (the full SecurityConfig chain mapping it to HTTP 403 isn't loaded here).
+        val ex = org.junit.jupiter.api.Assertions.assertThrows(Exception::class.java) {
+            mockMvc.perform(get("/api/data-requests/deletions"))
+        }
+        org.junit.jupiter.api.Assertions.assertTrue(
+            generateSequence(ex as Throwable?) { it.cause }
+                .any { it is org.springframework.security.authorization.AuthorizationDeniedException },
+            "expected an AuthorizationDeniedException in the cause chain",
+        )
+        org.mockito.Mockito.verify(deletionService, org.mockito.Mockito.never()).list()
     }
 
     @Test
