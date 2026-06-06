@@ -133,24 +133,9 @@ export function TimePicker({ initialTime, onSelect, onClose, style, selectedDate
     onClose();
   };
 
-  // Commit the exact current wall-clock time (to the minute, not snapped
-  // to the 5-minute grid) and close in one click — typical walk-in flow is
-  // "book for right now".
-  const handleNow = () => {
-    const now = new Date();
-    let h = now.getHours();
-    const period = h >= 12 ? "PM" : "AM";
-    h = h % 12;
-    if (h === 0) h = 12;
-    const m = now.getMinutes();
-    const formattedTime = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")} ${period}`;
-    onSelect(formattedTime);
-    onClose();
-  };
-
-  // Same time as Now, but emits via the walk-in channel — caller flags the
-  // appointment as a walk-in (isWalkin=true) and renders "Walk-in" instead
-  // of the time string in the queue.
+  // Commit the exact current wall-clock time via the walk-in channel —
+  // caller flags the appointment as a walk-in (isWalkin=true) and renders
+  // "Walk-in" instead of the time string in the queue.
   const handleWalkin = () => {
     if (!onWalkin) return;
     const now = new Date();
@@ -229,9 +214,6 @@ export function TimePicker({ initialTime, onSelect, onClose, style, selectedDate
               Walk-in
             </button>
           )}
-          <button type="button" style={styles.nowButton} onClick={handleNow}>
-            Now
-          </button>
           <button
             type="button"
             style={{ ...styles.doneButton, ...(selectionPast ? disabledCell : {}) }}
