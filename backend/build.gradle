@@ -4,6 +4,7 @@ plugins {
 	id 'org.springframework.boot' version '4.0.1'
 	id 'io.spring.dependency-management' version '1.1.7'
 	id 'org.jetbrains.kotlin.plugin.jpa' version '2.2.21'
+	id 'jacoco'
 }
 
 group = 'com.example'
@@ -74,6 +75,7 @@ allOpen {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	finalizedBy jacocoTestReport   // always emit the coverage report after tests run
 }
 
 // Local dev defaults — only applied when running via ./gradlew bootRun.
@@ -82,4 +84,68 @@ tasks.named('bootRun') {
 	environment 'JWT_SECRET',           System.getenv('JWT_SECRET')           ?: 'local-dev-secret-do-not-use-in-production-x'
 	environment 'POSTGRES_PASSWORD',    System.getenv('POSTGRES_PASSWORD')    ?: 'docodile'
 	environment 'FILE_ENCRYPTION_KEY',  System.getenv('FILE_ENCRYPTION_KEY')  ?: ''
+}
+
+// ─── Test coverage (JaCoCo) ─────────────────────────────────────────────────
+jacoco {
+	toolVersion = '0.8.12'
+}
+
+// Classes excluded from coverage accounting: pure data holders and framework
+// glue that carry no branching logic worth testing.
+def coverageExclusions = [
+	'com/example/docodile/DocodileApplication*',
+	'com/example/docodile/domain/**',          // JPA entities / enums (data)
+	'com/example/docodile/config/**',          // Spring @Configuration wiring
+	'**/*DTO*', '**/*Request*', '**/*Response*', // request/response data classes
+]
+
+jacocoTestReport {
+	dependsOn test
+	reports {
+		xml.required = true
+		html.required = true
+		csv.required = false
+	}
+	afterEvaluate {
+		classDirectories.setFrom(classDirectories.files.collect {
+			fileTree(dir: it, exclude: coverageExclusions)
+		})
+	}
+	// Print a one-line coverage summary to the console after the report is built.
+	doLast {
+		def report = file("${layout.buildDirectory.get()}/reports/jacoco/test/jacocoTestReport.xml")
+		if (report.exists()) {
+			def parser = new groovy.xml.XmlParser()
+			parser.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
+			parser.setFeature('http://apache.org/xml/features/disallow-doctype-decl', false)
+			def counters = parser.parse(report).counter
+			counters.findAll { it.@type in ['INSTRUCTION', 'LINE', 'BRANCH'] }.each { c ->
+				def covered = c.@covered as double
+				def missed = c.@missed as double
+				def pct = (covered + missed) > 0 ? (covered / (covered + missed) * 100) : 0
+				println String.format('JaCoCo %-12s coverage: %.1f%%', c.@type, pct)
+			}
+		}
+	}
+}
+
+jacocoTestCoverageVerification {
+	afterEvaluate {
+		classDirectories.setFrom(classDirectories.files.collect {
+			fileTree(dir: it, exclude: coverageExclusions)
+		})
+	}
+	violationRules {
+		rule {
+			limit {
+				counter = 'LINE'
+				minimum = 0.70   // overall line coverage gate
+			}
+		}
+	}
+}
+
+tasks.named('check') {
+	dependsOn jacocoTestCoverageVerification
 }
