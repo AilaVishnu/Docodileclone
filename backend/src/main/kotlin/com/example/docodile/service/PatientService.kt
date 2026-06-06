@@ -16,9 +16,9 @@ class PatientService(
     private val appUserRepository: AppUserRepository,
     private val currentUser: CurrentUser
 ) {
-    fun listPatients() = patientRepository.findAllByClinicIdAndArchivedFalse(currentUser.clinicId())
+    fun listPatients() = patientRepository.findAllByClinicIdAndDeletedAtIsNull(currentUser.clinicId())
 
-    fun listArchived() = patientRepository.findAllByClinicIdAndArchivedTrue(currentUser.clinicId())
+    fun listArchived() = patientRepository.findAllByClinicIdAndDeletedAtIsNotNull(currentUser.clinicId())
 
     /**
      * List patients in the caller's clinic with their most recent
@@ -31,7 +31,7 @@ class PatientService(
      */
     fun listPatientsWithLastVisit(): List<PatientWithLastVisitDTO> {
         val clinicId = currentUser.clinicId()
-        val patients = patientRepository.findAllByClinicIdAndArchivedFalse(clinicId)
+        val patients = patientRepository.findAllByClinicIdAndDeletedAtIsNull(clinicId)
         val lastVisitMap = visitRepository.findLastVisitDatesByClinic(clinicId)
             .associateBy({ it.getPatientId() }, { it.getLastVisitDate() })
         // Build patientId -> set of treating doctor ids from both visits AND

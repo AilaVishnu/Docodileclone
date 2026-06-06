@@ -4,16 +4,17 @@ import com.example.docodile.domain.Patient
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.time.Instant
 import java.util.UUID
 
 interface PatientRepository : JpaRepository<Patient, UUID> {
     fun findAllByClinicId(clinicId: UUID): List<Patient>
 
-    // Active patients only — used by the patient picker / queue. Archived
-    // patients still exist in the DB but are hidden from default lists.
-    fun findAllByClinicIdAndArchivedFalse(clinicId: UUID): List<Patient>
+    // Active patients only — excludes soft-deleted rows.
+    fun findAllByClinicIdAndDeletedAtIsNull(clinicId: UUID): List<Patient>
 
-    fun findAllByClinicIdAndArchivedTrue(clinicId: UUID): List<Patient>
+    // Soft-deleted patients — for the archived/deleted patient list.
+    fun findAllByClinicIdAndDeletedAtIsNotNull(clinicId: UUID): List<Patient>
 
     @Query("SELECT p FROM Patient p WHERE p.id = :id AND p.clinic.id = :clinicId")
     fun findByIdAndClinicId(@Param("id") id: UUID, @Param("clinicId") clinicId: UUID): Patient?
@@ -34,4 +35,9 @@ interface PatientRepository : JpaRepository<Patient, UUID> {
     // when numbering new patients.
     @Query("SELECT p.displayNo FROM Patient p WHERE p.clinic.id = :clinicId AND p.displayNo IS NOT NULL")
     fun findDisplayNosByClinicId(@Param("clinicId") clinicId: UUID): List<Int>
+
+    // Patients soft-deleted before the given cutoff — used by PurgeJob to
+    // identify records eligible for hard purge after the retention period.
+    @Query("SELECT p FROM Patient p WHERE p.deletedAt IS NOT NULL AND p.deletedAt < :cutoff")
+    fun findSoftDeletedBefore(@Param("cutoff") cutoff: Instant): List<Patient>
 }

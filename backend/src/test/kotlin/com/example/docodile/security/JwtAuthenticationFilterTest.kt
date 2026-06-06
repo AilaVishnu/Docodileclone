@@ -1,6 +1,7 @@
 package com.example.docodile.security
 
 
+import com.example.docodile.repo.RevokedTokenRepository
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -21,6 +22,9 @@ class JwtAuthenticationFilterTest {
 
     @Mock
     private lateinit var tokenService: TokenService
+
+    @Mock
+    private lateinit var revokedTokenRepository: RevokedTokenRepository
 
     @Mock
     private lateinit var request: HttpServletRequest
@@ -89,6 +93,69 @@ class JwtAuthenticationFilterTest {
     @Test
     fun `should skip if no authorization header`() {
         `when`(request.getHeader("Authorization")).thenReturn(null)
+
+        jwtAuthenticationFilter.doFilter(request, response, filterChain)
+
+        assertNull(SecurityContextHolder.getContext().authentication)
+        verify(filterChain).doFilter(request, response)
+    }
+
+    @Test
+    fun `should set ROLE authority for valid token`() {
+        val userId = UUID.randomUUID()
+        val tenantId = UUID.randomUUID()
+        val token = "valid-token"
+        val jti = UUID.randomUUID()
+
+        val claims = io.jsonwebtoken.Jwts.claims().apply {
+            put("user_id", userId.toString())
+            put("tenant_id", tenantId.toString())
+            put("email", "doc@example.com")
+            put("role", "DOCTOR")
+        }
+
+        `when`(request.getHeader("Authorization")).thenReturn("Bearer $token")
+        `when`(tokenService.validateToken(token)).thenReturn(true)
+        `when`(tokenService.extractJti(token)).thenReturn(jti)
+        `when`(revokedTokenRepository.existsByJti(jti)).thenReturn(false)
+        `when`(tokenService.isMfaPendingToken(token)).thenReturn(false)
+        `when`(tokenService.parseClaims(token)).thenReturn(claims)
+
+        jwtAuthenticationFilter.doFilter(request, response, filterChain)
+
+        val auth = SecurityContextHolder.getContext().authentication
+        assertNotNull(auth)
+        assertEquals("ROLE_DOCTOR", auth!!.authorities.first().authority)
+        verify(filterChain).doFilter(request, response)
+    }
+
+    @Test
+    fun `should reject revoked token`() {
+        val token = "revoked-token"
+        val jti = UUID.randomUUID()
+
+        `when`(request.getHeader("Authorization")).thenReturn("Bearer $token")
+        `when`(tokenService.validateToken(token)).thenReturn(true)
+        `when`(tokenService.extractJti(token)).thenReturn(jti)
+        `when`(revokedTokenRepository.existsByJti(jti)).thenReturn(true)
+
+        jwtAuthenticationFilter.doFilter(request, response, filterChain)
+
+        assertNull(SecurityContextHolder.getContext().authentication)
+        verify(filterChain).doFilter(request, response)
+    }
+
+    @Test
+    fun `should reject mfa pending token on non-mfa path`() {
+        val token = "mfa-pending-token"
+        val jti = UUID.randomUUID()
+
+        `when`(request.getHeader("Authorization")).thenReturn("Bearer $token")
+        `when`(tokenService.validateToken(token)).thenReturn(true)
+        `when`(tokenService.extractJti(token)).thenReturn(jti)
+        `when`(revokedTokenRepository.existsByJti(jti)).thenReturn(false)
+        `when`(tokenService.isMfaPendingToken(token)).thenReturn(true)
+        `when`(request.requestURI).thenReturn("/patients")
 
         jwtAuthenticationFilter.doFilter(request, response, filterChain)
 

@@ -1,3 +1,21 @@
+# ─── Required environment variables (no defaults — app refuses to start if absent) ───
+# JWT_SECRET          : HS256 signing key, min 32 chars (e.g. openssl rand -hex 32)
+# POSTGRES_PASSWORD   : PostgreSQL password (set in docker-compose or runtime env)
+#
+# ─── Optional environment variables (defaults shown) ────────────────────────────────
+# SPRING_DATASOURCE_URL     : jdbc:postgresql://localhost:5432/docodile?TimeZone=Asia/Kolkata
+# SPRING_DATASOURCE_USERNAME: docodile
+# SPRING_DATASOURCE_PASSWORD: (matches POSTGRES_PASSWORD)
+# JWT_EXPIRATION_MS         : 3600000 (1 hour)
+# FRONTEND_URL              : http://localhost:3000
+# TOKEN_EXPIRY_HOURS        : 24 (password-reset link TTL)
+# MAIL_HOST / MAIL_PORT / MAIL_USERNAME / MAIL_PASSWORD : SMTP credentials
+# ALLOWED_ORIGINS           : comma-separated list of allowed CORS origins
+# FILE_ENCRYPTION_KEY    : Base64-encoded 32-byte AES-256 key for patient file encryption
+#                          Generate: openssl rand -base64 32
+#                          Optional in dev (encryption disabled if absent); REQUIRED in prod
+# ────────────────────────────────────────────────────────────────────────────────────
+
 spring:
   servlet:
     multipart:
@@ -48,7 +66,20 @@ app:
   frontend-url: ${FRONTEND_URL:http://localhost:3000}
   token-expiry-hours: ${TOKEN_EXPIRY_HOURS:24}
 
+file:
+  encryption:
+    key: ${FILE_ENCRYPTION_KEY:}
+
+consent:
+  enforcement:
+    # When true, patient data access is blocked (HTTP 403) if no active consent
+    # record exists. Keep false until the frontend consent-capture flow is built
+    # and existing patients have been back-consented; then flip to true in prod.
+    enabled: ${CONSENT_ENFORCEMENT_ENABLED:false}
+
 security:
   jwt:
-    secret: ${JWT_SECRET:change-me-change-me-change-me-change-me}
+    # JWT_SECRET must be set in the environment — no default is provided.
+    # The application will refuse to start if this variable is absent or blank.
+    secret: ${JWT_SECRET}
     expiration-ms: ${JWT_EXPIRATION_MS:3600000}

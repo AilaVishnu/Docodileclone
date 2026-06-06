@@ -1,7 +1,9 @@
 package com.example.docodile.web
 
+import com.example.docodile.domain.AuditAction
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.security.CurrentUser
+import com.example.docodile.service.AuditService
 import com.example.docodile.service.PatientService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -25,7 +27,8 @@ data class UpdatePatientRequest(
 class PatientController(
     private val patientService: PatientService,
     private val patientRepository: PatientRepository,
-    private val currentUser: CurrentUser
+    private val currentUser: CurrentUser,
+    private val auditService: AuditService,
 ) {
 
     @GetMapping
@@ -43,7 +46,7 @@ class PatientController(
             "name" to p.name,
             "phone" to p.phone,
             "gender" to p.gender,
-            "archivedAt" to p.archivedAt
+            "archivedAt" to p.deletedAt
         )
     }
 
@@ -54,10 +57,11 @@ class PatientController(
         val clinicId = currentUser.clinicId()
         val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
             ?: return ResponseEntity.notFound().build()
-        if (!patient.archived) {
-            patient.archived = true
-            patient.archivedAt = Instant.now()
+        if (patient.deletedAt == null) {
+            patient.deletedAt = Instant.now()
+            patient.deletedBy = currentUser.userId()
             patientRepository.save(patient)
+            auditService.log(AuditAction.PATIENT_ARCHIVED, entityType = "Patient", entityId = patientId)
         }
         return ResponseEntity.noContent().build()
     }
@@ -69,10 +73,11 @@ class PatientController(
         val clinicId = currentUser.clinicId()
         val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
             ?: return ResponseEntity.notFound().build()
-        if (patient.archived) {
-            patient.archived = false
-            patient.archivedAt = null
+        if (patient.deletedAt != null) {
+            patient.deletedAt = null
+            patient.deletedBy = null
             patientRepository.save(patient)
+            auditService.log(AuditAction.PATIENT_UNARCHIVED, entityType = "Patient", entityId = patientId)
         }
         return ResponseEntity.noContent().build()
     }
@@ -86,6 +91,7 @@ class PatientController(
     ): ResponseEntity<Void> {
         val clinicId = currentUser.clinicId()
         val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
+            ?.takeIf { it.deletedAt == null }
             ?: return ResponseEntity.notFound().build()
 
         // Validate inputs to match the rigour ClinicStatusService.saveStaff
@@ -126,6 +132,7 @@ class PatientController(
         patient.age    = req.age
 
         patientRepository.save(patient)
+        auditService.log(AuditAction.PATIENT_UPDATED, entityType = "Patient", entityId = patientId)
         return ResponseEntity.noContent().build()
     }
 

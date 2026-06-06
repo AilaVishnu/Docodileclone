@@ -90,6 +90,30 @@ class EmailService(private val mailSender: JavaMailSender) {
         }
     }
 
+    @Async
+    fun sendCorrectionComplete(to: String, fieldName: String, newValue: String, approved: Boolean) {
+        try {
+            val msg: MimeMessage = mailSender.createMimeMessage()
+            val helper = MimeMessageHelper(msg, false, "UTF-8")
+            helper.setTo(to)
+            val status = if (approved) "Approved" else "Rejected"
+            helper.setSubject("Your Data Correction Request Has Been $status")
+            val safeField = org.springframework.web.util.HtmlUtils.htmlEscape(fieldName)
+            val safeValue = org.springframework.web.util.HtmlUtils.htmlEscape(newValue)
+            val body = if (approved)
+                "Your request to correct <b>$safeField</b> to <b>$safeValue</b> has been approved and applied to your record."
+            else
+                "Your request to correct <b>$safeField</b> has been reviewed and was not approved."
+            helper.setText("<html><body><p>$body</p><p>If you have questions, please contact your clinic.</p></body></html>", true)
+            mailSender.send(msg)
+            log.info("Correction complete email sent to {}", to)
+        } catch (e: MailException) {
+            log.error("Failed to send correction email to {}: {}", to, e.message)
+        } catch (e: Exception) {
+            log.error("Unexpected error sending correction email to {}: {}", to, e.message)
+        }
+    }
+
     private fun buildWelcomeHtml(name: String, clinicName: String, setupLink: String): String = """
         <!DOCTYPE html>
         <html>
