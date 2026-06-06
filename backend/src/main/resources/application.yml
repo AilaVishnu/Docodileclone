@@ -16,6 +16,10 @@
 #                          Optional in dev (encryption disabled if absent); REQUIRED in prod
 # ────────────────────────────────────────────────────────────────────────────────────
 
+# Bind to the port the host provides (Render/Heroku set $PORT); default 8080 locally.
+server:
+  port: ${PORT:8080}
+
 spring:
   servlet:
     multipart:
