@@ -179,13 +179,19 @@ export const styles: Record<string, CSSProperties> = {
 
   walkinBadge: {
     fontSize: fonts.size.caption,
-    padding: "2px 6px",
-    borderRadius: "4px",
-    backgroundColor: colors.secondary100,
-    color: colors.primary400,
-    marginLeft: "8px",
+    padding: "2px 8px",
+    borderRadius: "999px",
+    // Warm beige pill in the primary brand family — high enough contrast on
+    // the cream canvas that the WALK-IN marker is legible, and distinct from
+    // the existing status pills (Booked/Waiting/At Doc/Completed) so it
+    // reads as a separate type of metadata, not a status.
+    backgroundColor: colors.primary300,
+    color: colors.primary800,
     fontWeight: 700,
     textTransform: "uppercase" as const,
+    letterSpacing: "0.4px",
+    lineHeight: 1,
+    whiteSpace: "nowrap" as const,
   },
 
   payStatus: {

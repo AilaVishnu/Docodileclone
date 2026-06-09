@@ -19,6 +19,8 @@ import { listPharmacyStock, deductPharmacyStock } from "../../api/pharmacy";
 type Doctor = {
   id: string;
   name: string;
+  gender?: string;
+  role?: string;
 };
 
 type BillingMedicine = {
@@ -184,9 +186,20 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((visits: any[]) => {
-        // visits are sorted ASC; last entry is the most recent
-        const latest = visits[visits.length - 1];
-        const rows: BillingMedicine[] = (latest?.prescriptions ?? [])
+        // Bill the visit tied to *this* appointment, not "the patient's
+        // most recent visit". Otherwise a fresh walk-in (no Rx added yet)
+        // would leak medicines from the patient's previous visit into the
+        // bill. V45 links visits → appointments via appointment_id; rows
+        // that pre-date the migration fall back to a same-day match.
+        const apt = medsBillingApt;
+        const sameDay = (iso?: string | null): boolean => {
+          if (!iso || !apt?.rawScheduledTime) return false;
+          return iso.slice(0, 10) === apt.rawScheduledTime.slice(0, 10);
+        };
+        const matching =
+          visits.find((v: any) => v.appointmentId && apt?.id && v.appointmentId === apt.id) ??
+          visits.find((v: any) => sameDay(v.visitDate));
+        const rows: BillingMedicine[] = (matching?.prescriptions ?? [])
           .filter((p: any) => p.medicine)
           .map((p: any, i: number) => {
             const name = p.medicine as string;
@@ -239,7 +252,12 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
             // appointments. Only active doctors appear in the queue/booking.
             const doctorList = staffData
               .filter((s: any) => s.role === "DOCTOR" && s.active !== false)
-              .map((s: any) => ({ id: s.id, name: s.name }));
+              .map((s: any) => ({
+                id: s.id,
+                name: s.name,
+                gender: (s.gender ?? "").toLowerCase(),
+                role: "Doctor",
+              }));
 
             setDoctors(doctorList);
             if (doctorList.length > 0) {
@@ -267,7 +285,12 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           startOfToday.setHours(0, 0, 0, 0);
           const PENDING_STATUSES = new Set(["BOOKED", "SCHEDULED", "WAITING"]);
           const deriveStatus = (rawStatus: string | undefined, rawSched: string | undefined): string => {
-            const status = rawStatus || "WAITING";
+            // Legacy walk-in rows can carry "AT_DOC" — normalise to IN_PROGRESS
+            // so the existing StatusBadge / sort priority / filter logic apply
+            // without a new branch (At Doc is the IN_PROGRESS display label
+            // before Start Session is clicked).
+            const incoming = rawStatus?.toUpperCase() === "AT_DOC" ? "IN_PROGRESS" : rawStatus;
+            const status = incoming || "WAITING";
             if (!PENDING_STATUSES.has(status.toUpperCase())) return status;
             if (!rawSched) return status;
             const sched = new Date(rawSched);
@@ -443,6 +466,8 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                   patientGender: apt.patientGender,
                   patientDob: apt.patientDob,
                   patientAge: apt.patientAge,
+                  patientDisplayNo: apt.patientDisplayNo ?? null,
+                  isWalkin: !!apt.isWalkin,
                   service: apt.service,
                   type: apt.type,
                   scheduledTime: apt.rawScheduledTime || "",
@@ -526,7 +551,8 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           <div style={{ marginTop: "-30px", flexShrink: 0, display: "flex", flexDirection: "column" }}>
             <DoctorStatusCard
               doctorName={doctors.find(d => d.id === activeDoctorId)?.name || ""}
-              doctorGender="male"
+              doctorGender={doctors.find(d => d.id === activeDoctorId)?.gender || "male"}
+              doctorRole={doctors.find(d => d.id === activeDoctorId)?.role || "Doctor"}
               appointments={activeQueue}
             />
             <HeatmapCard appointments={activeQueue} date={selectedDate} />

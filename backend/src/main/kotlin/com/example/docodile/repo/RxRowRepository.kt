@@ -36,4 +36,22 @@ interface RxRowRepository : JpaRepository<RxRow, UUID> {
 
     @Query("SELECT r.medicine FROM RxRow r WHERE r.visit.id IN :visitIds AND r.medicine IS NOT NULL AND r.medicine <> ''")
     fun findMedicinesByVisitIds(@Param("visitIds") visitIds: List<UUID>): List<String>
+
+    // Latest prescription of a given medicine across the clinic — drives the
+    // pad's per-medicine autofill so the doctor's most recent schedule for a
+    // drug pre-fills the next time anyone prescribes it. Optionally excludes
+    // the visit being edited so the autofill doesn't echo what's already there.
+    @Query("""
+        SELECT r FROM RxRow r
+        WHERE r.visit.clinic.id = :clinicId
+          AND lower(r.medicine) = lower(:medicine)
+          AND (:excludeVisitId IS NULL OR r.visit.id <> :excludeVisitId)
+        ORDER BY r.visit.visitDate DESC, r.createdAt DESC
+    """)
+    fun findLatestByClinicAndMedicine(
+        @Param("clinicId") clinicId: UUID,
+        @Param("medicine") medicine: String,
+        @Param("excludeVisitId") excludeVisitId: UUID?,
+        pageable: Pageable,
+    ): List<RxRow>
 }

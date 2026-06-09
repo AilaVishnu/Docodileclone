@@ -54,6 +54,9 @@ type ViewMode = "grid" | "list";
 
 type PrescriptionQueueProps = {
   onSelect: (patient: Patient, appointmentId: string, queueDate: string, doctorId: string) => void;
+  // Bumped by the parent (HomePage) after a walk-in is created, so this
+  // queue refetches today's appointments and the new card appears.
+  refreshKey?: number;
 };
 
 const TAB_ITEMS: { id: StatusFilter; label: string }[] = [
@@ -64,7 +67,7 @@ const TAB_ITEMS: { id: StatusFilter; label: string }[] = [
   { id: "COMPLETED", label: "Completed" },
 ];
 
-export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
+export function PrescriptionQueue({ onSelect, refreshKey }: PrescriptionQueueProps) {
   const [appointments, setAppointments] = useState<AppointmentRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,6 +102,12 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return (await r.json()) as AppointmentRow[];
       })
+      // Legacy walk-in rows may carry "AT_DOC" — the existing pill/filter/group
+      // code is keyed off "IN_PROGRESS", so normalise at ingest and let the
+      // started-set decide the visual ("At Doc" vs "In Progress").
+      .then((rows) => rows.map((a) => (
+        a.status === "AT_DOC" ? { ...a, status: "IN_PROGRESS" } : a
+      )))
       .then(setAppointments)
       .catch((e) => {
         if ((e as Error).name === "AbortError") return;
@@ -107,7 +116,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [selectedDate]);
+  }, [selectedDate, refreshKey]);
 
   const filtered = useMemo(() => {
     // Only patients actually present at the clinic appear in this queue —

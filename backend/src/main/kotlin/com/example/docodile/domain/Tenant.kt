@@ -16,6 +16,12 @@ class Tenant(
     @Column(nullable = false)
     var name: String = "",
 
+    @Column(name = "max_clinics", nullable = false)
+    var maxClinics: Int = 5,
+
+    @Column(name = "max_staff_per_clinic", nullable = false)
+    var maxStaffPerClinic: Int = 10,
+
     @Column(name = "created_at")
     var createdAt: Instant? = null
 )

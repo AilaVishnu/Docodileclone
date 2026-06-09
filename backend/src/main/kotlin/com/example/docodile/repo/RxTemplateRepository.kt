@@ -7,8 +7,17 @@ import org.springframework.data.repository.query.Param
 import java.util.UUID
 
 interface RxTemplateRepository : JpaRepository<RxTemplate, UUID> {
-    fun findAllByClinicIdOrderByNameAsc(clinicId: UUID): List<RxTemplate>
+    fun findAllByClinicIdAndKindOrderByNameAsc(clinicId: UUID, kind: String): List<RxTemplate>
 
-    @Query("SELECT t FROM RxTemplate t WHERE t.clinic.id = :clinicId AND lower(t.name) = lower(:name)")
-    fun findByClinicIdAndName(@Param("clinicId") clinicId: UUID, @Param("name") name: String): RxTemplate?
+    @Query("""
+        SELECT t FROM RxTemplate t
+        WHERE t.clinic.id = :clinicId
+          AND t.kind = :kind
+          AND lower(t.name) = lower(:name)
+    """)
+    fun findByClinicIdAndKindAndName(
+        @Param("clinicId") clinicId: UUID,
+        @Param("kind") kind: String,
+        @Param("name") name: String,
+    ): RxTemplate?
 }

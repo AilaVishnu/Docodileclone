@@ -14,12 +14,16 @@ type TopNavProps = {
   onLogout?: () => void;
   onNewAppointment?: () => void;
   isBooking?: boolean;
+  // Overrides the default "New Appointment" CTA label. The Prescription page
+  // passes "New Prescription" since that's the user's intent there even
+  // though the action still opens the booking flow.
+  primaryActionLabel?: string;
   // Switches the active home tab. Passed from HomePage so the SessionTray
   // can route the doctor back to the Prescription form on click.
   onNavigate?: (tab: NavTab) => void;
 };
 
-export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, onNavigate }: TopNavProps) {
+export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, isBooking, primaryActionLabel, onNavigate }: TopNavProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -170,6 +174,12 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
 
   const HoverAvatar = ({ onClick }: { onClick: () => void }) => {
     const [hovered, setHovered] = useState(false);
+    const rawRole = localStorage.getItem("docodile_role") ?? "ADMIN";
+    const rawGender = localStorage.getItem("docodile_gender") ?? "male";
+    const isAdmin = rawRole === "ADMIN";
+    const displayRole = isAdmin
+      ? "Doctor"
+      : rawRole.split("_").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
     return (
       <div
         style={{ ...styles.profileAvatar, ...(hovered ? styles.profileAvatarHover : {}) }}
@@ -178,8 +188,8 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
         onMouseLeave={() => setHovered(false)}
       >
         <StaffIllustration
-          role="Doctor"
-          gender="male"
+          role={displayRole}
+          gender={(isAdmin ? "male" : rawGender) as "male" | "female" | "other"}
           width="100%"
           height="100%"
           borderRadius="0"
@@ -227,15 +237,17 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       </div>
 
       <div style={styles.actions}>
-        <Button
-          variant="primary"
-          size="sm"
-          iconLeft={<PlusIcon style={{ width: 'var(--topnav-cta-icon)', height: 'var(--topnav-cta-icon)', fill: '#fff' }} />}
-          style={{ padding: '0 var(--topnav-cta-padx)' }}
-          onClick={onNewAppointment}
-        >
-          New Appointment
-        </Button>
+        {!isBooking && (
+          <Button
+            variant="primary"
+            size="sm"
+            iconLeft={<PlusIcon style={{ width: 'var(--topnav-cta-icon)', height: 'var(--topnav-cta-icon)', fill: '#fff' }} />}
+            style={{ padding: '0 var(--topnav-cta-padx)' }}
+            onClick={onNewAppointment}
+          >
+            {primaryActionLabel ?? "New Appointment"}
+          </Button>
+        )}
 
         <div style={styles.iconGroup}>
           {onNavigate && <SessionTrayButton onNavigate={onNavigate} />}

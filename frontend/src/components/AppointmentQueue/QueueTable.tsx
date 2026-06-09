@@ -451,12 +451,15 @@ export function QueueTable({
 
                     <td style={spacerTd} aria-hidden />
 
-                    {/* Time */}
+                    {/* Time + Walk-in tag — stacked so the pill doesn't collide
+                        with the Status column when the row is narrow. */}
                     <td style={{ ...styles.td, textAlign: "center", padding: "10px 4px" }}>
-                      <span style={styles.time}>{apt.scheduledTime}</span>
-                      {apt.isWalkin && (
-                        <span style={styles.walkinBadge}>Walk-in</span>
-                      )}
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                        <span style={styles.time}>{apt.scheduledTime}</span>
+                        {apt.isWalkin && (
+                          <span style={styles.walkinBadge}>Walk-in</span>
+                        )}
+                      </div>
                     </td>
 
                     <td style={spacerTd} aria-hidden />

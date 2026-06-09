@@ -18,6 +18,7 @@ export type Staff = {
    *  clinic. They stay on record (history) but are hidden from booking and
    *  login, and surface in the "Deactivated" list for reactivation. */
   active: boolean;
+  accountStatus?: "ACTIVE" | "PENDING_ACTIVATION";
 };
 
 export type Clinic = {

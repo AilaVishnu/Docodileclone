@@ -89,7 +89,7 @@ export const styles: Record<string, CSSProperties> = {
 
   staffList: {
     display: "grid",
-    gridTemplateColumns: "repeat(5, 105px)",
+    gridTemplateColumns: "repeat(auto-fill, 105px)",
     gap: "10px 16px",
     width: "100%",
     justifyContent: "start",

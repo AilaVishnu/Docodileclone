@@ -19,7 +19,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
-@EnableConfigurationProperties(JwtProperties::class, EkaProperties::class)
+@EnableConfigurationProperties(JwtProperties::class, EkaProperties::class, AppProperties::class)
 class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilter) {
     @Bean
     fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
@@ -38,7 +38,12 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
             .httpBasic { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
-                it.requestMatchers("/auth/login", "/auth/staff/login", "/actuator/health", "/api/health", "/ws/**").permitAll()
+                it.requestMatchers(
+                    "/auth/login", "/auth/staff/login",
+                    "/auth/validate-token", "/auth/setup-password",
+                    "/auth/forgot-password",
+                    "/actuator/health", "/api/health", "/ws/**"
+                ).permitAll()
                     .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                     .anyRequest().authenticated()
             }
@@ -50,7 +55,7 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val config = CorsConfiguration()
-        val allowedOrigins = System.getenv("ALLOWED_ORIGINS")?.split(",")?.map { it.trim() } ?: listOf("http://localhost:3000", "http://localhost:3001")
+        val allowedOrigins = System.getenv("ALLOWED_ORIGINS")?.split(",") ?: listOf("http://localhost:3000", "http://localhost:3001")
         config.allowedOrigins = allowedOrigins
         config.allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
         config.allowedHeaders = listOf("Authorization", "Content-Type", "*")

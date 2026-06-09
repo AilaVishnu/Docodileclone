@@ -10,9 +10,9 @@ import jakarta.persistence.Table
 import java.time.Instant
 import java.util.UUID
 
-// A reusable prescription template, scoped per clinic. `content` is an opaque
-// JSON blob the frontend serialises/parses (complaints, diagnosis, tests,
-// notes, review, rx rows) — see V48.
+// A reusable per-section template, scoped per clinic + per section kind.
+// Saving from a section's 3-dots only appears under that same section's Load
+// list. `content` is an opaque JSON blob the frontend owns — see V48 / V49.
 @Entity
 @Table(name = "rx_template")
 class RxTemplate(
@@ -22,6 +22,9 @@ class RxTemplate(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "clinic_id", nullable = false)
     var clinic: ClinicEntity? = null,
+
+    @Column(nullable = false)
+    var kind: String = "",
 
     @Column(nullable = false)
     var name: String = "",

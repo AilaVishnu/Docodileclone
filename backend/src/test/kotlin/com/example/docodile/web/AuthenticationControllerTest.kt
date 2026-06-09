@@ -33,7 +33,7 @@ class AuthenticationControllerTest @Autowired constructor(
     @Test
     fun `login should return token for valid credentials`() {
         val request = LoginRequest(email = "test@example.com", password = "password")
-        val response = LoginResponse(token = "jwt_token", role = "ADMIN", clinicId = UUID.randomUUID(), clinicName = "Clinic")
+        val response = LoginResponse(token = "jwt_token", role = "ADMIN", clinicId = UUID.randomUUID(), clinicName = "Clinic", gender = null)
 
         `when`(authService.login(request)).thenReturn(response)
 
@@ -62,7 +62,7 @@ class AuthenticationControllerTest @Autowired constructor(
     @Test
     fun `staffLogin should return token for valid credentials`() {
         val request = StaffLoginRequest(domain = "clinic1", email = "staff@example.com", password = "password")
-        val response = LoginResponse(token = "staff_token", role = "DOCTOR", clinicId = UUID.randomUUID(), clinicName = "Clinic")
+        val response = LoginResponse(token = "staff_token", role = "DOCTOR", clinicId = UUID.randomUUID(), clinicName = "Clinic", gender = "male")
 
         `when`(authService.loginStaff(request)).thenReturn(response)
 
