@@ -22,7 +22,7 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "prestart": "lsof -ti tcp:3000 | xargs kill -9 2>/dev/null || true",
+    "prestart": "node -e \"try { require('child_process').execSync('npx --yes kill-port 3000', { stdio: 'inherit' }); } catch (e) {}\"",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
