@@ -26,6 +26,8 @@ import { ReactComponent as MicIcon } from "../../assets/icons/microphone.svg";
 import { ReactComponent as RewindIcon } from "../../assets/icons/rewind-back-circle.svg";
 import { ReactComponent as ArrowLeftIcon } from "../../assets/icons/arrow-left.svg";
 import { ReactComponent as CalendarIcon } from "../../assets/icons/calendar.svg";
+import { ReactComponent as UserIcon } from "../../assets/icons/user.svg";
+import { Card } from "../../components/Card";
 import { ReactComponent as ReorderIcon } from "../../assets/icons/reorder.svg";
 import { ReactComponent as TuningIcon } from "../../assets/icons/tuning.svg";
 import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg";
@@ -446,7 +448,14 @@ const ACTION_META: ActionMeta[] = [
   { icon: <FileIcon style={styles.actionIcon} />, label: "Files" },
   { icon: <HistoryIcon style={styles.actionIcon} />, label: "Timeline" },
   { icon: <BillCheckIcon style={styles.actionIcon} />, label: "Bills" },
+  // Info appended at the END so the other action indices (Visits 0 … Bills 3)
+  // are untouched; the nav just RENDERS it first (see NAV_ORDER).
+  { icon: <UserIcon style={styles.actionIcon} />, label: "Info" },
 ];
+
+// Display order for the section nav — Info (index 4) shows first, before Visits.
+const NAV_ORDER = [4, 0, 1, 2, 3];
+const INFO_ACTION = 4;
 
 // Figma node 2143:10730 — Reports view, swapped in when "Reports" is active.
 // AI Summary copy comes from the backend per-patient — left blank until wired.
@@ -1995,12 +2004,12 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
           {/* Flexible gap pushes nav + actions to the right side. */}
           <div style={styles.rxHeaderSpacer} />
 
-          {/* Section nav — Visits / Files / Timeline / Bills, on the right.
-              Icon-rail: inactive sections are icon-only (label via tooltip);
-              only the active section shows its label + count under a peach
-              underline. No fill, so it never reads as the CTA or a visit chip. */}
+          {/* Section nav — Info / Visits / Files / Timeline / Bills (Info first
+              via NAV_ORDER). Full-height underline tabs (icon + label), active
+              marked by the peach underline at the header's bottom edge. */}
           <nav style={styles.headerSectionNav} role="tablist" aria-label="Patient record sections">
-            {ACTION_META.map((a, i) => {
+            {NAV_ORDER.map((i) => {
+              const a = ACTION_META[i];
               const isActive = activeAction === i;
               const count = countFor(i);
               return (
@@ -2060,7 +2069,55 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
           // every field below without needing to wire each one.
           onBlur={handleFormBlur}>
 
-          {activeAction === 2 ? (
+          {activeAction === INFO_ACTION ? (
+            // Info — reuses the New Appointment cards: ID/avatar card, a
+            // read-only basic-info card, and an AI summary card (in the Bill
+            // card's slot).
+            <div style={styles.infoGrid}>
+              <Card style={styles.infoIdCard}>
+                <img
+                  src={pickAvatar({
+                    gender: selectedPatient?.gender,
+                    ageYears: selectedPatient?.age != null ? Math.floor(selectedPatient.age / 12) : null,
+                  })}
+                  alt=""
+                  style={styles.infoAvatar}
+                />
+                <h1 style={styles.infoIdText}>
+                  {selectedPatient?.displayNo != null ? `T${selectedPatient.displayNo}` : "T---"}
+                </h1>
+                <span style={styles.infoIdName}>{selectedPatient?.name}</span>
+              </Card>
+
+              <Card style={styles.infoFieldsCard}>
+                {[
+                  { icon: <UserIcon style={styles.infoRowIcon} />, label: "Name", value: selectedPatient?.name },
+                  { icon: <LetterIcon style={styles.infoRowIcon} />, label: "Email", value: selectedPatient?.email },
+                  { icon: <PhoneIcon style={styles.infoRowIcon} />, label: "Phone", value: selectedPatient?.phone },
+                  { icon: <CalendarIcon style={styles.infoRowIcon} />, label: "Age", value: selectedPatient?.age != null ? `${Math.floor(selectedPatient.age / 12)} yrs` : null },
+                  { icon: <UserIcon style={styles.infoRowIcon} />, label: "Gender", value: selectedPatient?.gender },
+                ].map((f) => (
+                  <div key={f.label} style={styles.infoRow}>
+                    {f.icon}
+                    <div style={styles.infoRowText}>
+                      <div style={styles.infoLabel}>{f.label}</div>
+                      <div style={styles.infoValue}>{f.value || "—"}</div>
+                    </div>
+                  </div>
+                ))}
+              </Card>
+
+              <Card style={styles.infoAiCard}>
+                <div style={styles.infoAiHead}>
+                  <span style={styles.infoAiSparkle} aria-hidden="true">✨</span>
+                  <span style={styles.infoAiTitle}>AI summary</span>
+                </div>
+                <p style={styles.infoAiBody}>
+                  {AI_SUMMARY_TEXT || "No summary yet — an AI overview of this patient's history will appear here."}
+                </p>
+              </Card>
+            </div>
+          ) : activeAction === 2 ? (
             // Timeline — chronological feed of the patient's visits (newest
             // first), each with a short synopsis (complaints → diagnosis).
             // File / Rx events interleave here once an activity feed exists.

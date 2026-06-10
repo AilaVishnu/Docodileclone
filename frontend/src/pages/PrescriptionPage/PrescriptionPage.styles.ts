@@ -1359,6 +1359,121 @@ export const styles: Record<string, CSSProperties> = {
     overflow: "hidden",
   },
 
+  // ── Info tab — reuses the New Appointment cards (ID/avatar · fields · AI) ──
+  // 3-column grid matching the booking layout (book-col tokens) so the cards
+  // line up with the rest of the app.
+  infoGrid: {
+    display: "grid",
+    gridTemplateColumns: "var(--book-col-left) minmax(0, 1fr) var(--book-col-right)",
+    gap: "var(--book-grid-gap, 16px)",
+    alignItems: "stretch",
+    paddingTop: spacing.m,
+    paddingBottom: spacing.xl,
+  },
+  // Avatar + T-number card — mirrors BookAppointment's patient ID card.
+  infoIdCard: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    padding: spacing.l,
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.m,
+  },
+  infoAvatar: {
+    width: "var(--book-patient-avatar, 140px)",
+    height: "var(--book-patient-avatar, 140px)",
+    objectFit: "contain",
+    display: "block",
+  },
+  infoIdText: {
+    margin: 0,
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h2,
+    color: colors.neutral900,
+  },
+  infoIdName: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.m,
+    fontWeight: fonts.weight.medium,
+    color: colors.neutral900,
+  },
+  // Basic-info card — same shape as the booking details card, but the fields
+  // are read-only text (no input underline).
+  infoFieldsCard: {
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    gap: spacing.l,
+    padding: `${spacing.l} ${spacing.xl}`,
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.m,
+  },
+  infoRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.s,
+  },
+  infoRowIcon: {
+    width: 22,
+    height: 22,
+    flexShrink: 0,
+    color: colors.neutral700,
+  },
+  infoRowText: {
+    display: "flex",
+    flexDirection: "column",
+    minWidth: 0,
+  },
+  infoLabel: {
+    fontSize: fonts.size.xs,
+    lineHeight: fonts.lineHeight.xs,
+    color: colors.neutral500,
+  },
+  infoValue: {
+    fontSize: fonts.size.m,
+    lineHeight: fonts.lineHeight.m,
+    color: colors.neutral900,
+  },
+  // AI summary card — occupies the Bill card's slot on the right.
+  infoAiCard: {
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.s,
+    padding: spacing.l,
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.m,
+  },
+  infoAiHead: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  infoAiSparkle: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 24,
+    height: 24,
+    borderRadius: radii.s,
+    backgroundColor: colors.primary200,
+    fontSize: 14,
+  },
+  infoAiTitle: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.m,
+    fontWeight: fonts.weight.medium,
+    color: colors.neutral900,
+  },
+  infoAiBody: {
+    margin: 0,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.l,
+    color: colors.neutral700,
+  },
+
   // Figma node 2143:11171 — "+ Add Report" pill on the page header. Dark
   // neutral900 fill with primary100 text, full-radius pill.
   addReportButton: {
