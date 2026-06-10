@@ -103,9 +103,15 @@ export const styles: Record<string, CSSProperties> = {
   // Single column — the section nav + contact actions live in a floating
   // bottom bar now, so the form spans the FULL content width. Page
   // responsiveness = the form stretching / squeezing.
+  // Form content is capped at a fixed --rx-content-max and centered; the
+  // page's horizontal padding + these auto margins are the stretchy gutters
+  // (wide at 1440+, squeezing toward the 1200 floor).
   body: {
     display: "block",
     width: "100%",
+    maxWidth: "var(--rx-content-max)",
+    marginLeft: "auto",
+    marginRight: "auto",
   },
 
   // ── Left column ──────────────────────────────────────────────────────────
@@ -231,10 +237,71 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   // ── Header patient identity (centered in the sticky bar) ─────────────────
+  // ── Bespoke single-row sticky header (replaces the shared PageHeader on this
+  // page). Full-bleed bar; inner caps at --rx-content-max and centers, so its
+  // content edge-aligns with the prescription form below. ~half the old height.
+  rxHeader: {
+    position: "sticky",
+    top: 0,
+    zIndex: 100,
+    backgroundColor: colors.primary200,
+    borderBottom: `${strokes.xs} solid ${colors.active.shade300}`,
+    // Full-bleed: cancel the page's horizontal padding so the bar paints
+    // edge-to-edge; the inner re-centers content at the form width.
+    marginLeft: `calc(-1 * ${fluidSpacing.outerX})`,
+    marginRight: `calc(-1 * ${fluidSpacing.outerX})`,
+    borderRadius: `${radii["2xl"]}px 0 0 0`,
+    boxSizing: "border-box",
+  },
+  // Horizontal-padding wrapper — recreates the page's outer gutter so the inner
+  // (capped at the form width) centers within the SAME box as the form below,
+  // keeping the avatar edge-aligned to the form at every width (incl. 1200).
+  rxHeaderPad: {
+    width: "100%",
+    paddingLeft: fluidSpacing.outerX,
+    paddingRight: fluidSpacing.outerX,
+    boxSizing: "border-box",
+  },
+  rxHeaderInner: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.m,
+    width: "100%",
+    maxWidth: "var(--rx-content-max)",
+    marginLeft: "auto",
+    marginRight: "auto",
+    minHeight: 56,
+    paddingTop: spacing["2xs"],
+    paddingBottom: spacing["2xs"],
+    boxSizing: "border-box",
+  },
+  // Back arrow pinned in the left gutter (absolute → outside the inner flow),
+  // so the avatar is the first inner element and aligns to the form edge.
+  rxBackBtn: {
+    position: "absolute",
+    left: spacing.xs,
+    top: 0,
+    bottom: 0,
+    width: 28,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "none",
+    backgroundColor: "transparent",
+    color: colors.neutral900,
+    cursor: "pointer",
+    padding: 0,
+  },
+  rxHeaderSpacer: {
+    flex: 1,
+    minWidth: spacing.s,
+  },
+
   headerPatient: {
     display: "flex",
     alignItems: "center",
     gap: spacing.s,
+    flexShrink: 0,
   },
   headerAvatar: {
     width: 40,
@@ -249,7 +316,7 @@ export const styles: Record<string, CSSProperties> = {
   },
   // Single inline line: "T--- Ramesh (M|64)". T--- is muted, name is dark.
   headerName: {
-    fontSize: fonts.size.l,
+    fontSize: fonts.size.h5,
     fontFamily: fonts.family.secondary,
     fontWeight: fonts.weight.regular,
     color: colors.neutral900,
@@ -258,6 +325,116 @@ export const styles: Record<string, CSSProperties> = {
   headerTId: {
     color: colors.neutral500,
     marginRight: spacing["2xs"],
+  },
+
+  // Print / Download / Share — icon-only actions in the sticky PageHeader's
+  // right slot (moved here from the floating SessionBar).
+  headerActionBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 36,
+    height: 36,
+    padding: 0,
+    background: "transparent",
+    border: "none",
+    borderRadius: radii.m,
+    cursor: "pointer",
+    color: colors.neutral700,
+  },
+  // Three-dot contact kebab trigger sitting in the header actions slot.
+  kebabTrigger: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 36,
+    height: 36,
+    fontSize: 22,
+    lineHeight: 1,
+    color: colors.neutral700,
+  },
+
+  // ── Header stack: identity row on top, section nav below ─────────────────
+  // The header center cell now carries two rows; both stay centered.
+  headerStack: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: spacing.xs,
+    minWidth: 0,
+  },
+  // Section nav (Visits / Files / Timeline / Bills) — a centered pill row.
+  headerSectionNav: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing["3xs"],
+    flexWrap: "nowrap",
+  },
+  // Icon-rail nav: inactive sections are icon-only; only the ACTIVE section
+  // spells out its label, under a peach underline. No fill anywhere, so it
+  // can't be mistaken for the green CTA or the filled visit chips below.
+  headerSectionTab: {
+    position: "relative",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing["3xs"],
+    height: 34,
+    padding: `0 ${spacing["2xs"]}`,
+    border: "none",
+    // Underline via inset boxShadow (not border-bottom) so toggling only the
+    // active colour can't trip React's border shorthand/longhand mix warning.
+    boxShadow: "inset 0 -2px 0 transparent",
+    backgroundColor: "transparent",
+    color: colors.neutral600,
+    cursor: "pointer",
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    whiteSpace: "nowrap",
+    boxSizing: "border-box",
+  },
+  // Active section = icon + label + count under a peach underline.
+  headerSectionTabActive: {
+    color: colors.neutral900,
+    boxShadow: `inset 0 -2px 0 ${colors.active.shade600}`,
+    padding: `0 ${spacing.xs}`,
+  },
+  headerSectionIcon: {
+    position: "relative",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // Small peach dot on an inactive icon-only tab when that section has a count
+  // (e.g. Files · 1). Ringed in the header tint so it reads as a badge.
+  headerSectionDot: {
+    position: "absolute",
+    top: -1,
+    right: -3,
+    width: 7,
+    height: 7,
+    borderRadius: radii.full,
+    backgroundColor: colors.active.shade600,
+    border: `1.5px solid ${colors.primary200}`,
+    boxSizing: "border-box",
+  },
+  headerSectionBadge: {
+    minWidth: 18,
+    height: 18,
+    paddingLeft: 5,
+    paddingRight: 5,
+    borderRadius: radii.full,
+    backgroundColor: colors.primary200,
+    color: colors.neutral700,
+    fontSize: 11,
+    lineHeight: "18px",
+    textAlign: "center",
+    boxSizing: "border-box",
+  },
+  headerSectionBadgeActive: {
+    backgroundColor: colors.primary100,
+    color: colors.primary700,
   },
 
   // ── Floating bottom bar — section nav (left) + contact actions (right) ───
@@ -277,6 +454,34 @@ export const styles: Record<string, CSSProperties> = {
     boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
     padding: `${spacing["2xs"]} ${spacing.s}`,
     zIndex: 1090,
+  },
+  // Per-section action buttons inside the floating bar (Download / Print /
+  // Share / Clear all for Visits). Output actions group together; Clear all
+  // gets the danger tint + a divider so it never sits flush with them.
+  barBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: spacing.xs,
+    height: 36,
+    padding: `0 ${spacing.s}`,
+    borderRadius: radii.m,
+    border: "none",
+    backgroundColor: "transparent",
+    color: colors.neutral900,
+    cursor: "pointer",
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    whiteSpace: "nowrap",
+  },
+  barBtnDanger: {
+    color: colors.red200,
+  },
+  barDivider: {
+    width: 1,
+    alignSelf: "stretch",
+    backgroundColor: colors.neutral200,
+    margin: `${spacing["2xs"]} ${spacing["2xs"]}`,
   },
   bottomNav: {
     display: "flex",
@@ -513,9 +718,9 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: spacing.xs,
-    // Pushed down so the tabs sit on the same baseline as the patient
-    // identity card on the left (which is offset by the overlapping avatar).
-    marginTop: 36,
+    // Small breathing room under the (now compact) sticky header. The old 36px
+    // offset existed to clear an overlapping avatar that no longer exists.
+    marginTop: spacing.s,
   },
   // Figma node 2133:9927 — Tuning settings dropdown. Wrapper just pushes
   // the PopoverMenu trigger to the far right of the tabs row.
@@ -524,18 +729,43 @@ export const styles: Record<string, CSSProperties> = {
     flexShrink: 0,
     display: "inline-flex",
   },
+  // "+ New Visit" — dashed "new tab" affordance sitting right after the last
+  // visit pill. Quiet by default so it reads as "add another", not a CTA.
+  newVisitBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: spacing["3xs"],
+    height: 32,
+    padding: `0 ${spacing.s}`,
+    borderRadius: radii.m,
+    border: `${strokes.xs} dashed ${colors.primary500}`,
+    backgroundColor: "transparent",
+    color: colors.neutral700,
+    cursor: "pointer",
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+  },
+  newVisitPlus: {
+    fontSize: 18,
+    lineHeight: 1,
+  },
+  // Compact pill — same density as the header section nav, so the visit strip
+  // is a slim single-line row ("visit 1 · 12 May") and buys back vertical space.
   tab: {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.xs,
-    padding: `${spacing.xs} ${spacing.m}`,
-    borderRadius: radii.xl,
+    padding: `${spacing["2xs"]} ${spacing.s}`,
+    borderRadius: radii.m,
     cursor: "pointer",
     backgroundColor: colors.alphaBlack0,
-    minWidth: 136,
-    height: 40,
+    height: 32,
     fontFamily: fonts.family.primary,
+    whiteSpace: "nowrap",
   },
   tabActive: {
     backgroundColor: colors.neutral100,
@@ -554,8 +784,8 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral500,
   },
   tabLabel: {
-    fontSize: fonts.size.m,
-    lineHeight: fonts.lineHeight.m,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
     fontWeight: fonts.weight.regular,
     color: "inherit",
   },
@@ -612,20 +842,18 @@ export const styles: Record<string, CSSProperties> = {
   // field (cream value 80×28 + bordered-white unit pill at right). Single-
   // cell columns push their content to the bottom so the second (isolated)
   // Hip aligns with BMI / Weight / Pulse on the lower row.
+  // Single responsive grid — one cell per vital. Column count is tier-driven
+  // (--vital-cols: 5 at 1440+, 4 at 1200–1439); the row-gap is sized so the
+  // absolute error line under a row-1 cell can't collide with the row below.
   vitalsGrid: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "stretch",
-    gap: spacing.l,
+    display: "grid",
+    gridTemplateColumns: "repeat(var(--vital-cols), minmax(0, 1fr))",
+    columnGap: "var(--vital-col-gap)",
+    rowGap: "var(--vital-row-gap)",
+    alignItems: "start",
     // Reserve space below the bottom row so absolutely-positioned error
     // helper text ("Enter valid details …") doesn't overlap the card edge.
     paddingBottom: spacing.l,
-  },
-  vitalColumn: {
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "flex-end",
-    gap: spacing["2xl"],
   },
   vitalCell: {
     position: "relative" as const,

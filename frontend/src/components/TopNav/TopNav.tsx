@@ -18,12 +18,16 @@ type TopNavProps = {
   // passes "New Prescription" since that's the user's intent there even
   // though the action still opens the booking flow.
   primaryActionLabel?: string;
+  // Colour treatment for the primary CTA. Defaults to the peach "primary"
+  // button; the Prescription page passes "secondary" so "New Prescription"
+  // reads green (secondary/700) and distinguishes itself from booking.
+  primaryActionVariant?: "primary" | "secondary";
   // Switches the active home tab. Passed from HomePage so the SessionTray
   // can route the doctor back to the Prescription form on click.
   onNavigate?: (tab: NavTab) => void;
 };
 
-export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, isBooking, primaryActionLabel, onNavigate }: TopNavProps) {
+export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, isBooking, primaryActionLabel, primaryActionVariant = "primary", onNavigate }: TopNavProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -239,7 +243,10 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       <div style={styles.actions}>
         {!isBooking && (
           <Button
-            variant="primary"
+            // "secondarySolid" = green resting at secondary/700 with a
+            // darken-on-hover to /800 (so the New Prescription CTA gets the
+            // same hover feedback as the peach New Appointment CTA).
+            variant={primaryActionVariant === "secondary" ? "secondarySolid" : "primary"}
             size="sm"
             iconLeft={<PlusIcon style={{ width: 'var(--topnav-cta-icon)', height: 'var(--topnav-cta-icon)', fill: '#fff' }} />}
             style={{ padding: '0 var(--topnav-cta-padx)' }}

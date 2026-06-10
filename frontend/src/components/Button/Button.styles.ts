@@ -139,6 +139,26 @@ export const variants = {
     },
   },
 
+  // Solid green CTA — resting at secondary/700 (the New Prescription button),
+  // darkening to secondary/800 on hover (mirrors how the primary CTA darkens).
+  secondarySolid: {
+    default: {
+      backgroundColor: colors.secondary700,
+      borderColor: colors.secondary700,
+      color: colors.neutral100,
+    },
+    hover: {
+      backgroundColor: colors.secondary800,
+      borderColor: colors.secondary800,
+      color: colors.neutral100,
+    },
+    disabled: {
+      backgroundColor: colors.secondary300,
+      borderColor: colors.secondary300,
+      color: colors.neutral100,
+    },
+  },
+
   secondaryLight: {
     default: {
       borderColor: colors.secondary600,

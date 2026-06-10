@@ -297,6 +297,12 @@ body {
   --book-header-mb: 20px;
   --book-footer-mt: 16px;
   --book-clearlink-mb: 6px;
+
+  /* Prescription (Rx Pad) page — form container + vitals grid */
+  --rx-content-max: 1120px;   /* fixed cap; left/right gutters stretch/squeeze */
+  --vital-cols: 6;            /* vitals grid columns — roomy tier (tight, fits more per row) */
+  --vital-col-gap: 12px;
+  --vital-row-gap: 28px;      /* room for the absolute error line under a row */
 }
 /* ─── Interval 1 (1200–1439): compact tier ───────────────────────────
    Only the TYPE scale and the universal CONTROL primitives step down
@@ -334,6 +340,11 @@ body {
     --book-col-form: 480px;
     --book-col-right: 280px;
     --book-grid-gap: 12px;
+
+    /* Prescription vitals — one fewer column + tighter gap at compact.
+       --rx-content-max holds (fixed cap, gutters absorb the difference). */
+    --vital-cols: 5;
+    --vital-col-gap: 10px;
 
     /* Header chrome compacts at 1200–1439 */
     --topnav-h: 56px;            /* shorter header */

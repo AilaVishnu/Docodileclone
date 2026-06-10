@@ -30,6 +30,8 @@ import { ReactComponent as CalendarIcon } from "../../assets/icons/calendar.svg"
 import { ReactComponent as ReorderIcon } from "../../assets/icons/reorder.svg";
 import { ReactComponent as TuningIcon } from "../../assets/icons/tuning.svg";
 import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg";
+import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
+import { ReactComponent as ShareIcon } from "../../assets/icons/share.svg";
 import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
@@ -121,6 +123,15 @@ const VITAL_COLUMNS: VitalCell[][] = [
     { label: "Hip", unit: "cm", unitWidth: 44 },
   ],
 ];
+
+// Flattened, render-order list of the 10 vital cells. Keeps the original
+// `${columnIndex}-${rowIndex}` key so vitalState (built from VITAL_COLUMNS)
+// still resolves — only the layout changed (column-pairs → one responsive
+// grid). Row-major order reads BP·BMI / Height·Weight / … pairing related
+// vitals next to each other.
+const VITAL_CELLS: { cell: VitalCell; cellKey: string }[] = VITAL_COLUMNS.flatMap(
+  (col, ci) => col.map((cell, ri) => ({ cell, cellKey: `${ci}-${ri}` })),
+);
 
 // Figma node 2073:3030 — History section. 2×2 grid of cream-filled fields.
 // Each row carries the `field` key for the suggestion API
@@ -1271,31 +1282,37 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       .finally(() => setTemplatesBusy(false));
   };
 
-  // Tuning button dropdown items — open/close + outside-click handling lives
-  // inside <PopoverMenu>, so we just declare the actions here.
-  const tuningMenuItems = [
-    {
-      label: "+ New Visit",
-      onClick: () => void handleAddVisit(),
-    },
-    {
-      label: "Clear all",
-      onClick: () => {
-        setVitalState(buildVitalState(undefined));
-        setReviewDate(null);
-        setReviewDays("");
-        setReviewNotesValue("");
-        setRxRows(Array.from({ length: 5 }, (_, i) => blankRxRow(i + 1)));
-        setHistoryValues({
-          family_history: "", allergies: "", personal_history: "", past_medical_history: "",
-        });
-        setDiagnosisValue("");
-        setComplaintsValue("");
-        setTestsValue("");
-        setNotesForPatientValue("");
-        setPrivateNotesValue("");
-      },
-    },
+  // Clear all — wipes every field on the current prescription back to blank.
+  // Relocated out of the old "tuning" dropdown into the section action bar
+  // (it acts on the active prescription, same scope as Print / Download /
+  // Share). Constructive "+ New Visit" deliberately lives elsewhere (the visit
+  // tab strip) so a mis-click can never swap create-a-visit for wipe-the-form.
+  const handleClearAll = () => {
+    setVitalState(buildVitalState(undefined));
+    setReviewDate(null);
+    setReviewDays("");
+    setReviewNotesValue("");
+    setRxRows(Array.from({ length: 5 }, (_, i) => blankRxRow(i + 1)));
+    setHistoryValues({
+      family_history: "", allergies: "", personal_history: "", past_medical_history: "",
+    });
+    setDiagnosisValue("");
+    setComplaintsValue("");
+    setTestsValue("");
+    setNotesForPatientValue("");
+    setPrivateNotesValue("");
+  };
+
+  // Contact / patient actions — collapsed into the header "⋯" kebab so the
+  // sticky header carries the stable patient-level actions (call / email /
+  // video / edit) without crowding the section nav beside it.
+  const contactMenuItems = [
+    ...(selectedPatient?.phone
+      ? [{ label: `Call ${selectedPatient.phone}`, onClick: () => { window.location.href = `tel:${selectedPatient.phone}`; } }]
+      : []),
+    { label: "Email patient", onClick: () => {} },
+    { label: "Video call", onClick: () => {} },
+    { label: "Edit patient info", onClick: () => setShowEditPatient(true) },
   ];
 
   // ── Header + right-area content driven by which left-rail action is active.
@@ -1909,23 +1926,39 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
 
   return (
     <div ref={pageRootRef} style={styles.page}>
-      {/* Sticky page header — on the patient chart the PATIENT is the context,
-          so the centered title is the patient identity (avatar + T--- eyebrow
-          + name) rather than the module name. Contact/edit actions sit at the
-          top-right as icon-only buttons. */}
-      <PageHeader
-        wrapTitle={false}
-        title={
+      {/* Sticky page header — single compact row, capped at the form width
+          (--rx-content-max) and centered so the patient identity LEFT-aligns
+          to the prescription form below. Layout: back · avatar+name · section
+          nav (inline) · flexible gap · contact kebab · AI. Roughly half the
+          height of the old two-row stack. */}
+      <header style={styles.rxHeader}>
+        {/* Back arrow lives in the left gutter (outside the form-aligned inner)
+            so the AVATAR — not the arrow — left-aligns to the form below. */}
+        <button
+          type="button"
+          style={styles.rxBackBtn}
+          onClick={() => {
+            setSelectedPatient(null);
+            setSelectedAppointmentId(null);
+          }}
+          aria-label="Back to patients"
+          title="Back to patients"
+        >
+          <ArrowLeftIcon width={20} height={20} />
+        </button>
+
+        <div style={styles.rxHeaderPad}>
+        <div style={styles.rxHeaderInner}>
           <div style={styles.headerPatient}>
-            <div style={styles.headerAvatar}>
+            <div style={{ ...styles.headerAvatar, width: 38, height: 38 }}>
               <img
                 src={pickAvatar({
                   gender: selectedPatient?.gender,
                   ageYears: selectedPatient?.age != null ? Math.floor(selectedPatient.age / 12) : null,
                 })}
                 alt=""
-                width={40}
-                height={40}
+                width={38}
+                height={38}
                 style={{ display: "block", objectFit: "contain" }}
               />
             </div>
@@ -1939,13 +1972,62 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
               })()}
             </span>
           </div>
-        }
-        onBack={() => {
-          setSelectedPatient(null);
-          setSelectedAppointmentId(null);
-        }}
-        backLabel="Back to patients"
-      />
+
+          {/* Flexible gap pushes nav + actions to the right side. */}
+          <div style={styles.rxHeaderSpacer} />
+
+          {/* Section nav — Visits / Files / Timeline / Bills, on the right.
+              Icon-rail: inactive sections are icon-only (label via tooltip);
+              only the active section shows its label + count under a peach
+              underline. No fill, so it never reads as the CTA or a visit chip. */}
+          <nav style={styles.headerSectionNav} role="tablist" aria-label="Patient record sections">
+            {ACTION_META.map((a, i) => {
+              const isActive = activeAction === i;
+              const count = countFor(i);
+              return (
+                <button
+                  key={a.label}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-label={a.label}
+                  title={a.label}
+                  style={{ ...styles.headerSectionTab, ...(isActive ? styles.headerSectionTabActive : {}) }}
+                  onClick={() => setActiveAction(i)}
+                >
+                  <span style={styles.headerSectionIcon}>
+                    {a.icon}
+                    {!isActive && count > 0 && <span style={styles.headerSectionDot} aria-hidden="true" />}
+                  </span>
+                  {isActive && <span>{a.label}</span>}
+                  {isActive && count > 0 && (
+                    <span style={styles.headerSectionBadge}>{count}</span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Stable patient-level actions: contact "⋯" kebab (call / email /
+              video / edit) + AI summary. Document actions live in the bottom bar. */}
+          <PopoverMenu
+            trigger={<span style={styles.kebabTrigger} aria-hidden="true">⋯</span>}
+            items={contactMenuItems}
+            ariaLabel="Patient contact and actions"
+          />
+          <button
+            type="button"
+            style={{ ...styles.headerActionBtn, ...(showAiSummary ? { backgroundColor: colors.primary100 } : {}) }}
+            onClick={() => setShowAiSummary((v) => !v)}
+            aria-label="AI Summary"
+            aria-expanded={showAiSummary}
+            title="AI Summary"
+          >
+            <span style={{ fontSize: 18, lineHeight: 1 }}>✨</span>
+          </button>
+        </div>
+        </div>
+      </header>
 
       <div style={styles.body}>
         {/* ─── Form area — content swapped via activeAction. Locked
@@ -2215,15 +2297,19 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                     <span style={styles.tabLabel}>{formatVisitLabel(v.visitDate)}</span>
                   </div>
                 ))}
-                {/* "+ New Visit" lives inside the tuning dropdown now —
-                    see tuningMenuItems above. */}
-                <div style={styles.tuningWrap}>
-                  <PopoverMenu
-                    trigger={<TuningIcon width={24} height={24} />}
-                    items={tuningMenuItems}
-                    ariaLabel="Visit settings"
-                  />
-                </div>
+                {/* "+ New Visit" — the "new tab" slot, sitting right after the
+                    last visit. Deliberately the ONLY create action here and
+                    kept clear of anything destructive. */}
+                <button
+                  type="button"
+                  style={styles.newVisitBtn}
+                  onClick={handleAddVisit}
+                  disabled={saving}
+                  title="Add a new visit"
+                >
+                  <span style={styles.newVisitPlus} aria-hidden="true">+</span>
+                  <span>{saving ? "Creating…" : "New Visit"}</span>
+                </button>
               </div>
 
               {/* Cream sheet wrapping all visit-content sections. Keyed by the
@@ -2255,10 +2341,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   </div>
                   {openSections.vitals && (
                     <div style={styles.vitalsGrid}>
-                      {VITAL_COLUMNS.map((col, ci) => (
-                        <div key={ci} style={styles.vitalColumn}>
-                          {col.map((v, ri) => {
-                            const cellKey = `${ci}-${ri}`;
+                      {VITAL_CELLS.map(({ cell: v, cellKey }) => {
                             const cell = vitalState[cellKey];
                             const canToggle = !!UNIT_TOGGLES[cell.unit];
                             // BP is rendered as two inputs separated by a fixed `/`.
@@ -2278,7 +2361,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                               ? `Valid: ${rangeForLabel.min}–${rangeForLabel.max} ${cell.unit}`
                               : undefined;
                             return (
-                              <div key={ri} style={styles.vitalCell}>
+                              <div key={cellKey} style={styles.vitalCell}>
                                 <span style={styles.vitalLabel}>{v.label}</span>
                                 <div style={styles.vitalInputRow} title={!valueValid ? rangeHint : undefined}>
                                   {isBp ? (
@@ -2331,9 +2414,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                 )}
                               </div>
                             );
-                          })}
-                        </div>
-                      ))}
+                      })}
                     </div>
                   )}
                 </div>
@@ -2911,11 +2992,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
           // Drives the SessionBar's 24h "Resume" buffer in readOnly mode.
           // After 24h since the visit's sessionEndedAt the Resume pill hides.
           recordedEndedAtMs={activeVisit?.sessionEndedAt ? new Date(activeVisit.sessionEndedAt).getTime() : null}
-          onPrint={() => handlePrintPrescription("print")}
-          // Direct server-side PDF download — no preview modal, no browser
-          // dialog. Same template + data as Print.
-          onDownload={() => handlePrintPrescription("download")}
-          onShare={handleShareWhatsApp}
+          // Print / Download / Share moved to the sticky PageHeader's right side.
           onActiveChange={setFormActive}
           onStart={handleSessionStart}
           onEnd={handleSessionEnd}
@@ -2983,64 +3060,41 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
         </div>
       </Modal>
 
-      {/* ─── Floating bottom bar — section nav (left) + contact actions
-          (right) + AI summary. Patient record navigation moved here from the
-          left rail so the form spans the full content width. */}
-      <div style={styles.bottomBar}>
-        <div style={styles.bottomNav} role="tablist" aria-label="Patient record sections">
-          {ACTION_META.map((a, i) => {
-            const isActive = activeAction === i;
-            const count = countFor(i);
-            return (
-              <button
-                key={a.label}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                style={{ ...styles.bottomNavItem, ...(isActive ? styles.bottomNavItemActive : {}) }}
-                onClick={() => setActiveAction(i)}
-              >
-                {a.icon}
-                <span>{a.label}</span>
-                {count > 0 && (
-                  <span style={{ ...styles.bottomNavBadge, ...(isActive ? styles.bottomNavBadgeActive : {}) }}>
-                    {count}
-                  </span>
-                )}
+      {/* ─── Floating bottom bar — the ACTIVE SECTION'S actions. Section nav
+          + contact actions moved up to the sticky header; this bar now adapts
+          to which section is open. Output actions (Download / Print / Share)
+          group on the left; the destructive Clear all is set apart behind a
+          divider. Coming-soon sections (Timeline / Bills) render no bar. */}
+      {activeAction <= 1 && (
+        <div style={styles.bottomBar}>
+          {activeAction === 0 ? (
+            <>
+              <button type="button" style={styles.barBtn} onClick={() => handlePrintPrescription("download")}>
+                <DownloadIcon width={18} height={18} />
+                <span>Download</span>
               </button>
-            );
-          })}
-        </div>
-
-        <div style={styles.bottomDivider} aria-hidden />
-
-        <div style={styles.bottomActions}>
-          {selectedPatient?.phone && (
-            <a href={`tel:${selectedPatient.phone}`} style={styles.bottomActionBtn} title={selectedPatient.phone} aria-label={`Call ${selectedPatient.phone}`}>
-              <PhoneIcon style={styles.actionIcon} />
-            </a>
+              <button type="button" style={styles.barBtn} onClick={() => handlePrintPrescription("print")}>
+                <PrinterIcon width={18} height={18} />
+                <span>Print</span>
+              </button>
+              <button type="button" style={styles.barBtn} onClick={handleShareWhatsApp}>
+                <ShareIcon width={18} height={18} />
+                <span>Share</span>
+              </button>
+              <div style={styles.barDivider} aria-hidden />
+              <button type="button" style={{ ...styles.barBtn, ...styles.barBtnDanger }} onClick={handleClearAll}>
+                <TrashIcon width={18} height={18} />
+                <span>Clear all</span>
+              </button>
+            </>
+          ) : (
+            <button type="button" style={styles.barBtn} onClick={() => setShowAddModal(true)}>
+              <FileIcon style={{ width: 18, height: 18 }} />
+              <span>Add file</span>
+            </button>
           )}
-          <button type="button" style={styles.bottomActionBtn} title="Email Patient" aria-label="Email Patient">
-            <LetterIcon style={styles.actionIcon} />
-          </button>
-          <button type="button" style={styles.bottomActionBtn} title="Video Call Patient" aria-label="Video Call Patient">
-            <VideocameraIcon style={styles.actionIcon} />
-          </button>
-          <button type="button" style={styles.bottomActionBtn} title="Edit Patient Info" aria-label="Edit Patient Info" onClick={() => setShowEditPatient(true)}>
-            <PenIcon style={styles.actionIcon} />
-          </button>
-          <button
-            type="button"
-            style={{ ...styles.bottomActionBtn, ...(showAiSummary ? { backgroundColor: colors.primary100 } : {}) }}
-            title="AI Summary"
-            aria-label="AI Summary"
-            aria-expanded={showAiSummary}
-            onClick={() => setShowAiSummary((v) => !v)}
-          >
-            <span style={{ fontSize: 18, lineHeight: 1 }}>✨</span>
-          </button>
         </div>
-      </div>
+      )}
 
       {showAiSummary && (
         <>

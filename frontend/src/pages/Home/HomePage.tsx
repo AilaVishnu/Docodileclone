@@ -328,6 +328,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
             onNewAppointment={handleNewAppointment}
             isBooking={isBooking}
             primaryActionLabel={activeTab === "Prescription" ? "New Prescription" : undefined}
+            primaryActionVariant={activeTab === "Prescription" ? "secondary" : "primary"}
             onNavigate={setActiveTab}
           />
           <main style={styles.mainContent}>
