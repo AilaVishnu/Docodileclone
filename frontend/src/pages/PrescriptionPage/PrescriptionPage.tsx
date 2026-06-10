@@ -1,7 +1,6 @@
 import React from "react";
 import { styles } from "./PrescriptionPage.styles";
 import { pickAvatar } from "../../utils/avatar";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 // Action-list icons exported from Figma node 2059:6764 (currentColor-normalized)
 import { ReactComponent as VisitsIcon } from "../../assets/icons/visits.svg";
 import { ReactComponent as PulseIcon } from "../../assets/icons/pulse.svg";
@@ -1303,16 +1302,36 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     setPrivateNotesValue("");
   };
 
+  // Download every file in the patient's Files tab (best-effort: triggers a
+  // browser download per file that has a URL).
+  const handleDownloadAllFiles = () => {
+    const downloadable = serverFiles.filter((f) => f.fileUrl);
+    if (!downloadable.length) {
+      showToast("No files to download");
+      return;
+    }
+    downloadable.forEach((f) => {
+      const a = document.createElement("a");
+      a.href = f.fileUrl as string;
+      a.download = f.name || "";
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+    showToast(`Downloading ${downloadable.length} file${downloadable.length === 1 ? "" : "s"}…`);
+  };
+
   // Contact / patient actions — collapsed into the header "⋯" kebab so the
   // sticky header carries the stable patient-level actions (call / email /
   // video / edit) without crowding the section nav beside it.
   const contactMenuItems = [
     ...(selectedPatient?.phone
-      ? [{ label: `Call ${selectedPatient.phone}`, onClick: () => { window.location.href = `tel:${selectedPatient.phone}`; } }]
+      ? [{ icon: <PhoneIcon style={styles.kebabItemIcon} />, label: `${selectedPatient.phone}`, onClick: () => { window.location.href = `tel:${selectedPatient.phone}`; } }]
       : []),
-    { label: "Email patient", onClick: () => {} },
-    { label: "Video call", onClick: () => {} },
-    { label: "Edit patient info", onClick: () => setShowEditPatient(true) },
+    { icon: <LetterIcon style={styles.kebabItemIcon} />, label: "Email patient", onClick: () => {} },
+    { icon: <VideocameraIcon style={styles.kebabItemIcon} />, label: "Video call", onClick: () => {} },
+    { icon: <PenIcon style={styles.kebabItemIcon} />, label: "Edit patient info", onClick: () => setShowEditPatient(true) },
   ];
 
   // ── Header + right-area content driven by which left-rail action is active.
@@ -1995,12 +2014,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   style={{ ...styles.headerSectionTab, ...(isActive ? styles.headerSectionTabActive : {}) }}
                   onClick={() => setActiveAction(i)}
                 >
-                  <span style={styles.headerSectionIcon}>
-                    {a.icon}
-                    {!isActive && count > 0 && <span style={styles.headerSectionDot} aria-hidden="true" />}
-                  </span>
-                  {isActive && <span>{a.label}</span>}
-                  {isActive && count > 0 && (
+                  <span style={styles.headerSectionIcon}>{a.icon}</span>
+                  <span>{a.label}</span>
+                  {count > 0 && (
                     <span style={styles.headerSectionBadge}>{count}</span>
                   )}
                 </button>
@@ -2009,22 +2025,13 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
           </nav>
 
           {/* Stable patient-level actions: contact "⋯" kebab (call / email /
-              video / edit) + AI summary. Document actions live in the bottom bar. */}
+              video / edit). Document actions live in the bottom bar; the AI
+              summary now lives in the Info tab. */}
           <PopoverMenu
             trigger={<span style={styles.kebabTrigger} aria-hidden="true">⋯</span>}
             items={contactMenuItems}
             ariaLabel="Patient contact and actions"
           />
-          <button
-            type="button"
-            style={{ ...styles.headerActionBtn, ...(showAiSummary ? { backgroundColor: colors.primary100 } : {}) }}
-            onClick={() => setShowAiSummary((v) => !v)}
-            aria-label="AI Summary"
-            aria-expanded={showAiSummary}
-            title="AI Summary"
-          >
-            <span style={{ fontSize: 18, lineHeight: 1 }}>✨</span>
-          </button>
         </div>
         </div>
       </header>
@@ -2053,7 +2060,38 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
           // every field below without needing to wire each one.
           onBlur={handleFormBlur}>
 
-          {comingSoonLabel ? (
+          {activeAction === 2 ? (
+            // Timeline — chronological feed of the patient's visits (newest
+            // first), each with a short synopsis (complaints → diagnosis).
+            // File / Rx events interleave here once an activity feed exists.
+            <div style={styles.timeline}>
+              {visits.length === 0 ? (
+                <p style={styles.comingSoonBody}>No visits yet.</p>
+              ) : (
+                <div style={styles.timelineList}>
+                  <div style={styles.timelineLine} aria-hidden />
+                  {visits.map((v, i) => ({ v, n: i + 1 })).reverse().map(({ v, n }) => {
+                    const parts: string[] = [];
+                    if (v.complaints) parts.push(v.complaints);
+                    if (v.diagnosis) parts.push(`Dx: ${v.diagnosis}`);
+                    const synopsis = parts.join(" · ");
+                    return (
+                      <div key={v.id} style={styles.timelineItem}>
+                        <span style={styles.timelineDot}><VisitsIcon style={styles.timelineDotIcon} /></span>
+                        <div style={styles.timelineContent}>
+                          <div style={styles.timelineHead}>
+                            <span style={styles.timelineTitle}>{`Visit ${n}`}</span>
+                            <span style={styles.timelineDate}>{formatVisitLabel(v.visitDate)}</span>
+                          </div>
+                          <p style={styles.timelineSynopsis}>{synopsis || "Consultation"}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : comingSoonLabel ? (
             <div style={styles.comingSoon}>
               {/* Section title moved into the sticky <PageHeader/>; only the
                   "Coming soon" body remains here. */}
@@ -2117,35 +2155,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                     <span style={{ textAlign: "center" }}>{listViewConfig.dateColumn}</span>
                     <span style={{ textAlign: "center" }}>Actions</span>
                   </div>
-                  {/* "+ Add file" affordance — replaces the page-header CTA.
-                      In list view it sits as a row at the top of the list. */}
-                  <div
-                    role="button"
-                    tabIndex={canEditForm ? 0 : -1}
-                    onClick={() => canEditForm && setShowAddModal(true)}
-                    onKeyDown={(e) => {
-                      if (!canEditForm) return;
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setShowAddModal(true);
-                      }
-                    }}
-                    style={{
-                      ...styles.reportRow,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: spacing.xs,
-                      color: colors.neutral900,
-                      border: `1px dashed ${colors.primary300}`,
-                      cursor: canEditForm ? "pointer" : "not-allowed",
-                      opacity: canEditForm ? 1 : 0.55,
-                    }}
-                    title={!canEditForm ? (isLatestVisit ? "Start a session to upload" : "Past visits are read-only") : undefined}
-                  >
-                    <span style={{ fontSize: fonts.size.h5, lineHeight: 1, fontFamily: fonts.family.primary }}>+</span>
-                    <span style={{ fontSize: fonts.size.m, fontFamily: fonts.family.primary }}>{listViewConfig.addLabel}</span>
-                  </div>
+                  {/* Add-file affordance lives in the floating action bar now. */}
                   {displayRows.map((r, i) => (
                     <div
                       key={r.id ?? i}
@@ -2179,35 +2189,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                    inner tile (file thumbnail placeholder + mic chip) and
                    name + date + size below. Kebab handle in top-right. */
                 <div style={styles.reportsGrid}>
-                  {/* "+ Add file" tile — replaces the page-header CTA.
-                      In grid view it sits as a dashed-bordered card at the
-                      start of the grid. */}
-                  <div
-                    role="button"
-                    tabIndex={canEditForm ? 0 : -1}
-                    onClick={() => canEditForm && setShowAddModal(true)}
-                    onKeyDown={(e) => {
-                      if (!canEditForm) return;
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setShowAddModal(true);
-                      }
-                    }}
-                    style={{
-                      ...styles.reportCard,
-                      backgroundColor: "transparent",
-                      border: `1px dashed ${colors.primary300}`,
-                      cursor: canEditForm ? "pointer" : "not-allowed",
-                      opacity: canEditForm ? 1 : 0.55,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: spacing.xs,
-                    }}
-                    title={!canEditForm ? (isLatestVisit ? "Start a session to upload" : "Past visits are read-only") : undefined}
-                  >
-                    <span style={{ fontSize: fonts.size.h2, lineHeight: 1, fontFamily: fonts.family.primary, color: colors.neutral900 }}>+</span>
-                    <span style={{ fontSize: fonts.size.m, fontFamily: fonts.family.primary, color: colors.neutral900 }}>{listViewConfig.addLabel}</span>
-                  </div>
+                  {/* Add-file affordance lives in the floating action bar now. */}
                   {displayRows.map((r, i) => (
                     <div
                       key={r.id ?? i}
@@ -2293,7 +2275,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                     style={{ ...styles.tab, ...(activeTab === i ? styles.tabActive : styles.tabInactive) }}
                     onClick={() => setActiveTab(i)}
                   >
-                    <span style={styles.tabCaption}>{`visit ${i + 1}`}</span>
+                    <span style={{ ...styles.tabNumber, ...(activeTab === i ? styles.tabNumberActive : {}) }}>{i + 1}</span>
                     <span style={styles.tabLabel}>{formatVisitLabel(v.visitDate)}</span>
                   </div>
                 ))}
@@ -3088,10 +3070,16 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
               </button>
             </>
           ) : (
-            <button type="button" style={styles.barBtn} onClick={() => setShowAddModal(true)}>
-              <FileIcon style={{ width: 18, height: 18 }} />
-              <span>Add file</span>
-            </button>
+            <>
+              <button type="button" style={styles.barBtn} onClick={() => setShowAddModal(true)}>
+                <FileIcon style={{ width: 18, height: 18 }} />
+                <span>Add file</span>
+              </button>
+              <button type="button" style={styles.barBtn} onClick={handleDownloadAllFiles}>
+                <DownloadIcon width={18} height={18} />
+                <span>Download all</span>
+              </button>
+            </>
           )}
         </div>
       )}

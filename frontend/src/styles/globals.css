@@ -300,6 +300,15 @@ body {
 
   /* Prescription (Rx Pad) page — form container + vitals grid */
   --rx-content-max: 1120px;   /* fixed cap; left/right gutters stretch/squeeze */
+
+  /* Shared sticky page-header chrome — used by BOTH the shared <PageHeader>
+     and the prescription rxHeader so every page top bar matches. Swap these
+     four values to retheme every header at once. */
+  --header-bg: var(--active-shade-100);  /* = primary100; theme-aware like the rest of the chrome */
+  --header-border: transparent;          /* no hairline (set a colour here to re-add one) */
+  --header-h: 56px;              /* inner row min-height */
+  --header-pad-y: 8px;           /* vertical padding → ~72px tall */
+  --header-back-inset: 8px;      /* back-arrow distance from the bar's left edge */
   --vital-cols: 6;            /* vitals grid columns — roomy tier (tight, fits more per row) */
   --vital-col-gap: 12px;
   --vital-row-gap: 28px;      /* room for the absolute error line under a row */

@@ -23,9 +23,9 @@ export const styles: Record<string, CSSProperties> = {
     position: "sticky",
     top: 0,
     zIndex: 100,
-    backgroundColor: colors.primary200,
-    // Match the sidebar tint so the bar reads as part of the chrome.
-    borderBottom: `${strokes.xs} solid ${colors.active.shade300}`,
+    // Shared header chrome — white, no hairline (see globals.css --header-*).
+    backgroundColor: "var(--header-bg)",
+    borderBottom: "1px solid var(--header-border)",
     // Full-bleed horizontally: cancel the scroll container's side padding, then
     // re-add it on `inner` so the back arrow can sit at the bar's true left edge.
     //
@@ -57,9 +57,9 @@ export const styles: Record<string, CSSProperties> = {
     marginRight: "auto",
     paddingLeft: fluidSpacing.outerX,
     paddingRight: fluidSpacing.outerX,
-    minHeight: "56px",
-    paddingTop: spacing.s,
-    paddingBottom: spacing.s,
+    minHeight: "var(--header-h)",
+    paddingTop: "var(--header-pad-y)",
+    paddingBottom: "var(--header-pad-y)",
     boxSizing: "border-box",
   },
 
@@ -85,7 +85,7 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     position: "absolute",
-    left: spacing.m,
+    left: "var(--header-back-inset)",
     top: 0,
     bottom: 0,
     width: "32px",
@@ -97,9 +97,10 @@ export const styles: Record<string, CSSProperties> = {
 
   title: {
     margin: 0,
-    fontSize: fonts.size.h5,
-    fontWeight: fonts.weight.regular,
-    fontFamily: fonts.family.secondary,
+    // Match the New Prescription CTA: sans (Inter) at the button font size.
+    fontSize: "var(--btn-fs)",
+    fontWeight: fonts.weight.semibold,
+    fontFamily: fonts.family.primary,
     color: colors.neutral900,
     display: "flex",
     alignItems: "center",

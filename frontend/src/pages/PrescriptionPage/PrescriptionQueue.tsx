@@ -10,6 +10,7 @@ import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { ReactComponent as RestartIcon } from "../../assets/icons/restart-24.svg";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { ReactComponent as StarIcon } from "../../assets/icons/star.svg";
+import { ChevronDown } from "../../components/icons/ChevronDown";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { styles } from "./PrescriptionQueue.styles";
 import { Toast } from "../../components/Toast";
@@ -228,7 +229,7 @@ export function PrescriptionQueue({ onSelect, refreshKey }: PrescriptionQueuePro
 
   const isToday = sameDay(selectedDate, new Date());
   const dateLabel = isToday
-    ? "Today’s"
+    ? "Today"
     : selectedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
 
   return (
@@ -239,15 +240,21 @@ export function PrescriptionQueue({ onSelect, refreshKey }: PrescriptionQueuePro
             <span
               onClick={() => setShowDatePicker((v) => !v)}
               style={{
-                textDecoration: "underline",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
                 cursor: "pointer",
                 color: colors.neutral900,
+                backgroundColor: "transparent",
+                border: `1px solid ${colors.primary400}`,
+                borderRadius: radii.m,
+                padding: "4px 12px",
                 position: "relative",
-                display: "inline-block",
                 zIndex: showDatePicker ? 1100 : "auto",
               }}
             >
               {dateLabel}
+              <ChevronDown open={showDatePicker} />
               {showDatePicker && (
                 <DatePicker
                   selectedDate={selectedDate}

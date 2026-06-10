@@ -572,7 +572,8 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 value={selectedDoctorId}
                 onChange={(val) => setSelectedDoctorId(val)}
                 placeholder="Select Doctor"
-                fontSize={fonts.size.h5}
+                variant="chip"
+                fontSize="var(--btn-fs)"
               />
             </>
           )

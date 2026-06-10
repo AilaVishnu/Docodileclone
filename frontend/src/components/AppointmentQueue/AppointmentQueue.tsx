@@ -6,6 +6,7 @@ import { DatePicker } from "../DatePicker/DatePicker";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { BookAppointment, EditAppointmentData } from "./BookAppointment";
 import { PageHeader } from "../PageHeader/PageHeader";
+import { ChevronDown } from "../icons/ChevronDown";
 import { BillMedicinesModal } from "./BillMedicinesModal";
 import { BillCard } from "../BillCard/BillCard";
 import { DoctorStatusCard } from "./DoctorStatusCard";
@@ -376,7 +377,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
   };
 
   const isQueueToday = isToday(selectedDate);
-  const dateText = isQueueToday ? "Today's" : formatDate(selectedDate);
+  const dateText = isQueueToday ? "Today" : formatDate(selectedDate);
 
   if (isLoading && doctors.length === 0) {
     return <div style={{ padding: "40px", textAlign: "center" }}>Loading Queue...</div>;
@@ -391,15 +392,21 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
             <span
               onClick={() => setShowDatePicker(!showDatePicker)}
               style={{
-                textDecoration: "underline",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
                 cursor: "pointer",
                 color: colors.neutral900,
+                backgroundColor: "transparent",
+                border: `1px solid ${colors.primary400}`,
+                borderRadius: radii.m,
+                padding: "4px 12px",
                 position: "relative",
-                display: "inline-block",
                 zIndex: showDatePicker ? 1100 : "auto",
               }}
             >
               {dateText}
+              <ChevronDown open={showDatePicker} />
               {showDatePicker && (
                 <DatePicker
                   selectedDate={selectedDate}

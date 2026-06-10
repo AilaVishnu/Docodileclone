@@ -11,6 +11,8 @@ export type PopoverMenuItem = {
   label: string;
   onClick: () => void;
   destructive?: boolean;
+  /** Optional leading icon, rendered before the label. */
+  icon?: React.ReactNode;
 };
 
 type PopoverMenuProps = {
@@ -62,6 +64,7 @@ export function PopoverMenu({ trigger, items, align = "right", ariaLabel }: Popo
                 setOpen(false);
               }}
             >
+              {item.icon && <span style={styles.itemIcon}>{item.icon}</span>}
               {item.label}
             </button>
           ))}
@@ -101,7 +104,9 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 1000,
   },
   item: {
-    display: "block",
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.xs,
     width: "100%",
     textAlign: "left",
     padding: `${spacing.xs} ${spacing.s}`,
@@ -113,6 +118,16 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: fonts.lineHeight.s,
     color: colors.neutral900,
     borderRadius: radii.xs,
+    whiteSpace: "nowrap",
+  },
+  itemIcon: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 18,
+    height: 18,
+    flexShrink: 0,
+    color: "currentColor",
   },
   itemDestructive: {
     color: "#c0392b",

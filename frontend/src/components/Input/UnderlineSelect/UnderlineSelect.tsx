@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { colors, fonts, radii } from "../../../styles/theme";
+import { ChevronDown } from "../../icons/ChevronDown";
 
 type UnderlineSelectOption = {
   label: string;
@@ -12,6 +13,12 @@ type UnderlineSelectProps = {
   onChange: (value: string) => void;
   placeholder?: string;
   fontSize?: string;
+  /**
+   * "underline" (default): serif label with an underline.
+   * "chip": sans label inside an outline pill — matches the header date chips
+   * in the queues. Same chevron either way.
+   */
+  variant?: "underline" | "chip";
 };
 
 export function UnderlineSelect({
@@ -20,7 +27,9 @@ export function UnderlineSelect({
   onChange,
   placeholder = "Select...",
   fontSize = fonts.size.h4,
+  variant = "underline",
 }: UnderlineSelectProps) {
+  const isChip = variant === "chip";
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -50,27 +59,28 @@ export function UnderlineSelect({
           gap: 6,
           cursor: "pointer",
           userSelect: "none",
+          ...(isChip
+            ? {
+                backgroundColor: "transparent",
+                border: `1px solid ${colors.primary400}`,
+                borderRadius: radii.m,
+                padding: "4px 12px",
+              }
+            : {}),
         }}
       >
         <span
           style={{
-            fontFamily: fonts.family.secondary,
+            fontFamily: isChip ? fonts.family.primary : fonts.family.secondary,
             fontSize,
-            fontWeight: 400,
+            fontWeight: isChip ? fonts.weight.semibold : 400,
             color: colors.neutral900,
-            textDecoration: "underline",
-            textUnderlineOffset: "4px",
+            ...(isChip ? {} : { textDecoration: "underline", textUnderlineOffset: "4px" }),
           }}
         >
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <svg
-          width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.neutral600}
-          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-          style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 160ms", flexShrink: 0 }}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+        <ChevronDown open={isOpen} />
       </span>
 
       {isOpen && (

@@ -31,16 +31,17 @@ export const styles: Record<string, CSSProperties> = {
   // Inner tabs ("All" / "Reports" / "Files") for the Files view — matches the
   // Rx Pad home filter-pill style (PrescriptionQueue.styles.tab), including
   // the tier-responsive --rxq-tab-padx variable for horizontal padding.
+  // Sized to match the visit chips (height 32, compact pill) for consistency.
   listTab: {
-    height: 40,
-    padding: `${spacing.xs} var(--rxq-tab-padx, 16px)`,
-    borderRadius: radii.xl,
+    height: 32,
+    padding: `${spacing["2xs"]} ${spacing.s}`,
+    borderRadius: radii.m,
     border: "none",
     backgroundColor: colors.alphaBlack0,
     color: colors.alphaBlack3,
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.m,
-    lineHeight: fonts.lineHeight.m,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
     cursor: "pointer",
     display: "inline-flex",
     alignItems: "center",
@@ -244,8 +245,9 @@ export const styles: Record<string, CSSProperties> = {
     position: "sticky",
     top: 0,
     zIndex: 100,
-    backgroundColor: colors.primary200,
-    borderBottom: `${strokes.xs} solid ${colors.active.shade300}`,
+    // Shared header chrome — see globals.css --header-* (matches PageHeader).
+    backgroundColor: "var(--header-bg)",
+    borderBottom: "1px solid var(--header-border)",
     // Full-bleed: cancel the page's horizontal padding so the bar paints
     // edge-to-edge; the inner re-centers content at the form width.
     marginLeft: `calc(-1 * ${fluidSpacing.outerX})`,
@@ -270,16 +272,16 @@ export const styles: Record<string, CSSProperties> = {
     maxWidth: "var(--rx-content-max)",
     marginLeft: "auto",
     marginRight: "auto",
-    minHeight: 56,
-    paddingTop: spacing["2xs"],
-    paddingBottom: spacing["2xs"],
+    minHeight: "var(--header-h)",
+    paddingTop: "var(--header-pad-y)",
+    paddingBottom: "var(--header-pad-y)",
     boxSizing: "border-box",
   },
   // Back arrow pinned in the left gutter (absolute → outside the inner flow),
   // so the avatar is the first inner element and aligns to the form edge.
   rxBackBtn: {
     position: "absolute",
-    left: spacing.xs,
+    left: "var(--header-back-inset)",
     top: 0,
     bottom: 0,
     width: 28,
@@ -315,10 +317,12 @@ export const styles: Record<string, CSSProperties> = {
     justifyContent: "center",
   },
   // Single inline line: "T--- Ramesh (M|64)". T--- is muted, name is dark.
+  // Patient name — sans (Inter) at the CTA font size, like the other header
+  // titles. This one stays LEFT-aligned (the prescription-file exception).
   headerName: {
-    fontSize: fonts.size.h5,
-    fontFamily: fonts.family.secondary,
-    fontWeight: fonts.weight.regular,
+    fontSize: "var(--btn-fs)",
+    fontFamily: fonts.family.primary,
+    fontWeight: fonts.weight.semibold,
     color: colors.neutral900,
     whiteSpace: "nowrap" as const,
   },
@@ -342,6 +346,13 @@ export const styles: Record<string, CSSProperties> = {
     cursor: "pointer",
     color: colors.neutral700,
   },
+  // Leading icon inside each contact-kebab menu item ([phone] +91…, etc.).
+  kebabItemIcon: {
+    width: 18,
+    height: 18,
+    flexShrink: 0,
+    color: "currentColor",
+  },
   // Three-dot contact kebab trigger sitting in the header actions slot.
   kebabTrigger: {
     display: "inline-flex",
@@ -363,27 +374,31 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing.xs,
     minWidth: 0,
   },
-  // Section nav (Visits / Files / Timeline / Bills) — a centered pill row.
+  // Section nav (Visits / Files / Timeline / Bills) — full-height underline
+  // tabs. Stretched to the bar's full height (cancelling the inner's vertical
+  // padding) so the active underline lands flush on the header's bottom edge.
   headerSectionNav: {
     display: "flex",
-    alignItems: "center",
-    gap: spacing["3xs"],
+    alignItems: "stretch",
+    alignSelf: "stretch",
+    gap: spacing.m,
     flexWrap: "nowrap",
+    marginTop: "calc(-1 * var(--header-pad-y))",
+    marginBottom: "calc(-1 * var(--header-pad-y))",
   },
-  // Icon-rail nav: inactive sections are icon-only; only the ACTIVE section
-  // spells out its label, under a peach underline. No fill anywhere, so it
-  // can't be mistaken for the green CTA or the filled visit chips below.
+  // Underline tabs: every section shows icon + label; the active tab carries a
+  // peach underline flush with the header's bottom edge (full-height tab).
   headerSectionTab: {
     position: "relative",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: spacing["3xs"],
-    height: 34,
+    gap: spacing.xs,
+    height: "100%",
     padding: `0 ${spacing["2xs"]}`,
     border: "none",
-    // Underline via inset boxShadow (not border-bottom) so toggling only the
-    // active colour can't trip React's border shorthand/longhand mix warning.
+    // Underline via inset boxShadow (sits at the very bottom of the full-height
+    // tab) — avoids the border shorthand/longhand mix warning.
     boxShadow: "inset 0 -2px 0 transparent",
     backgroundColor: "transparent",
     color: colors.neutral600,
@@ -394,11 +409,11 @@ export const styles: Record<string, CSSProperties> = {
     whiteSpace: "nowrap",
     boxSizing: "border-box",
   },
-  // Active section = icon + label + count under a peach underline.
+  // Active = peach underline + peach label, slightly bolder.
   headerSectionTabActive: {
-    color: colors.neutral900,
+    color: colors.primary700,
+    fontWeight: fonts.weight.medium,
     boxShadow: `inset 0 -2px 0 ${colors.active.shade600}`,
-    padding: `0 ${spacing.xs}`,
   },
   headerSectionIcon: {
     position: "relative",
@@ -416,9 +431,10 @@ export const styles: Record<string, CSSProperties> = {
     height: 7,
     borderRadius: radii.full,
     backgroundColor: colors.active.shade600,
-    border: `1.5px solid ${colors.primary200}`,
+    border: "1.5px solid var(--header-bg)",
     boxSizing: "border-box",
   },
+  // Count badge — light tint with dark-peach text (sits beside the label).
   headerSectionBadge: {
     minWidth: 18,
     height: 18,
@@ -426,7 +442,7 @@ export const styles: Record<string, CSSProperties> = {
     paddingRight: 5,
     borderRadius: radii.full,
     backgroundColor: colors.primary200,
-    color: colors.neutral700,
+    color: colors.primary700,
     fontSize: 11,
     lineHeight: "18px",
     textAlign: "center",
@@ -782,6 +798,30 @@ export const styles: Record<string, CSSProperties> = {
     lineHeight: fonts.lineHeight.xs,
     fontWeight: fonts.weight.regular,
     color: colors.neutral500,
+  },
+  // Visit number in a small circle (replaces the repeated "visit N" caption).
+  // Inactive: outlined grey. Active: filled peach.
+  tabNumber: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 19,
+    height: 19,
+    flexShrink: 0,
+    borderRadius: radii.full,
+    border: `1.5px solid ${colors.neutral300}`,
+    backgroundColor: "transparent",
+    color: colors.neutral500,
+    fontSize: fonts.size.xs,
+    lineHeight: 1,
+    // Optical nudge: digits ride high (no descender ink), so shift down ~1px.
+    paddingTop: 1,
+    boxSizing: "border-box",
+  },
+  tabNumberActive: {
+    border: "1.5px solid transparent",
+    backgroundColor: colors.active.shade600,
+    color: colors.neutral100,
   },
   tabLabel: {
     fontSize: fonts.size.s,
@@ -1241,6 +1281,82 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.m,
     lineHeight: fonts.lineHeight.m,
     color: colors.alphaBlack3,
+  },
+
+  // ── Timeline tab — chronological feed of visits (peach node + synopsis) ──
+  timeline: {
+    paddingTop: spacing.m,
+    paddingBottom: spacing.xl,
+  },
+  timelineList: {
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.l,
+  },
+  // The vertical rail behind the dots (dots are 20px; centre at x=10).
+  timelineLine: {
+    position: "absolute",
+    left: 9,
+    top: 8,
+    bottom: 8,
+    width: 2,
+    backgroundColor: colors.primary300,
+  },
+  timelineItem: {
+    position: "relative",
+    display: "flex",
+    gap: spacing.m,
+    alignItems: "flex-start",
+  },
+  timelineDot: {
+    position: "relative",
+    zIndex: 1,
+    flexShrink: 0,
+    width: 20,
+    height: 20,
+    borderRadius: radii.full,
+    backgroundColor: colors.active.shade600,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  timelineDotIcon: {
+    width: 12,
+    height: 12,
+    color: colors.neutral100,
+  },
+  timelineContent: {
+    flex: 1,
+    minWidth: 0,
+    paddingTop: 1,
+  },
+  timelineHead: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: spacing.xs,
+  },
+  timelineTitle: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.m,
+    fontWeight: fonts.weight.medium,
+    color: colors.neutral900,
+  },
+  timelineDate: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.xs,
+    color: colors.neutral500,
+  },
+  timelineSynopsis: {
+    margin: `${spacing["3xs"]} 0 0`,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    color: colors.neutral700,
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical" as const,
+    overflow: "hidden",
   },
 
   // Figma node 2143:11171 — "+ Add Report" pill on the page header. Dark
