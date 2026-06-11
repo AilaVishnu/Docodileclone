@@ -1,6 +1,7 @@
 import React from "react";
 import { styles } from "./ClinicCard.styles";
 import { Button } from "../Button";
+import { DomainInput } from "../Input/DomainInput/DomainInput";
 import { ReactComponent as BuildingIcon } from "../../assets/Buildings.svg";
 import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
 import { ReactComponent as LocationIcon } from "../../assets/Map Point.svg";
@@ -29,12 +30,7 @@ export function ClinicCard({
     <div style={styles.card}>
       <h3 style={styles.clinicName}>{name || "Your Clinic"}</h3>
 
-      {domain && (
-        <div style={styles.domainBox}>
-          <span style={styles.domainValue}>{domain}</span>
-          <span style={styles.domainSuffix}>.docodile.app</span>
-        </div>
-      )}
+      {domain && <DomainInput value={domain} readOnly />}
 
       <div style={styles.fieldRow}>
         <span style={styles.fieldIcon}><BuildingIcon width={20} height={20} /></span>

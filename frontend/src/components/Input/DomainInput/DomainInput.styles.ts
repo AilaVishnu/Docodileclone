@@ -13,7 +13,9 @@ export const styles: Record<string, CSSProperties> = {
     borderRadius: radii.m,
     gap: spacing.xs,
     overflow: "hidden",
-    backgroundColor: colors.neutralAlphaBlack,
+    // Container is transparent — the input paints its own bg (white when
+    // editable, transparent when read-only); the suffix stays transparent.
+    backgroundColor: "transparent",
     height: "var(--input-h, 40px)",
     width: "100%",
   },
