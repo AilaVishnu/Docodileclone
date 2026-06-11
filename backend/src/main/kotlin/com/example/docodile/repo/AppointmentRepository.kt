@@ -33,6 +33,11 @@ interface AppointmentRepository : JpaRepository<Appointment, UUID> {
 
     fun findAllByClinicId(clinicId: UUID): List<Appointment>
 
+    // Clinic-scoped single lookup — used by every mutation so a caller can
+    // only touch appointments in their OWN clinic. Prevents cross-tenant
+    // IDOR: findById() alone would happily return another clinic's row.
+    fun findByIdAndClinicId(id: UUID, clinicId: UUID): Appointment?
+
     fun findAllByClinicIdAndScheduledTimeBetween(
         clinicId: UUID,
         start: LocalDateTime,
