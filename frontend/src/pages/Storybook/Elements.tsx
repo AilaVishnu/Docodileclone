@@ -104,19 +104,20 @@ export function InputsSection() {
         <Rule>Heights are responsive via <code>--input-h</code> — every field compacts together at &lt;1440 (40→32). This is the same primitive Select &amp; the pickers read.</Rule>
       </Sub>
 
-      <Sub title="PROPOSED — Field with prefix / number / suffix"
-        note="The common hand-built inputs we could fold INTO Field so they become shared: a leading prefix (₹ price), a number field, and a trailing suffix (units / clinic domain). Mock only — not built yet.">
-        <div style={{ border: `1px dashed ${colors.secondary400}`, borderRadius: radii.m, padding: spacing.l, maxWidth: 560,
+      <Sub title="PROPOSED — Field with unit chips (vitals-style)"
+        note="Reuse the polished vitals pattern: a cream value box + a unit chip that's either FIXED (cream/grey) or SWITCHABLE (highlighted — click to toggle the unit & convert the value, e.g. kg⇄lb, °C⇄°F). One shared Field could then cover price (₹), quantities/duration AND the whole vitals grid. (Domain keeps its own DomainInput.)">
+        <div style={{ border: `1px dashed ${colors.secondary400}`, borderRadius: radii.m, padding: spacing.l, maxWidth: 640,
           background: colors.secondary50, display: "flex", flexDirection: "column", gap: spacing.m }}>
           <span style={{ alignSelf: "flex-start", fontSize: 10, fontWeight: fonts.weight.bold, letterSpacing: 0.4,
             color: colors.secondary700, background: colors.secondary100, borderRadius: radii.xs, padding: "1px 6px" }}>PROPOSED · MOCK</span>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing.m }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: spacing.m }}>
             <div><Label>prefix · price</Label><MockField prefix="₹" value="1,200" /></div>
-            <div><Label>number · duration</Label><MockField value="15" suffix="mins" /></div>
-            <div style={{ gridColumn: "1 / -1" }}><Label>suffix · clinic domain</Label><MockField value="sunrise" suffix=".docodile.app" /></div>
+            <div><Label>fixed · duration</Label><MockField value="15" unit="mins" /></div>
+            <div><Label>switchable · weight</Label><MockField value="68" unit="kg" toggle /></div>
+            <div><Label>switchable · temp</Label><MockField value="37.0" unit="°C" toggle /></div>
           </div>
-          <div style={{ fontSize: fonts.size.xs, color: colors.neutral600 }}>
-            Would replace the bespoke price/number/domain inputs (AddServiceModal, ClinicCard, …) with one shared <code>&lt;Field prefix suffix type&gt;</code>.
+          <div style={{ fontSize: fonts.size.xs, color: colors.neutral600, lineHeight: 1.5 }}>
+            Highlighted chip = <b>switchable</b> (click → converts, e.g. kg⇄lb); cream chip = <b>fixed</b>. Replaces the bespoke price/number inputs (Add Service, Pharmacy, Bill…) <b>and</b> the vitals grid with one shared <code>&lt;Field prefix unit toggle&gt;</code>.
           </div>
         </div>
       </Sub>
@@ -124,14 +125,26 @@ export function InputsSection() {
   );
 }
 
-// Mock of the proposed enhanced Field (box look + prefix/suffix slots). Not the real component.
-function MockField({ prefix, value, suffix }: { prefix?: string; value: string; suffix?: string }) {
+// Mock of the proposed enhanced Field — vitals-style: cream value box + a unit chip
+// (fixed = cream/grey · toggle = highlighted primary500, switches units). Not the real component.
+function MockField({ prefix, value, unit, toggle }: { prefix?: string; value: string; unit?: string; toggle?: boolean }) {
+  const R = radii.m;
   return (
-    <div style={{ display: "flex", alignItems: "center", height: "var(--input-h, 40px)",
-      border: `1px solid ${colors.neutral300}`, borderRadius: radii.m, background: colors.neutral100, overflow: "hidden" }}>
-      {prefix && <span style={{ padding: `0 ${spacing.xs}`, color: colors.neutral500, fontSize: fonts.size.m, borderRight: `1px solid ${colors.neutral200}`, alignSelf: "stretch", display: "flex", alignItems: "center" }}>{prefix}</span>}
-      <span style={{ flex: 1, padding: `0 ${spacing.s}`, color: colors.neutral900, fontSize: fonts.size.m }}>{value}</span>
-      {suffix && <span style={{ padding: `0 ${spacing.s}`, color: colors.neutral500, fontSize: fonts.size.s, borderLeft: `1px solid ${colors.neutral200}`, alignSelf: "stretch", display: "flex", alignItems: "center" }}>{suffix}</span>}
+    <div style={{ display: "flex", alignItems: "stretch", height: 32, width: "100%", maxWidth: 150 }}>
+      {prefix && (
+        <span style={{ display: "flex", alignItems: "center", padding: `0 ${spacing.xs}`, color: colors.neutral500,
+          fontSize: fonts.size.m, background: colors.neutral100, border: `1px solid ${colors.primary300}`,
+          borderRadius: `${R}px 0 0 ${R}px` }}>{prefix}</span>
+      )}
+      <span style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", padding: `0 ${spacing.xs}`,
+        color: colors.neutral900, fontSize: fonts.size.s, background: colors.primary100,
+        borderRadius: `${prefix ? 0 : R}px ${unit ? 0 : R}px ${unit ? 0 : R}px ${prefix ? 0 : R}px` }}>{value}</span>
+      {unit && (
+        <span title={toggle ? "Switchable unit" : undefined} style={{ display: "flex", alignItems: "center", justifyContent: "center",
+          padding: `0 ${spacing.xs}`, fontSize: fonts.size.s, whiteSpace: "nowrap", background: colors.neutral100,
+          border: `1px solid ${toggle ? colors.primary500 : colors.primary300}`, color: toggle ? colors.neutral800 : colors.neutral500,
+          borderRadius: `0 ${R}px ${R}px 0`, cursor: toggle ? "pointer" : "default" }}>{unit}</span>
+      )}
     </div>
   );
 }
