@@ -10,6 +10,8 @@ import { Modal } from "../../components/Modal";
 import { Button } from "../../components/Button";
 import { IconButton } from "../../components/IconButton";
 import { Field } from "../../components/Field";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
+import { ChevronDown } from "../../components/icons/ChevronDown";
 import { Section, Sub, Row, Label, Rule, From, Stage, DetailTable, ResponsiveTable } from "./kit";
 
 const dim = colors.neutral300;
@@ -71,25 +73,44 @@ export function SidebarBlock() {
 }
 
 // ── 16 · Sticky header (PageHeader) ──────────────────────────────────────────────
+// The inline box-pill dropdown that lives in the queue / Rx header titles.
+const HeaderDatePill = ({ label }: { label: string }) => (
+  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", color: colors.neutral900,
+    border: `1px solid ${colors.primary400}`, borderRadius: radii.m, padding: "4px 12px" }}>
+    {label} <ChevronDown />
+  </span>
+);
+// A small right-action icon button (printer-style glyph) for the prescription header.
+const HeaderAction = ({ label }: { label: string }) => (
+  <IconButton ariaLabel={label} size={32}>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" />
+    </svg>
+  </IconButton>
+);
+
 export function StickyHeaderBlock() {
-  const [tab, setTab] = useState(0);
   return (
     <Section id="sticky-header" title="16 · Sticky header (PageHeader)"
-      tldr={<>Per-page header that <b>parks under the TopNav</b> as the page scrolls (the page's <code>main</code> owns the scroll). Holds the page title, optional back affordance, tabs/filters and primary action.</>}>
-      <Stage pad={spacing.m}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: spacing.m,
-          background: colors.neutral100, borderBottom: `${strokes.xs} solid ${colors.neutral200}`, padding: `${spacing.s} ${spacing.m}` }}>
-          <div style={{ fontFamily: fonts.family.secondary, fontSize: fonts.size.h6, color: colors.neutral900 }}>Today's Queue</div>
-          <Row gap={spacing.xs}>
-            {["All","At Doc","Waiting"].map((t, i) => (
-              <button key={t} onClick={() => setTab(i)} style={{ cursor: "pointer", border: "none",
-                background: tab === i ? colors.neutral100 : "transparent", boxShadow: tab === i ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-                borderRadius: radii.full, padding: "6px 14px", fontSize: fonts.size.xs, color: colors.neutral800 }}>{t}</button>
-            ))}
-          </Row>
-        </div>
-      </Stage>
-      <Rule>Implementation note: the page is its own scroll container so the sticky header sits flush under the TopNav (not pushed down by page padding).</Rule>
+      tldr={<><From>components/PageHeader</From> — ONE shared sticky app-bar with three zones: <b>back</b> (left) · <b>title</b> (centred — can hold an inline dropdown) · <b>actions</b> (right icons). Parks under the TopNav as the page scrolls (the page's <code>main</code> owns the scroll). Below are the two shapes it actually takes in the app.</>}>
+      <Sub title="Queue header — centred title with an inline box dropdown" note="AppointmentQueue / PrescriptionQueue: the title is a clickable date box-pill (1px primary400 · radii.m · ChevronDown → DatePicker) plus a label word.">
+        <Stage pad="0px">
+          <PageHeader title={<><HeaderDatePill label="Wed, 11 Jun" /> Queue</>} />
+        </Stage>
+      </Sub>
+      <Sub title="Prescription header — back arrow + title + right action icons" note="PrescriptionPage: a left back arrow, the centred patient/visit title, and one or more right-hand action icons.">
+        <Stage pad="0px">
+          <PageHeader onBack={() => {}} backLabel="Back" title="Aisha Rahman · Visit 3"
+            actions={<Row gap={spacing.xs}><HeaderAction label="Print" /></Row>} />
+        </Stage>
+      </Sub>
+      <DetailTable rows={[
+        ["zones", "back (left) · title (centre) · actions (right)"],
+        ["title", "ReactNode — plain text or an inline dropdown"],
+        ["back", "optional onBack → 20px arrow"],
+        ["actions", "optional right-aligned icons/buttons"],
+        ["sticky", "page is its own scroll container → sits flush under TopNav"],
+      ]} />
     </Section>
   );
 }

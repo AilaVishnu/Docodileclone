@@ -11,6 +11,7 @@ import { TextInput } from "../../components/Input/TextInput";
 import { Select } from "../../components/Input/Select/Select";
 import { UnderlineSelect } from "../../components/Input/UnderlineSelect/UnderlineSelect";
 import { Tabs } from "../../components/Tabs";
+import { ChevronDown } from "../../components/icons/ChevronDown";
 import { Card } from "../../components/Card";
 import { HintCard } from "../../components/HintCard";
 import { Tag } from "../../components/Tag";
@@ -113,7 +114,7 @@ export function DropdownsSection() {
   const [u, setU] = useState("");
   return (
     <Section id="dropdowns" title="7 · Dropdowns"
-      tldr={<>Three trigger contexts share ONE menu surface: thin <code>primary300</code> border + <code>shadows.menu</code>, cream hover, <code>primary100</code> selected, one canonical <code>ChevronDown</code> @16. <b>Select</b> (default box) · <b>UnderlineSelect</b> (sticky headers) · picker (Rx form). Heights compact via <code>--input-h</code>.</>}>
+      tldr={<>Triggers share ONE menu surface: thin <code>primary300</code> border + <code>shadows.menu</code>, cream hover, <code>primary100</code> selected, canonical <code>ChevronDown</code> @16. Three trigger styles: <b>Select</b> (box · forms) · <b>inline header pill</b> (box · the date/scope dropdown in the sticky <code>PageHeader</code>) · <b>UnderlineSelect</b> (the booking form). Heights compact via <code>--input-h</code>.</>}>
       <Sub title="Select — box trigger">
         <Specimen
           details={<DetailTable rows={[
@@ -130,7 +131,15 @@ export function DropdownsSection() {
           </div>
         </Specimen>
       </Sub>
-      <Sub title="UnderlineSelect — sticky-header trigger">
+      <Sub title="Inline header pill — box trigger (sticky PageHeader)"
+        note="The recurring date/scope dropdown inside the queue & Rx sticky headers. Hand-rolled inline: 1px primary400 border, radii.m, ChevronDown — opens a DatePicker. (Same markup in two files — a merge candidate.)">
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", color: colors.neutral900,
+          border: `1px solid ${colors.primary400}`, borderRadius: radii.m, padding: "4px 12px", fontFamily: fonts.family.primary, fontSize: fonts.size.m }}>
+          Wed, 11 Jun <ChevronDown />
+        </span>
+      </Sub>
+      <Sub title="UnderlineSelect — booking form"
+        note="Underline trigger, used inside BookAppointment. NOT the sticky header anymore (that uses the box styles above).">
         <div style={{ maxWidth: 360 }}>
           <UnderlineSelect options={["Dr. Vinay","Dr. Rahul","Dr. Priya"]} value={u} onChange={setU} placeholder="Select doctor" />
         </div>
@@ -221,8 +230,8 @@ export function BadgesSection() {
           <StatusBadge status="IN_PROGRESS" started />
         </Row>
       </Sub>
-      <Sub title="PayBadge">
-        <Row>{["PAID","DUE","NO PAY"].map(s => <PayBadge key={s} status={s} />)}</Row>
+      <Sub title="PayBadge" note="Two states only: paid (check) and due (triangle). DUE / UNPAID / NO PAY all render the same due triangle.">
+        <Row>{["PAID","DUE"].map(s => <PayBadge key={s} status={s} />)}</Row>
       </Sub>
     </Section>
   );
