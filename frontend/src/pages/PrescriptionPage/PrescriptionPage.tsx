@@ -1546,25 +1546,19 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // from when the session started, dropping every edit made after that.
   const handleFormBlur = () => {
     if (!canEditForm || !activeVisit) return;
+    // Auto-save on blur works for every visit, including completed ones — a
+    // post-completion edit is persisted without reopening the appointment
+    // (handleSave changes no status). handleSave also clears the dirty flag,
+    // so the "Save changes" button hides again once the edit is saved.
     void handleSave({ silent: true });
   };
 
-  // Save on every Pause / Resume — the doctor's edits up to that moment
-  // get persisted even if they walk away with the session paused.
-  // formActive transitions cover Start (no-op effectively), Pause,
-  // Resume; End is handled in handleSessionEnd. We skip the very first
-  // render so we don't fire a save before the visit data has loaded.
-  const prevFormActiveRef = React.useRef<boolean | null>(null);
+  // A fresh visit (tab switch / patient change) starts clean — drop any
+  // unsaved-edit flag left from the previous visit.
   React.useEffect(() => {
-    if (prevFormActiveRef.current === null) {
-      prevFormActiveRef.current = formActive;
-      return;
-    }
-    if (prevFormActiveRef.current === formActive) return;
-    prevFormActiveRef.current = formActive;
-    if (activeVisit) void handleSave({ silent: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formActive, activeVisit?.id]);
+    setDirty(false);
+  }, [activeVisit?.id]);
+
 
   // Best-effort PATCH against the appointment status. Tries the
   // public /api/appointments endpoint first (broad role allowlist) and
