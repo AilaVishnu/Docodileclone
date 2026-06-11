@@ -17,7 +17,7 @@ import {
 
 const NAV: { group: string; items: [string, string][] }[] = [
   { group: "Foundations", items: [["typography","1 · Text"],["colors","2 · Color"],["icons","3 · Icons"],["spacing","4 · Spacing"]] },
-  { group: "Elements", items: [["buttons","5 · Buttons"],["inputs","6 · Inputs"],["dropdowns","7 · Dropdowns"],["tabs","8 · Tabs"],["cards","9 · Cards"],["controls","10 · Tags/Switch"],["badges","11 · Badges"],["tables","12 · Tables"],["toast","13 · Toast/Date"]] },
+  { group: "Elements", items: [["buttons","5 · Buttons"],["inputs","6 · Inputs"],["dropdowns","7 · Dropdowns"],["tabs","8 · Tabs"],["cards","9 · Cards"],["controls","10 · Tags/Switch"],["badges","11 · Badges"],["tables","12 · Tables"],["toast","13 · Toast"]] },
   { group: "Blocks", items: [["header","14 · Header"],["sidebar","15 · Sidebar"],["sticky-header","16 · Sticky header"],["modals","17 · Modals"],["login","18 · Login"],["chat","19 · Chat"]] },
 ];
 
