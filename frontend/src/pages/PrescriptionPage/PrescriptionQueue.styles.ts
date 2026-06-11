@@ -52,6 +52,11 @@ export const styles: Record<string, CSSProperties> = {
   // typography (Inter 16/22). Active: white bg with neutral900 text.
   tab: {
     height: "var(--tab-md-h, 40px)",
+    // Flex-center so the label sits dead-centre on both axes regardless of
+    // the line-height vs fixed-height delta.
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
     // Horizontal padding is tier-aware via --rxq-tab-padx (16px default,
     // 12px on the 1200–1439 tier). Vertical stays at spacing.xs.
     padding: `${spacing.xs} var(--rxq-tab-padx, 16px)`,

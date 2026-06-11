@@ -409,15 +409,15 @@ function PatientListTable({
             fixed widths for every data column, one flexible spacer absorbs
             leftover width, the rest are uniform inter-column gaps. */}
         <colgroup>
-          <col style={{ width: "48px" }} />        {/* # (T-number, e.g. T001) */}
+          <col style={{ width: "56px" }} />        {/* # (T-number, e.g. T001) */}
           <col />                                   {/* flex spacer — absorbs leftover */}
           <col style={{ width: "var(--queue-name-w)" }} />  {/* Name (256 / 200, truncates) */}
           <col />
-          <col style={{ width: "108px" }} />       {/* Phone */}
+          <col style={{ width: "140px" }} />       {/* Phone (fits "+91 98888 88888") */}
           <col />
           <col style={{ width: "72px" }} />        {/* Service */}
           <col />
-          <col style={{ width: "96px" }} />        {/* Type */}
+          <col style={{ width: "72px" }} />        {/* Type (text only) */}
           <col />
           <col style={{ width: "84px" }} />        {/* Time */}
           <col />
@@ -427,7 +427,7 @@ function PatientListTable({
         </colgroup>
         <thead>
           <tr>
-            <th style={{ ...styles.th, textAlign: "left", paddingLeft: 0, paddingRight: 0 }}>#</th>
+            <th style={{ ...styles.th, textAlign: "left", paddingLeft: 8, paddingRight: 0 }}>#</th>
             <th style={spacerTh} aria-hidden />
             <th style={{ ...styles.th, textAlign: "left", paddingLeft: 0, paddingRight: "4px" }}>Name</th>
             <th style={spacerTh} aria-hidden />
@@ -483,7 +483,7 @@ function PatientListTable({
                   {/* # — T-number with "T---" placeholder when the patient
                       isn't yet in the local id map (no fallback to a row
                       index — keep the column uniformly T-prefixed). */}
-                  <td style={{ ...styles.tdSerial, paddingLeft: 0, paddingRight: 0 }}>
+                  <td style={{ ...styles.tdSerial, paddingLeft: 8, paddingRight: 0 }}>
                     {tNum ? `T${String(tNum).padStart(3, "0")}` : "T---"}
                   </td>
                   <td style={spacerTd} aria-hidden />
