@@ -22,6 +22,10 @@ class VisitController(private val visitService: VisitService) {
     fun listForPatient(@PathVariable patientId: UUID): List<VisitDTO> =
         visitService.listForPatient(patientId)
 
+    @GetMapping("/active-sessions")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
+    fun activeSessions(): List<ActiveSessionDTO> = visitService.listActiveSessions()
+
     @GetMapping("/visits/{visitId}")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun get(@PathVariable visitId: UUID): ResponseEntity<Any> = try {

@@ -26,6 +26,29 @@ interface VisitRepository : JpaRepository<Visit, UUID> {
     // a tab would appear to "lose" its data even though it was untouched.
     fun findAllByClinicIdAndPatientIdOrderByVisitDateAscCreatedAtAsc(clinicId: UUID, patientId: UUID): List<Visit>
 
+    // Active consultations for the live "Active Sessions" indicator: the
+    // doctor opened the pad (session started) and hasn't ended the session
+    // (no end). We ALSO exclude any visit whose appointment is already in a
+    // terminal status — a visit can be marked done at the appointment level
+    // without the session end being stamped (e.g. completed via a path that
+    // didn't touch the visit), and such a consultation must not linger as
+    // "active". Server-owned so the list is accurate across devices.
+    @Query("""
+        SELECT v FROM Visit v
+        WHERE v.clinic.id = :clinicId
+          AND v.sessionStartedAt IS NOT NULL
+          AND v.sessionEndedAt IS NULL
+          AND (
+            v.appointmentId IS NULL
+            OR NOT EXISTS (
+              SELECT 1 FROM Appointment a
+              WHERE a.id = v.appointmentId
+                AND UPPER(a.status) IN ('COMPLETED', 'CANCELLED', 'NO_SHOW')
+            )
+          )
+    """)
+    fun findActiveSessions(@Param("clinicId") clinicId: UUID): List<Visit>
+
     @Query("SELECT v FROM Visit v WHERE v.clinic.id = :clinicId AND v.patient.id IN :patientIds ORDER BY v.visitDate ASC")
     fun findAllByClinicIdAndPatientIdInOrderByVisitDateAsc(
         @Param("clinicId") clinicId: UUID,
