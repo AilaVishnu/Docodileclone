@@ -701,7 +701,25 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
             {/* Receipt card — patient header + bill body + actions, all
                 under one white sheet so the action buttons read as part
                 of the bill instead of hanging detached below the zigzag. */}
-            <div style={{ backgroundColor: colors.neutral100, padding: spacing.xl, borderRadius: "16px 16px 0 0", display: "flex", flexDirection: "column", gap: spacing.s }}>
+            <div style={{ position: "relative", backgroundColor: colors.neutral100, padding: spacing.xl, borderRadius: "16px 16px 0 0", display: "flex", flexDirection: "column", gap: spacing.s }}>
+              {/* Close (X) — top-right; same as Cancel. Disabled mid-submit. */}
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setPayDueApt(null)}
+                disabled={payDueSubmitting}
+                style={{
+                  position: "absolute", top: spacing.s, right: spacing.s,
+                  width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
+                  border: "none", borderRadius: "50%", background: "transparent",
+                  cursor: payDueSubmitting ? "default" : "pointer",
+                  color: colors.neutral500, fontSize: 18, lineHeight: 1,
+                }}
+                onMouseEnter={(e) => { if (!payDueSubmitting) e.currentTarget.style.backgroundColor = colors.primary100; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+              >
+                ✕
+              </button>
               {/* Patient name header — serif, centered */}
               <h3 style={{ margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.regular, color: colors.neutral900, textAlign: "center" as const }}>
                 {payDueApt.patientName}
