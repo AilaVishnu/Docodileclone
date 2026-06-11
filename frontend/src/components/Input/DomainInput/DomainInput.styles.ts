@@ -22,6 +22,7 @@ export const styles: Record<string, CSSProperties> = {
 
   input: {
     flex: 1,
+    minWidth: 0, // allow the input to squeeze so the suffix keeps its full width
     height: "100%",
     border: "none",
     outline: "none",
@@ -33,6 +34,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   suffix: {
+    flexShrink: 0, // fixed width — never squeeze; the input flexes instead
     height: "100%",
     display: "flex",
     alignItems: "center",
