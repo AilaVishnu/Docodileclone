@@ -2056,16 +2056,21 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
         <div
           style={{
             ...styles.rightArea,
-            ...(canEditForm
+            // The lock applies ONLY to the prescription form (action 0). The
+            // other chart sections — Files (1), Timeline (2), Bills (3),
+            // Info (4) — stay fully usable (Add file etc.) regardless of the
+            // visit's editability; locking a past/unstarted visit must not
+            // freeze the whole chart.
+            ...(canEditForm || activeAction !== 0
               ? null
               // Mostly readable while locked — labels stay legible so the
-              // doctor can scan the form before starting a session. Clicks
-              // are still blocked via pointer-events:none. Past visits hit
-              // this branch unconditionally so they read as historic only.
+              // doctor can scan the form. Clicks are blocked via
+              // pointer-events:none. Past visits hit this unconditionally so
+              // they read as historic only.
               : { pointerEvents: "none", opacity: 0.75, userSelect: "none" }),
             transition: "opacity 0.15s ease",
           }}
-          aria-disabled={!canEditForm}
+          aria-disabled={!canEditForm && activeAction === 0}
           // Any descendant input/textarea/select change bubbles here — flag
           // unsaved edits so the "Save changes" button surfaces on an
           // already-completed visit only after the doctor actually edits.
