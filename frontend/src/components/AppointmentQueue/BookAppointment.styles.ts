@@ -366,7 +366,7 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.m,
     fontWeight: fonts.weight.regular,
     fontFamily: fonts.family.primary,
-    minWidth: "200px",
+    width: "216px",
     boxSizing: "border-box",
   },
   pillButtonSecondary: {
@@ -383,7 +383,7 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.m,
     fontWeight: fonts.weight.regular,
     fontFamily: fonts.family.primary,
-    minWidth: "200px",
+    width: "216px",
     boxSizing: "border-box",
   },
   pillButtonPayDue: {
@@ -400,7 +400,7 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.m,
     fontWeight: fonts.weight.regular,
     fontFamily: fonts.family.primary,
-    minWidth: "200px",
+    width: "216px",
     boxSizing: "border-box",
   },
 };
