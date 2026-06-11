@@ -87,6 +87,7 @@ export function InputsSection() {
   const [wt, setWt] = useState("68"); const [wtU, setWtU] = useState("kg");
   const [tmp, setTmp] = useState("37.0"); const [tmpU, setTmpU] = useState("°C");
   const [sys, setSys] = useState("120"); const [dia, setDia] = useState("80"); const [bpU, setBpU] = useState("mmHg");
+  const [ageY, setAgeY] = useState("5"); const [ageM, setAgeM] = useState("3");
   return (
     <Section id="inputs" title="6 · Input fields"
       tldr={<><From>components/Field</From> is the ONE text input — three looks by context: <b>underline</b> (most forms) · <b>box</b> (boxed forms) · <b>pill</b> (search only). One invalid state. <code>TextInput</code> is a thin alias of <code>Field variant="underline"</code>.</>}>
@@ -120,6 +121,15 @@ export function InputsSection() {
           <div><Label>BP variant</Label><MeasureField bp value={sys} onChange={setSys} value2={dia} onChange2={setDia} unit={bpU} onToggleUnit={() => setBpU(u => u === "mmHg" ? "kPa" : "mmHg")} ariaLabel="Systolic" ariaLabel2="Diastolic" /></div>
         </div>
         <Rule><b>box</b> variant (white) = form fields (price/qty) · <b>cream</b> (default) = the vitals grid. Highlighted chip = <b>switchable</b> (click to toggle units); grey = <b>fixed</b>. One component covers both.</Rule>
+      </Sub>
+
+      <Sub title="PROPOSED · MOCK — Age field (two fixed cream MeasureFields)"
+        note="For the Book Appointment Age field: reuse MeasureField (cream variant, FIXED unit — no toggle) as two fields, yrs + mos. Mock; approve to wire into the real form.">
+        <div style={{ display: "flex", alignItems: "center", gap: spacing.m }}>
+          <span style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>Age</span>
+          <div style={{ width: 100 }}><MeasureField value={ageY} onChange={setAgeY} unit="yrs" unitWidth={40} inputMode="numeric" /></div>
+          <div style={{ width: 100 }}><MeasureField value={ageM} onChange={setAgeM} unit="mos" unitWidth={40} inputMode="numeric" /></div>
+        </div>
       </Sub>
 
       <Sub title="DomainInput — white input · transparent suffix (APPLIED)"
