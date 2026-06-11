@@ -8,6 +8,7 @@ import { StatsPage } from "../Stats";
 import { PharmacyView } from "../Pharmacy";
 import { SettingsPage, DEFAULT_SETTINGS_SECTION, SettingsSection } from "../Settings";
 import { DesignSystemPage } from "../DesignSystem";
+import { AuditGalleryPage } from "../AuditGallery"; // TEMP — storybook tab; remove with the AuditGallery folder
 import { colors, fonts, ThemeMode } from "../../styles/theme";
 import { confirmStyles } from "../../components/AddStaffModal/AddStaffModal.styles";
 import { Button } from "../../components/Button";
@@ -299,6 +300,8 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         return <SettingsPage section={settingsSection} />;
       case "Design System":
         return <DesignSystemPage />;
+      case "Storybook":
+        return <AuditGalleryPage embedded />;
       default:
         return (
           <div>

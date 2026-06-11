@@ -165,7 +165,16 @@ export function AddReportModal({
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   const handleSave = async () => {
-    if (drafts.length === 0) return;
+    // Validate on click (button is now clickable by default): surface a friendly
+    // message via the existing uploadError banner instead of disabling the button.
+    if (drafts.length === 0) {
+      setUploadError("Please add at least one report.");
+      return;
+    }
+    if (drafts.some((d) => !d.category)) {
+      setUploadError("Please choose a category for each report.");
+      return;
+    }
     setUploading(true);
     setUploadError(null);
     let anyFailed = false;
@@ -401,7 +410,7 @@ export function AddReportModal({
             variant="primary"
             size="sm"
             onClick={handleSave}
-            disabled={uploading || drafts.length === 0 || drafts.some(d => !d.category)}
+            disabled={uploading}
           >
             {uploading ? "Uploading…" : `Add${drafts.length > 1 ? ` (${drafts.length})` : ""}`}
           </Button>

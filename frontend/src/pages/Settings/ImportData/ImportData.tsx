@@ -156,7 +156,10 @@ function HealthPlixZipImport({
   };
 
   const handleImport = async () => {
-    if (!file) return;
+    if (!file) {
+      setError("Please choose a file to import.");
+      return;
+    }
     setImporting(true);
     setError(null);
     try {
@@ -230,7 +233,7 @@ function HealthPlixZipImport({
       {error && <div style={S.error}>{error}</div>}
       <div style={{ ...S.actions, justifyContent: "center", gap: spacing.s }}>
         <Button variant="light" size="sm" onClick={onBack}>Cancel</Button>
-        <Button variant="primary" size="sm" onClick={handleImport} disabled={!file || importing}>
+        <Button variant="primary" size="sm" onClick={handleImport} disabled={importing}>
           {importing ? "Importing…" : "Import"}
         </Button>
       </div>

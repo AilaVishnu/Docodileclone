@@ -160,6 +160,10 @@ export function EditPatientModal({ isOpen, patient, onClose, onSave, onSaved, on
 
   const handleSave = async () => {
     if (!patient) return;
+    if (!form.name.trim()) {
+      onError?.("Please enter the patient's name.");
+      return;
+    }
     if (!validate()) return;
     const ageMonths = ageMode === "dob" && form.dob
       ? (() => {
@@ -413,7 +417,7 @@ export function EditPatientModal({ isOpen, patient, onClose, onSave, onSaved, on
             variant="primary"
             size="sm"
             onClick={handleSave}
-            disabled={saving || !form.name.trim()}
+            disabled={saving}
           >
             {saving ? "Saving…" : "Save changes"}
           </Button>

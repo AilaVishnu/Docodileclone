@@ -23,7 +23,8 @@ export type NavTab =
   | 'Stats'
   | 'Pharmacy'
   | 'Settings'
-  | 'Design System';
+  | 'Design System'
+  | 'Storybook';
 
 type SideNavProps = {
   activeTab: NavTab;
@@ -79,6 +80,18 @@ export function SideNav({ activeTab, onTabChange }: SideNavProps) {
     </svg>
   );
 
+  // Grid icon for the temporary Storybook (the /audit UI gallery). TEMP — remove
+  // this item + the 'Storybook' NavTab when the gallery is deleted (or once the
+  // 'Design System' entry is replaced by it).
+  const StorybookIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  );
+
   // `label` is the routing key (the NavTab); `display` is the short name shown
   // in the compact sidebar. Keep them separate so the wording can change
   // without touching navigation / persisted tab state.
@@ -93,6 +106,7 @@ export function SideNav({ activeTab, onTabChange }: SideNavProps) {
     { label: 'Pharmacy', display: 'Meds', icon: <PharmacyIcon /> },
     { label: 'Settings', display: 'Config', icon: <SettingsIcon /> },
     { label: 'Design System', display: 'Design', icon: <DesignSystemIcon /> },
+    { label: 'Storybook', display: 'Storybook', icon: <StorybookIcon /> },
   ];
 
   return (

@@ -33,7 +33,10 @@ const CATS: [string, string][] = [
   ["pages", "11 · Pages"],
 ];
 
-export function AuditGalleryPage() {
+// `embedded` = rendered inside the app shell (a HomePage tab) rather than the
+// standalone /audit route. Embedded mode lets the app's <main> own the scroll
+// (no inner 100vh / overflow) so the sticky header parks under the TopNav.
+export function AuditGalleryPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [theme, setTheme] = useState<"primary" | "secondary">("primary");
   const applyTheme = (t: "primary" | "secondary") => {
     setTheme(t);
@@ -41,7 +44,9 @@ export function AuditGalleryPage() {
     else document.documentElement.removeAttribute("data-theme");
   };
   return (
-    <div style={{ height: "100vh", overflowY: "auto", background: colors.neutral150, fontFamily: fonts.family.primary }}>
+    <div style={embedded
+      ? { background: colors.neutral150, fontFamily: fonts.family.primary }
+      : { height: "100vh", overflowY: "auto", background: colors.neutral150, fontFamily: fonts.family.primary }}>
       {/* sticky header */}
       <div style={{ position: "sticky", top: 0, zIndex: 10, background: colors.neutral100,
         borderBottom: `${strokes.xs} solid ${colors.neutral200}`, padding: `${spacing.s} ${spacing.xl}` }}>

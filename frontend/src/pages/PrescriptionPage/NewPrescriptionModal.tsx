@@ -159,6 +159,16 @@ function PickView({
   // Highlight, not submit — the row click only stages a patient. Start Rx
   // in the footer is the explicit commit so the user can re-pick freely.
   const [selectedPatient, setSelectedPatient] = React.useState<Patient | null>(null);
+  // Start Rx is clickable by default (coloured, not greyed-out) and validates
+  // on click — like a login button that prompts "please fill this in".
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
+
+  const handleStartRx = () => {
+    if (!canSubmit) { setSubmitError("Please assign a doctor first."); return; }
+    if (!selectedPatient) { setSubmitError("Please select a patient first."); return; }
+    setSubmitError(null);
+    onSelect(selectedPatient, service, feeFor(service));
+  };
 
   // Same service-catalog pattern as AddView so the walk-in for an existing
   // patient also carries the right price (otherwise Pay Due shows ₹0.00).
@@ -239,12 +249,12 @@ function PickView({
       </div>
 
       <footer style={styles.footer}>
-        <span title={!selectedPatient ? "Pick a patient first" : undefined} style={{ display: "inline-flex" }}>
+        {submitError && <span style={styles.footerError}>{submitError}</span>}
+        <span style={{ display: "inline-flex" }}>
           <Button
             variant="primary"
             size="sm"
-            onClick={() => selectedPatient && onSelect(selectedPatient, service, feeFor(service))}
-            disabled={!selectedPatient || !canSubmit}
+            onClick={handleStartRx}
           >
             Start Rx
           </Button>
@@ -387,13 +397,23 @@ function AddView({
   };
 
   const hasDobOrAge = draft.dob.trim().length > 0 || draft.age.trim().length > 0;
-  const valid =
-    canSubmit &&
-    draft.name.trim().length > 0 &&
-    phoneValid &&
-    draft.gender.length > 0 &&
-    hasDobOrAge &&
-    draft.service.trim().length > 0;
+
+  // Add & start Rx is clickable by default (coloured, not greyed-out) and
+  // validates on click — surfacing a friendly message instead of a dead button.
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
+
+  const handleSubmit = () => {
+    let message: string | null = null;
+    if (!canSubmit) message = "Please assign a doctor first.";
+    else if (draft.name.trim().length === 0) message = "Please enter the patient's name.";
+    else if (!phoneValid) message = "Please enter a 10-digit phone number.";
+    else if (draft.gender.length === 0) message = "Please select a gender.";
+    else if (!hasDobOrAge) message = "Please enter a date of birth or age.";
+    else if (draft.service.trim().length === 0) message = "Please select a service.";
+    if (message) { setSubmitError(message); return; }
+    setSubmitError(null);
+    onSubmit(draft);
+  };
 
   return (
     <>
@@ -463,12 +483,12 @@ function AddView({
       </div>
 
       <footer style={styles.footer}>
+        {submitError && <span style={styles.footerError}>{submitError}</span>}
         <Button variant="light" size="sm" onClick={onCancel}>Back</Button>
         <Button
           variant="primary"
           size="sm"
-          onClick={() => onSubmit(draft)}
-          disabled={!valid}
+          onClick={handleSubmit}
         >
           Add & start Rx
         </Button>
@@ -565,8 +585,15 @@ const styles: Record<string, React.CSSProperties> = {
 
   // Footer with top rule + ghost/primary buttons — same as Add Stock.
   footer: {
-    display: "flex", justifyContent: "flex-end", gap: spacing.s,
+    display: "flex", alignItems: "center", justifyContent: "flex-end", gap: spacing.s,
     paddingTop: spacing.s, borderTop: `1px solid ${colors.neutral200}`,
+  },
+  // Validate-on-click message — sits to the left of the footer buttons,
+  // same red token/typography as the per-field error.
+  footerError: {
+    marginRight: "auto",
+    fontFamily: fonts.family.primary, fontSize: fonts.control.xs,
+    color: colors.red200, textAlign: "left" as const,
   },
   // Compact ghost variant — height matches the rounded card inputs (35) so
   // it sits flush in the Search row. Same ghost tokens, shorter padding.
