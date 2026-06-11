@@ -22,6 +22,7 @@ import { UnderlineSelect } from "../Input/UnderlineSelect/UnderlineSelect";
 import { Select } from "../Input/Select/Select";
 import { Toast } from "../Toast";
 import { Button } from "../Button";
+import { MeasureField } from "../MeasureField";
 import { confirmStyles } from "../AddStaffModal/AddStaffModal.styles";
 import { API_BASE_URL } from "../../apiConfig";
 import { listServices, ServiceDTO } from "../../api/services";
@@ -176,7 +177,6 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   // extra fields is deferred; for now this state is set but unused.
   const [isAdvanced, setIsAdvanced] = useState(false);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
-  const monthInputRef = React.useRef<HTMLInputElement>(null);
   const [allPatients, setAllPatients] = useState<any[]>([]);
   const [showNameSugg, setShowNameSugg] = useState(false);
   const [showPhoneSugg, setShowPhoneSugg] = useState(false);
@@ -816,61 +816,50 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             <div style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>or</div>
             <div
               style={{
-                ...styles.iconField,
-                flex: 1,
+                flex: 1.4,
                 minWidth: 0,
+                display: "flex",
+                alignItems: "center",
                 gap: spacing.xs,
-                justifyContent: "flex-start",
-                ...(errors.dob ? { borderBottomColor: colors.red200, backgroundColor: colors.redAlpha10 } : {}),
-                ...(patientFieldsLocked ? { opacity: 0.65, pointerEvents: "none" as const } : {}),
+                opacity: patientFieldsLocked ? 0.65 : hasDob ? 0.4 : 1,
+                ...(patientFieldsLocked ? { pointerEvents: "none" as const } : {}),
               }}
             >
-              <span style={{ fontSize: fonts.size.m, color: colors.neutral900, opacity: hasDob ? 0.4 : 1 }}>Age</span>
-              <input
-                className="text-input-field"
-                style={{ ...styles.iconFieldInput, width: 32, flex: "0 0 auto", borderBottom: "none", textAlign: "center", MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
-                type="number"
-                min="0"
-                max="150"
-                placeholder="-"
-                disabled={patientFieldsLocked}
-                onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
-                value={form.age.split("/")[0]?.trim() || ""}
-                onChange={(e) => {
-                  const y = e.target.value;
-                  const m = form.age.split("/")[1]?.trim() || "";
-                  setDobDigits("");
-                  setForm({ ...form, age: (y || m) ? `${y || "0"} / ${m || "0"}` : "", dob: "" });
-                  if (y.length >= 2) monthInputRef.current?.focus();
-                }}
-              />
-              <style>{`
-                input[type=number]::-webkit-outer-spin-button,
-                input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-                input[type=number] { -moz-appearance: textfield; }
-              `}</style>
-              <span style={{ fontSize: fonts.size.m, color: colors.neutral400, opacity: hasDob ? 0.4 : 1 }}>yrs</span>
-              <input
-                ref={monthInputRef}
-                className="text-input-field"
-                style={{ ...styles.iconFieldInput, width: 32, flex: "0 0 auto", borderBottom: "none", textAlign: "center", MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
-                type="number"
-                min="0"
-                max="11"
-                placeholder="-"
-                disabled={patientFieldsLocked}
-                onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
-                value={form.age.split("/")[1]?.trim() || ""}
-                onChange={(e) => {
-                  let m = e.target.value;
-                  const n = parseInt(m, 10);
-                  if (m !== "" && (isNaN(n) || n < 0 || n > 11)) return;
-                  const y = form.age.split("/")[0]?.trim() || "";
-                  setDobDigits("");
-                  setForm({ ...form, age: (y || m) ? `${y || "0"} / ${m || "0"}` : "", dob: "" });
-                }}
-              />
-              <span style={{ fontSize: fonts.size.m, color: colors.neutral400, opacity: hasDob ? 0.4 : 1 }}>mos</span>
+              <span style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>Age</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <MeasureField
+                  value={form.age.split("/")[0]?.trim() || ""}
+                  onChange={(y) => {
+                    const m = form.age.split("/")[1]?.trim() || "";
+                    setDobDigits("");
+                    setForm({ ...form, age: (y || m) ? `${y || "0"} / ${m || "0"}` : "", dob: "" });
+                  }}
+                  onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
+                  unit="yrs"
+                  unitWidth={38}
+                  inputMode="numeric"
+                  invalid={!!errors.dob}
+                  ariaLabel="Age in years"
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <MeasureField
+                  value={form.age.split("/")[1]?.trim() || ""}
+                  onChange={(m) => {
+                    const n = parseInt(m, 10);
+                    if (m !== "" && (isNaN(n) || n < 0 || n > 11)) return;
+                    const y = form.age.split("/")[0]?.trim() || "";
+                    setDobDigits("");
+                    setForm({ ...form, age: (y || m) ? `${y || "0"} / ${m || "0"}` : "", dob: "" });
+                  }}
+                  onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
+                  unit="mos"
+                  unitWidth={38}
+                  inputMode="numeric"
+                  invalid={!!errors.dob}
+                  ariaLabel="Age in months"
+                />
+              </div>
             </div>
           </div>
           {errors.dob && (

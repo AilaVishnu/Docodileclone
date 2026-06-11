@@ -26,6 +26,7 @@ export type MeasureFieldProps = {
   inputMode?: "numeric" | "decimal" | "text";
   ariaLabel?: string;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onFocus?: () => void;
   /** Fixed unit-chip width (px). Defaults to a 44px minimum. */
   unitWidth?: number;
   /** "box" = white field for forms (price/qty); default cream = the vitals look. */
@@ -39,7 +40,7 @@ export type MeasureFieldProps = {
 
 export function MeasureField({
   value, onChange, unit, onToggleUnit, prefix, placeholder, invalid, dense, box,
-  inputMode = "numeric", ariaLabel, onKeyDown, unitWidth, bp, value2 = "", onChange2, ariaLabel2,
+  inputMode = "numeric", ariaLabel, onKeyDown, onFocus, unitWidth, bp, value2 = "", onChange2, ariaLabel2,
 }: MeasureFieldProps) {
   const switchable = !!onToggleUnit;
   const height = dense ? 28 : "var(--input-h, 40px)";
@@ -66,14 +67,14 @@ export function MeasureField({
     <>
       <input
         inputMode={inputMode} aria-label={ariaLabel} aria-invalid={invalid || undefined}
-        value={value} onChange={handleFirstChange} onKeyDown={handleFirstKeyDown} placeholder={placeholder} style={inputBase}
+        value={value} onChange={handleFirstChange} onKeyDown={handleFirstKeyDown} onFocus={onFocus} placeholder={placeholder} style={inputBase}
       />
       {bp && (
         <>
           <span style={{ flexShrink: 0, fontSize: fonts.size.s, color: colors.neutral500, padding: `0 ${spacing["3xs"]}`, userSelect: "none" }}>/</span>
           <input
             ref={diaRef} inputMode={inputMode} aria-label={ariaLabel2} aria-invalid={invalid || undefined}
-            value={value2} onChange={(e) => onChange2?.(e.target.value)} onKeyDown={onKeyDown} style={inputBase}
+            value={value2} onChange={(e) => onChange2?.(e.target.value)} onKeyDown={onKeyDown} onFocus={onFocus} style={inputBase}
           />
         </>
       )}
