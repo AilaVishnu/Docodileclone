@@ -11,8 +11,7 @@ import {
   PhoneIcon,
   CalendarIcon,
   HashtagIcon,
-  ClockIcon,
-  PlusIcon
+  ClockIcon
 } from "../../iconsUtil";
 import { Card } from "../Card/Card";
 import { PageHeader } from "../PageHeader/PageHeader";
@@ -29,6 +28,7 @@ import { listServices, ServiceDTO } from "../../api/services";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
 import { ReactComponent as EditPencilIcon } from "../../assets/icons/edit-pencil.svg";
 import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check.svg";
+import { ReactComponent as VerifiedBadgeIcon } from "../../assets/icons/verified-badge.svg";
 import { pickAvatar } from "../../utils/avatar";
 
 type Doctor = {
@@ -1161,11 +1161,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 onClick={() => handleBook("Unpaid")}
                 disabled={submitting || form.paymentMethod === "Waive"}
               >
-                <PlusIcon style={{ width: "20px", height: "20px" }} />
+                <CalendarIcon style={{ width: "20px", height: "20px" }} />
                 {submitting ? "Booking..." : "Book Now Pay Later"}
               </button>
               <button style={styles.pillButtonPrimary} onClick={() => handleBook("Paid")} disabled={submitting}>
-                <CalendarIcon style={{ width: "20px", height: "20px", color: colors.neutral100 }} />
+                <VerifiedBadgeIcon style={{ width: "20px", height: "20px", color: colors.neutral100 }} />
                 {submitting ? "Booking..." : "Pay & Book"}
               </button>
             </>
