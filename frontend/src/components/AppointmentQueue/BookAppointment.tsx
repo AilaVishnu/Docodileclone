@@ -643,7 +643,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               <button
                 type="button"
                 onClick={clearSelectedPatient}
-                style={{ background: "none", border: "none", color: colors.secondary700, cursor: "pointer", fontSize: fonts.size.xs, textDecoration: "underline", padding: 0 }}
+                style={{ background: "none", border: "none", color: colors.red200, cursor: "pointer", fontSize: fonts.size.xs, textDecoration: "underline", padding: 0 }}
               >
                 Clear & enter new patient
               </button>
