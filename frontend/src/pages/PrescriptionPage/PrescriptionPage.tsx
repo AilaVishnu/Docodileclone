@@ -2856,12 +2856,6 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                             selectedDate={reviewDate ?? new Date()}
                             onSelect={pickReviewDate}
                             onClose={() => setShowReviewDatePicker(false)}
-                            style={{
-                              top: "auto",
-                              bottom: "calc(100% + 8px)",
-                              left: 0,
-                              transform: "none",
-                            }}
                             disablePast
                           />
                         )}
@@ -2892,42 +2886,6 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
         </div>
       </div>
       <Toast message={toast.message} isVisible={toast.visible} onClose={closeToast} />
-      {/* Floating session toolbar (Figma node 2255:10871) — fixed at the
-          bottom of the viewport so the prescription form scrolls behind it. */}
-      {/* Only mount once the visit fetch has resolved for this patient.
-          Otherwise the bar mounts first with no storageKey, briefly renders
-          its idle Start Session state, then remounts with the real visit
-          id and flips to Running/Paused — visible as a one-frame jerk.
-          For past visits we still render the bar but pass readOnly so it
-          shows that visit's recorded duration in a frozen Session Ended
-          view — no interactive controls, can't accidentally start a new
-          session for a historic record. */}
-      {visitsLoadedFor === selectedPatientId && visits.length > 0 && (
-        <SessionBar
-          // Remount per-visit so the bar reads the persisted state for the
-          // active visit rather than carrying state across visit switches.
-          key={`${activeVisit?.id ?? "no-visit"}-${sessionBarEpoch}`}
-          storageKey={activeVisit?.id}
-          readOnly={!isEditable}
-          recordedDurationSec={activeVisit?.sessionDurationSec ?? null}
-          // Drives the SessionBar's 24h "Resume" buffer in readOnly mode.
-          // After 24h since the visit's sessionEndedAt the Resume pill hides.
-          recordedEndedAtMs={activeVisit?.sessionEndedAt ? new Date(activeVisit.sessionEndedAt).getTime() : null}
-          onPrint={() => handlePrintPrescription("print")}
-          // Direct server-side PDF download — no preview modal, no browser
-          // dialog. Same template + data as Print.
-          onDownload={() => handlePrintPrescription("download")}
-          onShare={handleShareWhatsApp}
-          onActiveChange={setFormActive}
-          onStart={handleSessionStart}
-          onEnd={handleSessionEnd}
-          // Always pass onRestart and let the SessionBar's 24h-buffer
-          // logic decide whether to show the Resume pill. Restricting to
-          // today's date alone was hiding Resume for yesterday's visit
-          // even while the buffer was still active.
-          onRestart={handleSessionRestart}
-        />
-      )}
 
       {/* Prescription templates — save the current Rx + clinical fields under a
           name, or load a saved one to auto-fill. Clinic-shared (backend). */}
