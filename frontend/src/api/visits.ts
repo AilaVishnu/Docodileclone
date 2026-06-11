@@ -99,6 +99,27 @@ export const getVisit = (visitId: string): Promise<VisitDTO> =>
   fetch(`${API_BASE_URL}/api/visits/${visitId}`, { headers: authHeaders() })
     .then((r) => handle<VisitDTO>(r));
 
+// One in-progress consultation (pad opened, not yet completed). Drives the
+// live Active Sessions indicator. `sessionStartedAt` is server-owned, so the
+// elapsed timer is accurate across devices/refreshes.
+export type ActiveSession = {
+  visitId: string;
+  patientId: string;
+  appointmentId: string | null;
+  sessionStartedAt: string; // ISO instant
+  name: string;
+  phone: string | null;
+  email: string | null;
+  gender: string | null;
+  dob: string | null;
+  age: number | null;
+  displayNo: number | null;
+};
+
+export const getActiveSessions = (): Promise<ActiveSession[]> =>
+  fetch(`${API_BASE_URL}/api/active-sessions`, { headers: authHeaders() })
+    .then((r) => handle<ActiveSession[]>(r));
+
 export const createVisit = (patientId: string, body: SaveVisitRequest): Promise<VisitDTO> =>
   fetch(`${API_BASE_URL}/api/patients/${patientId}/visits`, {
     method: "POST",

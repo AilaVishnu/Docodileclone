@@ -6,6 +6,7 @@ import { StaffIllustration } from '../AddStaffModal/StaffIllustration';
 import { ReactComponent as SearchIcon } from '../../assets/search.svg';
 import { ReactComponent as PlusIcon } from '../../assets/Plus.svg';
 import type { NavTab } from '../SideNav';
+import { SessionTrayButton } from './SessionTrayButton';
 
 type TopNavProps = {
   onBuildClinic?: () => void;
@@ -26,7 +27,7 @@ type TopNavProps = {
   onNavigate?: (tab: NavTab) => void;
 };
 
-export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, isBooking, primaryActionLabel, primaryActionVariant = "primary" }: TopNavProps) {
+export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, isBooking, primaryActionLabel, primaryActionVariant = "primary", onNavigate }: TopNavProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -256,6 +257,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
         )}
 
         <div style={styles.iconGroup}>
+          {onNavigate && <SessionTrayButton onNavigate={onNavigate} />}
           <HoverIconButton>
             <MessageIcon />
           </HoverIconButton>
