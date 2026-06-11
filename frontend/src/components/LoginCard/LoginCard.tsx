@@ -44,8 +44,6 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
   const [forgotSubmitting, setForgotSubmitting] = useState(false);
 
   const isStaff = mode === "staff";
-  const isDomainValid = !isStaff || domain.trim().length > 0;
-  const canSubmit = email.trim().length > 0 && password.trim().length > 0 && isDomainValid;
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -113,7 +111,7 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && canSubmit && !isSubmitting) {
+    if (e.key === "Enter" && !isSubmitting) {
       handleLogin();
     }
   };
@@ -281,7 +279,10 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
         variant={isStaff ? "primary" : "secondary"}
         size="md"
         onClick={handleLogin}
-        disabled={isSubmitting || !canSubmit}
+        // Always clickable by default (green/orange), not greyed out. Empty-field
+        // validation happens on click in handleLogin (friendly toast). Only the
+        // in-flight submit disables it, to prevent a double-submit.
+        disabled={isSubmitting}
       >
         {isSubmitting ? "Signing in..." : "Sign in"}
       </Button>
