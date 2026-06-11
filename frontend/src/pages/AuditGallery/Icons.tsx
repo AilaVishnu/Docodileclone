@@ -17,10 +17,6 @@ import { Section, Sub, Tile, Note } from "./shared";
 
 // ── (system 1) real SVGR assets — confirmed to exist via `ls assets/icons` ──
 import { ReactComponent as ChevronUp } from "../../assets/icons/chevron-up.svg";
-import { ReactComponent as CircleOutline } from "../../assets/icons/circle-outline.svg";
-import { ReactComponent as CircleOutline2 } from "../../assets/icons/circle-outline-2.svg";
-import { ReactComponent as ChevronDownDark } from "../../assets/icons/chevron-down-dark.svg";
-import { ReactComponent as ChevronDownLight } from "../../assets/icons/chevron-down-light.svg";
 import { ReactComponent as Restart } from "../../assets/icons/restart.svg";
 import { ReactComponent as Restart24 } from "../../assets/icons/restart-24.svg";
 import { ReactComponent as BillCheck } from "../../assets/icons/bill-check.svg";
@@ -35,18 +31,18 @@ import { ReactComponent as Plus } from "../../assets/icons/plus.svg";
 // ── (system 2) the one real shared component — takes size/open/color ──
 import { ChevronDown } from "../../components/icons/ChevronDown";
 
-// Dead (unreferenced anywhere outside this audit) asset files proposed for deletion.
+// The 8 UNUSED asset files DELETED in the safe-cleanup pass (verified 0 refs).
+// NB: bill-check-small / users-group-rounded / paid-stamp were on the original
+// "11 dead" list but are actually still imported (PrescriptionPage, BillCard) —
+// KEPT. The audit overstated the dead count; only these 8 were truly dead.
 const DEAD_FILES = [
   "circle-outline.svg",
   "circle-outline-2.svg",
   "chevron-down-dark.svg",
   "chevron-down-light.svg",
-  "bill-check-small.svg",
-  "users-group-rounded.svg",
   "horizontal-line-short-2.svg",
   "vertical-line-tall.svg",
   "stethoscope-cup.svg",
-  "paid-stamp.svg",
   "curved-connector.svg",
 ];
 
@@ -71,6 +67,14 @@ export function IconsCategory() {
         {" "}is only a comment, never a token. Proposed fix: one <code style={mono}>&lt;Icon name size color&gt;</code>
         {" "}at 24px default + <code style={mono}>currentColor</code>, normalize every asset to
         {" "}<code style={mono}>viewBox 0 0 24 24</code>, delete the dead files.
+        <br /><br />
+        <strong>✅ SHIPPED (safe-cleanup slice only):</strong> the {DEAD_FILES.length} truly-dead
+        files were deleted. The rest — the shared <code style={mono}>&lt;Icon&gt;</code> component,
+        stripping baked colours to <code style={mono}>currentColor</code>, and merging the live
+        look-alikes — was <strong>deferred</strong> (visual changes that need click-testing behind the
+        login wall). 3 files the audit called "dead" (<code style={mono}>bill-check-small</code>,{" "}
+        <code style={mono}>users-group-rounded</code>, <code style={mono}>paid-stamp</code>) are
+        actually in use and were KEPT.
       </Note>
 
       {/* ─────────────────────────── ICON-dups ─────────────────────────── */}
@@ -78,20 +82,8 @@ export function IconsCategory() {
         title="ICON-dups · duplicate asset files"
         note="Same glyph shipped two (or more) ways. Render side by side at the same box so the duplication is obvious. UNUSED = dead file (delete); LIVE = referenced in a real screen."
       >
-        <Tile id="ICON-dups-1a" label="circle-outline.svg" src="UNUSED · md5 333769…">
-          <Ink color={colors.neutral500}><CircleOutline width={24} height={24} /></Ink>
-        </Tile>
-        <Tile id="ICON-dups-1b" label="circle-outline-2.svg" src="UNUSED · BYTE-IDENTICAL ⇒ delete">
-          <Ink color={colors.neutral500}><CircleOutline2 width={24} height={24} /></Ink>
-        </Tile>
-
-        <Tile id="ICON-dups-2a" label="chevron-down-dark.svg" src="UNUSED · baked #202020">
-          <ChevronDownDark width={24} height={24} />
-        </Tile>
-        <Tile id="ICON-dups-2b" label="chevron-down-light.svg" src="UNUSED · same path, baked #C7C7C7">
-          <ChevronDownLight width={24} height={24} />
-        </Tile>
-
+        {/* ICON-dups-1a/1b (circle-outline ×2) and 2a/2b (chevron-down-dark/light)
+            were UNUSED — deleted in the safe-cleanup pass, so they no longer render here. */}
         <Tile id="ICON-dups-3a" label="restart.svg" src="LIVE · 18px, no stroke-width">
           <Ink><Restart width={24} height={24} /></Ink>
         </Tile>
@@ -245,11 +237,11 @@ export function IconsCategory() {
         </Tile>
       </Sub>
       <Note>
-        Migration: collapse the duplicate pairs to one asset each, convert the {DEAD_FILES.length} dead files
-        out of the build, replace every inline ✕ / chevron redraw with the shared component, and rewrite the 11
-        baked-colour assets to <code style={mono}>currentColor</code> on a <code style={mono}>0 0 24 24</code> box.
+        Remaining (deferred) migration: collapse the live duplicate pairs to one asset each, replace every
+        inline ✕ / chevron redraw with the shared component, and rewrite the baked-colour assets to{" "}
+        <code style={mono}>currentColor</code> on a <code style={mono}>0 0 24 24</code> box.
         <br />
-        <strong>Dead files proposed for deletion ({DEAD_FILES.length}):</strong>{" "}
+        <strong>✅ Deleted in the cleanup ({DEAD_FILES.length}):</strong>{" "}
         <code style={mono}>{DEAD_FILES.join("  ·  ")}</code>
       </Note>
     </Section>
