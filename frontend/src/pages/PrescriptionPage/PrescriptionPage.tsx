@@ -2940,6 +2940,90 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
         </div>
       </Modal>
 
+      {/* ─── Floating bottom bar — the ACTIVE SECTION'S actions. Section nav
+          + contact actions moved up to the sticky header; this bar now adapts
+          to which section is open. Output actions (Download / Print / Share)
+          group on the left; the destructive Clear all is set apart behind a
+          divider. Coming-soon sections (Timeline / Bills) render no bar. */}
+      {activeAction <= 1 && (
+        <div style={styles.bottomBar}>
+          {activeAction === 0 ? (
+            <>
+              {/* Complete visit / Save changes — only on the current editable
+                  visit with an appointment (canEditForm is false for past
+                  historic visits). Before completion: "Complete visit" (stamps
+                  the end time + marks the appointment Completed). After
+                  completion: shown as "Save changes" ONLY while there are
+                  unsaved edits, and it persists them WITHOUT reopening the
+                  appointment (status stays Completed). Auto-save still runs on
+                  blur and clears the dirty flag, so the button hides again. */}
+              {canEditForm && selectedAppointmentId && (() => {
+                const completed = (selectedAppointmentStatus ?? "").toUpperCase() === "COMPLETED";
+                if (completed && !dirty) return null;
+                return (
+                  <button
+                    type="button"
+                    style={{ ...styles.barBtn, backgroundColor: colors.secondary400, color: colors.neutral900 }}
+                    // onMouseDown + preventDefault so the handler runs BEFORE the
+                    // focused field blurs — otherwise the blur fires a silent
+                    // auto-save that clears the dirty flag and hides this button
+                    // before the click lands (the "no toast" bug).
+                    onMouseDown={(e) => { e.preventDefault(); void handleCompleteVisit(); }}
+                  >
+                    <BillCheckIcon width={18} height={18} />
+                    <span>{completed ? "Save changes" : "Complete visit"}</span>
+                  </button>
+                );
+              })()}
+              <button type="button" style={styles.barBtn} onClick={() => handlePrintPrescription("download")}>
+                <DownloadIcon width={18} height={18} />
+                <span>Download</span>
+              </button>
+              <button type="button" style={styles.barBtn} onClick={() => handlePrintPrescription("print")}>
+                <PrinterIcon width={18} height={18} />
+                <span>Print</span>
+              </button>
+              <button type="button" style={styles.barBtn} onClick={handleShareWhatsApp}>
+                <ShareIcon width={18} height={18} />
+                <span>Share</span>
+              </button>
+              {/* Clear all wipes the prescription — destructive, so only on the
+                  current editable visit. Past/historic visits are read-only. */}
+              {canEditForm && (
+                <>
+                  <div style={styles.barDivider} aria-hidden />
+                  <button type="button" style={{ ...styles.barBtn, ...styles.barBtnDanger }} onClick={handleClearAll}>
+                    <TrashIcon width={18} height={18} />
+                    <span>Clear all</span>
+                  </button>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <button type="button" style={styles.barBtn} onClick={() => setShowAddModal(true)}>
+                <FileIcon style={{ width: 18, height: 18 }} />
+                <span>Add file</span>
+              </button>
+              <button type="button" style={styles.barBtn} onClick={handleDownloadAllFiles}>
+                <DownloadIcon width={18} height={18} />
+                <span>Download all</span>
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {showAiSummary && (
+        <>
+          <div style={styles.aiPopoverBackdrop} onClick={() => setShowAiSummary(false)} />
+          <div style={styles.aiPopover} role="dialog" aria-label="AI Summary">
+            <h4 style={styles.aiSummaryTitle}>AI Summary</h4>
+            <p style={styles.aiSummaryBody}>{AI_SUMMARY_TEXT}</p>
+          </div>
+        </>
+      )}
+
       {/* Add File modal. Drag-drop or click-to-choose, multi-file, per-file
           metadata (name, category, investigation date, tie-to-visit, notes).
           One unified flow now that Reports + Files are a single tab. */}
