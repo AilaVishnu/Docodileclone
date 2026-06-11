@@ -100,9 +100,15 @@ DECISION (approved the proposed canonical Modal, with 2 tweaks):
 ### Chevron icon — updated 2026-06-11
 The canonical `ChevronDown` now uses the path you provided (`M19 9L12 15L5 9`, strokeWidth 1.5), colour driven by the `color` prop (not hardcoded). Propagates to all 3 dropdown types.
 
-## 5. Nav / tabs / headers — _built, ready for review_
+## 5. Nav / tabs (TABS only) — _✅ BUILT 2026-06-11_
 IDs: `TAB-block/rxfilter/stats/visit/pharmacy/connected/clinic`, `CHIP-conflict`, `HDR-pageheader/rx/settings`, `TAB-CANON`.
-Decision: one Tabs (white-pill, single active tone); fold rxHeader + Settings into PageHeader.
+DECISION (per A/B/C/D/E review):
+- **E = canonical** white-pill `<Tabs>`. ✅ Now has TWO sizes: `md` (the larger "E") and `size="sm"` (the smaller "visit"). RESPONSIVE: `md` compacts 40/r12 → 32/r8 below 1440 via new `--tab-md-h` / `--tab-md-r` vars (so at the lower tier all tabs read like the visit size; above 1440 both sizes are available).
+- **A (white-pill clones):** Rx-filter (`PrescriptionQueue.styles`) + Stats strip (`StatsPage`) aligned to the responsive `--tab-md-*` vars. (Full migration of these hand-rolled bars onto the `<Tabs>` component itself = optional follow-up; visually + responsively they now match.)
+- **B:** Pharmacy `togglePill` → the white pill (was an inverted dark pill, which even contradicted its own code comment) + responsive. The sort/range **chips RETAINED** as-is.
+- **C (legacy trapezoid)** + **D (headers: PageHeader / rxHeader / Settings)** — RETAINED as-is per your call.
+- _Not built:_ headers were explicitly kept, so the earlier "fold rxHeader/Settings into PageHeader" idea is dropped.
+- ⚠️ Not click-tested live (login wall) — recommend resizing the window across 1440 to confirm tabs compact.
 
 ## 6. Cards — _built, ready for review_
 IDs: `CARD-R8/R16/R20`, `CARD-BG-*`, `CARD-canon/bill/clinic/clinicdisplay/clinicinfo/hint/staff/addstaff/docstatus/heatmap/login/kpi`, `CARD-CANON-PROPOSED`.

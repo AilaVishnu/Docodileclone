@@ -25,7 +25,7 @@ const CATS: [string, string, "shipped" | "review"][] = [
   ["inputs", "2 · Inputs", "shipped"],
   ["dropdowns", "3 · Dropdowns", "shipped"],
   ["modals", "4 · Modals", "shipped"],
-  ["nav", "5 · Nav / Tabs", "review"],
+  ["nav", "5 · Nav / Tabs", "shipped"],
   ["cards", "6 · Cards", "review"],
   ["tables", "7 · Tables", "review"],
   ["icons", "8 · Icons", "review"],

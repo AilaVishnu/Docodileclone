@@ -25,7 +25,17 @@ import { Tabs } from "../../components/Tabs";
 
 export function NavCategory() {
   return (
-    <Section id="nav" title="5 · Nav / tabs / headers">
+    <Section id="nav" title="5 · Nav / tabs / headers" status="shipped">
+      <Note>
+        <strong>✅ DECIDED &amp; built (tabs).</strong> The canonical white-pill <code>&lt;Tabs&gt;</code>
+        (E) now has TWO sizes — <code>md</code> (the larger "E" tab) and <code>size="sm"</code> (the
+        smaller "visit" tab) — and is RESPONSIVE: <code>md</code> compacts from 40px/r12 to 32px/r8
+        BELOW 1440 (so at the lower tier everything reads like the visit size; above 1440 both
+        sizes are available). The hand-rolled white-pill copies (Rx filter, Stats strip) were aligned
+        to the same responsive height/radius vars, and <b>Pharmacy's dark toggle is now the white pill</b>
+        too. KEPT as-is per your call: the legacy trapezoid tabs (C), the sort/range chips (B), and all
+        three header patterns (D). The rows below are the BEFORE.
+      </Note>
       <Note>
         Eight tab implementations, three conflicting active tones. The white-pill
         design (radii.xl · inactive <code>alphaBlack0/alphaBlack3</code> · active{" "}

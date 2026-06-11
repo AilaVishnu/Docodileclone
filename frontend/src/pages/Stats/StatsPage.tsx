@@ -1515,9 +1515,9 @@ const styles: Record<string, React.CSSProperties> = {
   controlsRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: spacing.m, flexWrap: "wrap" },
   tabStrip: { display: "inline-flex", alignItems: "center", gap: spacing.xs },
   tab: {
-    height: 40,
+    height: "var(--tab-md-h, 40px)",
     padding: `${spacing.xs} ${spacing.m}`,
-    borderRadius: radii.xl,
+    borderRadius: "var(--tab-md-r, 12px)",
     border: "none",
     backgroundColor: colors.alphaBlack0,
     color: colors.alphaBlack3,

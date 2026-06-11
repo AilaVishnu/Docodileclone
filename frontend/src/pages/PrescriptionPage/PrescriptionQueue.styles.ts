@@ -50,11 +50,11 @@ export const styles: Record<string, CSSProperties> = {
   // Inactive: alphaBlack0 bg + alphaBlack3 text, 12px radius, paragraph-m
   // typography (Inter 16/22). Active: white bg with neutral900 text.
   tab: {
-    height: 40,
+    height: "var(--tab-md-h, 40px)",
     // Horizontal padding is tier-aware via --rxq-tab-padx (16px default,
     // 12px on the 1200–1439 tier). Vertical stays at spacing.xs.
     padding: `${spacing.xs} var(--rxq-tab-padx, 16px)`,
-    borderRadius: radii.xl,
+    borderRadius: "var(--tab-md-r, 12px)",
     border: "none",
     backgroundColor: colors.alphaBlack0,
     color: colors.alphaBlack3,
