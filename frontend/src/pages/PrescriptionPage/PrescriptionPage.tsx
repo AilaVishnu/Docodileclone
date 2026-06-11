@@ -51,19 +51,15 @@ import { useDoctors } from "../../hooks/useDoctors";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { PrescriptionQueue } from "./PrescriptionQueue";
 import { Patient } from "../../hooks/usePatients";
-import { SessionBar } from "../../components/SessionBar/SessionBar";
 import {
-  recordActiveSession,
-  clearActiveSession,
-  clearOtherSessionsForPatient,
   consumePendingSessionNav,
   type PendingSessionNav,
 } from "../../components/TopNav/SessionTrayButton";
+import { markStarted, unmarkStarted } from "../../utils/sessionStarted";
 import { useVisits } from "../../hooks/useVisits";
 import { createVisit, updateVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
 import { listRxTemplates, saveRxTemplate, deleteRxTemplate } from "../../api/rxTemplates";
 import { fetchLatestRxForMedicine, RxLatestDTO } from "../../api/rxHistory";
-import { markStarted, unmarkStarted } from "../../utils/sessionStarted";
 import { API_BASE_URL } from "../../apiConfig";
 import { AddReportModal, AddReportRow } from "./AddReportModal";
 import { FileViewer } from "./FileViewer";
@@ -660,7 +656,19 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   const prevVisit: VisitDTO | undefined = activeTab > 0 ? visits[activeTab - 1] : undefined;
   const [reviewDate, setReviewDate] = React.useState<Date | null>(null);
   const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
-  const [rxRows, setRxRows] = React.useState<RxRowDraft[]>([]);
+  // Tracks unsaved edits since the visit loaded / was last saved. Surfaces
+  // the "Save changes" button on an already-completed visit only after the
+  // doctor actually edits. Set on form input + rx mutations, cleared on save
+  // and on visit change.
+  const [dirty, setDirty] = React.useState<boolean>(false);
+  const [rxRows, _setRxRows] = React.useState<RxRowDraft[]>([]);
+  // Every USER rx mutation (add / delete row, picker change, etc.) flags
+  // dirty. The visit-load populate and the async generic-name enrichment use
+  // the raw `_setRxRows` so loading a visit never looks like an edit.
+  const setRxRows = React.useCallback((value: React.SetStateAction<RxRowDraft[]>) => {
+    _setRxRows(value);
+    setDirty(true);
+  }, []);
   const [rxInteractions, setRxInteractions] = React.useState<Array<{ drug: string; interactsWith: string; comment: string }>>([]);
 
   // Per-medicine autofill: index this patient's PAST prescriptions by medicine
@@ -736,33 +744,50 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     React.useState<Record<string, VitalCellState>>(() => buildVitalState(undefined));
   // History field values (Family History, Allergies, …). Controlled so the
   // <Autocomplete> dropdown can drive them. Reset on visit-tab change.
-  const [historyValues, setHistoryValues] =
+  const [historyValues, _setHistoryValues] =
     React.useState<Record<string, string>>(() =>
       Object.fromEntries(HISTORY_FIELDS.map((f) => [f.field, ""]))
     );
   // Diagnosis + Complaints + Tests are also suggestion-driven
   // (specialty-scoped via the same API).
-  const [diagnosisValue, setDiagnosisValue] = React.useState<string>("");
-  const [complaintsValue, setComplaintsValue] = React.useState<string>("");
-  const [testsValue, setTestsValue] = React.useState<string>("");
+  const [diagnosisValue, _setDiagnosisValue] = React.useState<string>("");
+  const [complaintsValue, _setComplaintsValue] = React.useState<string>("");
+  const [testsValue, _setTestsValue] = React.useState<string>("");
+  // Chip/tag + suggestion fields are click-driven (× to remove a chip, pick a
+  // suggestion) so they don't all bubble a form `onChange`. Wrap their setters
+  // to flag dirty on any user change; the visit-load populate uses the raw
+  // `_set*` versions so loading a visit is never treated as an edit.
+  const setHistoryValues = React.useCallback((value: React.SetStateAction<Record<string, string>>) => {
+    _setHistoryValues(value);
+    setDirty(true);
+  }, []);
+  const setDiagnosisValue = React.useCallback((value: React.SetStateAction<string>) => {
+    _setDiagnosisValue(value);
+    setDirty(true);
+  }, []);
+  const setComplaintsValue = React.useCallback((value: React.SetStateAction<string>) => {
+    _setComplaintsValue(value);
+    setDirty(true);
+  }, []);
+  const setTestsValue = React.useCallback((value: React.SetStateAction<string>) => {
+    _setTestsValue(value);
+    setDirty(true);
+  }, []);
   // Notes-for-Patient + Private Notes + Review-Notes are now controlled too
   // so we can serialize them on Save.
   const [notesForPatientValue, setNotesForPatientValue] = React.useState<string>("");
   const [privateNotesValue, setPrivateNotesValue] = React.useState<string>("");
   const [reviewNotesValue, setReviewNotesValue] = React.useState<string>("");
   const [saving, setSaving] = React.useState<boolean>(false);
+  // The visit id whose data the form currently holds. Updated (in state, so
+  // it flips atomically with the form fields) every time the form populates
+  // from a visit. handleSave refuses to write unless this matches the active
+  // visit — so during a visit switch the previous visit's form data can never
+  // be saved onto the newly-selected visit (the data-bleed-between-visits bug).
+  const [loadedVisitId, setLoadedVisitId] = React.useState<string | null>(null);
   // AI SOAP draft modal — opens on the ✨ AI draft button next to the
   // Complaints/Diagnosis row. Fetched on open; applies per-field on demand.
   const [aiSoapOpen, setAiSoapOpen] = React.useState<boolean>(false);
-  // Forces SessionBar to remount after Restart. The visit id doesn't change
-  // on restart so React would otherwise keep the bar's old in-memory state
-  // (which still thinks the session is ended); bumping this counter is the
-  // cheap way to make the bar re-read its localStorage entry.
-  const [sessionBarEpoch, setSessionBarEpoch] = React.useState(0);
-  // Form is non-interactive until the user clicks Start Session on the
-  // floating SessionBar. Pausing / ending re-locks. Visually unchanged
-  // while locked — only pointer-events are blocked.
-  const [formActive, setFormActive] = React.useState<boolean>(false);
   // Visits are loaded ASC by visit_date, so the latest one sits at the
   // tail of the array — that's "today's visit", the one whose SessionBar
   // Editability is purely a function of the visit's session lifecycle, not
