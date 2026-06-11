@@ -103,7 +103,36 @@ export function InputsSection() {
         </Specimen>
         <Rule>Heights are responsive via <code>--input-h</code> — every field compacts together at &lt;1440 (40→32). This is the same primitive Select &amp; the pickers read.</Rule>
       </Sub>
+
+      <Sub title="PROPOSED — Field with prefix / number / suffix"
+        note="The common hand-built inputs we could fold INTO Field so they become shared: a leading prefix (₹ price), a number field, and a trailing suffix (units / clinic domain). Mock only — not built yet.">
+        <div style={{ border: `1px dashed ${colors.secondary400}`, borderRadius: radii.m, padding: spacing.l, maxWidth: 560,
+          background: colors.secondary50, display: "flex", flexDirection: "column", gap: spacing.m }}>
+          <span style={{ alignSelf: "flex-start", fontSize: 10, fontWeight: fonts.weight.bold, letterSpacing: 0.4,
+            color: colors.secondary700, background: colors.secondary100, borderRadius: radii.xs, padding: "1px 6px" }}>PROPOSED · MOCK</span>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing.m }}>
+            <div><Label>prefix · price</Label><MockField prefix="₹" value="1,200" /></div>
+            <div><Label>number · duration</Label><MockField value="15" suffix="mins" /></div>
+            <div style={{ gridColumn: "1 / -1" }}><Label>suffix · clinic domain</Label><MockField value="sunrise" suffix=".docodile.app" /></div>
+          </div>
+          <div style={{ fontSize: fonts.size.xs, color: colors.neutral600 }}>
+            Would replace the bespoke price/number/domain inputs (AddServiceModal, ClinicCard, …) with one shared <code>&lt;Field prefix suffix type&gt;</code>.
+          </div>
+        </div>
+      </Sub>
     </Section>
+  );
+}
+
+// Mock of the proposed enhanced Field (box look + prefix/suffix slots). Not the real component.
+function MockField({ prefix, value, suffix }: { prefix?: string; value: string; suffix?: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", height: "var(--input-h, 40px)",
+      border: `1px solid ${colors.neutral300}`, borderRadius: radii.m, background: colors.neutral100, overflow: "hidden" }}>
+      {prefix && <span style={{ padding: `0 ${spacing.xs}`, color: colors.neutral500, fontSize: fonts.size.m, borderRight: `1px solid ${colors.neutral200}`, alignSelf: "stretch", display: "flex", alignItems: "center" }}>{prefix}</span>}
+      <span style={{ flex: 1, padding: `0 ${spacing.s}`, color: colors.neutral900, fontSize: fonts.size.m }}>{value}</span>
+      {suffix && <span style={{ padding: `0 ${spacing.s}`, color: colors.neutral500, fontSize: fonts.size.s, borderLeft: `1px solid ${colors.neutral200}`, alignSelf: "stretch", display: "flex", alignItems: "center" }}>{suffix}</span>}
+    </div>
   );
 }
 
