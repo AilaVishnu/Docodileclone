@@ -8,6 +8,7 @@ import com.example.docodile.repo.PatientRepository
 import com.example.docodile.repo.RxRowRepository
 import com.example.docodile.repo.VisitRepository
 import com.example.docodile.security.CurrentUser
+import com.example.docodile.web.ActiveSessionDTO
 import com.example.docodile.web.RxRowDTO
 import com.example.docodile.web.SaveVisitRequest
 import com.example.docodile.web.VisitDTO
@@ -34,6 +35,33 @@ class VisitService(
         // each patient row owns its own history.
         return visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAscCreatedAtAsc(clinicId, patientId)
             .map { it.toDTO(loadRxRows(it.id)) }
+    }
+
+    // In-progress consultations for the live "Active Sessions" indicator —
+    // the doctor has opened the pad but not yet completed the visit. Newest
+    // first so the most recently started session leads.
+    fun listActiveSessions(): List<ActiveSessionDTO> {
+        val clinicId = currentUser.clinicId()
+        return visitRepository
+            .findActiveSessions(clinicId)
+            .mapNotNull { v ->
+                val p = v.patient ?: return@mapNotNull null
+                val startedAt = v.sessionStartedAt ?: return@mapNotNull null
+                ActiveSessionDTO(
+                    visitId = v.id,
+                    patientId = p.id,
+                    appointmentId = v.appointmentId,
+                    sessionStartedAt = startedAt,
+                    name = p.name,
+                    phone = p.phone,
+                    email = p.email,
+                    gender = p.gender,
+                    dob = p.dob,
+                    age = p.age,
+                    displayNo = p.displayNo,
+                )
+            }
+            .sortedByDescending { it.sessionStartedAt }
     }
 
     fun get(visitId: UUID): VisitDTO {
