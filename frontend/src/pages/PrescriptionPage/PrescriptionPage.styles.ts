@@ -305,30 +305,15 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing.s,
     flexShrink: 0,
   },
-  headerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.full,
-    overflow: "hidden",
-    backgroundColor: colors.primary300,
-    flexShrink: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  // Single inline line: "T--- Ramesh (M|64)". T--- is muted, name is dark.
-  // Patient name — sans (Inter) at the CTA font size, like the other header
-  // titles. This one stays LEFT-aligned (the prescription-file exception).
+  // Patient name only (no avatar / T-number / meta) — sans (Inter) at the CTA
+  // font size, like the other header titles. LEFT-aligned (the prescription-
+  // file exception).
   headerName: {
     fontSize: "var(--btn-fs)",
     fontFamily: fonts.family.primary,
     fontWeight: fonts.weight.semibold,
     color: colors.neutral900,
     whiteSpace: "nowrap" as const,
-  },
-  headerTId: {
-    color: colors.neutral500,
-    marginRight: spacing["2xs"],
   },
 
   // Print / Download / Share — icon-only actions in the sticky PageHeader's
@@ -1393,12 +1378,6 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.h2,
     color: colors.neutral900,
   },
-  infoIdName: {
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.m,
-    fontWeight: fonts.weight.medium,
-    color: colors.neutral900,
-  },
   // Basic-info card — same shape as the booking details card, but the fields
   // are read-only text (no input underline).
   infoFieldsCard: {
@@ -1420,16 +1399,6 @@ export const styles: Record<string, CSSProperties> = {
     height: 22,
     flexShrink: 0,
     color: colors.neutral700,
-  },
-  infoRowText: {
-    display: "flex",
-    flexDirection: "column",
-    minWidth: 0,
-  },
-  infoLabel: {
-    fontSize: fonts.size.xs,
-    lineHeight: fonts.lineHeight.xs,
-    color: colors.neutral500,
   },
   infoValue: {
     fontSize: fonts.size.m,

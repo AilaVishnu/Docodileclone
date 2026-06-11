@@ -443,30 +443,6 @@ const computeRxTotal = (medicine?: string | null, dosage?: string | null, freque
   return Math.ceil(unitsPerDose * dosesPerDay * days);
 };
 
-// Format the secondary line of the patient identity card. Shape:
-// "M|64" — gender shortened, age joined with a pipe. Backend stores age in
-// months (consistent with PrescriptionQueue / queue list view); we convert
-// to years here. Phone is no longer included; it lives in Quick Actions.
-const formatPatientGenderAge = (
-  p: { gender: string | null; age: number | null } | null
-): string => {
-  if (!p) return "";
-  const genderShort = (() => {
-    if (!p.gender) return "";
-    const g = p.gender.trim().toLowerCase();
-    if (g.startsWith("m")) return "M";
-    if (g.startsWith("f")) return "F";
-    return p.gender;
-  })();
-  // Age stored in MONTHS — show whole years, or "Nm" for an infant under a
-  // year so it never reads as a bare "0". Phone is not included here; it
-  // lives in Quick Actions. Caller wraps the result in parens.
-  const ageStr = p.age != null
-    ? (p.age < 12 ? `${p.age}m` : String(Math.floor(p.age / 12)))
-    : "";
-  return [genderShort, ageStr].filter(Boolean).join("|");
-};
-
 // Figma node 2059:6764 — patient-context action list.
 // "Visits" renders active by default; count badges are circular.
 // Icons are the exact Linear set from the Figma design, normalized to
@@ -1923,27 +1899,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
         <div style={styles.rxHeaderPad}>
         <div style={styles.rxHeaderInner}>
           <div style={styles.headerPatient}>
-            <div style={{ ...styles.headerAvatar, width: 38, height: 38 }}>
-              <img
-                src={pickAvatar({
-                  gender: selectedPatient?.gender,
-                  ageYears: selectedPatient?.age != null ? Math.floor(selectedPatient.age / 12) : null,
-                })}
-                alt=""
-                width={38}
-                height={38}
-                style={{ display: "block", objectFit: "contain" }}
-              />
-            </div>
-            {/* Inline: "T--- Ramesh (M|64)" — T-number muted, name dark. */}
-            <span style={styles.headerName}>
-              <span style={styles.headerTId}>T---</span>
-              {selectedPatient?.name ?? ""}
-              {(() => {
-                const meta = formatPatientGenderAge(selectedPatient);
-                return meta ? ` (${meta})` : "";
-              })()}
-            </span>
+            {/* Just the patient's name — avatar, T-number and (gender|age)
+                meta intentionally omitted to keep the sticky header minimal. */}
+            <span style={styles.headerName}>{selectedPatient?.name ?? ""}</span>
           </div>
 
           {/* Flexible gap pushes nav + actions to the right side. */}
@@ -2040,7 +1998,6 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                 <h1 style={styles.infoIdText}>
                   {selectedPatient?.displayNo != null ? `T${selectedPatient.displayNo}` : "T---"}
                 </h1>
-                <span style={styles.infoIdName}>{selectedPatient?.name}</span>
               </Card>
 
               <Card style={styles.infoFieldsCard}>
@@ -2053,10 +2010,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                 ].map((f) => (
                   <div key={f.label} style={styles.infoRow}>
                     {f.icon}
-                    <div style={styles.infoRowText}>
-                      <div style={styles.infoLabel}>{f.label}</div>
-                      <div style={styles.infoValue}>{f.value || "—"}</div>
-                    </div>
+                    <div style={styles.infoValue}>{f.value || "—"}</div>
                   </div>
                 ))}
               </Card>

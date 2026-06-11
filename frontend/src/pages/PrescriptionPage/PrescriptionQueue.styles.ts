@@ -158,7 +158,7 @@ export const styles: Record<string, CSSProperties> = {
   cardTitleMeta: {
     fontSize: fonts.size.l,
     lineHeight: fonts.lineHeight.l,
-    fontFamily: fonts.family.secondary,
+    fontFamily: fonts.family.primary,
     color: colors.neutral900,
   },
   cardRows: {
