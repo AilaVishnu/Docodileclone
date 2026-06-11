@@ -19,6 +19,7 @@ import { Tag } from "../../components/Tag";
 import { Switch } from "../../components/Switch";
 import { StatusBadge, PayBadge } from "../../components/AppointmentQueue/StatusBadge";
 import { Toast } from "../../components/Toast";
+import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { tableHeadCell, tableDivider } from "../../styles/tableStyles";
 import { Section, Sub, Row, Label, Rule, From, Specimen, DetailTable, ResponsiveTable } from "./kit";
 
@@ -321,14 +322,29 @@ export function TablesSection() {
   );
 }
 
-// ── 13 · Toast ───────────────────────────────────────────────────────────────────
+// DatePicker's overlay is position:fixed/centered; neutralise it so the storybook
+// can show the calendar inline instead of as a viewport-centered popover.
+const dpInline: React.CSSProperties = { position: "static", top: "auto", left: "auto", transform: "none" };
+
+// ── 13 · Toast & Date picker ──────────────────────────────────────────────────────
 export function ToastSection() {
   const [open, setOpen] = useState(false);
+  const [d1, setD1] = useState(new Date());
+  const [d2, setD2] = useState(new Date());
   return (
-    <Section id="toast" title="13 · Toast"
-      tldr={<><From>components/Toast</From> — transient confirmation, auto-dismiss, sits at <code>zIndex.toast</code> (above modals).</>}>
-      <Button variant="secondary" onClick={() => setOpen(true)}>Show toast</Button>
-      <Toast message="Saved successfully" isVisible={open} onClose={() => setOpen(false)} />
+    <Section id="toast" title="13 · Toast & Date picker"
+      tldr={<><From>components/Toast</From> — transient confirmation, auto-dismiss, sits at <code>zIndex.toast</code>. <From>components/DatePicker</From> — ONE shared calendar; the <b>"Go to today"</b> button is an opt-in (<code>showDoneButton</code>), so the same picker covers both the header date-dropdown (with button) and every in-form date field (no button). <code>disablePast</code> greys past dates.</>}>
+      <Sub title="Toast">
+        <Button variant="secondary" onClick={() => setOpen(true)}>Show toast</Button>
+        <Toast message="Saved successfully" isVisible={open} onClose={() => setOpen(false)} />
+      </Sub>
+      <Sub title="DatePicker — two variants (same component)"
+        note="Left: the standard with a 'Go to today' button (sticky-header date dropdown). Right: the no-button variant (every in-form date field — New Appointment, Prescription review date, …).">
+        <Row align="flex-start" gap={spacing.xl}>
+          <div><Label>showDoneButton (header)</Label><DatePicker selectedDate={d1} onSelect={setD1} onClose={() => {}} showDoneButton style={dpInline} /></div>
+          <div><Label>plain — no button (forms)</Label><DatePicker selectedDate={d2} onSelect={setD2} onClose={() => {}} disablePast style={dpInline} /></div>
+        </Row>
+      </Sub>
     </Section>
   );
 }
