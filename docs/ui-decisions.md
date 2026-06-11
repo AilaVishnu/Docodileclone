@@ -88,9 +88,16 @@ DECISION:
 - ✅ BUILT: `shadows` token added to theme.ts (`menu`/`modal`/`card`); `Select` + `UnderlineSelect` menus reconciled to the bordered look + `shadows.menu` + cream hover / `primary100` selected.
 - _Follow-up:_ point the ~22 menus that already hardcode `0 4px 16px rgba(0,0,0,0.08)` at `shadows.menu` (same value, single-source); optionally extract a shared `<Menu>`/`<Popover>` primitive so the panel isn't hand-rolled in ~22 files.
 
-## 4. Modals / dialogs — _built, ready for review_
+## 4. Modals / dialogs — _✅ DECIDED 2026-06-11 (not yet built)_
 IDs: `MOD-canon`, `MOD-print/bill/service/presets/confirm/slot/ai`, `MOD-CANON-PROPOSED`.
-Decision: one shell + a `zIndex` scale; pick surface (tint/white/cream), backdrop opacity, radius, shadow, close style.
+DECISION (approved the proposed canonical Modal, with 2 tweaks):
+- ✅ Adopt one canonical `<Modal>` shell: tokenized backdrop (one opacity, e.g. `alphaBlack3`), a real **`zIndex` scale** in theme.ts (fixes the 1000→4000 chaos + the base-Modal-sitting-under-its-own-confirm-dialog bug), one radius, one shadow (`shadows.modal`), Esc-to-close + scroll-lock by default.
+- 🔸 **RETAIN each modal's existing background colour** — do NOT unify the surface. White / cream / tint stay per-modal (via a `surface`/bg prop on `<Modal>`).
+- 🔸 **Close ✕ = the shared IconButton (CLOSE-CANON)** — already done for the ~12 modal closes converted in the Buttons phase; the canonical Modal uses IconButton for its header ✕.
+- Build = migrate the 8 roll-your-own overlays onto `<Modal>` (keeping each one's colour): PrintPreview, BillMedicines, AddService, SchedulePresets, AddStaff delete-confirm, slot-picker, AI-SOAP. NOT yet built.
+
+### Chevron icon — updated 2026-06-11
+The canonical `ChevronDown` now uses the path you provided (`M19 9L12 15L5 9`, strokeWidth 1.5), colour driven by the `color` prop (not hardcoded). Propagates to all 3 dropdown types.
 
 ## 5. Nav / tabs / headers — _built, ready for review_
 IDs: `TAB-block/rxfilter/stats/visit/pharmacy/connected/clinic`, `CHIP-conflict`, `HDR-pageheader/rx/settings`, `TAB-CANON`.

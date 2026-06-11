@@ -21,7 +21,7 @@ export function ChevronDown({
   size = 16,
   open = false,
   color = colors.neutral600,
-  strokeWidth = 2,
+  strokeWidth = 1.5,
   style,
 }: ChevronDownProps) {
   return (
@@ -41,7 +41,7 @@ export function ChevronDown({
         ...style,
       }}
     >
-      <polyline points="6 9 12 15 18 9" />
+      <path d="M19 9L12 15L5 9" />
     </svg>
   );
 }
