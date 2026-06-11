@@ -11,7 +11,8 @@ import { ReactComponent as RestartIcon } from "../../assets/icons/restart-24.svg
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { ReactComponent as StarIcon } from "../../assets/icons/star.svg";
 import { ChevronDown } from "../../components/icons/ChevronDown";
-import { colors, fonts, radii, spacing } from "../../styles/theme";
+import { StatusBadge } from "../../components/AppointmentQueue/StatusBadge";
+import { colors, radii } from "../../styles/theme";
 import { styles } from "./PrescriptionQueue.styles";
 import { Toast } from "../../components/Toast";
 
@@ -382,7 +383,7 @@ function PatientCard({
           <CardRow label="Time" value={time} />
           <CardRow
             label="Status"
-            value={<StatusPill status={apt.status} started={started} />}
+            value={apt.status ? <StatusBadge status={apt.status} started={started} /> : "—"}
           />
         </div>
         <div style={styles.cardFooter}>
@@ -544,7 +545,7 @@ function PatientListTable({
 
                   {/* Status */}
                   <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
-                    <StatusPill status={apt.status} started={started} />
+                    {apt.status ? <StatusBadge status={apt.status} started={started} /> : "—"}
                   </td>
                   <td style={spacerTd} aria-hidden />
 
@@ -582,62 +583,10 @@ function CardRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-// Queue status pill — Figma "Queue Status" component (566:10938 + 566:10941).
-// Caption-size text on a 4px-radius colored pill. Backgrounds:
-//   At Doc      — neutral/100 (white)
-//   In Progress — secondary/100 (sage)
-//   Waiting     — yellow/100
-//   Completed   — green/100
-function StatusPill({
-  status,
-  started,
-}: {
-  status: string | null;
-  started: boolean;
-}) {
-  if (!status) return <>—</>;
-  type PillKey = "AT_DOC" | "IN_PROGRESS" | "WAITING" | "COMPLETED";
-  const variant: PillKey | null = (() => {
-    if (status === "IN_PROGRESS") return started ? "IN_PROGRESS" : "AT_DOC";
-    if (status === "WAITING") return "WAITING";
-    if (status === "COMPLETED") return "COMPLETED";
-    return null;
-  })();
-  if (!variant) return <span style={pillStyles.fallback}>{status}</span>;
-  const META: Record<PillKey, { bg: string; label: string }> = {
-    AT_DOC: { bg: colors.neutral100, label: "At Doc" },
-    IN_PROGRESS: { bg: colors.secondary100, label: "Ongoing" },
-    WAITING: { bg: colors.yellow100, label: "Waiting" },
-    COMPLETED: { bg: colors.green100, label: "Completed" },
-  };
-  const { bg, label } = META[variant];
-  return <span style={{ ...pillStyles.base, backgroundColor: bg }}>{label}</span>;
-}
-
-const pillStyles: Record<string, React.CSSProperties> = {
-  base: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: `${spacing["2xs"]} ${spacing.xs}`,
-    minWidth: 90,
-    borderRadius: radii.xs,
-    color: colors.neutral900,
-    fontFamily: fonts.family.primary,
-    // Matches the queue row's <StatusBadge/>: paragraph-s (14px) at
-    // line-height 16. Was control.xs (12) — bumped so the card pill reads
-    // at the same weight as the row badge.
-    fontSize: fonts.size.s,
-    lineHeight: "16px",
-    fontWeight: fonts.weight.regular,
-  },
-  fallback: {
-    color: colors.neutral500,
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.s,
-    lineHeight: "16px",
-  },
-};
+// StatusPill removed — the prescription queue now renders the shared
+// <StatusBadge started> from components/AppointmentQueue/StatusBadge (one badge
+// system across both queues). Its IN_PROGRESS+started case reads "Ongoing" on
+// sage, matching the old pill.
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 

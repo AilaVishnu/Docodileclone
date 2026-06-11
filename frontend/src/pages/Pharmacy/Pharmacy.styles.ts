@@ -1,5 +1,6 @@
 import { CSSProperties } from "react";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { tableHeadCell, tableDivider } from "../../styles/tableStyles";
 
 export const styles: Record<string, CSSProperties> = {
   page: {
@@ -169,19 +170,16 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: "transparent",
   },
   th: {
-    textAlign: "left",
+    ...tableHeadCell, // shared: alphaBlack3 / 400 / primary300 divider
     padding: `${spacing.s} ${spacing.m}`,
     fontSize: fonts.control.xs,
-    color: colors.alphaBlack3,
-    fontWeight: fonts.weight.regular,
     whiteSpace: "nowrap",
-    borderBottom: `${strokes.xs} solid ${colors.primary300}`,
   },
   thNumeric: {
     textAlign: "right",
   },
   tr: {
-    borderBottom: `${strokes.xs} solid ${colors.primary300}`,
+    borderBottom: tableDivider,
   },
   trAlt: {
     backgroundColor: "transparent",

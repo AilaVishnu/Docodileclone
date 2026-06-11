@@ -1,5 +1,6 @@
 import { CSSProperties } from "react";
 import { colors, fonts, radii, spacing, strokes, fluidSpacing } from "../../styles/theme";
+import { tableHeadCell, tableDivider } from "../../styles/tableStyles";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Styles for the Prescription "Today's Queue" landing — Figma 2282:17378.
@@ -243,18 +244,15 @@ export const styles: Record<string, CSSProperties> = {
   // queue tables read as siblings. Per-cell paddingLeft/Right is overridden
   // inline (mirrors the QueueTable spacer pattern).
   th: {
+    ...tableHeadCell, // shared: alphaBlack3 / 400 / primary300 divider
     padding: "12px 0",
-    borderBottom: `${strokes.xs} solid ${colors.primary300}`,
-    color: colors.alphaBlack3,
-    fontWeight: fonts.weight.regular,
     fontSize: fonts.size.m,
     lineHeight: fonts.lineHeight.m,
     fontFamily: fonts.family.primary,
-    textAlign: "left" as const,
     verticalAlign: "middle" as const,
   },
   tr: {
-    borderBottom: `${strokes.xs} solid ${colors.primary300}`,
+    borderBottom: tableDivider,
   },
   td: {
     padding: "10px 0",

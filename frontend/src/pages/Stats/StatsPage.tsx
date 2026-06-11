@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "../../apiConfig";
 import { fetchStatsHighlights } from "../../api/ai";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
+import { tableHeadCell, tableDivider } from "../../styles/tableStyles";
 import {
   AgePyramid,
   AreaTrend,
@@ -1616,8 +1617,8 @@ const styles: Record<string, React.CSSProperties> = {
 
   // Table (overdue / dues)
   table: { width: "100%", borderCollapse: "collapse", fontSize: fonts.size.s },
-  th: { textAlign: "left", padding: "8px", borderBottom: `${strokes.xs} solid ${colors.primary300}`, color: colors.neutral500, fontWeight: 500, whiteSpace: "nowrap" },
-  td: { padding: "10px 8px", color: colors.neutral900, borderBottom: `${strokes.xs} solid ${colors.primary300}`, fontWeight: 400 },
+  th: { ...tableHeadCell, padding: "8px", whiteSpace: "nowrap" }, // was neutral500 / 500 — the lone outlier, now matches the others
+  td: { padding: "10px 8px", color: colors.neutral900, borderBottom: tableDivider, fontWeight: 400 },
 
   // Schedule density grid
   densityGrid: { display: "grid", gridTemplateColumns: "80px repeat(7, 1fr)", gap: 4 },

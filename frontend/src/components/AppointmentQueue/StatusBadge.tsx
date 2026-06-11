@@ -79,9 +79,15 @@ type StatusBadgeProps = {
   patientId?: string;
   /** If true, badge is clickable and calls onClick */
   onClick?: () => void;
+  /**
+   * Prescription-queue use: when true and status is IN_PROGRESS, the badge
+   * reads "Ongoing" on sage (no live timer). The appointment queue instead
+   * passes `patientId` to get the running mm:ss timer. One badge, both looks.
+   */
+  started?: boolean;
 };
 
-export function StatusBadge({ status, patientId, onClick }: StatusBadgeProps) {
+export function StatusBadge({ status, patientId, started, onClick }: StatusBadgeProps) {
   const key = status?.toUpperCase();
   const baseCfg = STATUS_CONFIG[key] ?? { bg: colors.neutral200, color: colors.neutral700, label: status };
 
@@ -91,9 +97,9 @@ export function StatusBadge({ status, patientId, onClick }: StatusBadgeProps) {
   useEffect(() => {
     if (key !== "IN_PROGRESS" || !patientId) return;
     const tick = () => {
-      const started = loadStartedSet().has(patientId);
-      setLiveStarted(started);
-      setLiveSeconds(started ? getSessionSecondsForPatient(patientId) : null);
+      const running = loadStartedSet().has(patientId);
+      setLiveStarted(running);
+      setLiveSeconds(running ? getSessionSecondsForPatient(patientId) : null);
     };
     tick();
     const id = window.setInterval(tick, 1000);
@@ -103,10 +109,17 @@ export function StatusBadge({ status, patientId, onClick }: StatusBadgeProps) {
   const cfg = liveStarted
     ? {
         ...baseCfg,
-        // Once the session is running, show just the live timer (no "In Progress").
+        // Appointment queue: once the session is running, show just the live timer.
         label: formatTimer(liveSeconds ?? 0),
       }
-    : baseCfg;
+    : started && key === "IN_PROGRESS"
+      ? {
+          ...baseCfg,
+          // Prescription queue: a started session reads "Ongoing" on sage.
+          bg: colors.secondary100,
+          label: "Ongoing",
+        }
+      : baseCfg;
 
   // Uniform across every status — Waiting / At Doc used to render at m (16)
   // for emphasis, but that broke visual rhythm against the other s (14)

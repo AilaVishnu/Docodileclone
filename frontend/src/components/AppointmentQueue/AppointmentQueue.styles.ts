@@ -1,5 +1,6 @@
 import { CSSProperties } from "react";
 import { colors, fonts, fluidSpacing } from "../../styles/theme";
+import { tableHeadCell, tableDivider } from "../../styles/tableStyles";
 
 export const styles: Record<string, CSSProperties> = {
   // Acts as its OWN scroll container (mirroring BookAppointment.overlay) so the
@@ -60,17 +61,15 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   th: {
+    ...tableHeadCell, // shared: alphaBlack3 / 400 / primary300 divider
     padding: "12px var(--queue-cell-padx, 28px)",
-    borderBottom: `1px solid ${colors.primary300}`,
-    color: colors.alphaBlack3,
-    fontWeight: 400,
     fontSize: fonts.size.m,
     lineHeight: "20px",
     letterSpacing: 0,
   },
 
   tr: {
-    borderBottom: `1px solid ${colors.primary300}`,
+    borderBottom: tableDivider,
     transition: "background-color 0.15s ease",
   },
 

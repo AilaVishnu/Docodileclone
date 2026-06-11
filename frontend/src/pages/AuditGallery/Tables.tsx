@@ -76,19 +76,24 @@ const Pill = ({ label, bg, fg }: { label: string; bg: string; fg: string }) => (
 
 export function TablesCategory() {
   return (
-    <Section id="tables" title="7 · Tables / lists">
+    <Section id="tables" title="7 · Tables / lists" status="shipped">
       <Note>
-        <strong>
-          6 independently-styled tables, no shared primitive; header text colour and weight and card
-          radius all diverge; the Stats table is the visible outlier.
-        </strong>{" "}
-        Four tables paint their header text <code>alphaBlack3</code> at weight 400; the Stats overdue/dues
-        table uses <code>neutral500</code> at weight 500. Card radius is all over the map:{" "}
-        <code>"0 24px 24px 24px"</code> (queue), <code>24</code> (pharmacy), <code>radii["2xl"]=16</code>{" "}
-        (archived), <code>radii.l=10</code> (rx). There are also two parallel status-pill systems
-        (AppointmentQueue <code>StatusBadge</code> vs PrescriptionQueue <code>StatusPill</code>), and{" "}
-        <code>PatientFilesPage</code> imports <code>AppointmentQueue.styles</code> as{" "}
-        <code>queueStyles</code> — an accidental cross-page coupling.
+        <b>SHIPPED.</b> The five tables now share ONE header look via{" "}
+        <code>tableHeadCell</code> + <code>tableDivider</code> in <code>styles/tableStyles.ts</code>{" "}
+        (soft-black <code>alphaBlack3</code> / weight 400 / thin <code>primary300</code> divider).
+        The <b>Stats</b> overdue/dues table — the lone outlier at <code>neutral500</code> / weight
+        500 — was brought into line. The two queue tables' <b>status pills were merged</b> into the
+        single shared <code>StatusBadge</code> (it gained a <code>started</code> prop so the
+        prescription queue still reads "Ongoing"). Card corners were <b>deliberately left as-is</b>{" "}
+        per review (incl. the queue's intentional tab-tuck corner). No shared{" "}
+        <code>&lt;DataTable&gt;</code> component was built — the look is unified at the style level,
+        leaving each table's data / clicks / sorting / live timers untouched.
+      </Note>
+      <Note>
+        <i>Before:</i> 6 independently-styled tables, no shared primitive; Stats drifted on header
+        colour + weight; two parallel pill components; and <code>PatientFilesPage</code> still
+        borrows <code>AppointmentQueue.styles</code> (an accidental coupling — left as a follow-up;
+        it now inherits the shared header look transitively).
       </Note>
 
       {/* ─────────────────────────────────────────────────────────────────── */}
@@ -379,8 +384,8 @@ export function TablesCategory() {
 
       {/* ─────────────────────────────────────────────────────────────────── */}
       <Sub
-        title="Two parallel status-pill systems"
-        note="The two queue tables ship their own, unrelated pill component — same visual job, different code."
+        title="Status pills — ✅ MERGED into one StatusBadge"
+        note="The two queue tables used to ship two unrelated pill components. They now BOTH render the shared StatusBadge; the prescription queue passes a `started` prop so its IN_PROGRESS pill still reads 'Ongoing' on sage. The mocks below show the (already near-identical) before."
       >
         <Ctx id="TBL-PILLS" where="StatusBadge (AppointmentQueue) vs StatusPill (PrescriptionQueue)">
           <div style={{ display: "flex", gap: spacing.xl, flexWrap: "wrap", justifyContent: "center" }}>
@@ -417,12 +422,12 @@ export function TablesCategory() {
 
       {/* ─────────────────────────────────────────────────────────────────── */}
       <Sub
-        title="Proposed canonical — one <DataTable>"
-        note="One spec built on the queue conventions: th alphaBlack3 / weight 400 / padding 12px 28px; td 10px 28px; dividers strokes.xs primary300; a single card radius."
+        title="✅ Canonical header look — shared tableHeadCell (LIVE)"
+        note="Shipped: th colour + weight + divider come from styles/tableStyles.ts (alphaBlack3 / 400 / primary300), spread into all five tables. Padding, font-size and card radius stay per-table (column density + the queue's tab-tuck corner are intentional, left as-is). A full <DataTable> component was NOT built — that stays a future option."
       >
         <Ctx
-          id="TBL-CANON-PROPOSED"
-          where="proposed: a shared <DataTable> primitive — queue conventions, one card radius"
+          id="TBL-CANON"
+          where="shipped: shared tableHeadCell + tableDivider — applied to all five tables"
           canonical
         >
           <TableMock

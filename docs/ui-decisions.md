@@ -124,9 +124,18 @@ DECISION (per the 4-question review):
 - _Not done (deliberate, flagged for follow-up):_ (a) full component-collapse of the clinic family into one parametrised component — surfaces are unified, contents still live in separate files; (b) the clinic-family **tag pill** still diverges (`secondary700` filled on ClinicCard vs `secondary300` on ClinicDisplay/ClinicInfo) — that's content, not surface; pick one in a quick later pass.
 - ⚠️ NOT click-tested live (login wall) — `tsc --noEmit` 0 errors. Spot-check please: clinic cards (rounder + now have a soft shadow), the staff form cards + Stats KPI tiles (8→16, slightly rounder), and the queue sidebar (doctor/heatmap corners).
 
-## 7. Tables / lists — _built, ready for review_
-IDs: `TBL-queue` (canonical), `TBL-rx/pharmacy/archived/stats`, `TBL-DIV`, `TBL-PILLS`, `TBL-CANON-PROPOSED`.
-Decision: one DataTable on queue conventions; unify the two status-pill systems; fix Stats header outlier.
+## 7. Tables / lists — _✅ BUILT 2026-06-11_
+IDs: `TBL-queue` (canonical), `TBL-rx/pharmacy/archived/stats`, `TBL-DIV`, `TBL-PILLS`, `TBL-CANON`.
+DECISION (per the 4-question review):
+- **Approach = unify the look only** (user had no preference; I took the safe path since the live app can't be click-tested behind the login wall). NO full `<DataTable>` component — that would rewrite each table's data/click/sort/timer logic blind. Left as a future option.
+- **Fix the Stats outlier.** Its header was `neutral500` / weight 500 vs everyone else's `alphaBlack3` / 400 — brought into line.
+- **Leave corners as-is.** The 10/16/24/asymmetric card radii were explicitly KEPT (incl. the appointment-queue table's intentional `"0 24px 24px 24px"` tab-tuck, which tucks it under its Tabs). No radius changes.
+- **Merge the two status pills** into one shared `StatusBadge`.
+- ✅ BUILT:
+  - New **`styles/tableStyles.ts`** — `tableHeadCell` (alphaBlack3 / weight 400 / `primary300` divider) + `tableDivider`. The 5 tables (AppointmentQueue, PrescriptionQueue, Pharmacy, ArchivedPatients, Stats) now spread `tableHeadCell` into their `th` and use `tableDivider` for row/cell borders. The 4 already-matching tables become a no-op single-source; Stats is the one visible fix.
+  - **Pill merge:** `StatusBadge` gained an optional **`started`** prop — when `started && status===IN_PROGRESS` it reads **"Ongoing" on `secondary100`** (no timer), matching the retired rx pill. The appointment queue's `patientId`→live-timer path is unchanged. `PrescriptionQueue` now renders `<StatusBadge started>`; the duplicate `StatusPill` + `pillStyles` were deleted, and dead `fonts`/`spacing` imports trimmed.
+- _Not done (deliberate, flagged):_ (a) full `<DataTable>` component; (b) the `PatientFilesPage` → `AppointmentQueue.styles` cross-page coupling still stands — it now inherits the shared header look transitively, but ideally imports `tableStyles` + its own container; (c) unknown rx statuses now render as a grey pill (StatusBadge fallback) instead of grey text — minor, arguably nicer.
+- ⚠️ NOT click-tested live (login wall) — `tsc --noEmit` 0 errors. Spot-check please: **prescription queue** pills (esp. a started session → "Ongoing" sage pill; and that the appointment queue's live timer is unaffected) and the **Stats** overdue/dues table header (now soft-black, lighter).
 
 ## 8. Icons — _built, ready for review_
 IDs: `ICON-dups-1a..5b`, `ICON-chevron-1..3`, `ICON-close-1..4`, `ICON-size-*`, `ICON-color-*`, `ICON-CANON-*`.

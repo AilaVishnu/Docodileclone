@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { colors, fonts, radii, spacing } from "../../../styles/theme";
+import { tableHeadCell, tableDivider } from "../../../styles/tableStyles";
 import { API_BASE_URL } from "../../../apiConfig";
 import { Toast } from "../../../components/Toast";
 
@@ -146,17 +147,14 @@ const S: Record<string, React.CSSProperties> = {
     color: colors.neutral900,
   },
   th: {
-    textAlign: "left",
+    ...tableHeadCell, // shared: alphaBlack3 / 400 / primary300 divider
     padding: `${spacing.s} ${spacing.m}`,
     fontSize: fonts.control.xs,
-    fontWeight: fonts.weight.regular,
-    color: colors.alphaBlack3,
-    borderBottom: `1px solid ${colors.primary300}`,
     whiteSpace: "nowrap",
   },
   td: {
     padding: `${spacing.s} ${spacing.m}`,
-    borderBottom: `1px solid ${colors.primary300}`,
+    borderBottom: tableDivider,
     whiteSpace: "nowrap",
   },
   restoreBtn: {
