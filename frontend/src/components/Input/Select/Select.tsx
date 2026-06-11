@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { styles } from "./Select.styles";
 import { ChevronDown } from "../../icons/ChevronDown";
+import { zIndex } from "../../../styles/theme";
 
 type SelectOption = {
   label: string;
@@ -124,7 +125,9 @@ export function Select({
             left: menuRect.left,
             width: menuRect.width,
             right: "auto",
-            zIndex: 2000,
+            // Above modals (4000/4100) — the menu portals to <body>, so a low
+            // z-index would render it behind any modal it was opened from.
+            zIndex: zIndex.popover,
           }}
           onClick={(e) => e.stopPropagation()}
         >

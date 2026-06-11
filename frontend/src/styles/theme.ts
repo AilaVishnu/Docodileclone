@@ -254,6 +254,7 @@ export const zIndex = {
   sticky: 3000,    // SideNav / TopNav
   modal: 4000,
   modalTop: 4100,  // a confirm/dialog opened from within a modal
+  popover: 4500,   // portaled menus/dropdowns — must clear modals (4000/4100)
   toast: 5000,
 };
 
