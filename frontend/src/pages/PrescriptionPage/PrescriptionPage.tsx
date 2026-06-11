@@ -1626,148 +1626,109 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     }
   };
 
-  const handleSessionStart = () => {
-    // Mirror the auto-create gate: don't let the doctor start a session on
-    // an appointment that's still BOOKED/WAITING — the receptionist must
-    // mark the patient At Doc first.
-    if (selectedAppointmentId) {
-      const apptStatus = (selectedAppointmentStatus ?? "").toUpperCase();
-      if (apptStatus && apptStatus !== "AT_DOC" && apptStatus !== "IN_PROGRESS") {
-        showToast("Mark the patient as 'At Doc' before starting the session.");
-        return;
-      }
-    }
-    if (selectedPatient) markStarted(selectedPatient.id);
-    // Surface this session in the header tray so the doctor can navigate
-    // back to it from any other screen until the session ends.
-    if (activeVisit && selectedPatient) {
-      // One live session per patient: clear any orphaned session for this
-      // patient on a different visit tab before starting a new one. Stops
-      // a stale visit's timer from counting forever in the tray.
-      clearOtherSessionsForPatient(selectedPatient.id, activeVisit.id);
-      recordActiveSession({
-        visitId: activeVisit.id,
-        patient: selectedPatient,
-        appointmentId: selectedAppointmentId ?? null,
-      });
-    }
-    // Persist the session-start time on the visit row so other devices
-    // see when this prescription session began.
+  // Explicitly finish a consultation: save the current form and mark the
+  // linked appointment COMPLETED. This replaces "End Session" as the path to
+  // COMPLETED now that the session timer is being retired — without it, an
+  // appointment could never leave IN_PROGRESS and the queue/stats would stall.
+  const handleCompleteVisit = async () => {
+    const alreadyCompleted = (selectedAppointmentStatus ?? "").toUpperCase() === "COMPLETED";
+    // Stop the consultation timer and persist the form. The backend computes
+    // the duration from sessionStartedAt (set when the doctor opened the pad)
+    // to sessionEndedAt. On the FIRST completion we stamp the end time now;
+    // re-saving an already-completed visit preserves the original end time so
+    // the recorded duration isn't inflated.
     if (activeVisit) {
+      const endIso = activeVisit.sessionEndedAt ?? new Date().toISOString();
       const req: SaveVisitRequest = {
         ...buildSaveRequest(),
-        sessionStartedAt: new Date().toISOString(),
+        sessionEndedAt: endIso,
       };
-      void updateVisit(activeVisit.id, req).then(() => refetchVisits());
+      await updateVisit(activeVisit.id, req);
+      await refetchVisits();
+      setDirty(false);
     }
+    if (selectedAppointmentId && !alreadyCompleted) {
+      // Flip status only on the first completion. A later re-save keeps the
+      // visit Completed — it never goes back to In Progress.
+      await patchAppointmentStatus(selectedAppointmentId, "COMPLETED");
+      // Clear the "Ongoing" flag so the completed card shows Completed.
+      if (selectedPatient) unmarkStarted(selectedPatient.id);
+    }
+    // Reflect completion locally so the open-pad effects don't re-mark this
+    // patient as Ongoing, and the button switches to its "save" mode.
+    setSelectedAppointmentStatus("COMPLETED");
+    showToast(alreadyCompleted ? "Changes saved" : "Visit marked complete");
   };
 
-  const handleSessionEnd = (totalSeconds: number) => {
-    if (selectedPatient) unmarkStarted(selectedPatient.id);
-    // Drop this session from the header tray. Also clear any other
-    // orphaned session for the same patient (e.g. a session left running
-    // on a different visit tab) so the tray can't show a runaway timer.
-    if (activeVisit) clearActiveSession(activeVisit.id);
-    if (selectedPatient) clearOtherSessionsForPatient(selectedPatient.id, null);
-    // Persist the locked-in duration on the visit so reopening the
-    // prescription on any device shows the same final time.
-    if (activeVisit) {
-      const req: SaveVisitRequest = {
-        ...buildSaveRequest(),
-        sessionEndedAt: new Date().toISOString(),
-        sessionDurationSec: totalSeconds,
-      };
-      void updateVisit(activeVisit.id, req).then(() => refetchVisits());
-    } else {
-      void handleSave();
+  // Opening the pad for an At Doc / In Progress patient flips the queue card
+  // from "At Doc" to "Ongoing" — the queue reads this per-patient "started"
+  // flag. This replaces the old "Start Session" trigger. Idempotent, so it's
+  // safe to run on every open (including a re-open).
+  React.useEffect(() => {
+    if (!selectedPatient || !selectedAppointmentId) return;
+    const apptStatus = (selectedAppointmentStatus ?? "").toUpperCase();
+    if (apptStatus === "AT_DOC" || apptStatus === "IN_PROGRESS") {
+      markStarted(selectedPatient.id);
     }
-    // Move the appointment to COMPLETED so the queues show the right
-    // status next time they're viewed.
-    if (selectedAppointmentId) {
-      void patchAppointmentStatus(selectedAppointmentId, "COMPLETED");
-    }
-  };
+  }, [selectedPatient, selectedAppointmentId, selectedAppointmentStatus]);
 
-  // "Restart" really means "resume from where I ended". Visit data is
-  // untouched. The previously-recorded duration becomes the timer's new
-  // baseline, sessionEndedAt is cleared (so isEditable flips back to true),
-  // and we seed the per-visit localStorage state so the bar mounts as
-  // running with the saved seconds already on the clock — ticking forward
-  // from there instead of restarting at 00:00.
-  const handleSessionRestart = async () => {
-    if (!activeVisit) return;
-    if (selectedPatient) markStarted(selectedPatient.id);
-    // SessionBar writes to localStorage synchronously on End, but the
-    // post-End refetch of activeVisit hasn't necessarily completed yet,
-    // so localStorage is the more current source of truth for the
-    // recorded duration. Visit row is a fallback if storage was cleared.
-    let baseSeconds = activeVisit.sessionDurationSec ?? 0;
-    try {
-      const stateKey = "docodile_session_state";
-      const raw = localStorage.getItem(stateKey);
-      const all = raw ? JSON.parse(raw) as Record<string, any> : {};
-      const prior = all[activeVisit.id];
-      if (prior && typeof prior.baseSeconds === "number") {
-        baseSeconds = prior.baseSeconds;
-      }
-      all[activeVisit.id] = {
-        baseSeconds,
-        runStartedAtMs: Date.now(),
-        paused: false,
-        ended: false,
-      };
-      localStorage.setItem(stateKey, JSON.stringify(all));
-    } catch { /* localStorage full / private mode — bar will fall back to visit field */ }
+  // Start the consultation timer the moment the doctor opens the pad for an
+  // appointment that's with them (At Doc / In Progress): stamp
+  // sessionStartedAt once. Server-persisted; the backend computes the elapsed
+  // duration up to "Complete visit". Guarded so it fires once per visit and
+  // never overwrites a start time that's already set.
+  const timerStartedForVisitRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!activeVisit || !selectedAppointmentId) return;
+    if (activeVisit.appointmentId !== selectedAppointmentId) return;
+    if (activeVisit.sessionStartedAt) return;
+    if (timerStartedForVisitRef.current === activeVisit.id) return;
+    const apptStatus = (selectedAppointmentStatus ?? "").toUpperCase();
+    if (apptStatus !== "AT_DOC" && apptStatus !== "IN_PROGRESS") return;
+    timerStartedForVisitRef.current = activeVisit.id;
     const req: SaveVisitRequest = {
       ...buildSaveRequest(),
-      sessionEndedAt: null,
-      // Keep the accumulated time on the visit so reopening on another
-      // device sees the same baseline. The bar will keep adding to it.
-      sessionDurationSec: baseSeconds,
+      sessionStartedAt: new Date().toISOString(),
     };
-    try {
-      await updateVisit(activeVisit.id, req);
-      // Flip the linked appointment's status back to IN_PROGRESS so the
-      // queue card stops showing "Completed" — the doctor reopened the
-      // visit, the patient is effectively in-session again. Best-effort:
-      // don't fail the resume flow if the appointment update fails.
-      if (selectedAppointmentId) {
-        try {
-          const token = localStorage.getItem("docodile_token");
-          await fetch(`${API_BASE_URL}/api/tenant/appointments/${selectedAppointmentId}/status`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ status: "IN_PROGRESS" }),
-          });
-        } catch { /* swallow — visit reopened either way */ }
-      }
-      await refetchVisits();
-      // Force the SessionBar to remount so it re-reads the freshly seeded
-      // localStorage state and shows the running timer immediately —
-      // otherwise its in-memory `ended: true` lingers until a tab switch.
-      setSessionBarEpoch((n) => n + 1);
-    } catch (e) {
-      showToast(`Couldn't resume: ${(e as Error).message}`);
-    }
-  };
+    void updateVisit(activeVisit.id, req).then(() => refetchVisits());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeVisit, selectedAppointmentId, selectedAppointmentStatus]);
 
   const handleAddVisit = async () => {
     if (!selectedPatientId) return;
     setSaving(true);
     try {
+      // Persist any unsaved edits on the CURRENT visit before switching to the
+      // new one, so adding a visit can never appear to drop the previous one's
+      // data.
+      if (canEditForm && activeVisit && dirty) {
+        await handleSave({ silent: true });
+      }
+      // Carry the current visit's data into the new visit. Review patients
+      // usually get the same prescription with minor tweaks, so the doctor
+      // edits from a copy instead of retyping. Carried over: history,
+      // diagnosis, Rx, tests, all notes (patient / private / review). Reset
+      // because they're specific to each visit: vitals (measured fresh), the
+      // complaint (reason for THIS visit), the review/follow-up date, plus the
+      // technical fields (today's date, fresh session, no appointment link,
+      // and new Rx-row ids so they save as this visit's own rows).
+      const base = buildSaveRequest();
       const draft: SaveVisitRequest = {
+        ...base,
         visitDate: todayIso(),
+        appointmentId: undefined,
+        sessionStartedAt: null,
+        sessionEndedAt: null,
+        sessionDurationSec: null,
+        // Per-visit — do NOT carry forward.
         bpSystolic: null, bpDiastolic: null, bpUnit: null,
         bmi: null, bmiUnit: null, height: null, heightUnit: null,
         weight: null, weightUnit: null, temperature: null, temperatureUnit: null,
         pulse: null, pulseUnit: null, waist: null, waistUnit: null,
         hip: null, hipUnit: null, spo2: null, spo2Unit: null,
-        familyHistory: null, allergies: null, personalHistory: null, pastMedicalHistory: null,
-        complaints: null, diagnosis: null, notesForPatient: null, privateNotes: null, tests: null,
-        referDoctorId: null,
-        reviewDate: null, reviewDays: null, reviewNotes: null,
-        sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
-        prescriptions: [],
+        complaints: null,
+        reviewDate: null, reviewDays: null,
+        prescriptions: base.prescriptions.map((p, i) => ({ ...p, id: null, position: i + 1 })),
       };
       await createVisit(selectedPatientId, draft);
       await refetchVisits();
