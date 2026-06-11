@@ -6,19 +6,24 @@
 // SideNav.tsx `NavTab` + menuItems. The page and route keep working.
 // ══════════════════════════════════════════════════════════════════════════════
 import React, { useState } from "react";
-import { colors, fonts, spacing, radii, strokes, fluidSpacing } from "../../styles/theme";
+import { colors, fonts, spacing, radii, strokes, shadows, fluidSpacing } from "../../styles/theme";
 import { Button } from "../../components/Button";
+import { IconButton } from "../../components/IconButton";
 import { Card } from "../../components/Card";
 import { HintCard } from "../../components/HintCard";
 import { Modal } from "../../components/Modal";
 import { Toast } from "../../components/Toast";
 import { Tabs } from "../../components/Tabs";
+import { Tag } from "../../components/Tag";
+import { Switch } from "../../components/Switch";
 import { TextInput } from "../../components/Input/TextInput";
+import { Field } from "../../components/Field";
 import { Select } from "../../components/Input/Select/Select";
 import { UnderlineSelect } from "../../components/Input/UnderlineSelect/UnderlineSelect";
 import { StatusBadge, PayBadge } from "../../components/AppointmentQueue/StatusBadge";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { TimePicker } from "../../components/AppointmentQueue/TimePicker";
+import { tableHeadCell, tableDivider } from "../../styles/tableStyles";
 
 // ── Layout primitives used inside this page only ───────────────────────────────
 const SectionTitle = ({ children, id }: { children: React.ReactNode; id: string }) => (
@@ -53,6 +58,22 @@ const Row = ({ children, wrap = true }: { children: React.ReactNode; wrap?: bool
 
 const Label = ({ children }: { children: React.ReactNode }) => (
   <div style={{ fontSize: fonts.size.xs, color: colors.neutral500, fontFamily: fonts.family.primary }}>{children}</div>
+);
+
+// One-line "when to use / canonical rule" caption shown under a component title.
+const Rule = ({ children }: { children: React.ReactNode }) => (
+  <div style={{
+    fontSize: fonts.size.xs, color: colors.neutral600, fontFamily: fonts.family.primary,
+    lineHeight: 1.5, maxWidth: 760, margin: `0 0 ${spacing.s} 0`,
+  }}>{children}</div>
+);
+
+// Import-path chip so each component says exactly where it lives (SSOT pointer).
+const From = ({ children }: { children: React.ReactNode }) => (
+  <code style={{
+    fontSize: 11, color: colors.neutral500, fontFamily: "monospace",
+    background: colors.neutral150, borderRadius: radii.xs, padding: "1px 6px",
+  }}>{children}</code>
 );
 
 // ── Sections ──────────────────────────────────────────────────────────────────
@@ -200,7 +221,7 @@ function SpacingSection() {
   const staticKeys = ["3xs","2xs","xs","s","m","l","xl","2xl","3xl","4xl","5xl","6xl","7xl"] as const;
   return (
     <div>
-      <SectionTitle id="spacing">Spacing · Radii · Strokes</SectionTitle>
+      <SectionTitle id="spacing">Spacing · Radii · Strokes · Shadows</SectionTitle>
 
       <SubTitle>Static spacing — <code>spacing.*</code></SubTitle>
       <div style={{ display: "flex", flexDirection: "column", gap: spacing["2xs"] }}>
@@ -242,6 +263,17 @@ function SpacingSection() {
         ))}
       </Row>
 
+      <SubTitle>Shadows — <code>shadows.*</code></SubTitle>
+      <Rule>One elevation scale. <code>menu</code> = dropdowns / popovers · <code>modal</code> = dialogs · <code>card</code> = raised cards. Use the token, never an inline shadow string.</Rule>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.xl }}>
+        {(["menu","modal","card"] as const).map(k => (
+          <div key={k} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: spacing.xs, padding: spacing.s }}>
+            <div style={{ width: 120, height: 64, background: colors.neutral100, borderRadius: radii.m, boxShadow: shadows[k] }} />
+            <Label>shadows.{k}</Label>
+          </div>
+        ))}
+      </div>
+
       <SubTitle>Gradients</SubTitle>
       <Row>
         <div style={{ display: "flex", flexDirection: "column", gap: spacing["2xs"] }}>
@@ -259,7 +291,7 @@ function ButtonsSection() {
   return (
     <div>
       <SectionTitle id="buttons">Buttons</SectionTitle>
-      <Label>Each variant × size × state (default, disabled). Hover to see hover state.</Label>
+      <Rule><From>components/Button</From> — 6 variants × 2 sizes. <b>primary</b> = main action · <b>dark</b> = destructive confirm (filled black, not red) · <b>secondary</b> = themed solid · <b>primaryLight / secondaryLight</b> = themed outline · <b>light</b> = neutral cancel. Disabled is grey for every variant. Hover to see the hover state.</Rule>
       <div style={{ display: "grid", gridTemplateColumns: "160px 1fr 1fr 1fr", gap: spacing.m, alignItems: "center", marginTop: spacing.m }}>
         <div />
         {sizes.map(s => <div key={s} style={{ textAlign: "center" }}><Label>size: {s}</Label></div>)}
@@ -279,6 +311,19 @@ function ButtonsSection() {
           </React.Fragment>
         ))}
       </div>
+
+      <SubTitle>IconButton</SubTitle>
+      <Rule><From>components/IconButton</From> — the canonical icon-only button (32px circle, neutral700, hover tint). Defaults to a ✕ close glyph; pass <code>children</code> for any other icon. Every modal/panel close uses it.</Rule>
+      <Row>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: spacing["2xs"] }}>
+          <IconButton ariaLabel="Close" onClick={() => {}} />
+          <Label>default ✕</Label>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: spacing["2xs"] }}>
+          <IconButton ariaLabel="Disabled close" disabled />
+          <Label>disabled</Label>
+        </div>
+      </Row>
     </div>
   );
 }
@@ -291,12 +336,25 @@ function InputsSection() {
   const [sel, setSel] = useState("");
   const [sel2, setSel2] = useState("Hydrafacial");
   const [uline, setUline] = useState("");
+  const [fUnder, setFUnder] = useState("Jane Doe");
+  const [fBox, setFBox] = useState("");
+  const [fPill, setFPill] = useState("");
+  const [fErr, setFErr] = useState("bad value");
 
   return (
     <div>
       <SectionTitle id="inputs">Inputs</SectionTitle>
+      <Rule><From>components/Field</From> is the canonical text input — ONE component, three looks chosen by context: <b>underline</b> (most forms) · <b>box</b> (boxed forms) · <b>pill</b> (search only). Height is responsive via <code>--input-h</code>. One invalid state: red200 border + redAlpha10 fill. <code>TextInput</code> is now a thin alias of <code>Field variant="underline"</code>.</Rule>
 
-      <SubTitle>TextInput — states</SubTitle>
+      <SubTitle>Field — variants &amp; error</SubTitle>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing.m, maxWidth: 640 }}>
+        <div><Label>underline (default)</Label><Field variant="underline" value={fUnder} onChange={setFUnder} placeholder="Patient name" /></div>
+        <div><Label>box</Label><Field variant="box" value={fBox} onChange={setFBox} placeholder="Boxed input" /></div>
+        <div><Label>pill (search)</Label><Field variant="pill" value={fPill} onChange={setFPill} placeholder="Search…" /></div>
+        <div><Label>error</Label><Field variant="box" value={fErr} onChange={setFErr} error errorMessage="Required field" /></div>
+      </div>
+
+      <SubTitle>TextInput — states <span style={{ fontWeight: 400, color: colors.neutral500 }}>(alias of Field underline)</span></SubTitle>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing.m, maxWidth: 640 }}>
         <div><Label>Empty · placeholder</Label><TextInput value={text} onChange={setText} placeholder="Enter text" /></div>
         <div><Label>Typed</Label><TextInput value={typed} onChange={setTyped} placeholder="Enter text" /></div>
@@ -324,6 +382,47 @@ function InputsSection() {
   );
 }
 
+function ControlsSection() {
+  const [on, setOn] = useState(true);
+  const [off, setOff] = useState(false);
+  const [sm, setSm] = useState(true);
+  return (
+    <div>
+      <SectionTitle id="controls">Tags &amp; Switch</SectionTitle>
+
+      <SubTitle>Tag</SubTitle>
+      <Rule><From>components/Tag</From> — pill chip in two looks: <b>outline</b> (filters, removable selections) and <b>filled</b> (specialty chips). Optional remove ✕.</Rule>
+      <Row>
+        <Tag label="Outline" />
+        <Tag label="Removable" onRemove={() => {}} removeLabel="Remove tag" />
+        <Tag label="Filled" variant="filled" />
+        <Tag label="Filled · removable" variant="filled" onRemove={() => {}} removeLabel="Remove tag" />
+      </Row>
+
+      <SubTitle>Switch</SubTitle>
+      <Rule><From>components/Switch</From> — on/off toggle in two sizes. The track turns the active theme colour when on.</Rule>
+      <Row>
+        <div style={{ display: "flex", flexDirection: "column", gap: spacing["2xs"], alignItems: "flex-start" }}>
+          <Switch checked={on} onChange={setOn} size="md" ariaLabel="md on" />
+          <Label>md · on</Label>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: spacing["2xs"], alignItems: "flex-start" }}>
+          <Switch checked={off} onChange={setOff} size="md" ariaLabel="md off" />
+          <Label>md · off</Label>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: spacing["2xs"], alignItems: "flex-start" }}>
+          <Switch checked={sm} onChange={setSm} size="sm" ariaLabel="sm" />
+          <Label>sm</Label>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: spacing["2xs"], alignItems: "flex-start" }}>
+          <Switch checked disabled onChange={() => {}} ariaLabel="disabled" />
+          <Label>disabled</Label>
+        </div>
+      </Row>
+    </div>
+  );
+}
+
 function BadgesSection() {
   const statuses = ["BOOKED","WAITING","ARRIVED","IN_PROGRESS","COMPLETED","NO_SHOW","CANCELLED"];
   const payStatuses = ["PAID","DUE","NO PAY"];
@@ -332,8 +431,10 @@ function BadgesSection() {
       <SectionTitle id="badges">Badges</SectionTitle>
 
       <SubTitle>StatusBadge</SubTitle>
+      <Rule><From>components/AppointmentQueue/StatusBadge</From> — ONE badge system for both queues. Pass <code>started</code> so a running prescription visit reads "Ongoing" on sage; the appointment queue passes <code>patientId</code> to swap IN_PROGRESS for a live timer.</Rule>
       <Row>
         {statuses.map(s => <StatusBadge key={s} status={s} />)}
+        <StatusBadge status="IN_PROGRESS" started />
       </Row>
 
       <SubTitle>PayBadge</SubTitle>
@@ -358,21 +459,26 @@ function BadgesSection() {
 }
 
 function CardsSection() {
+  const body = (title: string, text: string) => (
+    <>
+      <div style={{ fontFamily: fonts.family.secondary, fontSize: fonts.size.m, color: colors.neutral900 }}>{title}</div>
+      <div style={{ marginTop: spacing.xs, color: colors.neutral600, fontSize: fonts.size.s }}>{text}</div>
+    </>
+  );
   return (
     <div>
       <SectionTitle id="cards">Cards</SectionTitle>
+      <Rule><From>components/Card</From> — ONE surface from <code>cardSurface(variant, elevation)</code>. Colour by context: <b>surface</b> (white · bills/stats) · <b>sage</b> (clinic) · <b>cream</b> (staff/queue). <code>elevation="raised"</code> adds the single soft card shadow; radius is always 16. The default <code>variant="plain"</code> is the transparent layout shell.</Rule>
       <Row>
-        <Card style={{ width: 320, padding: spacing.l }}>
-          <div style={{ fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 }}>Generic Card</div>
-          <div style={{ marginTop: spacing.s, color: colors.neutral600, fontSize: fonts.size.s }}>
-            Base container used across the app. Accepts custom <code>style</code> overrides.
-          </div>
-        </Card>
+        <Card variant="surface" elevation="none" padding="xl" style={{ width: 260 }}>{body("surface · flat", "White card — bills, stat tiles.")}</Card>
+        <Card variant="sage" elevation="raised" padding="xl" style={{ width: 260 }}>{body("sage · raised", "Clinic cards — the one surface with a soft shadow.")}</Card>
+        <Card variant="cream" elevation="none" padding="xl" style={{ width: 260 }}>{body("cream · flat", "Staff & queue cards.")}</Card>
+      </Row>
 
-        <HintCard
-          title="HintCard"
-          description="Dashed-border card used for tips, empty states, and onboarding hints."
-        />
+      <SubTitle>HintCard</SubTitle>
+      <Rule><From>components/HintCard</From> — dashed-border card for tips, empty states and onboarding.</Rule>
+      <Row>
+        <HintCard title="HintCard" description="Dashed-border card used for tips, empty states, and onboarding hints." />
       </Row>
     </div>
   );
@@ -389,6 +495,40 @@ function TabsSection() {
           activeId={active}
           onSelect={setActive}
         />
+      </div>
+    </div>
+  );
+}
+
+function TablesSection() {
+  const rows = [
+    { n: "01", name: "Aisha Rahman", status: "WAITING" },
+    { n: "02", name: "Diego Marín", status: "IN_PROGRESS" },
+    { n: "03", name: "Mei-Ling Chen", status: "COMPLETED" },
+  ];
+  return (
+    <div>
+      <SectionTitle id="tables">Tables</SectionTitle>
+      <Rule><From>styles/tableStyles</From> — the shared header look: <code>tableHeadCell</code> (soft-black alphaBlack3 / weight 400) + <code>tableDivider</code> (thin primary300). Per-table padding, font-size and card radius stay local; only the header colour/weight + divider are unified.</Rule>
+      <div style={{ background: colors.primary100, borderRadius: radii["2xl"], padding: spacing.xl, maxWidth: 520 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontFamily: fonts.family.primary }}>
+          <thead>
+            <tr>
+              {["#", "Patient", "Status"].map(h => (
+                <th key={h} style={{ ...tableHeadCell, padding: "12px 16px", fontSize: fonts.size.m }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.n} style={{ borderBottom: tableDivider }}>
+                <td style={{ padding: "10px 16px", fontSize: fonts.size.m, color: colors.neutral900 }}>{r.n}</td>
+                <td style={{ padding: "10px 16px", fontSize: fonts.size.m, color: colors.neutral900 }}>{r.name}</td>
+                <td style={{ padding: "10px 16px" }}><StatusBadge status={r.status} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -455,26 +595,47 @@ function OverlaysSection() {
 
 // ── Page shell ────────────────────────────────────────────────────────────────
 export function DesignSystemPage() {
+  const [theme, setTheme] = useState<"primary" | "secondary">("primary");
+  const applyTheme = (t: "primary" | "secondary") => {
+    setTheme(t);
+    if (t === "secondary") document.documentElement.setAttribute("data-theme", "secondary");
+    else document.documentElement.removeAttribute("data-theme");
+  };
   const sections = [
     { id: "colors", label: "Colors" },
     { id: "typography", label: "Typography" },
-    { id: "spacing", label: "Spacing & Radii" },
+    { id: "spacing", label: "Spacing & Shadows" },
     { id: "buttons", label: "Buttons" },
     { id: "inputs", label: "Inputs" },
+    { id: "controls", label: "Tags & Switch" },
     { id: "badges", label: "Badges" },
     { id: "cards", label: "Cards" },
+    { id: "tables", label: "Tables" },
     { id: "tabs", label: "Tabs" },
     { id: "overlays", label: "Overlays" },
   ];
 
   return (
     <div style={{ maxWidth: 1080 }}>
-      <h1 style={{ fontSize: fonts.size.h4, fontWeight: fonts.weight.semibold, color: colors.neutral900, margin: 0 }}>
-        Design System
-      </h1>
-      <p style={{ color: colors.neutral600, fontSize: fonts.size.s, marginTop: spacing.xs }}>
-        Living reference for all tokens and UI primitives used across the app. Auto-generated from <code>theme.ts</code>.
-      </p>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.m, flexWrap: "wrap" }}>
+        <div>
+          <h1 style={{ fontSize: fonts.size.h4, fontWeight: fonts.weight.semibold, color: colors.neutral900, margin: 0 }}>
+            Design System
+          </h1>
+          <p style={{ color: colors.neutral600, fontSize: fonts.size.s, marginTop: spacing.xs, maxWidth: 720, lineHeight: 1.5 }}>
+            The single source of truth for the app's tokens and UI components. Every specimen below is the{" "}
+            <b>real component, rendered live</b> — so this page can't drift from production. Tokens read straight
+            from <code>theme.ts</code>.
+          </p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, flexShrink: 0 }}>
+          <Label>theme:</Label>
+          <button onClick={() => applyTheme("primary")} style={{ cursor: "pointer", border: `${strokes.xs} solid ${colors.neutral300}`, borderRadius: radii.s, padding: "4px 10px",
+            background: theme === "primary" ? colors.neutral900 : colors.neutral100, color: theme === "primary" ? colors.neutral100 : colors.neutral700, fontSize: fonts.size.xs }}>Primary</button>
+          <button onClick={() => applyTheme("secondary")} style={{ cursor: "pointer", border: `${strokes.xs} solid ${colors.neutral300}`, borderRadius: radii.s, padding: "4px 10px",
+            background: theme === "secondary" ? colors.neutral900 : colors.neutral100, color: theme === "secondary" ? colors.neutral100 : colors.neutral700, fontSize: fonts.size.xs }}>Secondary</button>
+        </div>
+      </div>
 
       {/* sticky section nav */}
       <div style={{
@@ -503,8 +664,10 @@ export function DesignSystemPage() {
       <SpacingSection />
       <ButtonsSection />
       <InputsSection />
+      <ControlsSection />
       <BadgesSection />
       <CardsSection />
+      <TablesSection />
       <TabsSection />
       <OverlaysSection />
 
