@@ -816,36 +816,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   })();
   const isEditable = isWithinBuffer;
 
-  // Keep the header session tray in sync with whatever's running for the
-  // visit currently on screen. recordActiveSession fires once at handle-
-  // SessionStart, but if the doctor reloads the page mid-session (or the
-  // session was started before this tray existed) the meta map can lose
-  // its entry — then the tray skips a still-running session. This effect
-  // backfills the meta by reading the SessionBar's own localStorage
-  // state, which is the source of truth for whether the timer is ticking
-  // (the DB column `sessionStartedAt` can lag behind it).
-  React.useEffect(() => {
-    if (!activeVisit || !selectedPatient) return;
-    try {
-      const raw = localStorage.getItem("docodile_session_state");
-      const map = raw ? (JSON.parse(raw) as Record<string, { runStartedAtMs: number | null; baseSeconds: number; paused: boolean; ended: boolean }>) : {};
-      const state = map[activeVisit.id];
-      // A session counts as "live" if it has timer activity and hasn't
-      // been ended yet — covers both currently-running and paused.
-      const isLive = state != null && !state.ended && (state.runStartedAtMs != null || state.baseSeconds > 0);
-      if (isLive) {
-        recordActiveSession({
-          visitId: activeVisit.id,
-          patient: selectedPatient,
-          appointmentId: selectedAppointmentId ?? null,
-        });
-      }
-    } catch {
-      /* localStorage unavailable — tray will simply miss this entry */
-    }
-  }, [activeVisit, selectedPatient, selectedAppointmentId]);
-  // Edit flag used by every gate below.
-  const canEditForm = formActive && isEditable;
+  // Edit flag used by every gate below. The form is editable whenever the
+  // visit is within its edit window (today's / within 24h) — no longer gated
+  // behind starting a session. (Session timer is being retired; editing a
+  // current visit shouldn't require an explicit "Start Session" click.)
+  const canEditForm = isEditable;
   // On initial open of a patient, jump to the latest (today's) visit
   // tab. Without this the tabs default to index 0, which is the OLDEST
   // visit — confusing when the doctor expects to land on today.
