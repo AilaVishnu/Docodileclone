@@ -14,6 +14,7 @@ import {
   ThemedHorizontalBar,
   ThemedVerticalBar,
 } from "../../components/charts";
+import { Tabs } from "../../components/Tabs";
 
 type TabId = "overview" | "health" | "patients" | "doctors" | "clinical" | "operations" | "finance";
 type RangeId = "today" | "week" | "month" | "year" | "custom";
@@ -361,37 +362,22 @@ export function StatsPage() {
       <h1 style={styles.title}>Stats</h1>
 
       <div style={styles.controlsRow}>
-        <div style={styles.tabStrip} role="tablist">
-          {TABS.map((t) => {
-            const active = t.id === tab;
-            return (
-              <button
-                key={t.id}
-                role="tab"
-                aria-selected={active}
-                style={{ ...styles.tab, ...(active ? styles.tabActive : null) }}
-                onClick={() => setTab(t.id)}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
+        <Tabs
+          variant="block"
+          inline
+          items={TABS}
+          activeId={tab}
+          onSelect={(id) => setTab(id as TabId)}
+        />
 
-        <div style={styles.rangeControl}>
-          {RANGES.map((r) => {
-            const active = r.id === range;
-            return (
-              <button
-                key={r.id}
-                style={{ ...styles.rangePill, ...(active ? styles.rangePillActive : null) }}
-                onClick={() => setRange(r.id)}
-              >
-                {r.label}
-              </button>
-            );
-          })}
-        </div>
+        <Tabs
+          variant="block"
+          inline
+          size="sm"
+          items={RANGES}
+          activeId={range}
+          onSelect={(id) => setRange(id as RangeId)}
+        />
       </div>
 
       {range === "custom" && (
@@ -1514,23 +1500,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   controlsRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: spacing.m, flexWrap: "wrap" },
-  tabStrip: { display: "inline-flex", alignItems: "center", gap: spacing.xs },
-  tab: {
-    height: "var(--tab-md-h, 40px)",
-    padding: `${spacing.xs} ${spacing.m}`,
-    borderRadius: "var(--tab-md-r, 12px)",
-    border: "none",
-    backgroundColor: colors.alphaBlack0,
-    color: colors.alphaBlack3,
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.m,
-    lineHeight: fonts.lineHeight.m,
-    cursor: "pointer",
-  },
-  tabActive: { backgroundColor: colors.neutral100, color: colors.neutral900 },
-  rangeControl: { display: "flex", gap: 4, backgroundColor: colors.neutral100, padding: 4, borderRadius: radii.full },
-  rangePill: { border: "none", background: "transparent", color: colors.neutral700, padding: "6px 12px", borderRadius: radii.full, cursor: "pointer", fontSize: fonts.size.xs, fontWeight: 500, fontFamily: "inherit" },
-  rangePillActive: { backgroundColor: colors.active.shade700, color: colors.neutral100 },
+  // (Section tabs + date-range now use the shared <Tabs variant="block"> component.)
   customRangeRow: { display: "flex", alignItems: "center", gap: spacing.s, padding: `${spacing.s} ${spacing.m}`, backgroundColor: colors.neutral100, borderRadius: radii.m, alignSelf: "flex-end" },
   customRangeLabel: { fontSize: fonts.size.s, color: colors.neutral700, fontWeight: 500 },
   dateInput: { border: `${strokes.xs} solid ${colors.neutral300}`, borderRadius: 8, padding: "6px 10px", fontFamily: "inherit", fontSize: fonts.size.s, color: colors.neutral900, outline: "none", backgroundColor: colors.neutral100 },
