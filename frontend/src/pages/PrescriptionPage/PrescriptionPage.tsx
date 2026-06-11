@@ -1177,8 +1177,10 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   const showToast = (message: string) => setToast({ visible: true, message });
   const closeToast = () => setToast({ visible: false, message: "" });
 
-  const setVitalValue = (key: string, value: string) =>
+  const setVitalValue = (key: string, value: string) => {
     setVitalState((prev) => ({ ...prev, [key]: { ...prev[key], value } }));
+    setDirty(true);
+  };
   const validateVitalOnEnter = (
     e: React.KeyboardEvent<HTMLInputElement>,
     label: string,
@@ -1198,13 +1200,15 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       }
     }
   };
-  const toggleVitalUnit = (key: string) =>
+  const toggleVitalUnit = (key: string) => {
     setVitalState((prev) => {
       const cell = prev[key];
       const toggle = UNIT_TOGGLES[cell.unit];
       if (!toggle) return prev;
       return { ...prev, [key]: { value: toggle.convert(cell.value), unit: toggle.altUnit } };
     });
+    setDirty(true);
+  };
 
   // List-view tab state — shared across Reports / Files. Defaults to the
   // first tab ("All Reports" / "All Files").
