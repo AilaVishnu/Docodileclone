@@ -3,7 +3,7 @@
 // with its states + (where relevant) a responsiveness table and detail table.
 // ══════════════════════════════════════════════════════════════════════════════
 import React, { useState } from "react";
-import { colors, fonts, spacing, radii } from "../../styles/theme";
+import { colors, fonts, spacing, radii, shadows } from "../../styles/theme";
 import { Button } from "../../components/Button";
 import { IconButton } from "../../components/IconButton";
 import { Field } from "../../components/Field";
@@ -321,14 +321,68 @@ export function TablesSection() {
   );
 }
 
-// ── 13 · Toast ───────────────────────────────────────────────────────────────────
+// Static MOCK of the DatePicker (NO live component / no backdrop) so the storybook
+// can show every variant side by side. Mirrors June 2026 (today = the 11th).
+function MockCalendar({ showButton, disablePast }: { showButton?: boolean; disablePast?: boolean }) {
+  const days = Array.from({ length: 30 }, (_, i) => i + 1); // June 2026 starts on a Monday
+  const today = 11;
+  return (
+    <div style={{ background: colors.neutral100, width: 248, padding: spacing.m, borderRadius: radii["2xl"], boxShadow: shadows.menu,
+      display: "flex", flexDirection: "column", gap: spacing.s, fontFamily: fonts.family.primary }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ color: colors.neutral700 }}>‹</span>
+        <span style={{ fontWeight: 600, fontSize: fonts.size.m, color: colors.neutral900 }}>June 2026</span>
+        <span style={{ color: colors.neutral700 }}>›</span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, textAlign: "center" }}>
+        {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((d, i) => <div key={i} style={{ fontSize: 9, color: colors.neutral500 }}>{d}</div>)}
+        {days.map(d => {
+          const isToday = d === today;
+          const isPast = !!disablePast && d < today;
+          return (
+            <div key={d} style={{ aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: fonts.size.xs,
+              borderRadius: "50%", background: isToday ? colors.active.shade500 : "transparent",
+              color: isToday ? colors.neutral100 : colors.neutral900, opacity: isPast ? 0.35 : 1 }}>{d}</div>
+          );
+        })}
+      </div>
+      {showButton && (
+        <div style={{ background: colors.neutral900, color: colors.neutral100, borderRadius: radii.full, padding: "6px 0", textAlign: "center", fontSize: fonts.size.s }}>Go to today</div>
+      )}
+    </div>
+  );
+}
+
+// ── 13 · Toast & Date picker ──────────────────────────────────────────────────────
 export function ToastSection() {
   const [open, setOpen] = useState(false);
   return (
-    <Section id="toast" title="13 · Toast"
-      tldr={<><From>components/Toast</From> — transient confirmation, auto-dismiss, sits at <code>zIndex.toast</code> (above modals).</>}>
-      <Button variant="secondary" onClick={() => setOpen(true)}>Show toast</Button>
-      <Toast message="Saved successfully" isVisible={open} onClose={() => setOpen(false)} />
+    <Section id="toast" title="13 · Toast & Date picker"
+      tldr={<><From>components/Toast</From> — transient confirmation. <From>components/DatePicker</From> — ONE shared calendar used in <b>10 places</b>; two opt-in booleans give all the variants: <code>showDoneButton</code> (a "Go to today" button) and <code>disablePast</code> (greys past dates). Mocks below (static — the real picker is a popover).</>}>
+      <Sub title="Toast">
+        <Button variant="secondary" onClick={() => setOpen(true)}>Show toast</Button>
+        <Toast message="Saved successfully" isVisible={open} onClose={() => setOpen(false)} />
+      </Sub>
+      <Sub title="DatePicker — the 3 variants (one component)"
+        note="All 10 date pickers in the app are this same component; they differ only by the two boolean props below.">
+        <Row align="flex-start" gap={spacing.xl}>
+          <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
+            <Label><b>A · header</b> — showDoneButton</Label>
+            <MockCalendar showButton />
+            <div style={{ fontSize: 11, color: colors.neutral600, maxWidth: 248, lineHeight: 1.5 }}>Any date + "Go to today". <b>Used:</b> Appts &amp; Rx Pad queue date dropdowns (2).</div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
+            <Label><b>B · future-only</b> — disablePast</Label>
+            <MockCalendar disablePast />
+            <div style={{ fontSize: 11, color: colors.neutral600, maxWidth: 248, lineHeight: 1.5 }}>Past dates greyed, no button. <b>Used:</b> appointment date, prescription review date (2).</div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
+            <Label><b>C · any-date</b> — default (no props)</Label>
+            <MockCalendar />
+            <div style={{ fontSize: 11, color: colors.neutral600, maxWidth: 248, lineHeight: 1.5 }}>All dates, no button. <b>Used:</b> DOB ×3, report date, file filter from/to (6).</div>
+          </div>
+        </Row>
+      </Sub>
     </Section>
   );
 }
