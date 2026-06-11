@@ -23,9 +23,9 @@ import { PagesCategory } from "./Pages";
 const CATS: [string, string, "shipped" | "review"][] = [
   ["buttons", "1 · Buttons", "shipped"],
   ["inputs", "2 · Inputs", "shipped"],
-  ["dropdowns", "3 · Dropdowns", "review"],
-  ["modals", "4 · Modals", "review"],
-  ["nav", "5 · Nav / Tabs", "review"],
+  ["dropdowns", "3 · Dropdowns", "shipped"],
+  ["modals", "4 · Modals", "shipped"],
+  ["nav", "5 · Nav / Tabs", "shipped"],
   ["cards", "6 · Cards", "review"],
   ["tables", "7 · Tables", "review"],
   ["icons", "8 · Icons", "review"],

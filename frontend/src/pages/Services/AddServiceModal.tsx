@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { styles } from "./AddServiceModal.styles";
 import { Service, DiscountMode } from "./types";
+import { Modal } from "../../components/Modal";
 import { IconButton } from "../../components/IconButton";
 import { Button } from "../../components/Button";
+import { colors, spacing } from "../../styles/theme";
 
 const NO_SPINNER_CLASS = "no-spinner";
 
@@ -95,11 +96,9 @@ export function AddServiceModal({ isOpen, onClose, onSave, initial }: Props) {
     }
   };
 
-  if (!isOpen) return null;
-
-  return createPortal(
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.card} onClick={(e) => e.stopPropagation()}>
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} surface={colors.neutral100} width={440} padding={spacing.xl}>
+      <div style={styles.cardBody}>
         <div style={styles.header}>
           <h3 style={styles.title}>{initial ? "Edit Service" : "Add Service"}</h3>
           <IconButton ariaLabel="Close" onClick={onClose} />
@@ -232,7 +231,6 @@ export function AddServiceModal({ isOpen, onClose, onSave, initial }: Props) {
           </Button>
         </div>
       </div>
-    </div>,
-    document.body
+    </Modal>
   );
 }

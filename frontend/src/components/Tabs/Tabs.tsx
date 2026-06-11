@@ -29,6 +29,9 @@ type TabsProps = {
   // "block"     — pill-shaped rounded blocks, matching the Stats tab strip.
   //               No visual attachment to content; tabs float above.
   variant?: "connected" | "block";
+  // Block-variant size: "md" (the larger "E" tab, compacts below 1440) or
+  // "sm" (the smaller "visit" tab, always compact). Ignored for "connected".
+  size?: "md" | "sm";
 };
 
 export function Tabs({
@@ -38,10 +41,11 @@ export function Tabs({
   actions,
   activeBackgroundColor,
   variant = "connected",
+  size = "md",
 }: TabsProps) {
   const isBlock = variant === "block";
 
-  const tabBase    = isBlock ? styles.blockTab            : styles.tab;
+  const tabBase    = isBlock ? (size === "sm" ? styles.blockTabSm : styles.blockTab) : styles.tab;
   const tabActive  = isBlock ? styles.blockTabActive      : styles.activeTab;
   const container  = isBlock ? styles.blockContainer      : styles.container;
   const actionsCtr = isBlock ? styles.blockActionsContainer : styles.actionsContainer;

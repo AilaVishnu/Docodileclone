@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, radii, fonts, spacing, strokes } from "../../../styles/theme";
+import { colors, radii, fonts, spacing, strokes, shadows } from "../../../styles/theme";
 
 // Matches Figma dropdown-m (node 312:1441).
 //
@@ -114,8 +114,9 @@ export const styles: Record<string, CSSProperties> = {
     left: 0,
     right: 0,
     backgroundColor: colors.neutral100,
+    border: `${strokes.xs} solid ${colors.primary300}`,
     borderRadius: radii.m,
-    boxShadow: "2px 2px 12px rgba(0,0,0,0.08)",
+    boxShadow: shadows.menu,
     zIndex: 100,
     maxHeight: "220px",
     overflowY: "auto" as const,
@@ -140,10 +141,11 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   menuItemHovered: {
-    backgroundColor: colors.neutral150,
+    backgroundColor: colors.active.shade100,
   },
 
   menuItemSelected: {
-    backgroundColor: colors.neutral200,
+    backgroundColor: colors.primary100,
+    color: colors.primary700,
   },
 };

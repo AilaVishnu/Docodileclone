@@ -180,6 +180,11 @@ body {
   --btn-md-h: 44px;
   --btn-fs: 16px;
 
+  /* Tabs (block/pill variant). md = the larger "E" tab; below 1440 it compacts
+     to the smaller "visit" size (32 / radius 8). The sm size is always compact. */
+  --tab-md-h: 40px;
+  --tab-md-r: 12px;
+
   /* Universal form control primitives (Select dropdown, TextInput row, …) */
   --input-h: 40px;
   --input-pady: 6px;
@@ -327,6 +332,10 @@ body {
     --btn-sm-h: 32px;
     --btn-md-h: 36px;
     --btn-fs: 14px;
+
+    /* Tabs compact at <1440 — md becomes the "visit" size (32 / radius 8). */
+    --tab-md-h: 32px;
+    --tab-md-r: 8px;
 
     --input-h: 32px;
     --input-pady: 3px;

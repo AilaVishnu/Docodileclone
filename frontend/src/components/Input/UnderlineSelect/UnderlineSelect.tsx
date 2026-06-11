@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { colors, fonts, radii } from "../../../styles/theme";
+import { colors, fonts, radii, shadows } from "../../../styles/theme";
 import { ChevronDown } from "../../icons/ChevronDown";
 
 type UnderlineSelectOption = {
@@ -91,8 +91,9 @@ export function UnderlineSelect({
             top: "calc(100% + 8px)",
             left: 0,
             backgroundColor: colors.neutral100,
-            borderRadius: "12px",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+            border: `1px solid ${colors.primary300}`,
+            borderRadius: radii.m,
+            boxShadow: shadows.menu,
             zIndex: 1000,
             minWidth: "200px",
             maxHeight: "260px",
@@ -113,7 +114,7 @@ export function UnderlineSelect({
               style={{
                 padding: "10px 16px",
                 cursor: "pointer",
-                borderRadius: "8px",
+                borderRadius: radii.m,
                 fontFamily: fonts.family.primary,
                 fontSize: fonts.size.s,
                 color: colors.neutral900,
@@ -121,7 +122,7 @@ export function UnderlineSelect({
                 transition: "background-color 0.15s",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = colors.active.shade200;
+                e.currentTarget.style.backgroundColor = colors.active.shade100;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = "transparent";

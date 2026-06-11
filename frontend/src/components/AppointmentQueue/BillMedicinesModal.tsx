@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { colors, fonts, spacing, radii } from "../../styles/theme";
+import { Modal } from "../Modal";
 import { Button } from "../Button";
 import { IconButton } from "../IconButton";
 import { Select } from "../Input/Select/Select";
@@ -120,11 +120,12 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
     setItems((prev) => prev.filter((m) => m.id !== id));
   };
 
-  if (!isOpen) return null;
-
-  return createPortal(
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.body} onClick={(e) => e.stopPropagation()}>
+  // surface transparent: this is a two-card composite (Medicines + the torn-edge Bill
+  // receipt) whose own cards are white — the zigzag cut-outs must show the backdrop
+  // through, not a white panel.
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} surface="transparent" shadow="none" width={1000} padding={0}>
+      <div style={styles.body}>
         {/* ── Left card: medicines list ─────────────────────────────── */}
         <div style={styles.leftCard}>
           <div style={styles.leftHeader}>
@@ -355,27 +356,14 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
           <div style={styles.zigzag} />
         </div>
       </div>
-    </div>,
-    document.body
+    </Modal>
   );
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────
-const CARD_RADIUS = 16;
-
 const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1500,
-    padding: spacing.m,
-  },
   body: {
-    width: "min(1000px, calc(100vw - 32px))",
+    width: "100%",
     maxHeight: "calc(100vh - 64px)",
     display: "flex",
     alignItems: "stretch",
@@ -388,7 +376,7 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     minWidth: 0,
     backgroundColor: colors.neutral100,
-    borderRadius: CARD_RADIUS,
+    borderRadius: 16,
     padding: "20px 24px",
     display: "flex",
     flexDirection: "column",
@@ -553,7 +541,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   rightCard: {
     backgroundColor: colors.neutral100,
-    borderRadius: `${CARD_RADIUS}px ${CARD_RADIUS}px 0 0`,
+    borderRadius: "16px 16px 0 0",
     padding: "20px 24px",
     display: "flex",
     flexDirection: "column",

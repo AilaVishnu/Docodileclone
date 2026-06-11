@@ -232,6 +232,31 @@ export const strokes = {
   l: "4px",
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Elevation — one source of truth for shadows (was 8+ ad-hoc inline strings).
+//   • menu  — dropdowns / popovers / autocompletes / pickers
+//   • modal — dialogs / overlays
+//   • card  — raised cards
+// ──────────────────────────────────────────────────────────────────────────────
+export const shadows = {
+  menu: "0 4px 16px rgba(0, 0, 0, 0.08)",
+  modal: "0 12px 40px rgba(0, 0, 0, 0.12)",
+  card: "0 4px 20px rgba(0, 0, 0, 0.04)",
+};
+
+// ──────────────────────────────────────────────────────────────────────────────
+// z-index scale — one source of truth for stacking (was ad-hoc 1000…4000).
+// Modals sit ABOVE the fixed sidebar/top-nav (sticky:3000); a dialog opened from
+// inside a modal uses `modalTop` so it stacks above its parent; toasts win.
+// ──────────────────────────────────────────────────────────────────────────────
+export const zIndex = {
+  dropdown: 100,
+  sticky: 3000,    // SideNav / TopNav
+  modal: 4000,
+  modalTop: 4100,  // a confirm/dialog opened from within a modal
+  toast: 5000,
+};
+
 // Responsive breakpoints — desktop-only scope (no phone / tablet).
 //
 // Two intervals, one threshold:

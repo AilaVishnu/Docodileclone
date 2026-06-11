@@ -33,18 +33,23 @@ const Trigger = ({ children, style }: { children: React.ReactNode; style?: React
 
 export function DropdownsCategory() {
   return (
-    <Section id="dropdowns" title="3 · Dropdowns / selects">
+    <Section id="dropdowns" title="3 · Dropdowns / selects" status="shipped">
       <Note>
-        Every open dropdown panel below is a verbatim transcription of its real{" "}
-        <code style={mono}>menu</code> style object. The proposed canonical
-        (MENU-select, the Select component's own menu) is the OUTLIER: it is the
-        only one with <em>no border</em> and a <code style={mono}>2px 2px 12px</code>{" "}
-        offset shadow, while ~22 files use a 1px primary300 border + a centred{" "}
-        <code style={mono}>0 4px 16px</code> shadow. There is no{" "}
-        <code style={mono}>shadows</code> token — 4 distinct shadow strings appear
-        in just these four menus, and 8+ exist app-wide. Borders, radii (m=8 vs the
-        literal 12px), hover (neutral150 vs active.shade100/200 vs primary100) and
-        selected (neutral200 vs primary100+primary700) all disagree.
+        <strong>✅ DECIDED &amp; built.</strong> THREE dropdown types are kept, each for a context —{" "}
+        <code>primary</code> (the default, bordered look), <code>underline</code> (sticky header only),{" "}
+        <code>picker</code> (Rx / prescription form) — but they now SHARE: the bordered panel
+        (1px primary300 + <code>radii.m</code> + one <code>shadows.menu</code> token + cream{" "}
+        <code>active.shade100</code> hover); ONE chevron (the canonical <code>ChevronDown</code> @ 16px —
+        Select's flat arrow and the pickers' chevron-up asset were both swapped for it); and a RESPONSIVE
+        height (<code>--input-h</code>: 40px → 32px on the &lt;1440 lower tier, so they compact). Also
+        fixed: PopoverMenu's off-palette <code>#c0392b</code> → <code>red200</code>.
+      </Note>
+      <Note>
+        <strong>BEFORE (for the record).</strong> These show how the menu surfaces USED
+        to diverge — borderless vs bordered, 4 different shadows (8+ app-wide, no{" "}
+        <code style={mono}>shadows</code> token), radii (m=8 vs a literal 12px) and hover
+        colours all disagreeing. The decision above unified them onto the bordered{" "}
+        <code style={mono}>MENU-primary</code> look.
       </Note>
 
       {/* ════════════════════════════════════════════════════════════════════ */}
@@ -54,8 +59,8 @@ export function DropdownsCategory() {
         title="Open menu panels — 4 surfaces, 4 shadows, 0 shared border rule"
         note="Each is rendered as trigger + open panel with ~4 items (one hovered, one selected) so the full surface is visible. Compare the borders and drop shadows."
       >
-        {/* MENU-select — CANONICAL CANDIDATE but the OUTLIER */}
-        <Ctx id="MENU-select" where="Select.styles.ts:106-120 — canonical Select menu (the OUTLIER: no border, offset shadow)" canonical>
+        {/* MENU-select — Select's OLD borderless look (now reconciled to bordered) */}
+        <Ctx id="MENU-select" where="BEFORE — Select's old borderless menu; now reconciled to the bordered look">
           <Trigger>
             <SelectTriggerBox open label="Amoxicillin 500mg" />
             <div style={selectMenu}>
@@ -67,8 +72,8 @@ export function DropdownsCategory() {
           </Trigger>
         </Ctx>
 
-        {/* MENU-primary — the primary300 panel used by ~22 files */}
-        <Ctx id="MENU-primary" where="Autocomplete.tsx:127 + PopoverMenu.tsx:92 — the primary300 panel (~22 files)">
+        {/* MENU-primary — the CHOSEN look, now used everywhere */}
+        <Ctx id="MENU-primary" canonical where="✅ THE CHOSEN LOOK — 1px primary300 border + shadows.menu; now used by every menu (~22 files + Select + UnderlineSelect)">
           <Trigger>
             <PlainTriggerBox open label="Family history" />
             <div style={primaryMenu}>

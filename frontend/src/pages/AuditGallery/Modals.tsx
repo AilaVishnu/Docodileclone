@@ -144,7 +144,17 @@ const NoClose = ({ hint }: { hint: string }) => (
 
 export function ModalsCategory() {
   return (
-    <Section id="modals" title="4 · Modals / dialogs">
+    <Section id="modals" title="4 · Modals / dialogs" status="shipped">
+      <Note>
+        <strong>✅ DECIDED &amp; built.</strong> One canonical <code>&lt;Modal&gt;</code> now owns the
+        shell for everything: tokenized backdrop (one opacity), a real <code>zIndex</code> scale in
+        theme.ts (modals sit ABOVE the fixed sidebar now, and a confirm dialog opened from inside a
+        modal stacks above it — both were bugs), one radius, one <code>shadows.modal</code>, plus
+        Esc-to-close + body scroll-lock. Each modal RETAINS its own background colour (white / cream /
+        tint, via the <code>surface</code> prop), and the ✕ is the shared <code>IconButton</code>. The
+        8 hand-rolled overlays (print preview, bill, add-service, schedule presets, delete-confirm,
+        slot-picker, AI draft) were migrated onto it. The rows below are the BEFORE.
+      </Note>
       <Note>
         Nine overlay shells in the app: <strong>4 backdrop opacities</strong> (0.35 / 0.45 / 0.5 plus the
         canonical 0.35), <strong>6 z-index values</strong> (1000 / 1100 / 1200 / 1300 / 1500 / 2000 — the

@@ -75,17 +75,40 @@ DECISION:
 - ✅ BUILT: new `components/Field` (underline/box/pill, responsive via `--input-h`, unified `red200 + redAlpha10` error). `TextInput` is now a thin alias of `<Field variant="underline">`. DomainInput made responsive + unified error; PatientPicker search → `<Field variant="pill">`; the boxed form inputs (Pharmacy / NewPrescription / EditPatient) now use `--input-h` so they compact on the lower tier. Also fixed a pre-existing React border-shorthand warning in Select + DomainInput.
 - _Optional follow-up:_ migrate every remaining inline form `<input>` to `<Field>`; make the Select/date-trigger buttons compact too (the agent flagged `selectInput`/`selectTrigger`/`dobTrigger` still hardcode their height).
 
-## 3. Dropdowns / selects — _built, ready for review_
-IDs: `MENU-select` (canonical but outlier), `MENU-primary/underline/picker/destructive`, `MENU-CANON`, `TRIG-select/-active/picker/native`.
-Decision: one menu surface (border/radius/shadow/hover/selected); add a `shadows` token; fix the inverted chevron convention.
+## 3. Dropdowns / selects — _✅ BUILT 2026-06-11_
+IDs: `MENU-select/primary/underline/picker/destructive`, `MENU-CANON`, `TRIG-*`.
+DECISION:
+- **Menu surface = thin warm border + soft shadow** (Option A = the `MENU-primary` look already used by ~22 files): bg neutral100, `1px primary300` border, `radii.m`, ONE soft shadow, hover `active.shade100`, selected `primary100` + `primary700` text.
+- **Reconcile the 2 outliers** to match: the official `Select` menu (today borderless + `2px 2px 12px` offset shadow) → add the `primary300` border + the standard shadow; `UnderlineSelect` (12px literal radius + `0 4px 20px` shadow) → `radii.m` + standard shadow.
+- **Add a `shadows` token** to theme.ts (one menu shadow, e.g. `0 4px 16px rgba(0,0,0,0.08)`) — kills the 8+ ad-hoc shadow strings; menus point at it.
+- ✅ **3 TYPES KEPT, each for a context** (2026-06-11 refinement): `primary` (the default bordered look), `underline` (sticky header ONLY), `picker` (Rx / prescription form). They share the bordered panel + chevron + responsive height, and differ only in their trigger + usage context.
+- ✅ **Unified the chevron**: all 3 types now use the canonical `ChevronDown` @ 16px. Select's flat 14×6 arrow and the pickers' `chevron-up.svg` (inverted rotation) were both swapped for it. (The rotation DIRECTION was already correct everywhere — only the icon changed.)
+- ✅ **Compact lower tier (<1440):** the 5 picker triggers now use `--input-h` (40 → 32 on the lower tier), matching the field compaction; Select already did; the underline trigger compacts via the type scale.
+- ✅ **Fixed off-token destructive colour** `#c0392b` → `red200` (PopoverMenu).
+- ✅ BUILT: `shadows` token added to theme.ts (`menu`/`modal`/`card`); `Select` + `UnderlineSelect` menus reconciled to the bordered look + `shadows.menu` + cream hover / `primary100` selected.
+- _Follow-up:_ point the ~22 menus that already hardcode `0 4px 16px rgba(0,0,0,0.08)` at `shadows.menu` (same value, single-source); optionally extract a shared `<Menu>`/`<Popover>` primitive so the panel isn't hand-rolled in ~22 files.
 
-## 4. Modals / dialogs — _built, ready for review_
+## 4. Modals / dialogs — _✅ BUILT 2026-06-11_
 IDs: `MOD-canon`, `MOD-print/bill/service/presets/confirm/slot/ai`, `MOD-CANON-PROPOSED`.
-Decision: one shell + a `zIndex` scale; pick surface (tint/white/cream), backdrop opacity, radius, shadow, close style.
+DECISION (approved the proposed canonical Modal, with 2 tweaks):
+- ✅ Adopt one canonical `<Modal>` shell: tokenized backdrop (one opacity, e.g. `alphaBlack3`), a real **`zIndex` scale** in theme.ts (fixes the 1000→4000 chaos + the base-Modal-sitting-under-its-own-confirm-dialog bug), one radius, one shadow (`shadows.modal`), Esc-to-close + scroll-lock by default.
+- 🔸 **RETAIN each modal's existing background colour** — do NOT unify the surface. White / cream / tint stay per-modal (via a `surface`/bg prop on `<Modal>`).
+- 🔸 **Close ✕ = the shared IconButton (CLOSE-CANON)** — already done for the ~12 modal closes converted in the Buttons phase; the canonical Modal uses IconButton for its header ✕.
+- ✅ BUILT: rebuilt `<Modal>` (tokenized backdrop / `shadows.modal` / `radii["2xl"]` + Esc + scroll-lock + `surface`/`width`/`level` props, back-compat defaults so the 16 existing callers are unchanged except the z-index fix). Added a `zIndex` scale to theme.ts (modal 4000 — above the sidebar; modalTop 4100 for confirm-over-modal). Migrated the 7 hand-rolled overlays onto `<Modal>` keeping their colours: PrintPreview, BillMedicines (surface transparent — preserves the zigzag), AddService, SchedulePresets, AddStaff delete-confirm (`level="top"`), slot-picker, AI-SOAP.
+- ⚠️ NOT click-tested live (login wall) — recommend a manual pass: open a couple of modals (do they appear ABOVE the sidebar now? does Esc close them? does the bill receipt's torn edge still show the dark backdrop?).
 
-## 5. Nav / tabs / headers — _built, ready for review_
+### Chevron icon — updated 2026-06-11
+The canonical `ChevronDown` now uses the path you provided (`M19 9L12 15L5 9`, strokeWidth 1.5), colour driven by the `color` prop (not hardcoded). Propagates to all 3 dropdown types.
+
+## 5. Nav / tabs (TABS only) — _✅ BUILT 2026-06-11_
 IDs: `TAB-block/rxfilter/stats/visit/pharmacy/connected/clinic`, `CHIP-conflict`, `HDR-pageheader/rx/settings`, `TAB-CANON`.
-Decision: one Tabs (white-pill, single active tone); fold rxHeader + Settings into PageHeader.
+DECISION (per A/B/C/D/E review):
+- **E = canonical** white-pill `<Tabs>`. ✅ Now has TWO sizes: `md` (the larger "E") and `size="sm"` (the smaller "visit"). RESPONSIVE: `md` compacts 40/r12 → 32/r8 below 1440 via new `--tab-md-h` / `--tab-md-r` vars (so at the lower tier all tabs read like the visit size; above 1440 both sizes are available).
+- **A (white-pill clones):** Rx-filter (`PrescriptionQueue.styles`) + Stats strip (`StatsPage`) aligned to the responsive `--tab-md-*` vars. (Full migration of these hand-rolled bars onto the `<Tabs>` component itself = optional follow-up; visually + responsively they now match.)
+- **B:** Pharmacy `togglePill` → the white pill (was an inverted dark pill, which even contradicted its own code comment) + responsive. The sort/range **chips RETAINED** as-is.
+- **C (legacy trapezoid)** + **D (headers: PageHeader / rxHeader / Settings)** — RETAINED as-is per your call.
+- _Not built:_ headers were explicitly kept, so the earlier "fold rxHeader/Settings into PageHeader" idea is dropped.
+- ⚠️ Not click-tested live (login wall) — recommend resizing the window across 1440 to confirm tabs compact.
 
 ## 6. Cards — _built, ready for review_
 IDs: `CARD-R8/R16/R20`, `CARD-BG-*`, `CARD-canon/bill/clinic/clinicdisplay/clinicinfo/hint/staff/addstaff/docstatus/heatmap/login/kpi`, `CARD-CANON-PROPOSED`.

@@ -83,9 +83,9 @@ export const styles: Record<string, CSSProperties> = {
   // inactive = subtle alphaBlack0 bg w/ muted text, active = white pill w/
   // dark text. Never solid black (that's reserved for the primary CTA).
   togglePill: {
-    height: 36,
+    height: "var(--tab-md-h, 40px)",
     padding: `0 ${spacing.m}`,
-    borderRadius: radii.full,
+    borderRadius: "var(--tab-md-r, 12px)",
     border: "none",
     backgroundColor: colors.alphaBlack0,
     fontFamily: fonts.family.primary,
@@ -94,9 +94,11 @@ export const styles: Record<string, CSSProperties> = {
     cursor: "pointer",
     whiteSpace: "nowrap",
   },
+  // White pill (matches the canonical Tabs) — was an inverted dark pill, which
+  // contradicted this block's own comment. Now neutral100 bg / neutral900 text.
   togglePillActive: {
-    backgroundColor: colors.neutral900,
-    color: colors.neutral100,
+    backgroundColor: colors.neutral100,
+    color: colors.neutral900,
   },
   sortGroup: {
     display: "inline-flex",

@@ -1,6 +1,6 @@
 import React, { CSSProperties, useEffect, useRef, useState } from "react";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
-import { ReactComponent as ChevronIcon } from "../../assets/icons/chevron-up.svg";
+import { ChevronDown } from "../icons/ChevronDown";
 
 const OPTIONS = [
   "Before Food",
@@ -44,11 +44,7 @@ export function WhenPicker({ value, onChange }: Props) {
           {value || "When"}
         </span>
         <span style={styles.chevron}>
-          <ChevronIcon
-            width={16}
-            height={16}
-            style={{ transform: open ? "rotate(0deg)" : "rotate(180deg)" }}
-          />
+          <ChevronDown open={open} size={16} />
         </span>
       </div>
 
@@ -85,7 +81,7 @@ const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    height: 40,
+    height: "var(--input-h, 40px)",
     borderRadius: radii.m,
     overflow: "hidden",
     cursor: "pointer",

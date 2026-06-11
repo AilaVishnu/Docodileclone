@@ -2,22 +2,7 @@ import { CSSProperties } from "react";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1000,
-    padding: spacing.m,
-  },
-
-  card: {
-    width: "min(440px, calc(100vw - 32px))",
-    backgroundColor: colors.neutral100,
-    borderRadius: radii["2xl"],
-    padding: spacing.xl,
+  cardBody: {
     display: "flex",
     flexDirection: "column",
     gap: spacing.l,

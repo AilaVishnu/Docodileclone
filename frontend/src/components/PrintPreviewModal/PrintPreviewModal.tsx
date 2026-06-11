@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { styles } from "./PrintPreviewModal.styles";
+import { Modal } from "../Modal";
 import { Button } from "../Button";
 import { colors } from "../../styles/theme";
 import { ReactComponent as ChevronIcon } from "../../assets/icons/chevron-up.svg";
@@ -52,15 +52,6 @@ export function PrintPreviewModal({
   }, [isOpen, html]);
 
   useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [isOpen, onClose]);
-
-  useEffect(() => {
     if (!destOpen) return;
     const onClick = (e: MouseEvent) => {
       if (destWrapRef.current && !destWrapRef.current.contains(e.target as Node)) setDestOpen(false);
@@ -79,9 +70,9 @@ export function PrintPreviewModal({
     : <DownloadIcon width={16} height={16} />;
   const onCta = isPrint ? (onPrint ?? onClose) : (onSave ?? onClose);
 
-  return createPortal(
-    <div style={styles.overlay} onMouseDown={onClose}>
-      <div style={styles.shell} onMouseDown={(e) => e.stopPropagation()}>
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} surface={colors.neutral100} padding={0}>
+      <div style={styles.shell}>
         <div style={styles.previewPane}>
           <iframe
             ref={iframeRef}
@@ -164,8 +155,7 @@ export function PrintPreviewModal({
           </div>
         </div>
       </div>
-    </div>,
-    document.body
+    </Modal>
   );
 }
 
