@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { colors, fonts, radii, spacing } from "../../styles/theme";
+import { colors, fonts, radii, spacing, fluidSpacing } from "../../styles/theme";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { usePatients, Patient } from "../../hooks/usePatients";
 import { useDoctors } from "../../hooks/useDoctors";
 import { API_BASE_URL } from "../../apiConfig";
@@ -45,16 +46,7 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
   // Auto-open when any filter is set so users see what's currently applied.
   const hasActiveFilter = department !== ANY || doctorId !== ANY || dateFrom != null || dateTo != null || sort !== "";
   const [filtersOpen, setFiltersOpen] = useState(false);
-  // Split-pane: left index lets you scan, right pane shows the selected file
-  // in full. selection auto-falls to the first visible patient when the
-  // current one is filtered out.
-  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
 
-  // When navigated here with a specific patient (e.g. from the queue's
-  // "View Patient File"), jump straight to that patient's right-pane.
-  useEffect(() => {
-    if (initialSelectedId) setSelectedId(initialSelectedId);
-  }, [initialSelectedId]);
   // Departments come from the clinic's configured list (set in Build Your
   // Clinic), not from staff data. That way the filter shows every
   // department the clinic supports even before a doctor has been added to
@@ -163,28 +155,6 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
     return () => io.disconnect();
   }, [limit, visible.length]);
 
-  // Keep selection valid as filters change. If the current selection vanishes
-  // from `visible`, fall back to the first item.
-  useEffect(() => {
-    if (visible.length === 0) {
-      setSelectedId(null);
-      return;
-    }
-    if (!selectedId || !visible.some((p) => p.id === selectedId)) {
-      setSelectedId(visible[0].id);
-    }
-  }, [visible, selectedId]);
-
-  const selectedPatient = visible.find((p) => p.id === selectedId) ?? null;
-
-  // Select from the list AND jump back to the top, so the chosen patient's
-  // file + action buttons are visible regardless of how far the list was
-  // scrolled. Used only for explicit row clicks (not auto-selection).
-  const handleSelect = (id: string) => {
-    setSelectedId(id);
-    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   const handleOpen = (patient: Patient, opts?: { initialAction?: number }) => {
     // Record where the doctor came from so the Prescription page's Back
     // button can route them back to Patient Files rather than dumping
@@ -202,14 +172,11 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
 
   return (
     <div ref={topRef} style={styles.container}>
-      <div style={styles.headerRow}>
-        <h1 style={styles.title}>Patient Files</h1>
-      </div>
+      <PageHeader title="Patient Files" />
 
-      <div style={styles.layout}>
-        {/* LEFT — index. Search at top, segment chips, advanced filters
-            collapsed inline, then the patient list. */}
-        <div style={styles.indexPane}>
+      {/* Single centered column: search (with inline filter toggle) → optional
+          filter dropdowns → results list. No right-hand preview. */}
+      <div style={styles.content}>
           <div style={styles.searchBox}>
             <SearchIcon style={styles.searchIcon} />
             <input
@@ -337,8 +304,8 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
                       key={p.id}
                       patient={p}
                       query={search.trim().toLowerCase()}
-                      selected={p.id === selectedId}
-                      onSelect={() => handleSelect(p.id)}
+                      selected={false}
+                      onSelect={() => handleOpen(p)}
                     />
                   ))}
                 </tbody>
@@ -353,21 +320,6 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
           <div style={styles.indexCount}>
             {loading ? "Loading…" : `${visible.length} of ${patients.length} patients`}
           </div>
-        </div>
-
-        {/* RIGHT — open file. The cabinet visual gets to breathe here, with
-            real content on top of it. */}
-        <div style={styles.openPane}>
-          {selectedPatient ? (
-            <OpenFile
-              patient={selectedPatient}
-              onOpenChart={() => handleOpen(selectedPatient)}
-              onOpenBills={() => handleOpen(selectedPatient, { initialAction: 3 })}
-            />
-          ) : (
-            <div style={styles.openEmpty}>Select a patient to view their file</div>
-          )}
-        </div>
       </div>
     </div>
   );
@@ -917,60 +869,33 @@ const TAG_TONES: Record<Tone, React.CSSProperties> = {
 // ─── Styles ─────────────────────────────────────────────────────────────────
 
 const styles: Record<string, React.CSSProperties> = {
-  // The host <main> already paints active-shade-200 (= primary200), so we
-  // just sit on top of it without a wrapper background.
+  // Own scroll container filling <main> (like the Appointments / Rx Pad
+  // queues) so the shared <PageHeader> can stick to the very top. No top
+  // padding — the sticky bar hugs the top; the content gap lives below it.
   container: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     display: "flex",
     flexDirection: "column",
-    gap: spacing.xl,
-    width: "100%",
+    padding: `0 ${fluidSpacing.outerX} ${fluidSpacing.outerY}`,
+    overflowY: "auto",
+    overflowX: "hidden",
   },
 
-  // Title centered (matches Prescription/Appointments).
-  headerRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    margin: 0,
-    textAlign: "center",
-    fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h5,
-    lineHeight: fonts.lineHeight.h5,
-    fontWeight: fonts.weight.regular,
-    color: colors.neutral900,
-  },
-  // Split-pane: index list (left) + open file (right).
-  layout: {
-    display: "flex",
-    gap: spacing.xl,
-    alignItems: "stretch",
+  // Single centered column: search + filters + results. No right preview.
+  content: {
     width: "100%",
-    minWidth: 0,
-    minHeight: 600,
-  },
-  indexPane: {
-    flex: "0 0 40%",
+    maxWidth: 820,
+    marginLeft: "auto",
+    marginRight: "auto",
+    marginTop: "var(--main-gap, 24px)",
     minWidth: 0,
     display: "flex",
     flexDirection: "column",
     gap: spacing.s,
-  },
-  openPane: {
-    flex: 1,
-    minWidth: 0,
-    display: "flex",
-    flexDirection: "column",
-  },
-  openEmpty: {
-    flex: 1,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.s,
-    color: colors.neutral500,
   },
 
   // Same dimensions as TopNav.searchBarContainer (40px tall, 55px radius,
