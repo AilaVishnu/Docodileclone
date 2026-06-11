@@ -1,14 +1,15 @@
 import { CSSProperties } from "react";
 import { colors, radii, spacing, fonts } from "../../styles/theme";
+import { cardSurface } from "../Card/Card.styles";
 
 export const styles: Record<string, CSSProperties> = {
   card: {
+    // Cream staff surface — shared with StaffDetailsCard.
+    ...cardSurface("cream", "none"),
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,     // was spacing.s — breathing between sections
-    borderRadius: radii.m,
     padding: spacing.l, // was spacing.s — more generous interior
-    backgroundColor: colors.primary100,
     minWidth: "25vw",
   },
 

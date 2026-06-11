@@ -12,6 +12,7 @@ import React from "react";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 import { Section, Sub, Tile, Ctx, Note } from "./shared";
 import { HintCard } from "../../components/HintCard"; // real, safe — props: { title?, description }
+import { cardSurface, CardVariant, CardElevation } from "../../components/Card/Card.styles"; // real shipped helper
 
 // ── tiny content primitives so every card mock reads as a real card ──────────
 const Line = ({ w = "100%", h = 10, bg = colors.neutral200, mt = 0 }:
@@ -47,7 +48,7 @@ const IdChip = ({ id, canonical, label }: { id: string; canonical?: boolean; lab
     <span style={{ fontSize: 10, fontWeight: fonts.weight.bold, letterSpacing: 0.4, fontFamily: "monospace",
       color: canonical ? colors.secondary700 : colors.neutral700,
       background: canonical ? colors.secondary100 : colors.neutral150, borderRadius: radii.xs, padding: "1px 6px" }}>{id}</span>
-    {canonical && <span style={{ fontSize: 10, color: colors.secondary700, fontWeight: fonts.weight.semibold }}>✓ proposed canonical</span>}
+    {canonical && <span style={{ fontSize: 10, color: colors.secondary700, fontWeight: fonts.weight.semibold }}>✓ canonical · live</span>}
     {label && <span style={{ fontSize: fonts.size.xs, color: colors.neutral800, fontWeight: fonts.weight.medium }}>{label}</span>}
   </div>
 );
@@ -64,15 +65,23 @@ const CardMock = ({ id, canonical, label, spec, capWidth = 360, children }:
 
 export function CardsCategory() {
   return (
-    <Section id="cards" title="6 · Cards">
+    <Section id="cards" title="6 · Cards" status="shipped">
       <Note>
-        11 named <code>*Card</code> components span radius <b>8 / 16 / 20</b>, padding{" "}
-        <b>20 / 24 / 32 / 40</b>, and bg <b>secondary50 / primary100 / neutral100</b>. Only{" "}
-        <b>one</b> (ClinicDisplayCard) carries a shadow. Legacy <code>radii.primary(20)</code> —
-        commented "only used in LoginCard/ClinicCard" — actually leaks to <b>3 extra</b> surfaces
-        (HintCard, plus the literal <code>"20px"</code> in DoctorStatusCard &amp; HeatmapCard). There is{" "}
-        <b>no shadows token</b> in <code>theme.ts</code>. Data-bound cards are reproduced as styled
-        <code>div</code> mocks; only HintCard is the real component.
+        <b>SHIPPED.</b> Every card surface now draws from ONE source —{" "}
+        <code>cardSurface(variant, elevation)</code> in <code>Card.styles.ts</code>:{" "}
+        radius <b>16 everywhere</b> (legacy <code>radii.primary(20)</code> retired from cards),
+        the 3 paper colours <b>kept as variants</b> (sage = clinic · cream = staff/queue ·
+        white = bills/stats), and the lone soft shadow promoted to the{" "}
+        <code>shadows.card</code> token. The three near-twin pairs —{" "}
+        <b>clinic</b> (Clinic + ClinicDisplay), <b>staff</b> (Staff + AdditionalStaff) and{" "}
+        <b>queue-sidebar</b> (DoctorStatus + Heatmap) — now share that surface.
+      </Note>
+      <Note>
+        <i>Before:</i> 11 cards spanned radius <b>8 / 16 / 20</b>, bg{" "}
+        <b>secondary50 / primary100 / neutral100</b>, only ClinicDisplayCard had a shadow, and{" "}
+        <code>radii.primary(20)</code> leaked to HintCard plus the literal <code>"20px"</code> in
+        the two queue cards. Data-bound cards below are styled <code>div</code> mocks; only
+        HintCard is the real component.
       </Note>
 
       {/* ── radius spread, front and center ─────────────────────────────── */}
@@ -299,49 +308,34 @@ export function CardsCategory() {
         </CardMock>
       </Sub>
 
-      {/* ── CARD-CANON-PROPOSED ─────────────────────────────────────────── */}
-      <Sub title="CARD-CANON-PROPOSED · one token-driven <Card variant elevation>"
-        note="Proposal: collapse all 11 into ONE Card driven by tokens. Retire radii.primary(20) → radii.2xl(16). Add a shadows token (the missing scale: shadows.none / .sm / .md). variant maps to bg (surface=neutral100, sage=secondary50, cream=primary100); elevation maps to the new shadow token. Examples below.">
-        <CardMock id="CARD-CANON-PROPOSED" canonical label="Card · variant='surface' elevation='sm'" capWidth={300}
-          spec={<>bg neutral100 (variant surface) · radii.2xl(16) · pad spacing.xl(24) · shadows.sm "0 1px 3px rgba(0,0,0,0.06)"</>}>
-          <ProposedCard variant="surface" elevation="sm" title="Surface" />
+      {/* ── CARD-CANON · the shipped surface ────────────────────────────── */}
+      <Sub title="CARD-CANON · cardSurface(variant, elevation) — LIVE"
+        note="Shipped: ONE surface source — cardSurface() in Card.styles.ts. radius always radii.2xl(16); variant → bg (surface=neutral100 white · sage=secondary50 · cream=primary100); elevation → flat or the shadows.card token. The three cards below render the REAL helper (imported), and every *Card now spreads it. <Card variant elevation> also accepts these as props, defaulting to the legacy transparent shell.">
+        <CardMock id="CARD-CANON" canonical label="cardSurface('sage','raised')" capWidth={300}
+          spec={<>bg secondary50 · radii.2xl(16) · shadows.card — Clinic + ClinicDisplay now share this</>}>
+          <ProposedCard variant="sage" elevation="raised" title="Sage · raised" />
         </CardMock>
-        <CardMock id="CARD-CANON-PROPOSED" canonical label="Card · variant='sage' elevation='none'" capWidth={300}
-          spec={<>bg secondary50 (variant sage) · radii.2xl(16) · pad spacing.xl(24) · shadows.none — replaces Clinic + ClinicDisplay</>}>
-          <ProposedCard variant="sage" elevation="none" title="Sage" />
+        <CardMock id="CARD-CANON" canonical label="cardSurface('cream','none')" capWidth={300}
+          spec={<>bg primary100 · radii.2xl(16) · flat — Staff + AdditionalStaff + the two queue cards share this</>}>
+          <ProposedCard variant="cream" elevation="none" title="Cream · flat" />
         </CardMock>
-        <CardMock id="CARD-CANON-PROPOSED" canonical label="Card · variant='cream' elevation='md'" capWidth={300}
-          spec={<>bg primary100 (variant cream) · radii.2xl(16) · pad spacing.xl(24) · shadows.md "0 4px 20px rgba(0,0,0,0.04)" — replaces Staff + queue cards</>}>
-          <ProposedCard variant="cream" elevation="md" title="Cream" />
+        <CardMock id="CARD-CANON" canonical label="cardSurface('surface','none')" capWidth={300}
+          spec={<>bg neutral100 (white) · radii.2xl(16) · flat — bills / stat tiles</>}>
+          <ProposedCard variant="surface" elevation="none" title="Surface · flat" />
         </CardMock>
       </Sub>
     </Section>
   );
 }
 
-// ── proposed canonical Card — token-driven variant + elevation ───────────────
-// Single surface; no legacy radii.primary, every value a token (+ a proposed
-// shadows scale that does not yet exist in theme.ts).
-const PROPOSED_SHADOWS = {
-  none: "none",
-  sm: "0 1px 3px rgba(0,0,0,0.06)",
-  md: "0 4px 20px rgba(0,0,0,0.04)", // = the lone ClinicDisplayCard shadow, promoted to a token
-} as const;
-
-const PROPOSED_BG = {
-  surface: colors.neutral100,
-  sage: colors.secondary50,
-  cream: colors.primary100,
-} as const;
-
+// ── canonical Card — renders the SHIPPED cardSurface() helper directly, so the
+// gallery shows live code rather than a mock of it.
 function ProposedCard({ variant, elevation, title }:
-  { variant: keyof typeof PROPOSED_BG; elevation: keyof typeof PROPOSED_SHADOWS; title: string }) {
+  { variant: CardVariant; elevation: CardElevation; title: string }) {
   return (
     <div style={{
-      backgroundColor: PROPOSED_BG[variant],
-      borderRadius: radii["2xl"],          // retired radii.primary → 16
-      padding: spacing.xl,                  // single padding token
-      boxShadow: PROPOSED_SHADOWS[elevation], // proposed shadows token
+      ...cardSurface(variant, elevation), // the real helper from Card.styles.ts
+      padding: spacing.xl,
       display: "flex", flexDirection: "column", gap: spacing.s,
       width: 280, maxWidth: "100%", boxSizing: "border-box",
       border: `${strokes.xs} solid ${colors.neutral200}`,

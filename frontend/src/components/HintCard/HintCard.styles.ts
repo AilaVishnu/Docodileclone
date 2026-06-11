@@ -4,7 +4,7 @@ import { colors, radii, fonts } from "../../styles/theme";
 export const styles: Record<string, CSSProperties> = {
   card: {
     border: `1px dashed ${colors.neutral900}`,
-    borderRadius: radii.primary,
+    borderRadius: radii["2xl"], // was radii.primary(20) — cards snap to 16
     padding: 24,
     backgroundColor: "transparent",
     maxWidth: 280,

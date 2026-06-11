@@ -1,11 +1,12 @@
 import { CSSProperties } from "react";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
+import { cardSurface } from "../Card/Card.styles";
 
 export const styles: Record<string, CSSProperties> = {
   card: {
-    // Figma: card fill is Secondary/50 (#F1F6E7). Was primary100.
-    backgroundColor: colors.secondary50,
-    borderRadius: radii.primary,
+    // Sage clinic surface — shared with ClinicDisplayCard via cardSurface
+    // (secondary50 + 16 radius + the one soft card shadow).
+    ...cardSurface("sage", "raised"),
     padding: spacing["2xl"],
     display: "flex",
     flexDirection: "column",

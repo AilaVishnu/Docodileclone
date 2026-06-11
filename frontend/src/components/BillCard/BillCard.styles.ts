@@ -14,7 +14,7 @@ export const styles: Record<string, CSSProperties> = {
     gap: "12px",
     padding: "24px",
     backgroundColor: colors.neutral100,
-    borderRadius: "12px 12px 0 0",
+    borderRadius: "16px 16px 0 0", // top-only (torn zigzag below); 12 → 16 to match cards
     flex: 1,
   },
 

@@ -1538,7 +1538,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   // KPIs
   kpiGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: spacing.m },
-  kpiCard: { backgroundColor: colors.neutral100, borderRadius: radii.m, padding: spacing.m, display: "flex", flexDirection: "column", gap: 6, minHeight: 110 },
+  kpiCard: { backgroundColor: colors.neutral100, borderRadius: radii["2xl"], padding: spacing.m, display: "flex", flexDirection: "column", gap: 6, minHeight: 110 }, // radii.m(8) → 16 to match cards
   kpiLabel: { fontSize: fonts.size.s, color: colors.neutral500, fontWeight: 500, display: "flex", alignItems: "center", gap: 6 },
   kpiValue: { fontFamily: fonts.family.secondary, fontSize: fonts.size.h4, color: colors.neutral900, lineHeight: 1.1 },
   kpiFooter: { display: "flex", alignItems: "baseline", gap: 8, marginTop: "auto" },

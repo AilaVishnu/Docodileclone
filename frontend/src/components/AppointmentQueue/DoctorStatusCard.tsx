@@ -1,5 +1,6 @@
 import React from "react";
 import { colors, fonts } from "../../styles/theme";
+import { cardSurface } from "../Card/Card.styles";
 import { StaffIllustration } from "../AddStaffModal/StaffIllustration";
 import { ReactComponent as IconStopwatch } from "../../assets/icons/stopwatch.svg";
 import { ReactComponent as IconUser } from "../../assets/icons/user.svg";
@@ -162,8 +163,9 @@ const cardStyles: Record<string, React.CSSProperties> = {
   },
 
   card: {
-    backgroundColor: colors.primary100,   // #F9F9ED — warm cream from Figma
-    borderRadius: "20px",
+    // Cream queue surface — shared with HeatmapCard via cardSurface
+    // (was borderRadius "20px" literal → 16).
+    ...cardSurface("cream", "none"),
     border: "none",
     // Top/bottom fixed, horizontal var-driven so 1024 tightens the right
     // whitespace; width var lets the queue table reclaim space.

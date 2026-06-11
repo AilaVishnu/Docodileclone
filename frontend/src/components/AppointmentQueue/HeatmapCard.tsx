@@ -1,5 +1,6 @@
 import React from "react";
 import { colors, fonts } from "../../styles/theme";
+import { cardSurface } from "../Card/Card.styles";
 import { loadSchedule, weekHourRange } from "../DoctorSchedule";
 
 type HeatmapAppointment = {
@@ -152,8 +153,9 @@ const GRID_TEMPLATE = "36px repeat(4, 1fr)";
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    backgroundColor: colors.primary100,
-    borderRadius: "20px",
+    // Cream queue surface — shared with DoctorStatusCard via cardSurface
+    // (was borderRadius "20px" literal → 16).
+    ...cardSurface("cream", "none"),
     // Vertical 20 fixed, horizontal var-driven so it matches the doctor card.
     padding: "20px var(--queue-side-padx, 20px)",
     width: "var(--queue-side-w, 246px)",

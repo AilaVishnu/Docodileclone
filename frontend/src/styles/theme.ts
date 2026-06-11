@@ -202,7 +202,7 @@ export const radii = {
   xl: 12,
   "2xl": 16,
   xxl: 16,     // legacy alias for 2xl (do not remove — in use)
-  primary: 20, // legacy (off-system, only used in LoginCard/ClinicCard)
+  primary: 20, // legacy (off-system). Cards retired it → 16; only Tabs/ClinicTabs/Modal/Workspace/SetupPassword still use it (mop up in their categories)
   pill: 999,   // legacy alias for full
   full: 999,
 };

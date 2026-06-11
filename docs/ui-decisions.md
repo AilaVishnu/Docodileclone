@@ -110,9 +110,19 @@ DECISION (per A/B/C/D/E review):
 - _Not built:_ headers were explicitly kept, so the earlier "fold rxHeader/Settings into PageHeader" idea is dropped.
 - ⚠️ Not click-tested live (login wall) — recommend resizing the window across 1440 to confirm tabs compact.
 
-## 6. Cards — _built, ready for review_
-IDs: `CARD-R8/R16/R20`, `CARD-BG-*`, `CARD-canon/bill/clinic/clinicdisplay/clinicinfo/hint/staff/addstaff/docstatus/heatmap/login/kpi`, `CARD-CANON-PROPOSED`.
-Merge pairs: clinic+clinicdisplay(+clinicinfo), staff+addstaff, docstatus+heatmap. Decision: retire radii.primary(20)→16; add shadows token.
+## 6. Cards — _✅ BUILT 2026-06-11_
+IDs: `CARD-R8/R16/R20`, `CARD-BG-*`, `CARD-canon/bill/clinic/clinicdisplay/clinicinfo/hint/staff/addstaff/docstatus/heatmap/login/kpi`, `CARD-CANON`.
+DECISION (per the 4-question review):
+- **Corners → 16 everywhere.** Snap ALL card surfaces to `radii.2xl(16)` — retiring the legacy `radii.primary(20)` *and* pulling the 8px staff/kpi tiles up to 16. One card radius. (radii.primary stays in theme.ts for Tabs/ClinicTabs/Modal/Workspace/SetupPassword — mopped up in their own categories.)
+- **Keep the soft shadow** on the clinic card. Both clinic cards are now `raised`; everything else flat.
+- **Keep all 3 paper colours** as meaningful variants: `sage`(secondary50)=clinic · `cream`(primary100)=staff/queue · `surface`(neutral100 white)=bills/stats. Login stays its own themed bg (just corner-snapped).
+- **Merge all 3 near-twin sets** at the surface level (not a risky whole-component collapse, since I can't click-test):
+  - **clinic** — ClinicCard + ClinicDisplayCard now both spread `cardSurface("sage","raised")` (ClinicCard *gains* the shadow; ClinicDisplay's literal shadow → `shadows.card` token; both → 16).
+  - **staff** — StaffDetailsCard + AdditionalStaffDetailsCard both spread `cardSurface("cream","none")` (8 → 16). Only their inner content gap still differs (intended).
+  - **queue-sidebar** — DoctorStatusCard + HeatmapCard both spread `cardSurface("cream","none")` (literal "20px" → 16).
+- ✅ BUILT: new **`cardSurface(variant, elevation)`** helper in `components/Card/Card.styles.ts` = ONE source for every card's paper (bg + 16 radius + optional `shadows.card`). The 6 merge-pair cards spread it; bespoke cards (Hint dashed, Login themed, Bill torn-edge) keep their look but got corner-snapped to 16; StatsPage `kpiCard` → 16. The `<Card>` component now also takes optional `variant`/`elevation`/`padding` props (defaulting to the legacy transparent shell, so the existing section-wrapper callers are untouched).
+- _Not done (deliberate, flagged for follow-up):_ (a) full component-collapse of the clinic family into one parametrised component — surfaces are unified, contents still live in separate files; (b) the clinic-family **tag pill** still diverges (`secondary700` filled on ClinicCard vs `secondary300` on ClinicDisplay/ClinicInfo) — that's content, not surface; pick one in a quick later pass.
+- ⚠️ NOT click-tested live (login wall) — `tsc --noEmit` 0 errors. Spot-check please: clinic cards (rounder + now have a soft shadow), the staff form cards + Stats KPI tiles (8→16, slightly rounder), and the queue sidebar (doctor/heatmap corners).
 
 ## 7. Tables / lists — _built, ready for review_
 IDs: `TBL-queue` (canonical), `TBL-rx/pharmacy/archived/stats`, `TBL-DIV`, `TBL-PILLS`, `TBL-CANON-PROPOSED`.
@@ -141,7 +151,7 @@ Decision: rebuild SetupPasswordPage on shared comps; tokenize Pharmacy CSV zone 
 ### Token-level decisions (cascade into everything)
 | Topic | Question | Verdict |
 |-------|----------|---------|
-| `shadows` token | Add a shadow scale to `theme.ts`? (~12 ad-hoc recipes today) | ⬜ |
-| `zIndex` scale | Add a z-index scale? (raw 1000→4000 today) | ⬜ |
-| `icon.size` token | Make 24px a real token (currently only a comment)? | ⬜ |
-| `radii.primary` (20) | Retire the legacy 20px radius in favour of 16? | ⬜ |
+| `shadows` token | Add a shadow scale to `theme.ts`? (~12 ad-hoc recipes today) | ✅ DONE — `shadows.{menu,modal,card}` (Dropdowns/Modals/Cards phases) |
+| `zIndex` scale | Add a z-index scale? (raw 1000→4000 today) | ✅ DONE — `zIndex` scale added (Modals phase) |
+| `icon.size` token | Make 24px a real token (currently only a comment)? | ⬜ (Category 8 · Icons) |
+| `radii.primary` (20) | Retire the legacy 20px radius in favour of 16? | 🔧 PARTIAL — retired from all cards (→16, Cards phase); Tabs/ClinicTabs/Modal/Workspace/SetupPassword still on it |
