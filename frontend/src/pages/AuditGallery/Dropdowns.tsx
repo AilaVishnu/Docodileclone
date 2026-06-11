@@ -35,14 +35,14 @@ export function DropdownsCategory() {
   return (
     <Section id="dropdowns" title="3 · Dropdowns / selects" status="shipped">
       <Note>
-        <strong>✅ DECIDED &amp; built — Option A (thin border + soft shadow).</strong> Every pop-up
-        menu now uses the <code>MENU-primary</code> look: a 1px primary300 border, <code>radii.m</code>,
-        ONE shared shadow (new <code>shadows.menu</code> token in theme.ts), cream{" "}
-        <code>active.shade100</code> hover. The two outliers were reconciled: the official{" "}
-        <code>Select</code> menu (was borderless + offset shadow) and <code>UnderlineSelect</code>{" "}
-        (was 12px radius + a different shadow) now match. Also fixed: PopoverMenu's off-palette{" "}
-        <code>#c0392b</code> → <code>red200</code>. (The "inverted chevron" turned out to be code-only —
-        the arrows already point correctly — so it was left alone.)
+        <strong>✅ DECIDED &amp; built.</strong> THREE dropdown types are kept, each for a context —{" "}
+        <code>primary</code> (the default, bordered look), <code>underline</code> (sticky header only),{" "}
+        <code>picker</code> (Rx / prescription form) — but they now SHARE: the bordered panel
+        (1px primary300 + <code>radii.m</code> + one <code>shadows.menu</code> token + cream{" "}
+        <code>active.shade100</code> hover); ONE chevron (the canonical <code>ChevronDown</code> @ 16px —
+        Select's flat arrow and the pickers' chevron-up asset were both swapped for it); and a RESPONSIVE
+        height (<code>--input-h</code>: 40px → 32px on the &lt;1440 lower tier, so they compact). Also
+        fixed: PopoverMenu's off-palette <code>#c0392b</code> → <code>red200</code>.
       </Note>
       <Note>
         <strong>BEFORE (for the record).</strong> These show how the menu surfaces USED

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { styles } from "./Select.styles";
+import { ChevronDown } from "../../icons/ChevronDown";
 
 type SelectOption = {
   label: string;
@@ -105,16 +106,8 @@ export function Select({
         )}
       </div>
 
-      <div style={{ ...styles.arrow, transform: isOpen ? "rotate(180deg)" : "rotate(0)" }}>
-        <svg width="14" height="6" viewBox="0 0 14 6" fill="none">
-          <path
-            d="M1 1L7 5L13 1"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+      <div style={{ ...styles.arrow, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <ChevronDown open={isOpen} color="currentColor" size={16} strokeWidth={1.5} />
       </div>
 
       {isOpen && !disabled && menuRect && createPortal(

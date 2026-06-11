@@ -120,7 +120,7 @@ const styles: Record<string, CSSProperties> = {
   inputWrap: {
     display: "flex",
     alignItems: "center",
-    height: 40,
+    height: "var(--input-h, 40px)",
     borderRadius: radii.m,
     backgroundColor: colors.primary100,
     padding: `0 ${spacing["2xs"]}`,
