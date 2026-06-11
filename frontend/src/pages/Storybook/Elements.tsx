@@ -121,7 +121,35 @@ export function InputsSection() {
         </div>
         <Rule><b>box</b> variant (white) = form fields (price/qty) · <b>cream</b> (default) = the vitals grid. Highlighted chip = <b>switchable</b> (click to toggle units); grey = <b>fixed</b>. One component covers both.</Rule>
       </Sub>
+
+      <Sub title="PROPOSED · MOCK — DomainInput (white input + transparent suffix)"
+        note="Today the whole field has a grey tint. Proposed: the input (left) goes WHITE, the .docodile.app suffix (right) goes TRANSPARENT so it shows the card behind. Shown on a cream card so the transparency is visible. Mock — approve to apply to the real component.">
+        <div style={{ background: colors.active.shade100, borderRadius: radii.m, padding: spacing.l, maxWidth: 560, display: "flex", flexDirection: "column", gap: spacing.m }}>
+          <span style={{ alignSelf: "flex-start", fontSize: 10, fontWeight: fonts.weight.bold, letterSpacing: 0.4,
+            color: colors.secondary700, background: colors.secondary100, borderRadius: radii.xs, padding: "1px 6px" }}>PROPOSED · MOCK</span>
+          <div><Label>default (empty)</Label><MockDomain value="" /></div>
+          <div><Label>filled</Label><MockDomain value="sunrise" /></div>
+          <div><Label>available</Label><MockDomain value="sunrise" border={colors.secondary700} status="Available" statusColor={colors.secondary700} /></div>
+          <div><Label>taken (error)</Label><MockDomain value="acme-clinic" border={colors.red200} status="Already taken" statusColor={colors.red200} /></div>
+        </div>
+      </Sub>
     </Section>
+  );
+}
+
+// Mock of the proposed DomainInput — white input box + transparent suffix.
+function MockDomain({ value, border, status, statusColor }: { value: string; border?: string; status?: string; statusColor?: string }) {
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", height: "var(--input-h, 40px)", borderRadius: radii.m, overflow: "hidden",
+        border: `1px solid ${border || colors.neutral300}`, background: "transparent" }}>
+        <input readOnly value={value} placeholder="your-clinic-domain" style={{ flex: 1, minWidth: 0, height: "100%", border: "none",
+          outline: "none", padding: "0 12px", background: colors.neutral100, fontFamily: fonts.family.primary, fontSize: fonts.size.m, color: colors.neutral900 }} />
+        <div style={{ height: "100%", display: "flex", alignItems: "center", padding: "0 24px", borderLeft: `1px solid ${colors.neutral300}`,
+          background: "transparent", fontFamily: fonts.family.primary, fontSize: fonts.size.m, color: colors.neutral900, whiteSpace: "nowrap" }}>.docodile.app</div>
+      </div>
+      {status && <div style={{ fontSize: fonts.size.xs, color: statusColor, marginTop: 4, marginLeft: 4 }}>{status}</div>}
+    </div>
   );
 }
 
