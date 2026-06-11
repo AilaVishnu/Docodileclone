@@ -7,6 +7,7 @@ import { colors, fonts, spacing, radii } from "../../styles/theme";
 import { Button } from "../../components/Button";
 import { IconButton } from "../../components/IconButton";
 import { Field } from "../../components/Field";
+import { MeasureField } from "../../components/MeasureField";
 import { TextInput } from "../../components/Input/TextInput";
 import { Select } from "../../components/Input/Select/Select";
 import { UnderlineSelect } from "../../components/Input/UnderlineSelect/UnderlineSelect";
@@ -81,6 +82,11 @@ export function InputsSection() {
   const [c, setC] = useState("");
   const [e, setE] = useState("bad value");
   const [m, setM] = useState("First line\nSecond line");
+  const [price, setPrice] = useState("1,200");
+  const [dur, setDur] = useState("15");
+  const [wt, setWt] = useState("68"); const [wtU, setWtU] = useState("kg");
+  const [tmp, setTmp] = useState("37.0"); const [tmpU, setTmpU] = useState("°C");
+  const [sys, setSys] = useState("120"); const [dia, setDia] = useState("80"); const [bpU, setBpU] = useState("mmHg");
   return (
     <Section id="inputs" title="6 · Input fields"
       tldr={<><From>components/Field</From> is the ONE text input — three looks by context: <b>underline</b> (most forms) · <b>box</b> (boxed forms) · <b>pill</b> (search only). One invalid state. <code>TextInput</code> is a thin alias of <code>Field variant="underline"</code>.</>}>
@@ -104,48 +110,18 @@ export function InputsSection() {
         <Rule>Heights are responsive via <code>--input-h</code> — every field compacts together at &lt;1440 (40→32). This is the same primitive Select &amp; the pickers read.</Rule>
       </Sub>
 
-      <Sub title="PROPOSED — Field with unit chips (vitals-style)"
-        note="Reuse the polished vitals pattern: a cream value box + a unit chip that's either FIXED (cream/grey) or SWITCHABLE (highlighted — click to toggle the unit & convert the value, e.g. kg⇄lb, °C⇄°F). One shared Field could then cover price (₹), quantities/duration AND the whole vitals grid. (Domain keeps its own DomainInput.)">
-        <div style={{ border: `1px dashed ${colors.secondary400}`, borderRadius: radii.m, padding: spacing.l, maxWidth: 640,
-          background: colors.secondary50, display: "flex", flexDirection: "column", gap: spacing.m }}>
-          <span style={{ alignSelf: "flex-start", fontSize: 10, fontWeight: fonts.weight.bold, letterSpacing: 0.4,
-            color: colors.secondary700, background: colors.secondary100, borderRadius: radii.xs, padding: "1px 6px" }}>PROPOSED · MOCK</span>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: spacing.m }}>
-            <div><Label>prefix · price</Label><MockField prefix="₹" value="1,200" /></div>
-            <div><Label>fixed · duration</Label><MockField value="15" unit="mins" /></div>
-            <div><Label>switchable · weight</Label><MockField value="68" unit="kg" toggle /></div>
-            <div><Label>switchable · temp</Label><MockField value="37.0" unit="°C" toggle /></div>
-          </div>
-          <div style={{ fontSize: fonts.size.xs, color: colors.neutral600, lineHeight: 1.5 }}>
-            Highlighted chip = <b>switchable</b> (click → converts, e.g. kg⇄lb); cream chip = <b>fixed</b>. Replaces the bespoke price/number inputs (Add Service, Pharmacy, Bill…) <b>and</b> the vitals grid with one shared <code>&lt;Field prefix unit toggle&gt;</code>.
-          </div>
+      <Sub title="MeasureField — value + unit chip (NEW · live)"
+        note="components/MeasureField — the shared input behind vitals, price (₹ prefix) and quantity/duration. The unit chip is FIXED (grey) or SWITCHABLE (highlighted — pass onToggleUnit; the parent owns the unit + value conversion). BP is a variant (two inputs + '/'). Try editing the values and clicking the highlighted chips.">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(120px, 1fr))", gap: spacing.m, maxWidth: 780 }}>
+          <div><Label>prefix · price</Label><MeasureField prefix="₹" value={price} onChange={setPrice} inputMode="decimal" /></div>
+          <div><Label>fixed · duration</Label><MeasureField value={dur} onChange={setDur} unit="mins" /></div>
+          <div><Label>switchable · weight</Label><MeasureField value={wt} onChange={setWt} unit={wtU} onToggleUnit={() => setWtU(u => u === "kg" ? "lb" : "kg")} /></div>
+          <div><Label>switchable · temp</Label><MeasureField value={tmp} onChange={setTmp} unit={tmpU} onToggleUnit={() => setTmpU(u => u === "°C" ? "°F" : "°C")} inputMode="decimal" /></div>
+          <div><Label>BP variant</Label><MeasureField bp value={sys} onChange={setSys} value2={dia} onChange2={setDia} unit={bpU} onToggleUnit={() => setBpU(u => u === "mmHg" ? "kPa" : "mmHg")} ariaLabel="Systolic" ariaLabel2="Diastolic" /></div>
         </div>
+        <Rule>Highlighted chip = <b>switchable</b> (click to toggle units); grey chip = <b>fixed</b>. This one component replaces the vitals grid + the price/quantity inputs across the app.</Rule>
       </Sub>
     </Section>
-  );
-}
-
-// Mock of the proposed enhanced Field — vitals-style: cream value box + a unit chip
-// (fixed = cream/grey · toggle = highlighted primary500, switches units). Not the real component.
-function MockField({ prefix, value, unit, toggle }: { prefix?: string; value: string; unit?: string; toggle?: boolean }) {
-  const R = radii.m;
-  return (
-    <div style={{ display: "flex", alignItems: "stretch", height: 32, width: "100%", maxWidth: 150 }}>
-      {prefix && (
-        <span style={{ display: "flex", alignItems: "center", padding: `0 ${spacing.xs}`, color: colors.neutral500,
-          fontSize: fonts.size.m, background: colors.neutral100, border: `1px solid ${colors.primary300}`,
-          borderRadius: `${R}px 0 0 ${R}px` }}>{prefix}</span>
-      )}
-      <span style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", padding: `0 ${spacing.xs}`,
-        color: colors.neutral900, fontSize: fonts.size.s, background: colors.primary100,
-        borderRadius: `${prefix ? 0 : R}px ${unit ? 0 : R}px ${unit ? 0 : R}px ${prefix ? 0 : R}px` }}>{value}</span>
-      {unit && (
-        <span title={toggle ? "Switchable unit" : undefined} style={{ display: "flex", alignItems: "center", justifyContent: "center",
-          padding: `0 ${spacing.xs}`, fontSize: fonts.size.s, whiteSpace: "nowrap", background: colors.neutral100,
-          border: `1px solid ${toggle ? colors.primary500 : colors.primary300}`, color: toggle ? colors.neutral800 : colors.neutral500,
-          borderRadius: `0 ${R}px ${R}px 0`, cursor: toggle ? "pointer" : "default" }}>{unit}</span>
-      )}
-    </div>
   );
 }
 
