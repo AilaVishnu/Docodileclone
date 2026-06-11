@@ -68,6 +68,8 @@ type QueueTableProps = {
   onStatusChange?: (appointmentId: string, newStatus: string) => void;
 };
 
+// Front-desk status actions. Completion is intentionally NOT here — only the
+// doctor marks a visit complete (via "Complete visit" on the prescription pad).
 const STATUS_OPTIONS = [
   { label: "No-Show", value: "NO_SHOW" },
   { label: "Arrived", value: "WAITING" },
