@@ -130,11 +130,20 @@ class VisitService(
         visit.reviewDate = r.reviewDate
         visit.reviewDays = r.reviewDays
         visit.reviewNotes = r.reviewNotes
-        // Session timing — passed through verbatim. Frontend sets these
-        // from SessionBar's Start / End handlers.
+        // Consultation timing. The frontend stamps sessionStartedAt when the
+        // doctor opens the pad (View Pad) and sessionEndedAt when they mark
+        // the visit complete. The DURATION is computed here, server-side, so
+        // it's trusted: time elapsed between those two moments. Falls back to
+        // the request value only when we can't compute it (start missing).
         visit.sessionStartedAt = r.sessionStartedAt
         visit.sessionEndedAt = r.sessionEndedAt
-        visit.sessionDurationSec = r.sessionDurationSec
+        visit.sessionDurationSec =
+            if (r.sessionStartedAt != null && r.sessionEndedAt != null) {
+                java.time.Duration.between(r.sessionStartedAt, r.sessionEndedAt)
+                    .seconds.toInt().coerceAtLeast(0)
+            } else {
+                r.sessionDurationSec
+            }
         // Tag the visit with its appointment on create; never null it out
         // on a later update that omits the field.
         if (r.appointmentId != null) visit.appointmentId = r.appointmentId
