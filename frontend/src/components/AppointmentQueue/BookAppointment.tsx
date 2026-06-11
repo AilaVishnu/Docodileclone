@@ -1198,7 +1198,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               {pendingDupe.message}
             </p>
             <div style={confirmStyles.actions}>
-              <Button variant="dangerLight" size="sm" onClick={() => setPendingDupe(null)}>
+              <Button variant="light" size="sm" onClick={() => setPendingDupe(null)}>
                 Nope
               </Button>
               <Button variant="dark" size="sm" onClick={() => {

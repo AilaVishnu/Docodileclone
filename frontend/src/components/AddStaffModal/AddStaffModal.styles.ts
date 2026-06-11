@@ -17,14 +17,6 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral900,
   },
 
-  closeButton: {
-    background: "none",
-    border: "none",
-    fontSize: fonts.size.m,
-    cursor: "pointer",
-    color: colors.neutral900,
-  },
-
   topSection: {
     display: "flex",
     gap: spacing.m,         // was spacing.s — between illustration and details

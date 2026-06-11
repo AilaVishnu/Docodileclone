@@ -63,9 +63,9 @@ export const variants = {
       color: colors.neutral100,
     },
     disabled: {
-      backgroundColor: colors.neutralAlphaBlack,
-      borderColor: colors.neutralAlphaBlack,
-      color: colors.neutral300,
+      backgroundColor: colors.neutral200,
+      borderColor: colors.neutral200,
+      color: colors.neutral500,
     },
   },
 
@@ -98,9 +98,9 @@ export const variants = {
       color: colors.neutral100,
     },
     disabled: {
-      backgroundColor: colors.active.shade300,
-      borderColor: colors.active.shade300,
-      color: colors.neutral100,
+      backgroundColor: colors.neutral200,
+      borderColor: colors.neutral200,
+      color: colors.neutral500,
     },
   },
 
@@ -116,33 +116,16 @@ export const variants = {
       color: colors.active.shade700,
     },
     disabled: {
-      borderColor: colors.active.shade400,
-      color: colors.active.shade400,
+      borderColor: colors.neutral400,
+      color: colors.neutral400,
     },
   },
 
+  // secondary — solid green CTA (e.g. "New Prescription"). Resting at
+  // secondary/700, darkening to secondary/800 on hover (mirrors how primary
+  // darkens). Merged from the old secondary/secondarySolid pair (2026-06-11).
   secondary: {
     default: {
-      backgroundColor: colors.secondary800,
-      borderColor: colors.secondary800,
-      color: colors.neutral100,
-    },
-    hover: {
-      backgroundColor: colors.secondary700,
-      borderColor: colors.secondary700,
-      color: colors.neutral100,
-    },
-    disabled: {
-      backgroundColor: colors.secondary300,
-      borderColor: colors.secondary300,
-      color: colors.neutral100,
-    },
-  },
-
-  // Solid green CTA — resting at secondary/700 (the New Prescription button),
-  // darkening to secondary/800 on hover (mirrors how the primary CTA darkens).
-  secondarySolid: {
-    default: {
       backgroundColor: colors.secondary700,
       borderColor: colors.secondary700,
       color: colors.neutral100,
@@ -153,9 +136,9 @@ export const variants = {
       color: colors.neutral100,
     },
     disabled: {
-      backgroundColor: colors.secondary300,
-      borderColor: colors.secondary300,
-      color: colors.neutral100,
+      backgroundColor: colors.neutral200,
+      borderColor: colors.neutral200,
+      color: colors.neutral500,
     },
   },
 
@@ -171,25 +154,9 @@ export const variants = {
       color: colors.secondary700,
     },
     disabled: {
-      borderColor: colors.secondary400,
-      color: colors.secondary400,
+      borderColor: colors.neutral400,
+      color: colors.neutral400,
     },
   },
 
-  dangerLight: {
-    default: {
-      borderColor: colors.red200,
-      color: colors.red200,
-      backgroundColor: "transparent",
-    },
-    hover: {
-      backgroundColor: colors.redAlpha10,
-      borderColor: colors.red200,
-      color: colors.red200,
-    },
-    disabled: {
-      borderColor: colors.red100,
-      color: colors.red100,
-    },
-  },
 };

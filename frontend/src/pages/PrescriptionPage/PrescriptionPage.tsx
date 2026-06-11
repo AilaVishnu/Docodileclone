@@ -28,6 +28,7 @@ import { ReactComponent as ArrowLeftIcon } from "../../assets/icons/arrow-left.s
 import { ReactComponent as CalendarIcon } from "../../assets/icons/calendar.svg";
 import { ReactComponent as UserIcon } from "../../assets/icons/user.svg";
 import { Card } from "../../components/Card";
+import { IconButton } from "../../components/IconButton";
 import { ReactComponent as ReorderIcon } from "../../assets/icons/reorder.svg";
 import { ReactComponent as TuningIcon } from "../../assets/icons/tuning.svg";
 import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg";
@@ -335,7 +336,6 @@ const tplStyles: Record<string, React.CSSProperties> = {
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: spacing.s },
   title: { margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.regular, color: colors.neutral900 },
   subtitle: { margin: "4px 0 0", fontSize: fonts.size.s, color: colors.neutral500 },
-  close: { background: "transparent", border: "none", fontSize: 18, color: colors.neutral500, cursor: "pointer", lineHeight: 1, padding: 0 },
   saveRow: { display: "flex", gap: spacing.s, alignItems: "center" },
   input: { flex: 1, height: 40, boxSizing: "border-box", padding: `0 ${spacing.s}`, border: `1px solid ${colors.neutral300}`, borderRadius: radii.m, backgroundColor: colors.neutral150, fontFamily: fonts.family.primary, fontSize: fonts.control.md, color: colors.neutral900, outline: "none" },
   saveBtn: { flexShrink: 0, height: 40, padding: "0 20px", border: "none", borderRadius: radii.full, backgroundColor: colors.primary700, color: colors.neutral100, fontFamily: fonts.family.primary, fontSize: fonts.control.md, cursor: "pointer" },
@@ -3061,7 +3061,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   : "Pick a saved template to auto-fill the prescription."}
               </p>
             </div>
-            <button type="button" onClick={() => setShowTemplates(false)} aria-label="Close" style={tplStyles.close}>✕</button>
+            <IconButton ariaLabel="Close" onClick={() => setShowTemplates(false)} />
           </header>
 
           {templatesMode === "save" ? (
@@ -3381,7 +3381,7 @@ function AISoapDraftModal({
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
           <h3 style={{ margin: 0, fontSize: 18 }}>AI SOAP draft</h3>
-          <button type="button" onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, lineHeight: 1, cursor: "pointer", color: "#666" }}>×</button>
+          <IconButton ariaLabel="Close" onClick={onClose} />
         </div>
         {loading && <p style={{ color: "#666", fontStyle: "italic" }}>Drafting…</p>}
         {!loading && error && !data?.subjective && (

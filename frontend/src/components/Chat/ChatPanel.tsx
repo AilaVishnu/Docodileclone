@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 import { ChatMessage, useChat } from "../../hooks/useChat";
+import { IconButton } from "../IconButton";
 import { chatWithAssistant, AIChatTurn } from "../../api/ai";
 
 type Props = {
@@ -165,14 +166,12 @@ export function ChatPanel({ clinicId, currentUserId, currentUserName, onUnreadCh
 
   return (
     <div style={styles.panel}>
-      <button
-        style={styles.closeBtn}
+      <IconButton
+        ariaLabel="Close"
         onClick={onClose}
-        aria-label="Close chat"
-        title="Close"
-      >
-        <CloseIcon />
-      </button>
+        size={28}
+        style={{ position: "absolute", top: spacing.s, right: spacing.s, zIndex: 2 }}
+      />
 
       {/* Conversation list — shown in list view, hidden once a thread is opened. */}
       {viewMode === "list" && (
@@ -554,15 +553,6 @@ function BackArrowIcon() {
   );
 }
 
-function CloseIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 6L6 18" />
-      <path d="M6 6l12 12" />
-    </svg>
-  );
-}
-
 function TrashIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
@@ -757,23 +747,6 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "center",
     cursor: "pointer",
     flexShrink: 0,
-  },
-  // X close button — floats over the top-right of the panel.
-  closeBtn: {
-    position: "absolute" as const,
-    top: spacing.s,
-    right: spacing.s,
-    width: 28,
-    height: 28,
-    borderRadius: "50%",
-    border: "none",
-    backgroundColor: "transparent",
-    color: colors.neutral700,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    zIndex: 2,
   },
   // Sidebar uses a warm cream tint (primary200) to separate from the white
   // thread by color rather than a divider line.

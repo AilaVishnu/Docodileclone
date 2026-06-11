@@ -243,10 +243,10 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       <div style={styles.actions}>
         {!isBooking && (
           <Button
-            // "secondarySolid" = green resting at secondary/700 with a
-            // darken-on-hover to /800 (so the New Prescription CTA gets the
-            // same hover feedback as the peach New Appointment CTA).
-            variant={primaryActionVariant === "secondary" ? "secondarySolid" : "primary"}
+            // "secondary" = green resting at secondary/700 with a darken-on-hover
+            // to /800 (so the New Prescription CTA gets the same hover feedback as
+            // the peach New Appointment CTA).
+            variant={primaryActionVariant === "secondary" ? "secondary" : "primary"}
             size="sm"
             iconLeft={<PlusIcon style={{ width: 'var(--topnav-cta-icon)', height: 'var(--topnav-cta-icon)', fill: '#fff' }} />}
             style={{ padding: '0 var(--topnav-cta-padx)' }}

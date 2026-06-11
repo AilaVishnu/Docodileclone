@@ -3,6 +3,7 @@ import { Modal } from "../Modal";
 import { Card } from "../Card";
 import { StaffDetailsCard } from "../StaffDetailsCard";
 import { Button } from "../Button";
+import { IconButton } from "../IconButton";
 import { styles, confirmStyles } from "./AddStaffModal.styles";
 import { AdditionalStaffDetailsCard } from "../AdditionalStaffDetailsCard";
 import { styles as roleStyles } from "../AdditionalStaffDetailsCard/AdditionalStaffDetailsCard.styles";
@@ -195,9 +196,7 @@ export function AddStaffModal({
       <div style={styles.header}>
         <h3 style={styles.title}>Add staff member</h3>
 
-        <button style={styles.closeButton} onClick={onClose}>
-          ✕
-        </button>
+        <IconButton ariaLabel="Close" onClick={onClose} />
       </div>
 
       {/* Role section — first after the heading. Drives everything else. */}
@@ -307,7 +306,7 @@ export function AddStaffModal({
         )}
 
         <div style={styles.footerRight}>
-          <Button variant="dangerLight" size="sm" onClick={onClose}>
+          <Button variant="light" size="sm" onClick={onClose}>
             Cancel
           </Button>
 
@@ -327,7 +326,7 @@ export function AddStaffModal({
             booked. Their past appointments and prescriptions stay on record.
           </p>
           <div style={confirmStyles.actions}>
-            <Button variant="dangerLight" size="sm" onClick={() => setShowDeleteConfirm(false)}>
+            <Button variant="light" size="sm" onClick={() => setShowDeleteConfirm(false)}>
               Nope
             </Button>
             <Button variant="dark" size="sm" onClick={() => {

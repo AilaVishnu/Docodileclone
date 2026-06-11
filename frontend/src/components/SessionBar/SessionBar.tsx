@@ -321,15 +321,21 @@ export function SessionBar({
               Resume
             </button>
           )}
-          <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
-            <PrinterIcon width={24} height={24} />
-          </button>
-          <button type="button" style={styles.iconBtn} onClick={onDownload} aria-label="Download">
-            <DownloadIcon width={24} height={24} />
-          </button>
-          <button type="button" style={styles.iconBtn} onClick={onShare} aria-label="Share">
-            <ShareIcon width={24} height={24} />
-          </button>
+          {onPrint && (
+            <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
+              <PrinterIcon width={24} height={24} />
+            </button>
+          )}
+          {onDownload && (
+            <button type="button" style={styles.iconBtn} onClick={onDownload} aria-label="Download">
+              <DownloadIcon width={24} height={24} />
+            </button>
+          )}
+          {onShare && (
+            <button type="button" style={styles.iconBtn} onClick={onShare} aria-label="Share">
+              <ShareIcon width={24} height={24} />
+            </button>
+          )}
         </div>
       </div>
     );
@@ -374,15 +380,21 @@ export function SessionBar({
                 Resume
               </button>
             )}
-            <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
-              <PrinterIcon width={24} height={24} />
-            </button>
-            <button type="button" style={styles.iconBtn} onClick={onDownload} aria-label="Download">
-              <DownloadIcon width={24} height={24} />
-            </button>
-            <button type="button" style={styles.iconBtn} onClick={onShare} aria-label="Share">
-              <ShareIcon width={24} height={24} />
-            </button>
+            {onPrint && (
+              <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
+                <PrinterIcon width={24} height={24} />
+              </button>
+            )}
+            {onDownload && (
+              <button type="button" style={styles.iconBtn} onClick={onDownload} aria-label="Download">
+                <DownloadIcon width={24} height={24} />
+              </button>
+            )}
+            {onShare && (
+              <button type="button" style={styles.iconBtn} onClick={onShare} aria-label="Share">
+                <ShareIcon width={24} height={24} />
+              </button>
+            )}
           </div>
         </>
       ) : running || paused ? (
@@ -447,7 +459,7 @@ export function SessionBar({
           </p>
           <div style={confirmStyles.actions}>
             <Button
-              variant="dangerLight"
+              variant="light"
               size="sm"
               onClick={() => setShowEndConfirm(false)}
             >
@@ -484,7 +496,7 @@ export function SessionBar({
           </p>
           <div style={confirmStyles.actions}>
             <Button
-              variant="dangerLight"
+              variant="light"
               size="sm"
               onClick={() => setShowRestartConfirm(false)}
             >

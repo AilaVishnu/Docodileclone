@@ -4,7 +4,7 @@ import { styles, variants } from "./Button.styles";
 
 type ButtonProps = {
   children?: React.ReactNode;
-  variant?: "dark" | "light" | "primary" | "primaryLight" | "secondary" | "secondarySolid" | "secondaryLight" | "dangerLight";
+  variant?: "dark" | "light" | "primary" | "primaryLight" | "secondary" | "secondaryLight";
   size?: "sm" | "md" | "smIcon" | "mdIcon";
   iconLeft?: React.ReactNode;
   iconRight?: React.ReactNode;

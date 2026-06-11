@@ -350,7 +350,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
           <h4 style={confirmStyles.title}>Are you sure?</h4>
           <p style={{ margin: 0, fontSize: fonts.size.s, color: colors.neutral600, textAlign: "center" }}>Current booking data will be discarded.</p>
           <div style={confirmStyles.actions}>
-            <Button variant="dangerLight" size="sm" onClick={() => setShowConfirm(false)}>
+            <Button variant="light" size="sm" onClick={() => setShowConfirm(false)}>
               Nope
             </Button>
             <Button variant="dark" size="sm" onClick={handleConfirmNewAppointment}>

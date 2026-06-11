@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { colors, fonts, spacing, radii } from "../../styles/theme";
 import { Button } from "../Button";
+import { IconButton } from "../IconButton";
 import { Select } from "../Input/Select/Select";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
 
@@ -256,9 +257,7 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
           <div style={styles.rightCard}>
             <div style={styles.rightHeader}>
               <h3 style={styles.billTitle}>Bill</h3>
-              <button style={styles.closeBtn} onClick={onClose} aria-label="Close">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-              </button>
+              <IconButton ariaLabel="Close" onClick={onClose} />
             </div>
 
             <div style={styles.fieldsContainer}>
@@ -572,18 +571,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: fonts.family.secondary,
     color: colors.neutral900,
     lineHeight: fonts.lineHeight.h5,
-  },
-  closeBtn: {
-    border: "none",
-    background: "transparent",
-    cursor: "pointer",
-    color: colors.neutral500,
-    padding: 0,
-    width: 28,
-    height: 28,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
   },
 
   zigzag: {

@@ -177,7 +177,7 @@ body {
 
   /* Universal Button primitives (sm / md sizes used app-wide) */
   --btn-sm-h: 40px;
-  --btn-md-h: 42px;
+  --btn-md-h: 44px;
   --btn-fs: 16px;
 
   /* Universal form control primitives (Select dropdown, TextInput row, …) */
@@ -325,7 +325,7 @@ body {
     --search-fs: 14px;
 
     --btn-sm-h: 32px;
-    --btn-md-h: 34px;
+    --btn-md-h: 36px;
     --btn-fs: 14px;
 
     --input-h: 32px;

@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Modal } from "../../components/Modal/Modal";
+import { IconButton } from "../../components/IconButton";
+import { Button } from "../../components/Button";
 import { Select } from "../../components/Input/Select/Select";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
@@ -248,14 +250,7 @@ export function AddReportModal({
             <h2 style={styles.title}>{titleCopy}</h2>
             <p style={styles.subtitle}>{headerSubtitle}</p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            style={styles.closeBtn}
-          >
-            ✕
-          </button>
+          <IconButton ariaLabel="Close" onClick={onClose} />
         </header>
 
         {/* Drop zone — clickable, also accepts drag/drop. Stays visible even
@@ -399,20 +394,17 @@ export function AddReportModal({
           <p style={styles.uploadError}>{uploadError}</p>
         )}
         <footer style={styles.footer}>
-          <button type="button" onClick={onClose} style={styles.btnGhost}>
+          <Button variant="light" size="sm" onClick={onClose}>
             {uploadError ? "Close anyway" : "Cancel"}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
             onClick={handleSave}
             disabled={uploading || drafts.length === 0 || drafts.some(d => !d.category)}
-            style={{
-              ...styles.btnPrimary,
-              ...(uploading || drafts.length === 0 || drafts.some(d => !d.category) ? { opacity: 0.45, cursor: "not-allowed" } : null),
-            }}
           >
             {uploading ? "Uploading…" : `Add${drafts.length > 1 ? ` (${drafts.length})` : ""}`}
-          </button>
+          </Button>
         </footer>
       </div>
     </Modal>
@@ -485,18 +477,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: fonts.family.primary,
     fontSize: fonts.control.sm,
     color: colors.neutral600,
-  },
-  // Matches AddStaffModal's closeButton — plain text "✕", no background
-  // circle. Keeps modal headers consistent across the app.
-  closeBtn: {
-    background: "none",
-    border: "none",
-    color: colors.neutral900,
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.m,
-    cursor: "pointer",
-    padding: 0,
-    flexShrink: 0,
   },
   dropZone: {
     display: "flex",
@@ -666,25 +646,5 @@ const styles: Record<string, React.CSSProperties> = {
     gap: spacing.s,
     paddingTop: spacing.s,
     borderTop: `1px solid ${colors.neutral200}`,
-  },
-  btnGhost: {
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.control.md,
-    color: colors.neutral900,
-    background: "transparent",
-    border: `1px solid ${colors.primary300}`,
-    borderRadius: radii.full,
-    padding: "10px 20px",
-    cursor: "pointer",
-  },
-  btnPrimary: {
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.control.md,
-    color: colors.neutral100,
-    backgroundColor: colors.primary700,
-    border: "none",
-    borderRadius: radii.full,
-    padding: "10px 20px",
-    cursor: "pointer",
   },
 };

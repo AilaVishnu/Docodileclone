@@ -583,7 +583,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           <div style={confirmStyles.dialog}>
             <h4 style={confirmStyles.title}>Are you sure?</h4>
             <div style={confirmStyles.actions}>
-              <Button variant="dangerLight" size="sm" onClick={() => setPendingCancelId(null)}>
+              <Button variant="light" size="sm" onClick={() => setPendingCancelId(null)}>
                 Nope
               </Button>
               <Button variant="dark" size="sm" onClick={() => {
@@ -801,7 +801,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               {/* Action buttons — inside the white card, above the zigzag */}
               <div style={{ display: "flex", gap: spacing.s, justifyContent: "center", paddingTop: spacing.s }}>
               <Button
-                variant="dangerLight"
+                variant="light"
                 size="sm"
                 onClick={() => { setPayDueApt(null); }}
                 disabled={payDueSubmitting}

@@ -254,7 +254,7 @@ function SpacingSection() {
 }
 
 function ButtonsSection() {
-  const variants = ["primary","primaryLight","secondary","secondaryLight","dark","light","dangerLight"] as const;
+  const variants = ["primary","primaryLight","secondary","secondaryLight","dark","light"] as const;
   const sizes = ["sm","md"] as const;
   return (
     <div>

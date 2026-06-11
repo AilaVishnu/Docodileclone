@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Modal } from "../../components/Modal/Modal";
+import { IconButton } from "../../components/IconButton";
+import { Button } from "../../components/Button";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { pickAvatar } from "../../utils/avatar";
@@ -223,9 +225,7 @@ export function EditPatientModal({ isOpen, patient, onClose, onSave, onSaved, on
             <h2 style={styles.title}>Edit Patient Info</h2>
             <p style={styles.subtitle}>Update personal details for this patient</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" style={styles.closeBtn}>
-            ✕
-          </button>
+          <IconButton ariaLabel="Close" onClick={onClose} />
         </header>
 
         {/* Patient identity strip — cream bg mirrors the prescription patient card */}
@@ -406,20 +406,17 @@ export function EditPatientModal({ isOpen, patient, onClose, onSave, onSaved, on
             Archive Patient
           </button>
           <div style={{ flex: 1 }} />
-          <button type="button" onClick={onClose} style={styles.btnGhost}>
+          <Button variant="light" size="sm" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
             onClick={handleSave}
             disabled={saving || !form.name.trim()}
-            style={{
-              ...styles.btnPrimary,
-              ...((saving || !form.name.trim()) ? { opacity: 0.45, cursor: "not-allowed" } : undefined),
-            }}
           >
             {saving ? "Saving…" : "Save changes"}
-          </button>
+          </Button>
         </footer>
       </div>
 
@@ -433,14 +430,7 @@ export function EditPatientModal({ isOpen, patient, onClose, onSave, onSaved, on
               <h2 style={styles.title}>Are you sure?</h2>
               <p style={styles.subtitle}>Archive this patient from the active list</p>
             </div>
-            <button
-              type="button"
-              onClick={() => !archiving && setConfirmArchive(false)}
-              aria-label="Close"
-              style={styles.closeBtn}
-            >
-              ✕
-            </button>
+            <IconButton ariaLabel="Close" onClick={() => !archiving && setConfirmArchive(false)} />
           </header>
 
           <div style={styles.identityStrip}>
@@ -464,14 +454,14 @@ export function EditPatientModal({ isOpen, patient, onClose, onSave, onSaved, on
           </p>
 
           <footer style={styles.footer}>
-            <button
-              type="button"
+            <Button
+              variant="light"
+              size="sm"
               onClick={() => setConfirmArchive(false)}
               disabled={archiving}
-              style={styles.btnGhost}
             >
               Cancel
-            </button>
+            </Button>
             <button
               type="button"
               onClick={handleArchive}
@@ -527,16 +517,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: fonts.family.primary,
     fontSize: fonts.control.sm,
     color: colors.neutral600,
-  },
-  closeBtn: {
-    background: "none",
-    border: "none",
-    color: colors.neutral900,
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.m,
-    cursor: "pointer",
-    padding: 0,
-    flexShrink: 0,
   },
 
   // ── Patient identity strip — cream bg, mirrors prescription patient card ──
@@ -754,26 +734,6 @@ const styles: Record<string, React.CSSProperties> = {
     gap: spacing.s,
     paddingTop: spacing.s,
     borderTop: `1px solid ${colors.neutral200}`,
-  },
-  btnGhost: {
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.control.md,
-    color: colors.neutral900,
-    background: "transparent",
-    border: `1px solid ${colors.primary300}`,
-    borderRadius: radii.full,
-    padding: "10px 20px",
-    cursor: "pointer",
-  },
-  btnPrimary: {
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.control.md,
-    color: colors.neutral100,
-    backgroundColor: colors.primary700,
-    border: "none",
-    borderRadius: radii.full,
-    padding: "10px 20px",
-    cursor: "pointer",
   },
 
   // ── Archive button + inline confirm — sits on the left of the footer,

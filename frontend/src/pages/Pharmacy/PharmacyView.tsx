@@ -7,6 +7,7 @@ import { formatExpiry, expiryStatus } from "./expiry";
 import { MedIllustration } from "./MedIllustration";
 import { Modal } from "../../components/Modal/Modal";
 import { Button } from "../../components/Button";
+import { IconButton } from "../../components/IconButton";
 import { colors, fonts, spacing, radii } from "../../styles/theme";
 import { PlusIcon } from "../../iconsUtil";
 import { ReactComponent as SearchIcon } from "../../assets/search.svg";
@@ -452,11 +453,6 @@ const ms: Record<string, React.CSSProperties> = {
     fontFamily: fonts.family.primary, fontSize: fonts.control.sm,
     color: colors.neutral600,
   },
-  closeBtn: {
-    background: "none", border: "none", color: colors.neutral900,
-    fontFamily: fonts.family.primary, fontSize: fonts.size.m,
-    cursor: "pointer", padding: 0, flexShrink: 0,
-  },
   identityStrip: {
     display: "flex", alignItems: "center", gap: spacing.m,
     backgroundColor: colors.primary100, borderRadius: radii.xl,
@@ -528,18 +524,6 @@ const ms: Record<string, React.CSSProperties> = {
     display: "flex", justifyContent: "flex-end", gap: spacing.s,
     paddingTop: spacing.s, borderTop: `1px solid ${colors.neutral200}`,
   },
-  btnGhost: {
-    fontFamily: fonts.family.primary, fontSize: fonts.control.md,
-    color: colors.neutral900, background: "transparent",
-    border: `1px solid ${colors.primary300}`, borderRadius: radii.full,
-    padding: "10px 20px", cursor: "pointer",
-  },
-  btnPrimary: {
-    fontFamily: fonts.family.primary, fontSize: fonts.control.md,
-    color: colors.neutral100, backgroundColor: colors.primary700,
-    border: "none", borderRadius: radii.full,
-    padding: "10px 20px", cursor: "pointer",
-  },
   btnDanger: {
     fontFamily: fonts.family.primary, fontSize: fonts.control.md,
     color: colors.neutral100, backgroundColor: colors.red200,
@@ -565,7 +549,7 @@ function ModalHeader({ title, subtitle, onClose }: { title: string; subtitle?: s
         <h2 style={ms.title}>{title}</h2>
         {subtitle && <p style={ms.subtitle}>{subtitle}</p>}
       </div>
-      <button type="button" onClick={onClose} aria-label="Close" style={ms.closeBtn}>✕</button>
+      <IconButton ariaLabel="Close" onClick={onClose} />
     </header>
   );
 }
@@ -736,15 +720,10 @@ function StockFormBody({
       </div>
 
       <footer style={ms.footer}>
-        <button type="button" onClick={onClose} disabled={saving} style={ms.btnGhost}>Cancel</button>
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={saving}
-          style={{ ...ms.btnPrimary, ...(saving ? { opacity: 0.45, cursor: "not-allowed" } : null) }}
-        >
+        <Button variant="light" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button variant="primary" size="sm" onClick={handleSubmit} disabled={saving}>
           {saving ? "Saving…" : isEdit ? "Save changes" : "Add stock"}
-        </button>
+        </Button>
       </footer>
     </div>
   );
@@ -807,15 +786,10 @@ function AdjustQtyBody({
       </div>
 
       <footer style={ms.footer}>
-        <button type="button" onClick={onClose} disabled={saving} style={ms.btnGhost}>Cancel</button>
-        <button
-          type="button"
-          onClick={submit}
-          disabled={saving}
-          style={{ ...ms.btnPrimary, ...(saving ? { opacity: 0.45, cursor: "not-allowed" } : null) }}
-        >
+        <Button variant="light" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button variant="primary" size="sm" onClick={submit} disabled={saving}>
           {saving ? "Saving…" : "Update"}
-        </button>
+        </Button>
       </footer>
     </div>
   );
@@ -848,7 +822,7 @@ function DeleteConfirmBody({
       <MedIdentityStrip med={med} />
 
       <footer style={ms.footer}>
-        <button type="button" onClick={onCancel} disabled={busy} style={ms.btnGhost}>Cancel</button>
+        <Button variant="light" size="sm" onClick={onCancel} disabled={busy}>Cancel</Button>
         <button
           type="button"
           onClick={submit}

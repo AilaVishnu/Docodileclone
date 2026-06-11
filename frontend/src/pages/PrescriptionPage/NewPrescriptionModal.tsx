@@ -1,5 +1,7 @@
 import React from "react";
 import { Modal } from "../../components/Modal/Modal";
+import { IconButton } from "../../components/IconButton";
+import { Button } from "../../components/Button";
 import { Patient, usePatients } from "../../hooks/usePatients";
 import { useDoctors } from "../../hooks/useDoctors";
 import { Select } from "../../components/Input/Select/Select";
@@ -92,7 +94,7 @@ export function NewPrescriptionModal({
                 : "Fill in the patient's basic details."}
             </p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" style={styles.close}>✕</button>
+          <IconButton ariaLabel="Close" onClick={onClose} />
         </header>
 
         {view === "pick" ? (
@@ -237,18 +239,16 @@ function PickView({
       </div>
 
       <footer style={styles.footer}>
-        <button
-          type="button"
-          onClick={() => selectedPatient && onSelect(selectedPatient, service, feeFor(service))}
-          disabled={!selectedPatient || !canSubmit}
-          style={{
-            ...styles.btnPrimary,
-            ...(!selectedPatient || !canSubmit ? { opacity: 0.45, cursor: "not-allowed" as const } : null),
-          }}
-          title={!selectedPatient ? "Pick a patient first" : undefined}
-        >
-          Start Rx
-        </button>
+        <span title={!selectedPatient ? "Pick a patient first" : undefined} style={{ display: "inline-flex" }}>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => selectedPatient && onSelect(selectedPatient, service, feeFor(service))}
+            disabled={!selectedPatient || !canSubmit}
+          >
+            Start Rx
+          </Button>
+        </span>
       </footer>
     </>
   );
@@ -463,15 +463,15 @@ function AddView({
       </div>
 
       <footer style={styles.footer}>
-        <button type="button" onClick={onCancel} style={styles.btnGhost}>Back</button>
-        <button
-          type="button"
+        <Button variant="light" size="sm" onClick={onCancel}>Back</Button>
+        <Button
+          variant="primary"
+          size="sm"
           onClick={() => onSubmit(draft)}
           disabled={!valid}
-          style={{ ...styles.btnPrimary, ...(valid ? null : { opacity: 0.45, cursor: "not-allowed" }) }}
         >
           Add & start Rx
-        </button>
+        </Button>
       </footer>
     </>
   );
@@ -494,7 +494,6 @@ const styles: Record<string, React.CSSProperties> = {
   header: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.m },
   title: { margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h6, lineHeight: fonts.lineHeight.h6, fontWeight: fonts.weight.regular, color: colors.neutral900 },
   subtitle: { margin: "4px 0 0", fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral600 },
-  close: { background: "none", border: "none", color: colors.neutral900, fontFamily: fonts.family.primary, fontSize: fonts.size.m, cursor: "pointer", padding: 0, flexShrink: 0 },
 
   // White-ish form card containing all fields — same shell as Add Stock.
   formCard: {
@@ -569,12 +568,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex", justifyContent: "flex-end", gap: spacing.s,
     paddingTop: spacing.s, borderTop: `1px solid ${colors.neutral200}`,
   },
-  btnGhost: {
-    fontFamily: fonts.family.primary, fontSize: fonts.control.md,
-    color: colors.neutral900, background: "transparent",
-    border: `1px solid ${colors.primary300}`, borderRadius: radii.full,
-    padding: "10px 20px", cursor: "pointer",
-  },
   // Compact ghost variant — height matches the rounded card inputs (35) so
   // it sits flush in the Search row. Same ghost tokens, shorter padding.
   btnGhostCompact: {
@@ -583,11 +576,5 @@ const styles: Record<string, React.CSSProperties> = {
     border: `1px solid ${colors.primary300}`, borderRadius: radii.full,
     padding: `0 ${spacing.m}`, height: 35, cursor: "pointer",
     whiteSpace: "nowrap" as const, flexShrink: 0,
-  },
-  btnPrimary: {
-    fontFamily: fonts.family.primary, fontSize: fonts.control.md,
-    color: colors.neutral100, backgroundColor: colors.primary700,
-    border: "none", borderRadius: radii.full,
-    padding: "10px 20px", cursor: "pointer",
   },
 };

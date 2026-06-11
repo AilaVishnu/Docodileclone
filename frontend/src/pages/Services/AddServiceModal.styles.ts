@@ -37,19 +37,6 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral900,
   },
 
-  closeBtn: {
-    border: "none",
-    background: "transparent",
-    cursor: "pointer",
-    color: colors.neutral500,
-    padding: 0,
-    width: "28px",
-    height: "28px",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
   form: {
     display: "flex",
     flexDirection: "column",
@@ -151,32 +138,4 @@ export const styles: Record<string, CSSProperties> = {
     marginTop: spacing.xs,
   },
 
-  cancelBtn: {
-    border: "none",
-    background: "transparent",
-    color: colors.neutral700,
-    fontSize: fonts.size.s,
-    fontWeight: fonts.weight.medium,
-    cursor: "pointer",
-    padding: `${spacing.xs} ${spacing.m}`,
-    textDecoration: "underline",
-    fontFamily: fonts.family.primary,
-  },
-
-  saveBtn: {
-    backgroundColor: colors.neutral900,
-    color: colors.neutral100,
-    border: "none",
-    borderRadius: radii.full,
-    padding: `${spacing.xs} ${spacing.l}`,
-    fontSize: fonts.size.s,
-    fontWeight: fonts.weight.medium,
-    fontFamily: fonts.family.primary,
-    cursor: "pointer",
-  },
-
-  saveBtnDisabled: {
-    opacity: 0.5,
-    cursor: "not-allowed",
-  },
 };

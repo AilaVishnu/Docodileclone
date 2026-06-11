@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { API_BASE_URL } from "../../apiConfig";
+import { IconButton } from "../../components/IconButton";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FileViewer — full-page-style image viewer with annotation overlay. Renders
@@ -329,15 +330,8 @@ export function FileViewer({ file, onBack }: Props) {
               Download w/ markup
             </button>
           )}
-          {/* Close — same plain-text treatment as AddReportModal's closeBtn. */}
-          <button
-            type="button"
-            onClick={onBack}
-            aria-label="Close"
-            style={styles.closeBtn}
-          >
-            ✕
-          </button>
+          {/* Close — dismisses the file viewer. */}
+          <IconButton ariaLabel="Close" onClick={onBack} style={{ marginLeft: 4 }} />
         </div>
       </header>
 
@@ -954,18 +948,6 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: radii.full,
     padding: "8px 16px",
     cursor: "pointer",
-  },
-  // Matches AddStaffModal / AddReportModal closeBtn — plain text, no circle.
-  closeBtn: {
-    background: "none",
-    border: "none",
-    color: colors.neutral900,
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.m,
-    cursor: "pointer",
-    padding: 0,
-    flexShrink: 0,
-    marginLeft: 4,
   },
   // Two-column row: image stage + (optional) right rail.
   stageRow: {

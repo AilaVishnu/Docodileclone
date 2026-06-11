@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { styles } from "./AddServiceModal.styles";
 import { Service, DiscountMode } from "./types";
+import { IconButton } from "../../components/IconButton";
+import { Button } from "../../components/Button";
 
 const NO_SPINNER_CLASS = "no-spinner";
 
@@ -100,9 +102,7 @@ export function AddServiceModal({ isOpen, onClose, onSave, initial }: Props) {
       <div style={styles.card} onClick={(e) => e.stopPropagation()}>
         <div style={styles.header}>
           <h3 style={styles.title}>{initial ? "Edit Service" : "Add Service"}</h3>
-          <button style={styles.closeBtn} onClick={onClose} aria-label="Close">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
+          <IconButton ariaLabel="Close" onClick={onClose} />
         </div>
 
         <div style={styles.form}>
@@ -226,14 +226,10 @@ export function AddServiceModal({ isOpen, onClose, onSave, initial }: Props) {
         )}
 
         <div style={styles.footer}>
-          <button style={styles.cancelBtn} onClick={onClose} disabled={saving}>Cancel</button>
-          <button
-            style={{ ...styles.saveBtn, ...(canSave && !saving ? {} : styles.saveBtnDisabled) }}
-            onClick={handleSave}
-            disabled={saving}
-          >
+          <Button variant="light" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
             {saving ? "Saving…" : initial ? "Save Changes" : "Add Service"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>,
