@@ -44,7 +44,7 @@ const STATUS_CONFIG: Record<
   SCHEDULED: { bg: colors.active.shade300, color: colors.neutral900, label: "Booked" },
   ARRIVED: { bg: colors.primary200, color: colors.neutral900, label: "Arrived" },
   IN_PROGRESS: { bg: colors.neutral100, color: colors.neutral900, label: "At Doc" },
-  COMPLETED: { bg: colors.green200, color: colors.neutral100, label: "Done" },
+  COMPLETED: { bg: colors.secondary600, color: colors.neutral100, label: "Done" },
   NO_SHOW: { bg: colors.neutral400, color: colors.neutral100, label: "No Show" },
   CANCELLED: { bg: colors.red100, color: colors.neutral100, label: "Cancelled" },
 };
