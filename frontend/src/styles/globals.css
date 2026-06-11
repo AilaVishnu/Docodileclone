@@ -160,14 +160,6 @@ body {
   background-color: var(--active-shade-400);
 }
 
-/* Queue Type column: at 1200–1439 show just the word ("New" / "Review"),
-   hiding the leading icon to save width. Icon returns at 1440+. */
-@media (max-width: 1439.98px) {
-  .type-badge-icon {
-    display: none;
-  }
-}
-
 /* ─── Responsive design tokens ────────────────────────────────────────
    Variables exposed on :root so inline styles in *.styles.ts can
    consume them via var(--name). The browser resolves them per viewport

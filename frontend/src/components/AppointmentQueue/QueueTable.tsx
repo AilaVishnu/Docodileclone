@@ -2,9 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { styles } from "./AppointmentQueue.styles";
 import { fonts, colors } from "../../styles/theme";
 import { StatusBadge, PayBadge } from "./StatusBadge";
-import { ReactComponent as StarOutlineIcon } from "../../assets/icons/star.svg";
 import { ReactComponent as ReorderDotsIcon } from "../../assets/icons/reorder.svg";
-import { ReactComponent as RestartArrowIcon } from "../../assets/icons/restart.svg";
 import { ZeroQueue } from "./ZeroQueue";
 import { loadStartedSet } from "../../utils/sessionStarted";
 
@@ -186,20 +184,7 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange, sessionSta
 
 // ── Type badge (☆ New / ↺ Review) ────────────────────────────────────────
 function TypeBadge({ type }: { type: "New" | "Review" }) {
-  if (type === "New") {
-    return (
-      <span style={styles.typeBadge}>
-        <StarOutlineIcon className="type-badge-icon" width={18} height={18} style={{ flexShrink: 0 }} />
-        New
-      </span>
-    );
-  }
-  return (
-    <span style={styles.typeBadge}>
-      <RestartArrowIcon className="type-badge-icon" width={18} height={18} style={{ flexShrink: 0 }} />
-      Review
-    </span>
-  );
+  return <span style={styles.typeBadge}>{type === "New" ? "New" : "Review"}</span>;
 }
 
 // ── Three-dot action menu ─────────────────────────────────────────────────
@@ -229,12 +214,6 @@ function ActionMenu({
       <button
         style={styles.actionButton}
         onClick={() => setIsOpen(!isOpen)}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.backgroundColor = colors.neutral150;
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
-        }}
       >
         <ReorderDotsIcon width={24} height={24} />
       </button>
@@ -304,7 +283,7 @@ export function QueueTable({
               leftover width: Name stays capped at 256 (truncates), the 3-dots
               stays exactly 24px, and the name↔phone gap stretches/squeezes as
               the queue resizes. */}
-          <col style={{ width: "48px" }} />   {/* # (T-number e.g. T001) */}
+          <col style={{ width: "56px" }} />   {/* # (T-number e.g. T001) */}
           <col />
           <col style={{ width: "var(--queue-name-w)" }} />  {/* Name (256 / 200, truncates) */}
           <col />
@@ -326,7 +305,7 @@ export function QueueTable({
           <tr>
             {/* Real header cells with empty flexible spacer <th>s between them
                 (matching the colgroup) so the inter-column gaps stretch equally. */}
-            <th style={{ ...styles.th, textAlign: "left", paddingLeft: 0, paddingRight: 0 }}>#</th>
+            <th style={{ ...styles.th, textAlign: "left", paddingLeft: 8, paddingRight: 0 }}>#</th>
             <th style={spacerTh} aria-hidden />
             <th style={{ ...styles.th, textAlign: "left", paddingLeft: "0", paddingRight: "4px" }}>Name</th>
             <th style={spacerTh} aria-hidden />
@@ -402,7 +381,7 @@ export function QueueTable({
                   >
                     {/* # — T-number (e.g. T001). Falls back to "T---" when
                         the appointment is not in the local id map. */}
-                    <td style={styles.serialCell}>
+                    <td style={{ ...styles.serialCell, paddingLeft: 8 }}>
                       {tIdFor(apt.id)}
                     </td>
 

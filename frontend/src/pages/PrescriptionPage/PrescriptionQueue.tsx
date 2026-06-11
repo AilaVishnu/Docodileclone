@@ -7,24 +7,12 @@ import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { loadStartedSet } from "../../utils/sessionStarted";
 import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
-import { ReactComponent as RestartIcon } from "../../assets/icons/restart-24.svg";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
-import { ReactComponent as StarIcon } from "../../assets/icons/star.svg";
 import { ChevronDown } from "../../components/icons/ChevronDown";
 import { StatusBadge } from "../../components/AppointmentQueue/StatusBadge";
 import { colors, radii } from "../../styles/theme";
 import { styles } from "./PrescriptionQueue.styles";
 import { Toast } from "../../components/Toast";
-
-// Pick the icon that fits the appointment type. New patient = filled
-// star (first-time visit); everything else (Review, follow-up) uses
-// the restart/refresh glyph to signal a repeat.
-function TypeIcon({ type, className }: { type: string | null | undefined; className?: string }) {
-  const isNew = (type ?? "").trim().toLowerCase() === "new";
-  return isNew
-    ? <StarIcon className={className} width={18} height={18} />
-    : <RestartIcon className={className} width={18} height={18} />;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal landing of the Prescription page — Figma 2282:17378.
@@ -375,7 +363,6 @@ function PatientCard({
             label="Type"
             value={
               <span style={styles.typeRow}>
-                <TypeIcon type={apt.type} />
                 {apt.type ?? "—"}
               </span>
             }
@@ -526,12 +513,9 @@ function PatientListTable({
                   </td>
                   <td style={spacerTd} aria-hidden />
 
-                  {/* Type — star icon for "New" appointments (Prescription's
-                      TypeIcon); hides at the 1200–1439 tier via the
-                      .type-badge-icon CSS rule in globals.css. */}
+                  {/* Type — plain "New" / "Review" label (icons removed). */}
                   <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
                     <span style={styles.typeRow}>
-                      <TypeIcon type={apt.type} className="type-badge-icon" />
                       {apt.type ?? "—"}
                     </span>
                   </td>
