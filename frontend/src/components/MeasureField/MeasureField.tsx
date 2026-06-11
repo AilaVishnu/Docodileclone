@@ -43,6 +43,17 @@ export function MeasureField({
   const height = dense ? 28 : "var(--input-h, 40px)";
   const R = radii.m;
 
+  // BP variant: auto-advance from systolic → diastolic at 3 digits or on "/".
+  const diaRef = React.useRef<HTMLInputElement>(null);
+  const handleFirstChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(e.target.value);
+    if (bp && e.target.value.length >= 3) diaRef.current?.focus();
+  };
+  const handleFirstKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (bp && e.key === "/") { e.preventDefault(); diaRef.current?.focus(); return; }
+    onKeyDown?.(e);
+  };
+
   const inputBase: React.CSSProperties = {
     flex: 1, minWidth: 0, height: "100%", border: "none", outline: "none", padding: 0,
     fontSize: fonts.size.s, fontFamily: fonts.family.primary, color: colors.neutral900,
@@ -64,13 +75,13 @@ export function MeasureField({
         borderRadius: `${prefix ? 0 : R}px ${unit ? 0 : R}px ${unit ? 0 : R}px ${prefix ? 0 : R}px` }}>
         <input
           inputMode={inputMode} aria-label={ariaLabel} aria-invalid={invalid || undefined}
-          value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={onKeyDown} placeholder={placeholder} style={inputBase}
+          value={value} onChange={handleFirstChange} onKeyDown={handleFirstKeyDown} placeholder={placeholder} style={inputBase}
         />
         {bp && (
           <>
             <span style={{ flexShrink: 0, fontSize: fonts.size.s, color: colors.neutral500, padding: `0 ${spacing["3xs"]}`, userSelect: "none" }}>/</span>
             <input
-              inputMode={inputMode} aria-label={ariaLabel2} aria-invalid={invalid || undefined}
+              ref={diaRef} inputMode={inputMode} aria-label={ariaLabel2} aria-invalid={invalid || undefined}
               value={value2} onChange={(e) => onChange2?.(e.target.value)} onKeyDown={onKeyDown} style={inputBase}
             />
           </>

@@ -524,67 +524,8 @@ const LIST_VIEWS: Record<number, ListViewConfig> = {
   },
 };
 
-// Two-input BP cell: systolic + fixed `/` + diastolic. Auto-advances focus
-// to the diastolic input once the systolic input has 3 digits, or when the
-// user explicitly types `/`. Validation styling is driven by parent state.
-function BpInput({
-  valid, sysValid, diaValid,
-  sys, dia,
-  onSysChange, onDiaChange, onEnter,
-}: {
-  valid: boolean;
-  sysValid: boolean;
-  diaValid: boolean;
-  sys: string;
-  dia: string;
-  onSysChange: (v: string) => void;
-  onDiaChange: (v: string) => void;
-  onEnter: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-}) {
-  const diaRef = React.useRef<HTMLInputElement>(null);
-  const handleSysChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const next = e.target.value;
-    onSysChange(next);
-    if (next.length >= 3) diaRef.current?.focus();
-  };
-  const handleSysKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "/") {
-      e.preventDefault();
-      diaRef.current?.focus();
-      return;
-    }
-    onEnter(e);
-  };
-  return (
-    <div
-      style={{
-        ...styles.bpSplitInput,
-        ...(!valid ? styles.vitalInputValueInvalid : {}),
-      }}
-    >
-      <input
-        style={{ ...styles.bpHalfInput, ...(!sysValid ? styles.vitalInputInvalidText : {}) }}
-        value={sys}
-        onChange={handleSysChange}
-        onKeyDown={handleSysKeyDown}
-        inputMode="numeric"
-        aria-label="Systolic"
-        aria-invalid={!sysValid}
-      />
-      <span style={styles.bpSeparator}>/</span>
-      <input
-        ref={diaRef}
-        style={{ ...styles.bpHalfInput, ...(!diaValid ? styles.vitalInputInvalidText : {}) }}
-        value={dia}
-        onChange={(e) => onDiaChange(e.target.value)}
-        onKeyDown={onEnter}
-        inputMode="numeric"
-        aria-label="Diastolic"
-        aria-invalid={!diaValid}
-      />
-    </div>
-  );
-}
+// (BpInput removed — the BP cell now uses the shared <MeasureField bp> with its
+// own auto-advance systolic→diastolic logic.)
 
 // Renders an image thumbnail for files — handles both local blob URLs and
 // auth-protected API download URLs by fetching with the JWT when needed.
