@@ -167,16 +167,20 @@ export function InputsCategory() {
   const [cErr, setCErr] = useState("bad value");
 
   return (
-    <Section id="inputs" title="2 · Inputs">
+    <Section id="inputs" title="2 · Inputs" status="shipped">
       <Note>
-        Five mutually-incompatible text-field idioms ship across the app. Only the
-        canonical <strong>TextInput</strong> (underline) and <strong>Select</strong>
-        honor the <code>--input-h</code> / <code>--input-pady</code> CSS vars that drive
-        the responsive compaction at 1024; every ad-hoc field hard-codes its own height,
-        so the field heights scatter <strong>32 / 35 / 40 / 48 / 54</strong> with no shared
-        rhythm. Backgrounds (transparent vs <code>neutral150</code> vs <code>neutralAlphaBlack</code> vs
-        <code>neutral100</code>), borders (underline vs full-box vs pill), and radii
-        (none vs <code>m:8</code> vs <code>full</code>) all diverge too.
+        <strong>✅ FINALISED &amp; live.</strong> There is now ONE shared{" "}
+        <code>&lt;Field&gt;</code> component with three looks — <code>underline</code>{" "}
+        (where underline is used today), <code>box</code> (where box is used today), and{" "}
+        <code>pill</code> (search inputs only). Every Field is RESPONSIVE via{" "}
+        <code>--input-h</code> (40px → 32px on the 1200–1439 tier) and shares ONE error
+        look (red border + soft red tint). <code>TextInput</code> is now a thin alias of{" "}
+        <code>&lt;Field variant="underline"&gt;</code>; DomainInput, the patient-search
+        pill, and the boxed form inputs all compact correctly now too.
+      </Note>
+      <Note>
+        The rows below show the BEFORE — the five hand-rolled idioms whose heights used to
+        scatter <strong>35 / 40 / 48 / 54</strong> with no shared rhythm. Kept for the record.
       </Note>
 
       {/* ─────────────── Swatch overview ─────────────── */}

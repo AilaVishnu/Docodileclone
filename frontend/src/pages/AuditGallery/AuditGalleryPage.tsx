@@ -19,18 +19,19 @@ import { ColorsCategory } from "./Colors";
 import { TypeCategory } from "./TypeSpace";
 import { PagesCategory } from "./Pages";
 
-const CATS: [string, string][] = [
-  ["buttons", "1 · Buttons"],
-  ["inputs", "2 · Inputs"],
-  ["dropdowns", "3 · Dropdowns"],
-  ["modals", "4 · Modals"],
-  ["nav", "5 · Nav / Tabs"],
-  ["cards", "6 · Cards"],
-  ["tables", "7 · Tables"],
-  ["icons", "8 · Icons"],
-  ["colors", "9 · Colors"],
-  ["type", "10 · Type / Space"],
-  ["pages", "11 · Pages"],
+// status: "shipped" = finalised + live in the app · "review" = not decided yet.
+const CATS: [string, string, "shipped" | "review"][] = [
+  ["buttons", "1 · Buttons", "shipped"],
+  ["inputs", "2 · Inputs", "shipped"],
+  ["dropdowns", "3 · Dropdowns", "review"],
+  ["modals", "4 · Modals", "review"],
+  ["nav", "5 · Nav / Tabs", "review"],
+  ["cards", "6 · Cards", "review"],
+  ["tables", "7 · Tables", "review"],
+  ["icons", "8 · Icons", "review"],
+  ["colors", "9 · Colors", "review"],
+  ["type", "10 · Type / Space", "review"],
+  ["pages", "11 · Pages", "review"],
 ];
 
 // `embedded` = rendered inside the app shell (a HomePage tab) rather than the
@@ -63,21 +64,35 @@ export function AuditGalleryPage({ embedded = false }: { embedded?: boolean } = 
               background: theme === "secondary" ? colors.neutral900 : colors.neutral100, color: theme === "secondary" ? colors.neutral100 : colors.neutral700, fontSize: fonts.size.xs }}>Secondary</button>
           </div>
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: spacing["2xs"], marginTop: spacing.xs }}>
-          {CATS.map(([id, label]) => (
-            <a key={id} href={`#${id}`} style={{ fontSize: fonts.size.xs, color: colors.neutral800, textDecoration: "none", background: colors.primary200, borderRadius: radii.xs, padding: "2px 8px" }}>{label}</a>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: spacing["2xs"], marginTop: spacing.xs }}>
+          {CATS.map(([id, label, status]) => (
+            <a key={id} href={`#${id}`} style={{ fontSize: fonts.size.xs, textDecoration: "none", borderRadius: radii.xs, padding: "2px 8px",
+              color: status === "shipped" ? colors.secondary700 : colors.neutral700,
+              background: status === "shipped" ? colors.secondary100 : colors.neutral150,
+              fontWeight: status === "shipped" ? fonts.weight.semibold : fonts.weight.regular }}>
+              {status === "shipped" ? "✅ " : ""}{label}
+            </a>
           ))}
+          <span style={{ fontSize: fonts.size.xs, color: colors.neutral500, marginLeft: spacing.xs }}>
+            ✅ green = finalised &amp; live · grey = still under review
+          </span>
         </div>
       </div>
 
       {/* body */}
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: `${spacing.xl} ${spacing.xl} ${spacing["7xl"]}` }}>
-        <p style={{ fontSize: fonts.size.s, color: colors.neutral700, margin: `0 0 ${spacing.xl}`, lineHeight: 1.6, maxWidth: 860 }}>
-          Each tile/row has an <b>ID</b> (the monospace chip). Tiles with a green border + <b>✓ canonical</b> are the proposed
-          source of truth; rows marked <b>where</b> show the variant inside its real container at real width. Tell me, by ID,
-          which is correct and which should be fixed or removed — I'll record it in the decision sheet, and nothing in the real
-          app changes until you approve a fix phase. Duplicate / merge candidates are flagged inline within each category.
-        </p>
+        <div style={{ margin: `0 0 ${spacing.xl}`, padding: spacing.m, borderRadius: radii.m, background: colors.neutral100,
+          border: `${strokes.xs} solid ${colors.neutral200}`, maxWidth: 900 }}>
+          <div style={{ fontSize: fonts.size.s, fontWeight: fonts.weight.semibold, color: colors.neutral900, marginBottom: spacing.xs }}>How to read this page</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: spacing["2xs"], fontSize: fonts.size.xs, color: colors.neutral700, lineHeight: 1.6 }}>
+            <div><span style={{ display: "inline-block", width: 110, fontWeight: fonts.weight.semibold, color: colors.secondary700 }}>✅ FINALISED</span> — green tiles / a green section badge = <b>the decided, correct version, now LIVE in the app</b>. This is what we keep.</div>
+            <div><span style={{ display: "inline-block", width: 110, fontWeight: fonts.weight.semibold, color: colors.neutral600 }}>existing / before</span> — plain (grey-border) tiles = <b>what used to be in the app</b> (the messy variants), kept only so you can see what changed.</div>
+            <div><span style={{ display: "inline-block", width: 110, fontWeight: fonts.weight.semibold, color: colors.neutral600 }}>🔍 under review</span> — grey category in the top bar = <b>not decided yet</b>; we'll go through it together.</div>
+          </div>
+          <div style={{ fontSize: fonts.size.xs, color: colors.neutral500, marginTop: spacing.xs }}>
+            Each tile has a short <b>ID</b> (the monospace chip) — reply by ID to give a verdict. Rows marked <b>“where”</b> show a variant inside its real container at real size.
+          </div>
+        </div>
         <ButtonsCategory />
         <InputsCategory />
         <DropdownsCategory />

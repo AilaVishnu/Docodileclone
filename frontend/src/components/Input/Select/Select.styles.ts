@@ -19,7 +19,12 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     gap: spacing.xs,
     padding: `0 ${spacing.xs}`,
-    border: `${strokes.xs} solid ${colors.neutral300}`,
+    // Longhand (not the `border` shorthand) so the hover/open/error states below
+    // can override just `borderColor` without React warning about mixing
+    // shorthand + non-shorthand border properties across re-renders.
+    borderWidth: strokes.xs,
+    borderStyle: "solid",
+    borderColor: colors.neutral300,
     borderRadius: radii.m,
     backgroundColor: colors.neutral100,
     height: "var(--input-h, 40px)",

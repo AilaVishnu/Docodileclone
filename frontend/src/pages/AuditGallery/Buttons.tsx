@@ -51,7 +51,7 @@ export function ButtonsCategory() {
     { v: "light", name: "light", note: "unchanged" },
   ];
   return (
-    <Section id="buttons" title="1 · Buttons & controls">
+    <Section id="buttons" title="1 · Buttons & controls" status="shipped">
       <Sub title="BTN — canonical set · 6 variants · ✅ SHIPPED"
         note="The final set, now live in the real Button component: secondarySolid merged into secondary (700 → 800 on hover), dangerLight removed (its 8 Cancel buttons are now neutral 'light'). Toggle the theme to confirm primary / primaryLight / secondaryLight follow it.">
         {RESOLVED.map(({ v, name, note }) => (

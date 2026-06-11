@@ -65,9 +65,15 @@ Review order: Buttons → Inputs → Dropdowns → Modals → Nav/Tabs → Cards
 - **FINAL SET (6): `primary · dark · secondary · primaryLight · secondaryLight · light`**
 - _Design note: Cancel red→grey is a deliberate change to those 8 dialogs. The destructive confirm stays `dark` (filled black), NOT red — flagged, not changed (that was option 3, which you didn't pick)._
 
-## 2. Inputs — _built, ready for review_
+## 2. Inputs — _✅ BUILT 2026-06-11_
 IDs: `INP-CANON/select/domain/box35/box40/pill`, `INV-1..4` + `INV-CANON`, `INP-FIELD*`.
-Decision: pick ONE field idiom + height; one invalid-state treatment (proposed: red200 border + redAlpha10 fill).
+DECISION:
+- ✅ Approve one canonical `<Field variant size error>` component (3 looks).
+- **Looks kept, assigned by context (no field changes its look):** `underline` stays where underline is today; `box` stays where box is today; `pill` is ONLY for search inputs (e.g. PatientPicker search). Today's placement already matches, so this is a consolidation, not a re-style.
+- **Standardize heights + make them RESPONSIVE** — `<Field>` reads `--input-h` (40px baseline → **32px on the 1200–1439 tier**) + `--input-pady` (6→3), so every field compacts together on smaller laptops. Today only `TextInput` & `Select` honor this; DomainInput (54), the boxed inputs (35/40), PatientPicker pill (48) and the pickers hardcode their height and DON'T compact — a real bug the `<Field>` fixes. Kills the 35/40/48/54 scatter. DomainInput's suffix box is the one possible exception (confirm during build).
+- **One invalid state:** `red200` border + `redAlpha10` soft fill (INV-CANON) — replaces the 5 ad-hoc error looks incl. `rgba(255,0,0,0.05)` and raw `1px solid red`.
+- ✅ BUILT: new `components/Field` (underline/box/pill, responsive via `--input-h`, unified `red200 + redAlpha10` error). `TextInput` is now a thin alias of `<Field variant="underline">`. DomainInput made responsive + unified error; PatientPicker search → `<Field variant="pill">`; the boxed form inputs (Pharmacy / NewPrescription / EditPatient) now use `--input-h` so they compact on the lower tier. Also fixed a pre-existing React border-shorthand warning in Select + DomainInput.
+- _Optional follow-up:_ migrate every remaining inline form `<input>` to `<Field>`; make the Select/date-trigger buttons compact too (the agent flagged `selectInput`/`selectTrigger`/`dobTrigger` still hardcode their height).
 
 ## 3. Dropdowns / selects — _built, ready for review_
 IDs: `MENU-select` (canonical but outlier), `MENU-primary/underline/picker/destructive`, `MENU-CANON`, `TRIG-select/-active/picker/native`.

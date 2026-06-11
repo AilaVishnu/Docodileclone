@@ -624,7 +624,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   textInput: {
     width: "100%",
-    height: 40,
+    height: "var(--input-h, 40px)",
     boxSizing: "border-box" as const,
     padding: `0 ${spacing.s}`,
     border: `1px solid ${colors.neutral300}`,

@@ -505,7 +505,7 @@ const ms: Record<string, React.CSSProperties> = {
     padding: `${spacing.s} 0`,
   },
   textInput: {
-    width: "100%", height: 35, boxSizing: "border-box",
+    width: "100%", height: "var(--input-h, 40px)", boxSizing: "border-box",
     padding: `0 ${spacing.s}`,
     border: `1px solid ${colors.neutral300}`, borderRadius: radii.m,
     backgroundColor: colors.neutral150,

@@ -1,7 +1,9 @@
-import React, { useRef, useCallback, useEffect } from "react";
-import { styles } from "./TextInput.styles";
-import { fonts, colors } from "../../../styles/theme";
+import React from "react";
+import { Field } from "../../Field";
 
+// TextInput is now a thin alias for the canonical <Field variant="underline">.
+// Kept so the many existing call sites don't have to change. The underline look,
+// responsive --input-pady, and error handling all live in <Field> now.
 type TextInputProps = {
   value: string;
   onChange: (value: string) => void;
@@ -17,96 +19,6 @@ type TextInputProps = {
   multiline?: boolean;
 };
 
-function AutoGrowTextarea({ value, onChange, placeholder, maxLength }: {
-  value: string; onChange: (v: string) => void; placeholder?: string; maxLength?: number;
-}) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-
-  const maxHeight = 80; // ~4 lines max
-
-  const resize = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "auto";
-    const scrollH = el.scrollHeight;
-    if (scrollH > maxHeight) {
-      el.style.height = maxHeight + "px";
-      el.style.overflowY = "auto";
-    } else {
-      el.style.height = scrollH + "px";
-      el.style.overflowY = "hidden";
-    }
-  }, []);
-
-  useEffect(() => { resize(); }, [value, resize]);
-
-  return (
-    <textarea
-      ref={ref}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      maxLength={maxLength}
-      rows={1}
-      className="text-input-field"
-      style={{ ...styles.input, resize: "none" as const, overflow: "hidden", lineHeight: 1.6 }}
-    />
-  );
-}
-
-export function TextInput({
-  value,
-  onChange,
-  placeholder,
-  iconLeft,
-  iconRight,
-  type = "text",
-  onKeyDown,
-  onBlur,
-  error,
-  errorMessage,
-  maxLength,
-  multiline,
-}: TextInputProps) {
-  const containerStyle = {
-    ...styles.container,
-    ...(multiline ? { alignItems: "flex-start" as const } : {}),
-    ...(error ? styles.errorContainer : {}),
-  };
-
-  return (
-    <div style={{ width: "100%" }}>
-      <div style={containerStyle}>
-        {iconLeft && <span style={{ ...styles.icon, ...(multiline ? { marginTop: 4 } : {}) }}>{iconLeft}</span>}
-
-        {multiline ? (
-          <AutoGrowTextarea
-            value={value}
-            onChange={onChange}
-            placeholder={placeholder}
-            maxLength={maxLength}
-          />
-        ) : (
-          <input
-            type={type}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={onKeyDown}
-            onBlur={onBlur}
-            placeholder={placeholder}
-            maxLength={maxLength}
-            className="text-input-field"
-            style={styles.input}
-          />
-        )}
-
-        {iconRight && <span style={styles.icon}>{iconRight}</span>}
-      </div>
-      {error && errorMessage && (
-        <div style={{ color: colors.red200, fontSize: fonts.size.xs, fontFamily: "'inter', sans-serif", marginTop: 2, marginLeft: 4 }}>
-          {errorMessage}
-        </div>
-      )}
-    </div>
-  );
+export function TextInput(props: TextInputProps) {
+  return <Field variant="underline" {...props} />;
 }

@@ -19,12 +19,26 @@
 import React from "react";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 
-export const Section = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => (
+export type SectionStatus = "shipped" | "decided" | "review";
+const STATUS_META: Record<SectionStatus, { label: string; bg: string; fg: string }> = {
+  shipped: { label: "✅ FINALISED · live in the app", bg: colors.secondary100, fg: colors.secondary700 },
+  decided: { label: "✅ DECIDED · building", bg: colors.yellowAlpha10, fg: colors.neutral800 },
+  review:  { label: "🔍 under review", bg: colors.neutral150, fg: colors.neutral600 },
+};
+
+export const StatusPill = ({ status }: { status: SectionStatus }) => {
+  const m = STATUS_META[status];
+  return <span style={{ fontSize: fonts.size.xs, fontWeight: fonts.weight.semibold, color: m.fg, background: m.bg,
+    borderRadius: radii.full, padding: "2px 10px", whiteSpace: "nowrap" }}>{m.label}</span>;
+};
+
+export const Section = ({ id, title, status, children }: { id: string; title: string; status?: SectionStatus; children: React.ReactNode }) => (
   <section id={id} style={{ scrollMarginTop: 84, marginBottom: spacing["4xl"] }}>
-    <h2 style={{ fontSize: fonts.size.h5, fontWeight: fonts.weight.semibold, color: colors.neutral900,
+    <div style={{ display: "flex", alignItems: "center", gap: spacing.s, flexWrap: "wrap",
       margin: `0 0 ${spacing.s} 0`, paddingBottom: spacing.xs, borderBottom: `${strokes.s} solid ${colors.neutral200}` }}>
-      {title}
-    </h2>
+      <h2 style={{ fontSize: fonts.size.h5, fontWeight: fonts.weight.semibold, color: colors.neutral900, margin: 0 }}>{title}</h2>
+      {status && <StatusPill status={status} />}
+    </div>
     {children}
   </section>
 );

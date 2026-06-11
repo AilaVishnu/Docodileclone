@@ -5,12 +5,16 @@ export const styles: Record<string, CSSProperties> = {
   container: {
     display: "flex",
     alignItems: "center",
-    border: `1px solid ${colors.neutral300}`,
+    // Longhand so the availability/error states can override just borderColor
+    // without React's shorthand/non-shorthand mixing warning.
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: colors.neutral300,
     borderRadius: radii.m,
     gap: spacing.xs,
     overflow: "hidden",
     backgroundColor: colors.neutralAlphaBlack,
-    height: 54,
+    height: "var(--input-h, 40px)",
     width: "100%",
   },
 

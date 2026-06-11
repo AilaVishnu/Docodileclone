@@ -69,17 +69,22 @@ export function DomainInput({
     availability === "taken" ? colors.red200 :
     colors.neutral700;
 
-  const borderColor =
-    availability === "taken" ? colors.red200 :
-    availability === "available" ? colors.secondary700 :
-    undefined;
+  // "taken" is the invalid state — match the canonical Field error look:
+  // red200 border + a soft redAlpha10 fill. "available" is a non-error accent
+  // (secondary700 border only).
+  const stateStyle: React.CSSProperties =
+    availability === "taken"
+      ? { borderColor: colors.red200, backgroundColor: colors.redAlpha10 }
+      : availability === "available"
+      ? { borderColor: colors.secondary700 }
+      : {};
 
   return (
     <div>
       <div style={{
         ...styles.container,
         ...(disabled ? { opacity: 0.6, cursor: "not-allowed" } : {}),
-        ...(borderColor ? { borderColor } : {}),
+        ...stateStyle,
       }}>
         <input
           type="text"
