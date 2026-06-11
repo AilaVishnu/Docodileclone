@@ -48,7 +48,7 @@ class AIService(
         val clinicId = currentUser.clinicId()
         val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
             ?: throw IllegalArgumentException("Patient not found")
-        val visits = visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAsc(clinicId, patientId)
+        val visits = visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAscCreatedAtAsc(clinicId, patientId)
         val currentHash = visitsHash(visits)
         val cached = patientAISummaryRepo.findById(patientId).orElse(null)
         val isFresh = cached != null && cached.visitsHash == currentHash
@@ -72,7 +72,7 @@ class AIService(
         val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
             ?: throw IllegalArgumentException("Patient not found")
 
-        val visits = visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAsc(clinicId, patientId)
+        val visits = visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAscCreatedAtAsc(clinicId, patientId)
         val hash = visitsHash(visits)
 
         // Build the prompt. Compact JSON-y blob of patient context — gives

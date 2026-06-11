@@ -130,7 +130,7 @@ class AIChatService(
             catch (_: Exception) { return mapOf("error" to "Invalid patientId") }
         val p = patientRepository.findByIdAndClinicId(id, clinicId)
             ?: return mapOf("error" to "Patient not found in this clinic")
-        val visits = visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAsc(clinicId, id)
+        val visits = visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAscCreatedAtAsc(clinicId, id)
         return mapOf(
             "name" to p.name,
             "phone" to p.phone,

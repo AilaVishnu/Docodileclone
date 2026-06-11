@@ -19,7 +19,12 @@ interface VisitRepository : JpaRepository<Visit, UUID> {
     """)
     fun findOverdueReviews(@Param("clinicId") clinicId: UUID, @Param("today") today: LocalDate): List<Visit>
 
-    fun findAllByClinicIdAndPatientIdOrderByVisitDateAsc(clinicId: UUID, patientId: UUID): List<Visit>
+    // Order by visit date, then creation time, so multiple visits on the same
+    // day (e.g. several "Today" visits) keep a STABLE order. Without the
+    // createdAt tiebreaker their order shuffled on every fetch, which made the
+    // prescription tabs remap to different visits when a new one was added —
+    // a tab would appear to "lose" its data even though it was untouched.
+    fun findAllByClinicIdAndPatientIdOrderByVisitDateAscCreatedAtAsc(clinicId: UUID, patientId: UUID): List<Visit>
 
     @Query("SELECT v FROM Visit v WHERE v.clinic.id = :clinicId AND v.patient.id IN :patientIds ORDER BY v.visitDate ASC")
     fun findAllByClinicIdAndPatientIdInOrderByVisitDateAsc(

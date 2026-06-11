@@ -32,7 +32,7 @@ class VisitService(
         // Strictly this patient's own visits. A phone number can be shared
         // across a family, so visit history must never be merged by phone —
         // each patient row owns its own history.
-        return visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAsc(clinicId, patientId)
+        return visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAscCreatedAtAsc(clinicId, patientId)
             .map { it.toDTO(loadRxRows(it.id)) }
     }
 
