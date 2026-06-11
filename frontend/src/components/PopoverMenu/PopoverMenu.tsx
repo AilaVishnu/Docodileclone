@@ -130,6 +130,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: "currentColor",
   },
   itemDestructive: {
-    color: "#c0392b",
+    color: colors.red200,
   },
 };

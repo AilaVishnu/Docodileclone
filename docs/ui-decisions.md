@@ -75,9 +75,16 @@ DECISION:
 - ✅ BUILT: new `components/Field` (underline/box/pill, responsive via `--input-h`, unified `red200 + redAlpha10` error). `TextInput` is now a thin alias of `<Field variant="underline">`. DomainInput made responsive + unified error; PatientPicker search → `<Field variant="pill">`; the boxed form inputs (Pharmacy / NewPrescription / EditPatient) now use `--input-h` so they compact on the lower tier. Also fixed a pre-existing React border-shorthand warning in Select + DomainInput.
 - _Optional follow-up:_ migrate every remaining inline form `<input>` to `<Field>`; make the Select/date-trigger buttons compact too (the agent flagged `selectInput`/`selectTrigger`/`dobTrigger` still hardcode their height).
 
-## 3. Dropdowns / selects — _built, ready for review_
-IDs: `MENU-select` (canonical but outlier), `MENU-primary/underline/picker/destructive`, `MENU-CANON`, `TRIG-select/-active/picker/native`.
-Decision: one menu surface (border/radius/shadow/hover/selected); add a `shadows` token; fix the inverted chevron convention.
+## 3. Dropdowns / selects — _✅ BUILT 2026-06-11_
+IDs: `MENU-select/primary/underline/picker/destructive`, `MENU-CANON`, `TRIG-*`.
+DECISION:
+- **Menu surface = thin warm border + soft shadow** (Option A = the `MENU-primary` look already used by ~22 files): bg neutral100, `1px primary300` border, `radii.m`, ONE soft shadow, hover `active.shade100`, selected `primary100` + `primary700` text.
+- **Reconcile the 2 outliers** to match: the official `Select` menu (today borderless + `2px 2px 12px` offset shadow) → add the `primary300` border + the standard shadow; `UnderlineSelect` (12px literal radius + `0 4px 20px` shadow) → `radii.m` + standard shadow.
+- **Add a `shadows` token** to theme.ts (one menu shadow, e.g. `0 4px 16px rgba(0,0,0,0.08)`) — kills the 8+ ad-hoc shadow strings; menus point at it.
+- ~~Fix the inverted chevron~~ — INVESTIGATED, not a real bug: the pickers use a chevron-UP asset with inverted rotation, so the arrows already point correctly (down when closed, up when open). Left as-is (a "fix" would flip them the wrong way).
+- ✅ **Fixed off-token destructive colour** `#c0392b` → `red200` (PopoverMenu).
+- ✅ BUILT: `shadows` token added to theme.ts (`menu`/`modal`/`card`); `Select` + `UnderlineSelect` menus reconciled to the bordered look + `shadows.menu` + cream hover / `primary100` selected.
+- _Follow-up:_ point the ~22 menus that already hardcode `0 4px 16px rgba(0,0,0,0.08)` at `shadows.menu` (same value, single-source); optionally extract a shared `<Menu>`/`<Popover>` primitive so the panel isn't hand-rolled in ~22 files.
 
 ## 4. Modals / dialogs — _built, ready for review_
 IDs: `MOD-canon`, `MOD-print/bill/service/presets/confirm/slot/ai`, `MOD-CANON-PROPOSED`.

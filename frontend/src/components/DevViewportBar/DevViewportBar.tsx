@@ -184,7 +184,11 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "3px 9px",
     backgroundColor: "transparent",
     color: "#fff",
-    border: "1px solid rgba(255,255,255,0.25)",
+    // Longhand so btnActive can override just borderColor without React's
+    // shorthand/non-shorthand mixing warning (this bar renders on every page).
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: "rgba(255,255,255,0.25)",
     borderRadius: 6,
     cursor: "pointer",
     fontFamily: "inherit",

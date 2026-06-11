@@ -232,6 +232,18 @@ export const strokes = {
   l: "4px",
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Elevation — one source of truth for shadows (was 8+ ad-hoc inline strings).
+//   • menu  — dropdowns / popovers / autocompletes / pickers
+//   • modal — dialogs / overlays
+//   • card  — raised cards
+// ──────────────────────────────────────────────────────────────────────────────
+export const shadows = {
+  menu: "0 4px 16px rgba(0, 0, 0, 0.08)",
+  modal: "0 12px 40px rgba(0, 0, 0, 0.12)",
+  card: "0 4px 20px rgba(0, 0, 0, 0.04)",
+};
+
 // Responsive breakpoints — desktop-only scope (no phone / tablet).
 //
 // Two intervals, one threshold:
