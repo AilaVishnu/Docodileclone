@@ -16,6 +16,7 @@ import { Button } from "../Button";
 import { confirmStyles } from "../AddStaffModal/AddStaffModal.styles";
 import { API_BASE_URL } from "../../apiConfig";
 import { listPharmacyStock, deductPharmacyStock } from "../../api/pharmacy";
+import { getActiveSessions } from "../../api/visits";
 
 type Doctor = {
   id: string;
@@ -59,6 +60,28 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
   const [payDueSubmitting, setPayDueSubmitting] = useState(false);
   const [payDueDiscount, setPayDueDiscount] = useState<number>(0);
   const [payDueDiscountMode, setPayDueDiscountMode] = useState<"%" | "₹">("₹");
+  // appointmentId → backend session start (ISO) for in-progress consultations.
+  // Polled from the active-sessions endpoint; drives the live status-badge
+  // timer (the badge itself ticks each second from this start instant).
+  const [sessionStarts, setSessionStarts] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () =>
+      getActiveSessions()
+        .then((sessions) => {
+          if (cancelled) return;
+          const map: Record<string, string> = {};
+          for (const s of sessions) {
+            if (s.appointmentId) map[s.appointmentId] = s.sessionStartedAt;
+          }
+          setSessionStarts(map);
+        })
+        .catch(() => { /* keep last good map on transient errors */ });
+    load();
+    const id = window.setInterval(load, 10000);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [refreshKey]);
   const [billingMedicines, setBillingMedicines] = useState<BillingMedicine[]>([]);
   const [billingLoading, setBillingLoading] = useState(false);
   // Clinic pharmacy inventory — drives both the unit prices used when
@@ -450,6 +473,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           <div style={{ flex: 1, minWidth: 0 }}>
           <QueueTable
             appointments={activeQueue}
+            sessionStarts={sessionStarts}
             doctorName={doctors.find(d => d.id === activeDoctorId)?.name}
             menuItems={[
               { label: "Edit Appointment", onClick: (apt) => {

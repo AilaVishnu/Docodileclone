@@ -66,6 +66,9 @@ type QueueTableProps = {
   doctorName?: string;
   menuItems?: MenuItem[];
   onStatusChange?: (appointmentId: string, newStatus: string) => void;
+  /** appointmentId → backend session start (ISO) for in-progress visits.
+   *  Drives the live consultation timer on the IN_PROGRESS status badge. */
+  sessionStarts?: Record<string, string>;
 };
 
 // Front-desk status actions. Completion is intentionally NOT here — only the
@@ -91,10 +94,11 @@ function formatPhone(raw: string): string {
 const spacerTh: React.CSSProperties = { borderBottom: `1px solid ${colors.primary300}`, padding: 0 };
 const spacerTd: React.CSSProperties = { padding: 0 };
 
-function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
+function StatusDropdown({ appointment, currentStatus, onStatusChange, sessionStartedAt }: {
   appointment: Appointment;
   currentStatus: string;
   onStatusChange: (appointmentId: string, newStatus: string) => void;
+  sessionStartedAt?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [timerStarted, setTimerStarted] = useState(() =>
@@ -130,7 +134,7 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
     <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
       <StatusBadge
         status={currentStatus}
-        patientId={appointment.patientId}
+        sessionStartedAt={sessionStartedAt}
         onClick={isLocked ? undefined : () => setIsOpen(!isOpen)}
       />
       {isOpen && (
@@ -271,6 +275,7 @@ export function QueueTable({
   doctorName,
   menuItems,
   onStatusChange,
+  sessionStarts,
 }: QueueTableProps) {
   // Patient T-id map — same localStorage-backed counter that BookAppointment
   // and PrescriptionQueue use. Keyed by appointment id; missing keys render
@@ -473,9 +478,10 @@ export function QueueTable({
                           appointment={apt}
                           currentStatus={apt.status}
                           onStatusChange={onStatusChange}
+                          sessionStartedAt={sessionStarts?.[apt.id]}
                         />
                       ) : (
-                        <StatusBadge status={apt.status} patientId={apt.patientId} />
+                        <StatusBadge status={apt.status} sessionStartedAt={sessionStarts?.[apt.id]} />
                       )}
                     </td>
 

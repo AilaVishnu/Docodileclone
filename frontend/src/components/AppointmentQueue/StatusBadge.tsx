@@ -2,10 +2,14 @@ import React, { useState, useEffect } from "react";
 import { fonts, colors } from "../../styles/theme";
 import { ReactComponent as DangerTriangleIcon } from "../../assets/icons/danger-triangle.svg";
 import { ReactComponent as CheckCircleIcon } from "../../assets/icons/check-circle.svg";
-import { loadStartedSet, getSessionSecondsForPatient } from "../../utils/sessionStarted";
 
-const formatTimer = (s: number) =>
-  `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+// H:MM:SS once past an hour, MM:SS below.
+const formatTimer = (s: number) => {
+  const h = Math.floor(s / 3600);
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -82,35 +86,38 @@ type StatusBadgeProps = {
   /**
    * Prescription-queue use: when true and status is IN_PROGRESS, the badge
    * reads "Ongoing" on sage (no live timer). The appointment queue instead
-   * passes `patientId` to get the running mm:ss timer. One badge, both looks.
+   * passes `sessionStartedAt` to get the running live timer. One badge, both.
    */
   started?: boolean;
+  /**
+   * Backend session start (ISO). When set and status is IN_PROGRESS, the badge
+   * shows a live timer counting up from this instant — server-owned, so it's
+   * the real elapsed consultation time and stays correct across devices/reloads.
+   */
+  sessionStartedAt?: string;
 };
 
-export function StatusBadge({ status, patientId, started, onClick }: StatusBadgeProps) {
+export function StatusBadge({ status, started, sessionStartedAt, onClick }: StatusBadgeProps) {
   const key = status?.toUpperCase();
   const baseCfg = STATUS_CONFIG[key] ?? { bg: colors.neutral200, color: colors.neutral700, label: status };
 
-  const [liveStarted, setLiveStarted] = useState(false);
   const [liveSeconds, setLiveSeconds] = useState<number | null>(null);
 
   useEffect(() => {
-    if (key !== "IN_PROGRESS" || !patientId) return;
-    const tick = () => {
-      const running = loadStartedSet().has(patientId);
-      setLiveStarted(running);
-      setLiveSeconds(running ? getSessionSecondsForPatient(patientId) : null);
-    };
+    if (key !== "IN_PROGRESS" || !sessionStartedAt) { setLiveSeconds(null); return; }
+    const startMs = new Date(sessionStartedAt).getTime();
+    if (Number.isNaN(startMs)) { setLiveSeconds(null); return; }
+    const tick = () => setLiveSeconds(Math.max(0, Math.floor((Date.now() - startMs) / 1000)));
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, [key, patientId]);
+  }, [key, sessionStartedAt]);
 
-  const cfg = liveStarted
+  const cfg = key === "IN_PROGRESS" && liveSeconds != null
     ? {
         ...baseCfg,
-        // Appointment queue: once the session is running, show just the live timer.
-        label: formatTimer(liveSeconds ?? 0),
+        // Appointment queue: live elapsed time from the backend session start.
+        label: formatTimer(liveSeconds),
       }
     : started && key === "IN_PROGRESS"
       ? {
@@ -146,7 +153,7 @@ export function StatusBadge({ status, patientId, started, onClick }: StatusBadge
         cursor: onClick ? "pointer" : "default",
         userSelect: "none",
         whiteSpace: "nowrap",
-        minWidth: liveStarted ? "auto" : "90px",
+        minWidth: key === "IN_PROGRESS" && liveSeconds != null ? "auto" : "90px",
         textAlign: "center" as const,
       }}
     >
