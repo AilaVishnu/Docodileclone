@@ -137,8 +137,8 @@ class AppointmentService(
 
     @Transactional
     fun updateAppointment(appointmentId: UUID, request: BookAppointmentRequest): AppointmentDTO {
-        val appointment = appointmentRepository.findById(appointmentId)
-            .orElseThrow { IllegalArgumentException("Appointment not found") }
+        val appointment = appointmentRepository.findByIdAndClinicId(appointmentId, currentUser.clinicId())
+            ?: throw IllegalArgumentException("Appointment not found")
 
         // Server-side enforcement of the edit window — mirrors the
         // BookAppointment modal's readOnly gates so a direct API call
@@ -191,8 +191,8 @@ class AppointmentService(
         pharmacyAmount: java.math.BigDecimal? = null,
         discountAmount: java.math.BigDecimal? = null,
     ): AppointmentDTO {
-        val appointment = appointmentRepository.findById(appointmentId)
-            .orElseThrow { IllegalArgumentException("Appointment not found") }
+        val appointment = appointmentRepository.findByIdAndClinicId(appointmentId, currentUser.clinicId())
+            ?: throw IllegalArgumentException("Appointment not found")
         appointment.payStatus = payStatus
         appointment.paymentMethod = paymentMethod
         // Only overwrite pharmacy_amount / discount when the caller passes
@@ -205,8 +205,8 @@ class AppointmentService(
 
     @Transactional
     fun updateStatus(appointmentId: UUID, status: String): AppointmentDTO {
-        val appointment = appointmentRepository.findById(appointmentId)
-            .orElseThrow { IllegalArgumentException("Appointment not found") }
+        val appointment = appointmentRepository.findByIdAndClinicId(appointmentId, currentUser.clinicId())
+            ?: throw IllegalArgumentException("Appointment not found")
         appointment.status = status
         return appointmentRepository.save(appointment).toDTO()
     }
