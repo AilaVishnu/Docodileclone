@@ -3,129 +3,35 @@ import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { PrescriptionIcon } from "../../iconsUtil";
 import type { Patient } from "../../hooks/usePatients";
 import type { NavTab } from "../SideNav";
+import { getActiveSessions, type ActiveSession } from "../../api/visits";
 
-// ─── Active-session metadata persisted across reloads ────────────────────────
+// ─── Active sessions (server-driven) ─────────────────────────────────────────
 //
-// The SessionBar already persists timer state under `docodile_session_state`
-// keyed by visit id. This module adds a parallel map keyed by visit id with
-// just enough patient context (name, ids) to render a header tray entry and
-// route the doctor back to that prescription form on click.
-//
-// Meta is written when a session starts, kept while running/paused, and
-// removed when the session ends. The header polls every second so the
-// timer stays in sync with the SessionBar's own clock.
+// The live "Active Sessions" tray lists the consultations currently in
+// progress — visits whose pad the doctor has opened (session started) but not
+// yet completed. The source of truth is the backend (`GET /api/active-sessions`,
+// derived from session_started_at / session_ended_at), so the list and the
+// elapsed timers are accurate across devices and survive refreshes — unlike the
+// old localStorage timer this replaces.
 
-export type ActiveSessionMeta = {
-  visitId: string;
-  patient: Patient;
-  appointmentId: string | null;
-};
-
-const META_KEY = "docodile_session_meta";
-const STATE_KEY = "docodile_session_state";
 const PENDING_NAV_KEY = "docodile_pending_session_nav";
-
-type SessionState = {
-  baseSeconds: number;
-  runStartedAtMs: number | null;
-  paused: boolean;
-  ended: boolean;
-};
-
-function readMap<T>(key: string): Record<string, T> {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as Record<string, T>) : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeMap<T>(key: string, map: Record<string, T>) {
-  try {
-    localStorage.setItem(key, JSON.stringify(map));
-  } catch {
-    /* quota / private mode — ignore */
-  }
-}
-
-export function recordActiveSession(meta: ActiveSessionMeta) {
-  const map = readMap<ActiveSessionMeta>(META_KEY);
-  map[meta.visitId] = meta;
-  writeMap(META_KEY, map);
-}
-
-export function clearActiveSession(visitId: string) {
-  const map = readMap<ActiveSessionMeta>(META_KEY);
-  if (visitId in map) {
-    delete map[visitId];
-    writeMap(META_KEY, map);
-  }
-  // Also flip the persisted timer state to ended so the tray's
-  // state-based filter drops it even if some other code path re-adds
-  // the meta entry. Belt-and-suspenders against orphaned counters.
-  const stateMap = readMap<SessionState>(STATE_KEY);
-  const st = stateMap[visitId];
-  if (st && !st.ended) {
-    stateMap[visitId] = { ...st, ended: true, runStartedAtMs: null };
-    writeMap(STATE_KEY, stateMap);
-  }
-}
-
-// Clear every active session belonging to a patient EXCEPT one visit
-// (the one we're keeping live). A patient can only be in one live
-// session at a time; switching visit tabs and ending one used to leave
-// the other visit's session running in the tray forever. Pass the visit
-// being kept as `exceptVisitId`, or null to clear all of the patient's.
-export function clearOtherSessionsForPatient(patientId: string, exceptVisitId: string | null) {
-  const metaMap = readMap<ActiveSessionMeta>(META_KEY);
-  for (const visitId of Object.keys(metaMap)) {
-    if (visitId === exceptVisitId) continue;
-    if (metaMap[visitId]?.patient?.id === patientId) {
-      clearActiveSession(visitId);
-    }
-  }
-}
-
-// Snapshot of all sessions still considered live (i.e. not ended in their
-// SessionBar state). Used by the header tray to render its list.
-function listActiveSessions(): Array<{ meta: ActiveSessionMeta; state: SessionState | null; seconds: number }> {
-  const metaMap = readMap<ActiveSessionMeta>(META_KEY);
-  const stateMap = readMap<SessionState>(STATE_KEY);
-  const out: Array<{ meta: ActiveSessionMeta; state: SessionState | null; seconds: number }> = [];
-  for (const visitId of Object.keys(metaMap)) {
-    const meta = metaMap[visitId];
-    const state = stateMap[visitId] ?? null;
-    if (state?.ended) continue;
-    const seconds = state == null
-      ? 0
-      : state.runStartedAtMs == null
-        ? state.baseSeconds
-        : state.baseSeconds + Math.max(0, Math.floor((Date.now() - state.runStartedAtMs) / 1000));
-    out.push({ meta, state, seconds });
-  }
-  return out;
-}
 
 // Set when the doctor clicks a tray item — picked up by PrescriptionPage on
 // next mount so it can pre-select the right patient/appointment.
 export type PendingSessionNav = {
   patient: Patient;
   appointmentId: string | null;
-  // Sidebar tab to return to when the user hits Back from the
-  // Prescription page. Lets callers (Patient Files etc.) bring the
-  // doctor back where they came from instead of the prescription home.
+  // Sidebar tab to return to when the user hits Back from the Prescription
+  // page. Lets callers bring the doctor back where they came from.
   returnTab?: NavTab;
   // Left-rail action to land on inside the chart (0=Visits, 1=Files,
   // 2=Timeline, 3=Bills). Defaults to Visits when omitted.
   initialAction?: number;
 };
 
-// Short-lived in-memory cache so a quick StrictMode remount (or any
-// remount within the same JS tick) can still see the pending nav after
-// localStorage has been wiped. Cleared 1s after writing — long enough
-// for any same-event remount, short enough to not leak into a real
-// later navigation.
+// Short-lived in-memory cache so a quick StrictMode remount (or any remount
+// within the same JS tick) can still see the pending nav after localStorage
+// has been wiped. Cleared 1s after writing.
 let memNav: PendingSessionNav | null = null;
 let memNavClearTimer: number | null = null;
 
@@ -160,11 +66,31 @@ export function consumePendingSessionNav(): PendingSessionNav | null {
   }
 }
 
-const formatTimer = (totalSec: number): string => {
-  const m = Math.floor(totalSec / 60);
+// HH:MM:SS once a consultation passes an hour, MM:SS below that.
+const formatElapsed = (totalSec: number): string => {
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
   const s = totalSec % 60;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 };
+
+// Build the minimal Patient the Prescription page needs to open the pad. The
+// chart re-fetches full detail on mount; this just seeds the selection.
+const toPatient = (s: ActiveSession): Patient => ({
+  id: s.patientId,
+  name: s.name,
+  phone: s.phone,
+  email: s.email,
+  gender: s.gender,
+  dob: s.dob,
+  age: s.age,
+  displayNo: s.displayNo,
+  lastVisitDate: null,
+  treatingDoctorIds: [],
+  treatingDepartments: [],
+});
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -177,16 +103,29 @@ type SessionTrayButtonProps = {
 export function SessionTrayButton({ onNavigate }: SessionTrayButtonProps) {
   const [open, setOpen] = React.useState(false);
   const [hovered, setHovered] = React.useState(false);
-  const [sessions, setSessions] = React.useState<ReturnType<typeof listActiveSessions>>(() => listActiveSessions());
+  const [sessions, setSessions] = React.useState<ActiveSession[]>([]);
+  const [now, setNow] = React.useState(() => Date.now());
   const wrapperRef = React.useRef<HTMLDivElement>(null);
 
-  // Refresh every second while the tray is open so timers tick. When closed,
-  // refresh every 5s so the badge count stays correct without burning cycles.
+  // Poll the list from the backend — faster while open so newly-started /
+  // just-completed sessions appear/disappear promptly, slower while closed.
+  // Transient failures keep the last good list rather than blanking the tray.
   React.useEffect(() => {
-    setSessions(listActiveSessions());
-    const id = window.setInterval(() => setSessions(listActiveSessions()), open ? 1000 : 5000);
-    return () => window.clearInterval(id);
+    let cancelled = false;
+    const load = () =>
+      getActiveSessions()
+        .then((s) => { if (!cancelled) setSessions(s); })
+        .catch(() => { /* keep last good list */ });
+    load();
+    const id = window.setInterval(load, open ? 5000 : 15000);
+    return () => { cancelled = true; window.clearInterval(id); };
   }, [open]);
+
+  // Tick the elapsed display locally every second (cheap, no network).
+  React.useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
 
   // Close on outside click — same pattern as the profile dropdown next to it.
   React.useEffect(() => {
@@ -200,8 +139,8 @@ export function SessionTrayButton({ onNavigate }: SessionTrayButtonProps) {
 
   if (sessions.length === 0) return null;
 
-  const handleSessionClick = (meta: ActiveSessionMeta) => {
-    setPendingSessionNav({ patient: meta.patient, appointmentId: meta.appointmentId });
+  const handleSessionClick = (s: ActiveSession) => {
+    setPendingSessionNav({ patient: toPatient(s), appointmentId: s.appointmentId });
     setOpen(false);
     onNavigate("Prescription");
   };
@@ -223,28 +162,25 @@ export function SessionTrayButton({ onNavigate }: SessionTrayButtonProps) {
       {open && (
         <div style={styles.dropdown}>
           <p style={styles.dropdownTitle}>Active sessions</p>
-          {sessions.map(({ meta, state, seconds }) => {
-            const isPaused = state?.paused === true;
+          {sessions.map((s) => {
+            const elapsed = Math.max(
+              0,
+              Math.floor((now - new Date(s.sessionStartedAt).getTime()) / 1000),
+            );
             return (
               <button
-                key={meta.visitId}
+                key={s.visitId}
                 type="button"
                 style={styles.sessionRow}
-                onClick={() => handleSessionClick(meta)}
+                onClick={() => handleSessionClick(s)}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.active.shade100)}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
               >
-                <span style={styles.sessionName}>{meta.patient.name}</span>
+                <span style={styles.sessionName}>{s.name}</span>
                 <span style={styles.sessionTimerWrap}>
-                  <span
-                    style={{
-                      ...styles.sessionTimer,
-                      color: isPaused ? colors.neutral500 : colors.green200,
-                    }}
-                  >
-                    {formatTimer(seconds)}
+                  <span style={{ ...styles.sessionTimer, color: colors.green200 }}>
+                    {formatElapsed(elapsed)}
                   </span>
-                  {isPaused && <span style={styles.sessionPausedLabel}>· Paused</span>}
                 </span>
               </button>
             );
@@ -344,14 +280,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: fonts.family.secondary,
     fontSize: fonts.size.l,
     fontVariantNumeric: "tabular-nums",
-    whiteSpace: "nowrap",
-  },
-  // "· Paused" suffix — sans-serif so it reads as a label rather than part
-  // of the timer numerals. Same family/size as the patient name on the left.
-  sessionPausedLabel: {
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.s,
-    color: colors.neutral500,
     whiteSpace: "nowrap",
   },
 };

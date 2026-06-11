@@ -6,6 +6,7 @@ import { StaffIllustration } from '../AddStaffModal/StaffIllustration';
 import { ReactComponent as SearchIcon } from '../../assets/search.svg';
 import { ReactComponent as PlusIcon } from '../../assets/Plus.svg';
 import type { NavTab } from '../SideNav';
+import { SessionTrayButton } from './SessionTrayButton';
 
 type TopNavProps = {
   onBuildClinic?: () => void;
@@ -248,6 +249,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
         )}
 
         <div style={styles.iconGroup}>
+          {onNavigate && <SessionTrayButton onNavigate={onNavigate} />}
           <HoverIconButton>
             <MessageIcon />
           </HoverIconButton>
