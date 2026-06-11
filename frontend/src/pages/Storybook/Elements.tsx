@@ -113,13 +113,13 @@ export function InputsSection() {
       <Sub title="MeasureField — value + unit chip (NEW · live)"
         note="components/MeasureField — the shared input behind vitals, price (₹ prefix) and quantity/duration. The unit chip is FIXED (grey) or SWITCHABLE (highlighted — pass onToggleUnit; the parent owns the unit + value conversion). BP is a variant (two inputs + '/'). Try editing the values and clicking the highlighted chips.">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(120px, 1fr))", gap: spacing.m, maxWidth: 780 }}>
-          <div><Label>prefix · price</Label><MeasureField prefix="₹" value={price} onChange={setPrice} inputMode="decimal" /></div>
-          <div><Label>fixed · duration</Label><MeasureField value={dur} onChange={setDur} unit="mins" /></div>
-          <div><Label>switchable · weight</Label><MeasureField value={wt} onChange={setWt} unit={wtU} onToggleUnit={() => setWtU(u => u === "kg" ? "lb" : "kg")} /></div>
+          <div><Label>box · price (form)</Label><MeasureField box prefix="₹" value={price} onChange={setPrice} inputMode="decimal" /></div>
+          <div><Label>box · duration (form)</Label><MeasureField box value={dur} onChange={setDur} unit="mins" /></div>
+          <div><Label>cream · weight (vitals)</Label><MeasureField value={wt} onChange={setWt} unit={wtU} onToggleUnit={() => setWtU(u => u === "kg" ? "lb" : "kg")} /></div>
           <div><Label>switchable · temp</Label><MeasureField value={tmp} onChange={setTmp} unit={tmpU} onToggleUnit={() => setTmpU(u => u === "°C" ? "°F" : "°C")} inputMode="decimal" /></div>
           <div><Label>BP variant</Label><MeasureField bp value={sys} onChange={setSys} value2={dia} onChange2={setDia} unit={bpU} onToggleUnit={() => setBpU(u => u === "mmHg" ? "kPa" : "mmHg")} ariaLabel="Systolic" ariaLabel2="Diastolic" /></div>
         </div>
-        <Rule>Highlighted chip = <b>switchable</b> (click to toggle units); grey chip = <b>fixed</b>. This one component replaces the vitals grid + the price/quantity inputs across the app.</Rule>
+        <Rule><b>box</b> variant (white) = form fields (price/qty) · <b>cream</b> (default) = the vitals grid. Highlighted chip = <b>switchable</b> (click to toggle units); grey = <b>fixed</b>. One component covers both.</Rule>
       </Sub>
     </Section>
   );

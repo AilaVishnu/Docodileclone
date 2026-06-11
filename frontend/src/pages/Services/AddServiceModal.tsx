@@ -4,6 +4,7 @@ import { Service, DiscountMode } from "./types";
 import { Modal } from "../../components/Modal";
 import { IconButton } from "../../components/IconButton";
 import { Button } from "../../components/Button";
+import { MeasureField } from "../../components/MeasureField";
 import { colors, spacing } from "../../styles/theme";
 
 const NO_SPINNER_CLASS = "no-spinner";
@@ -138,18 +139,15 @@ export function AddServiceModal({ isOpen, onClose, onSave, initial }: Props) {
           <div style={styles.row}>
             <div style={styles.field}>
               <label style={styles.label}>Price<span style={styles.required}>*</span></label>
-              <div style={{ ...styles.inputWrap, ...(touched && priceError ? styles.inputWrapError : {}) }}>
-                <span style={styles.prefix}>₹</span>
-                <input
-                  style={styles.input}
-                  type="number"
-                  className={NO_SPINNER_CLASS}
-                  min={0}
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
-                  placeholder="0"
-                />
-              </div>
+              <MeasureField
+                box
+                prefix="₹"
+                value={form.price}
+                onChange={(val) => setForm({ ...form, price: val })}
+                inputMode="decimal"
+                placeholder="0"
+                invalid={touched && !!priceError}
+              />
               {touched && priceError && <div style={styles.errorText}>Enter a valid price</div>}
             </div>
 

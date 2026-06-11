@@ -28,6 +28,8 @@ export type MeasureFieldProps = {
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   /** Fixed unit-chip width (px). Defaults to a 44px minimum. */
   unitWidth?: number;
+  /** "box" = white field for forms (price/qty); default cream = the vitals look. */
+  box?: boolean;
   // BP variant
   bp?: boolean;
   value2?: string;
@@ -36,7 +38,7 @@ export type MeasureFieldProps = {
 };
 
 export function MeasureField({
-  value, onChange, unit, onToggleUnit, prefix, placeholder, invalid, dense,
+  value, onChange, unit, onToggleUnit, prefix, placeholder, invalid, dense, box,
   inputMode = "numeric", ariaLabel, onKeyDown, unitWidth, bp, value2 = "", onChange2, ariaLabel2,
 }: MeasureFieldProps) {
   const switchable = !!onToggleUnit;
@@ -57,9 +59,52 @@ export function MeasureField({
   const inputBase: React.CSSProperties = {
     flex: 1, minWidth: 0, height: "100%", border: "none", outline: "none", padding: 0,
     fontSize: fonts.size.s, fontFamily: fonts.family.primary, color: colors.neutral900,
-    backgroundColor: "transparent", textAlign: "center",
+    backgroundColor: "transparent", textAlign: box ? "left" : "center",
   };
 
+  const inputs = (
+    <>
+      <input
+        inputMode={inputMode} aria-label={ariaLabel} aria-invalid={invalid || undefined}
+        value={value} onChange={handleFirstChange} onKeyDown={handleFirstKeyDown} placeholder={placeholder} style={inputBase}
+      />
+      {bp && (
+        <>
+          <span style={{ flexShrink: 0, fontSize: fonts.size.s, color: colors.neutral500, padding: `0 ${spacing["3xs"]}`, userSelect: "none" }}>/</span>
+          <input
+            ref={diaRef} inputMode={inputMode} aria-label={ariaLabel2} aria-invalid={invalid || undefined}
+            value={value2} onChange={(e) => onChange2?.(e.target.value)} onKeyDown={onKeyDown} style={inputBase}
+          />
+        </>
+      )}
+    </>
+  );
+
+  // ── Box variant — white field for forms (price/qty). One outer border; the
+  // prefix / unit sit inside as dividers (fixed units; switchable shown by text). ──
+  if (box) {
+    return (
+      <div style={{ display: "flex", alignItems: "stretch", height, width: "100%", boxSizing: "border-box",
+        background: colors.neutral100, overflow: "hidden", borderRadius: R,
+        border: `${strokes.xs} solid ${invalid ? colors.red200 : colors.neutral300}` }}>
+        {prefix && (
+          <span style={{ display: "flex", alignItems: "center", padding: `0 ${spacing.s}`, color: colors.neutral500,
+            fontSize: fonts.size.m, borderRight: `${strokes.xs} solid ${colors.neutral200}` }}>{prefix}</span>
+        )}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", padding: `0 ${spacing.s}` }}>{inputs}</div>
+        {unit && (
+          <button type="button" onClick={onToggleUnit} title={switchable ? "Switch unit" : undefined}
+            style={{ flexShrink: 0, ...(unitWidth ? { width: unitWidth } : { minWidth: 44 }), padding: `0 ${spacing.xs}`,
+              display: "flex", alignItems: "center", justifyContent: "center", whiteSpace: "nowrap",
+              fontSize: fonts.size.s, fontFamily: fonts.family.primary, background: colors.neutral100, border: "none",
+              borderLeft: `${strokes.xs} solid ${colors.neutral200}`,
+              color: switchable ? colors.neutral800 : colors.neutral500, cursor: switchable ? "pointer" : "default" }}>{unit}</button>
+        )}
+      </div>
+    );
+  }
+
+  // ── Cream variant (default) — the vitals look. ──
   return (
     <div style={{ display: "flex", alignItems: "stretch", height, width: "100%" }}>
       {prefix && (
@@ -69,26 +114,12 @@ export function MeasureField({
           borderRadius: `${R}px 0 0 ${R}px` }}>{prefix}</span>
       )}
 
-      {/* cream value box */}
       <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", padding: `0 ${spacing.xs}`,
         backgroundColor: colors.primary100, boxSizing: "border-box",
         borderRadius: `${prefix ? 0 : R}px ${unit ? 0 : R}px ${unit ? 0 : R}px ${prefix ? 0 : R}px` }}>
-        <input
-          inputMode={inputMode} aria-label={ariaLabel} aria-invalid={invalid || undefined}
-          value={value} onChange={handleFirstChange} onKeyDown={handleFirstKeyDown} placeholder={placeholder} style={inputBase}
-        />
-        {bp && (
-          <>
-            <span style={{ flexShrink: 0, fontSize: fonts.size.s, color: colors.neutral500, padding: `0 ${spacing["3xs"]}`, userSelect: "none" }}>/</span>
-            <input
-              ref={diaRef} inputMode={inputMode} aria-label={ariaLabel2} aria-invalid={invalid || undefined}
-              value={value2} onChange={(e) => onChange2?.(e.target.value)} onKeyDown={onKeyDown} style={inputBase}
-            />
-          </>
-        )}
+        {inputs}
       </div>
 
-      {/* unit chip */}
       {unit && (
         <button
           type="button"
