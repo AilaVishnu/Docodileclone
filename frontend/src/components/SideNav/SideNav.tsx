@@ -23,7 +23,6 @@ export type NavTab =
   | 'Stats'
   | 'Pharmacy'
   | 'Settings'
-  | 'Design System'
   | 'Storybook';
 
 type SideNavProps = {
@@ -61,8 +60,8 @@ export function SideNav({ activeTab, onTabChange }: SideNavProps) {
     }
   } as const;
 
-  // Palette icon for the Design System menu entry. Remove this item (and the
-  // 'Design System' branch in NavTab) to hide the page from end users.
+  // Palette icon for the Storybook (design-system) menu entry. Remove this item
+  // (and the 'Storybook' branch in NavTab) to hide the page from end users.
   const DesignSystemIcon = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 22a10 10 0 1 1 10-10c0 2-1.5 3-3 3h-2a2 2 0 0 0-2 2 2 2 0 0 1-2 2h-1Z" />
@@ -80,18 +79,6 @@ export function SideNav({ activeTab, onTabChange }: SideNavProps) {
     </svg>
   );
 
-  // Grid icon for the temporary Storybook (the /audit UI gallery). TEMP — remove
-  // this item + the 'Storybook' NavTab when the gallery is deleted (or once the
-  // 'Design System' entry is replaced by it).
-  const StorybookIcon = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="7" rx="1.5" />
-      <rect x="14" y="3" width="7" height="7" rx="1.5" />
-      <rect x="3" y="14" width="7" height="7" rx="1.5" />
-      <rect x="14" y="14" width="7" height="7" rx="1.5" />
-    </svg>
-  );
-
   // `label` is the routing key (the NavTab); `display` is the short name shown
   // in the compact sidebar. Keep them separate so the wording can change
   // without touching navigation / persisted tab state.
@@ -105,8 +92,7 @@ export function SideNav({ activeTab, onTabChange }: SideNavProps) {
     { label: 'Stats', display: 'Stats', icon: <BusinessIcon /> },
     { label: 'Pharmacy', display: 'Meds', icon: <PharmacyIcon /> },
     { label: 'Settings', display: 'Config', icon: <SettingsIcon /> },
-    { label: 'Design System', display: 'Design', icon: <DesignSystemIcon /> },
-    { label: 'Storybook', display: 'Storybook', icon: <StorybookIcon /> },
+    { label: 'Storybook', display: 'Storybook', icon: <DesignSystemIcon /> },
   ];
 
   return (
