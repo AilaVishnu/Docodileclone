@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts } from "../../styles/theme";
+import { colors, fonts, spacing } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   wrapper: {
@@ -148,6 +148,8 @@ export const styles: Record<string, CSSProperties> = {
     columnGap: "32px",
     rowGap: "8px",
     justifyContent: "center",
+    // Breathing room between the Total row above and the payment options.
+    marginTop: spacing.s,
   },
 
   radioLabel: {
@@ -188,8 +190,9 @@ export const styles: Record<string, CSSProperties> = {
   toggleActive: {
     padding: "4px 10px",
     border: "none",
-    // Inverted: black bg + cream/white symbol so the active state really pops.
-    backgroundColor: colors.neutral900,
+    // Active: the themed primary orange (matches the +New Appointment button)
+    // with white text so the selected mode pops.
+    backgroundColor: colors.active.shade700,
     color: colors.neutral100,
     fontSize: fonts.size.s,
     fontWeight: 600,
