@@ -25,6 +25,9 @@ export type MeasureFieldProps = {
   dense?: boolean;
   inputMode?: "numeric" | "decimal" | "text";
   ariaLabel?: string;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  /** Fixed unit-chip width (px). Defaults to a 44px minimum. */
+  unitWidth?: number;
   // BP variant
   bp?: boolean;
   value2?: string;
@@ -34,7 +37,7 @@ export type MeasureFieldProps = {
 
 export function MeasureField({
   value, onChange, unit, onToggleUnit, prefix, placeholder, invalid, dense,
-  inputMode = "numeric", ariaLabel, bp, value2 = "", onChange2, ariaLabel2,
+  inputMode = "numeric", ariaLabel, onKeyDown, unitWidth, bp, value2 = "", onChange2, ariaLabel2,
 }: MeasureFieldProps) {
   const switchable = !!onToggleUnit;
   const height = dense ? 28 : "var(--input-h, 40px)";
@@ -61,14 +64,14 @@ export function MeasureField({
         borderRadius: `${prefix ? 0 : R}px ${unit ? 0 : R}px ${unit ? 0 : R}px ${prefix ? 0 : R}px` }}>
         <input
           inputMode={inputMode} aria-label={ariaLabel} aria-invalid={invalid || undefined}
-          value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={inputBase}
+          value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={onKeyDown} placeholder={placeholder} style={inputBase}
         />
         {bp && (
           <>
             <span style={{ flexShrink: 0, fontSize: fonts.size.s, color: colors.neutral500, padding: `0 ${spacing["3xs"]}`, userSelect: "none" }}>/</span>
             <input
               inputMode={inputMode} aria-label={ariaLabel2} aria-invalid={invalid || undefined}
-              value={value2} onChange={(e) => onChange2?.(e.target.value)} style={inputBase}
+              value={value2} onChange={(e) => onChange2?.(e.target.value)} onKeyDown={onKeyDown} style={inputBase}
             />
           </>
         )}
@@ -81,7 +84,7 @@ export function MeasureField({
           onClick={onToggleUnit}
           title={switchable ? "Switch unit" : undefined}
           style={{
-            flexShrink: 0, minWidth: 44, padding: `0 ${spacing.xs}`, height: "100%",
+            flexShrink: 0, ...(unitWidth ? { width: unitWidth } : { minWidth: 44 }), padding: `0 ${spacing.xs}`, height: "100%",
             display: "flex", alignItems: "center", justifyContent: "center", whiteSpace: "nowrap",
             fontSize: fonts.size.s, fontFamily: fonts.family.primary,
             backgroundColor: colors.neutral100,

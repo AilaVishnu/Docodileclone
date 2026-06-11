@@ -29,6 +29,7 @@ import { ReactComponent as CalendarIcon } from "../../assets/icons/calendar.svg"
 import { ReactComponent as UserIcon } from "../../assets/icons/user.svg";
 import { Card } from "../../components/Card";
 import { IconButton } from "../../components/IconButton";
+import { MeasureField } from "../../components/MeasureField";
 import { ReactComponent as ReorderIcon } from "../../assets/icons/reorder.svg";
 import { ReactComponent as TuningIcon } from "../../assets/icons/tuning.svg";
 import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg";
@@ -2415,46 +2416,22 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                               <div key={cellKey} style={styles.vitalCell}>
                                 <span style={styles.vitalLabel}>{v.label}</span>
                                 <div style={styles.vitalInputRow} title={!valueValid ? rangeHint : undefined}>
-                                  {isBp ? (
-                                    <BpInput
-                                      valid={valueValid}
-                                      sysValid={sysValid}
-                                      diaValid={diaValid}
-                                      sys={bpSys}
-                                      dia={bpDia}
-                                      onSysChange={(v2) => setBpPart(v2, bpDia)}
-                                      onDiaChange={(v2) => setBpPart(bpSys, v2)}
-                                      onEnter={(e) => validateVitalOnEnter(e, v.label, cell.value, cell.unit, true)}
-                                    />
-                                  ) : (
-                                    <input
-                                      style={{
-                                        ...styles.vitalInputValue,
-                                        ...(!valueValid ? styles.vitalInputValueInvalid : {}),
-                                      }}
-                                      placeholder={v.placeholder ?? ""}
-                                      value={cell.value}
-                                      onChange={(e) => setVitalValue(cellKey, e.target.value)}
-                                      onKeyDown={(e) => validateVitalOnEnter(e, v.label, cell.value, cell.unit)}
-                                      aria-invalid={!valueValid}
-                                    />
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={canToggle ? () => toggleVitalUnit(cellKey) : undefined}
-                                    style={{
-                                      ...styles.vitalUnit,
-                                      // Clickable toggles get a black stroke + text;
-                                      // pure-display units (cm/bpm/%) keep cream/grey.
-                                      ...(canToggle ? styles.vitalUnitClickable : null),
-                                      width: v.unitWidth ?? 44,
-                                      cursor: canToggle ? "pointer" : "default",
-                                      ...(!valueValid ? styles.vitalUnitInvalid : {}),
-                                    }}
-                                    title={canToggle ? `Switch to ${UNIT_TOGGLES[cell.unit].altUnit}` : undefined}
-                                  >
-                                    {cell.unit}
-                                  </button>
+                                  <MeasureField
+                                    bp={isBp}
+                                    value={isBp ? bpSys : cell.value}
+                                    onChange={isBp ? (val) => setBpPart(val, bpDia) : (val) => setVitalValue(cellKey, val)}
+                                    value2={isBp ? bpDia : undefined}
+                                    onChange2={isBp ? (val) => setBpPart(bpSys, val) : undefined}
+                                    unit={cell.unit}
+                                    unitWidth={v.unitWidth}
+                                    onToggleUnit={canToggle ? () => toggleVitalUnit(cellKey) : undefined}
+                                    invalid={!valueValid}
+                                    dense
+                                    placeholder={v.placeholder ?? ""}
+                                    onKeyDown={(e) => validateVitalOnEnter(e, v.label, cell.value, cell.unit, isBp)}
+                                    ariaLabel={isBp ? "Systolic" : v.label}
+                                    ariaLabel2={isBp ? "Diastolic" : undefined}
+                                  />
                                 </div>
                                 {!valueValid && (
                                   <span style={styles.vitalErrorMessage}>
