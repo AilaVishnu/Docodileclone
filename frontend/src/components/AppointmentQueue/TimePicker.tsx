@@ -211,9 +211,9 @@ export function TimePicker({ initialTime, onSelect, onClose, style, selectedDate
 
         <div style={styles.actionsRow}>
           {onWalkin && (
-            <Button variant="light" size="sm" onClick={handleWalkin}>Walk-in</Button>
+            <Button variant="light" size="sm" onClick={handleWalkin} style={{ flex: 1 }}>Walk-in</Button>
           )}
-          <Button variant="dark" size="sm" onClick={handleDone} disabled={selectionPast}>Done</Button>
+          <Button variant="dark" size="sm" onClick={handleDone} disabled={selectionPast} style={{ flex: 1 }}>Done</Button>
         </div>
         </div>
       </div>
