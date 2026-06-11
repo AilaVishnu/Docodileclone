@@ -11,6 +11,13 @@ const formatTimer = (s: number) => {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 };
 
+// A consultation counts live for this long; past it we stop ticking and show
+// a static "Since <start time>" instead — so a visit left open for hours
+// doesn't run a forever-counter, but is still clearly visible as in-progress.
+const SESSION_LIVE_SEC = 6 * 60 * 60;
+const formatSince = (iso: string) =>
+  `Since ${new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
@@ -107,17 +114,26 @@ export function StatusBadge({ status, started, sessionStartedAt, onClick }: Stat
     if (key !== "IN_PROGRESS" || !sessionStartedAt) { setLiveSeconds(null); return; }
     const startMs = new Date(sessionStartedAt).getTime();
     if (Number.isNaN(startMs)) { setLiveSeconds(null); return; }
-    const tick = () => setLiveSeconds(Math.max(0, Math.floor((Date.now() - startMs) / 1000)));
-    tick();
-    const id = window.setInterval(tick, 1000);
+    const compute = () => Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+    setLiveSeconds(compute());
+    // Already past the live window → static "Since …", never start an interval.
+    if (compute() >= SESSION_LIVE_SEC) return;
+    const id = window.setInterval(() => {
+      const e = compute();
+      setLiveSeconds(e);
+      // Crossed the 6h mark while watching → stop ticking, switch to static.
+      if (e >= SESSION_LIVE_SEC) window.clearInterval(id);
+    }, 1000);
     return () => window.clearInterval(id);
   }, [key, sessionStartedAt]);
 
   const cfg = key === "IN_PROGRESS" && liveSeconds != null
     ? {
         ...baseCfg,
-        // Appointment queue: live elapsed time from the backend session start.
-        label: formatTimer(liveSeconds),
+        // Live elapsed for the first 6h, then the static start time.
+        label: liveSeconds >= SESSION_LIVE_SEC && sessionStartedAt
+          ? formatSince(sessionStartedAt)
+          : formatTimer(liveSeconds),
       }
     : baseCfg;
 

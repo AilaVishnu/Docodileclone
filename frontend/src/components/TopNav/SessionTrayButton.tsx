@@ -76,6 +76,13 @@ const formatElapsed = (totalSec: number): string => {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 };
 
+// A session counts live for this long; past it we stop ticking and show a
+// static "Since <start time>" — a visit left open for hours doesn't run a
+// forever-counter, but is still listed as active.
+const SESSION_LIVE_MS = 6 * 60 * 60 * 1000;
+const formatSince = (iso: string) =>
+  `Since ${new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+
 // Build the minimal Patient the Prescription page needs to open the pad. The
 // chart re-fetches full detail on mount; this just seeds the selection.
 const toPatient = (s: ActiveSession): Patient => ({
@@ -121,11 +128,18 @@ export function SessionTrayButton({ onNavigate }: SessionTrayButtonProps) {
     return () => { cancelled = true; window.clearInterval(id); };
   }, [open]);
 
-  // Tick the elapsed display locally every second (cheap, no network).
+  // Only tick while at least one session is still within its live window.
+  // Once every session is past 6h they render a static "Since …" that needs
+  // no updates, so we stop the interval entirely — zero ongoing work.
+  const hasLiveSession = sessions.some((s) => {
+    const startMs = new Date(s.sessionStartedAt).getTime();
+    return !Number.isNaN(startMs) && Date.now() - startMs < SESSION_LIVE_MS;
+  });
   React.useEffect(() => {
+    if (!hasLiveSession) return;
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [hasLiveSession]);
 
   // Close on outside click — same pattern as the profile dropdown next to it.
   React.useEffect(() => {
@@ -163,10 +177,13 @@ export function SessionTrayButton({ onNavigate }: SessionTrayButtonProps) {
         <div style={styles.dropdown}>
           <p style={styles.dropdownTitle}>Active sessions</p>
           {sessions.map((s) => {
-            const elapsed = Math.max(
-              0,
-              Math.floor((now - new Date(s.sessionStartedAt).getTime()) / 1000),
-            );
+            const startMs = new Date(s.sessionStartedAt).getTime();
+            const elapsedMs = now - startMs;
+            // Live count for the first 6h, then a static start-time stamp.
+            const isLive = !Number.isNaN(startMs) && elapsedMs < SESSION_LIVE_MS;
+            const label = isLive
+              ? formatElapsed(Math.max(0, Math.floor(elapsedMs / 1000)))
+              : formatSince(s.sessionStartedAt);
             return (
               <button
                 key={s.visitId}
@@ -178,8 +195,8 @@ export function SessionTrayButton({ onNavigate }: SessionTrayButtonProps) {
               >
                 <span style={styles.sessionName}>{s.name}</span>
                 <span style={styles.sessionTimerWrap}>
-                  <span style={{ ...styles.sessionTimer, color: colors.green200 }}>
-                    {formatElapsed(elapsed)}
+                  <span style={{ ...styles.sessionTimer, color: isLive ? colors.green200 : colors.neutral500 }}>
+                    {label}
                   </span>
                 </span>
               </button>
