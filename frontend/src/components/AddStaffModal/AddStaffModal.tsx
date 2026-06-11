@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { colors } from "../../styles/theme";
 import { Modal } from "../Modal";
 import { Card } from "../Card";
 import { StaffDetailsCard } from "../StaffDetailsCard";
@@ -317,28 +318,32 @@ export function AddStaffModal({
       </div>
     </Modal>
 
-    {showDeleteConfirm && (
-      <div style={confirmStyles.overlay}>
-        <div style={confirmStyles.dialog}>
-          <h4 style={confirmStyles.title}>Remove this staff member?</h4>
-          <p style={confirmStyles.message}>
-            They'll be removed from this clinic and can no longer log in or be
-            booked. Their past appointments and prescriptions stay on record.
-          </p>
-          <div style={confirmStyles.actions}>
-            <Button variant="light" size="sm" onClick={() => setShowDeleteConfirm(false)}>
-              Nope
-            </Button>
-            <Button variant="dark" size="sm" onClick={() => {
-              setShowDeleteConfirm(false);
-              onDelete?.();
-            }}>
-              Yes
-            </Button>
-          </div>
+    <Modal
+      isOpen={showDeleteConfirm}
+      onClose={() => setShowDeleteConfirm(false)}
+      surface={colors.primary100}
+      width={360}
+      level="top"
+    >
+      <div style={confirmStyles.body}>
+        <h4 style={confirmStyles.title}>Remove this staff member?</h4>
+        <p style={confirmStyles.message}>
+          They'll be removed from this clinic and can no longer log in or be
+          booked. Their past appointments and prescriptions stay on record.
+        </p>
+        <div style={confirmStyles.actions}>
+          <Button variant="light" size="sm" onClick={() => setShowDeleteConfirm(false)}>
+            Nope
+          </Button>
+          <Button variant="dark" size="sm" onClick={() => {
+            setShowDeleteConfirm(false);
+            onDelete?.();
+          }}>
+            Yes
+          </Button>
         </div>
       </div>
-    )}
+    </Modal>
     </>
   );
 }

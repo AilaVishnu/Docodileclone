@@ -88,13 +88,14 @@ DECISION:
 - ✅ BUILT: `shadows` token added to theme.ts (`menu`/`modal`/`card`); `Select` + `UnderlineSelect` menus reconciled to the bordered look + `shadows.menu` + cream hover / `primary100` selected.
 - _Follow-up:_ point the ~22 menus that already hardcode `0 4px 16px rgba(0,0,0,0.08)` at `shadows.menu` (same value, single-source); optionally extract a shared `<Menu>`/`<Popover>` primitive so the panel isn't hand-rolled in ~22 files.
 
-## 4. Modals / dialogs — _✅ DECIDED 2026-06-11 (not yet built)_
+## 4. Modals / dialogs — _✅ BUILT 2026-06-11_
 IDs: `MOD-canon`, `MOD-print/bill/service/presets/confirm/slot/ai`, `MOD-CANON-PROPOSED`.
 DECISION (approved the proposed canonical Modal, with 2 tweaks):
 - ✅ Adopt one canonical `<Modal>` shell: tokenized backdrop (one opacity, e.g. `alphaBlack3`), a real **`zIndex` scale** in theme.ts (fixes the 1000→4000 chaos + the base-Modal-sitting-under-its-own-confirm-dialog bug), one radius, one shadow (`shadows.modal`), Esc-to-close + scroll-lock by default.
 - 🔸 **RETAIN each modal's existing background colour** — do NOT unify the surface. White / cream / tint stay per-modal (via a `surface`/bg prop on `<Modal>`).
 - 🔸 **Close ✕ = the shared IconButton (CLOSE-CANON)** — already done for the ~12 modal closes converted in the Buttons phase; the canonical Modal uses IconButton for its header ✕.
-- Build = migrate the 8 roll-your-own overlays onto `<Modal>` (keeping each one's colour): PrintPreview, BillMedicines, AddService, SchedulePresets, AddStaff delete-confirm, slot-picker, AI-SOAP. NOT yet built.
+- ✅ BUILT: rebuilt `<Modal>` (tokenized backdrop / `shadows.modal` / `radii["2xl"]` + Esc + scroll-lock + `surface`/`width`/`level` props, back-compat defaults so the 16 existing callers are unchanged except the z-index fix). Added a `zIndex` scale to theme.ts (modal 4000 — above the sidebar; modalTop 4100 for confirm-over-modal). Migrated the 7 hand-rolled overlays onto `<Modal>` keeping their colours: PrintPreview, BillMedicines (surface transparent — preserves the zigzag), AddService, SchedulePresets, AddStaff delete-confirm (`level="top"`), slot-picker, AI-SOAP.
+- ⚠️ NOT click-tested live (login wall) — recommend a manual pass: open a couple of modals (do they appear ABOVE the sidebar now? does Esc close them? does the bill receipt's torn edge still show the dark backdrop?).
 
 ### Chevron icon — updated 2026-06-11
 The canonical `ChevronDown` now uses the path you provided (`M19 9L12 15L5 9`, strokeWidth 1.5), colour driven by the `color` prop (not hardcoded). Propagates to all 3 dropdown types.

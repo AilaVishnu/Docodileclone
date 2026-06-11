@@ -3215,29 +3215,32 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
 
       {/* Slot picker — patient has 2+ appointments today and was opened
           without a specific one. Asks which slot this consultation is for. */}
-      {slotOptions && (
-        <div style={slotPickerStyles.overlay}>
-          <div style={slotPickerStyles.card}>
-            <h3 style={slotPickerStyles.title}>Choose an appointment slot</h3>
-            <p style={slotPickerStyles.sub}>
-              {selectedPatient?.name ?? "This patient"} has more than one appointment
-              today. Pick the slot you're starting this consultation for.
-            </p>
-            <div style={slotPickerStyles.slots}>
-              {slotOptions.map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  style={slotPickerStyles.slotBtn}
-                  onClick={() => chooseSlot(a)}
-                >
-                  {formatSlot(a.scheduledTime)}
-                </button>
-              ))}
-            </div>
+      <Modal
+        isOpen={!!slotOptions}
+        onClose={() => setSlotOptions(null)}
+        surface={colors.primary100}
+        width={460}
+      >
+        <div style={slotPickerStyles.card}>
+          <h3 style={slotPickerStyles.title}>Choose an appointment slot</h3>
+          <p style={slotPickerStyles.sub}>
+            {selectedPatient?.name ?? "This patient"} has more than one appointment
+            today. Pick the slot you're starting this consultation for.
+          </p>
+          <div style={slotPickerStyles.slots}>
+            {(slotOptions ?? []).map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                style={slotPickerStyles.slotBtn}
+                onClick={() => chooseSlot(a)}
+              >
+                {formatSlot(a.scheduledTime)}
+              </button>
+            ))}
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }
@@ -3253,26 +3256,11 @@ function formatSlot(iso: string | null): string {
 }
 
 const slotPickerStyles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1100,
-  },
   card: {
-    backgroundColor: colors.primary100,
-    borderRadius: radii["2xl"],
-    padding: spacing["2xl"],
-    minWidth: 360,
-    maxWidth: 460,
     display: "flex",
     flexDirection: "column",
     gap: spacing.s,
     textAlign: "center",
-    boxShadow: "0 12px 40px rgba(0,0,0,0.18)",
   },
   title: {
     margin: 0,
@@ -3371,14 +3359,8 @@ function AISoapDraftModal({
   );
 
   return (
-    <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000 }}
-      onClick={onClose}
-    >
-      <div
-        style={{ background: "#fff", borderRadius: 12, padding: 20, width: "min(560px, 92vw)", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal isOpen onClose={onClose} surface={colors.neutral100} width={560} padding={20}>
+      <div style={{ maxHeight: "90vh", overflowY: "auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
           <h3 style={{ margin: 0, fontSize: 18 }}>AI SOAP draft</h3>
           <IconButton ariaLabel="Close" onClick={onClose} />
@@ -3397,6 +3379,6 @@ function AISoapDraftModal({
           </div>
         )}
       </div>
-    </div>
+    </Modal>
   );
 }

@@ -1,6 +1,7 @@
 import React from "react";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { Button } from "../Button";
+import { Modal } from "../Modal";
 import { PRESETS, WeekSchedule } from "./scheduleStorage";
 
 type SchedulePresetsModalProps = {
@@ -11,8 +12,8 @@ type SchedulePresetsModalProps = {
 
 export function SchedulePresetsModal({ onPick, onCustom, onDismiss }: SchedulePresetsModalProps) {
   return (
-    <div style={styles.overlay}>
-      <div style={styles.dialog}>
+    <Modal isOpen onClose={onDismiss} surface={colors.primary100} width={560}>
+      <div style={styles.body}>
         <p style={styles.title}>Set your hours</p>
         <p style={styles.subtitle}>
           Pick a starting point — you can tweak any day after.
@@ -42,31 +43,16 @@ export function SchedulePresetsModal({ onPick, onCustom, onDismiss }: SchedulePr
           Skip for now
         </Button>
       </div>
-    </div>
+    </Modal>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1200,
-  },
-  dialog: {
-    backgroundColor: colors.primary100,
-    borderRadius: radii.xxl,
-    padding: spacing["2xl"],
+  body: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     gap: spacing.m,
-    boxShadow: "0 12px 36px rgba(0, 0, 0, 0.2)",
-    width: "560px",
-    maxWidth: "92vw",
   },
   title: {
     fontFamily: fonts.family.secondary,
