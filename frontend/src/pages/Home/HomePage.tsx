@@ -317,10 +317,9 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         onTabChange={setActiveTab}
       />
       <div style={styles.contentArea}>
-        {/* Paint the content cream behind the panel so its rounded top-left
-            corner blends, instead of revealing the darker tan shell as a
-            notch in that corner. */}
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: colors.active.shade200 }}>
+        {/* Transparent backdrop so the content panel's rounded top-left corner
+            reveals the darker shell behind it — a visible rounded corner. */}
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
           <TopNav
             onBuildClinic={onViewClinic}
             onViewAllClinics={onViewAllClinics}

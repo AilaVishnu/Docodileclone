@@ -1,5 +1,6 @@
 import { CSSProperties, ReactNode } from "react";
 import { styles } from "./PageHeader.styles";
+import { ReactComponent as ArrowLeftIcon } from "../../assets/icons/arrow-left.svg";
 
 interface PageHeaderProps {
   /** Title shown centered in the bar. String or rich node (e.g. with an inline dropdown). */
@@ -16,15 +17,6 @@ interface PageHeaderProps {
   style?: CSSProperties;
 }
 
-/** Left-pointing arrow, 20px at a 1.5px stroke to match the sidebar icon weight. */
-function BackArrow() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 /**
  * Shared sticky app-bar for full-page views. Three zones: back (left),
  * title (center), actions (right). See PageHeader.styles.ts for layout notes.
@@ -34,7 +26,7 @@ export function PageHeader({ title, onBack, backLabel = "Back", actions, wrapTit
     <header style={{ ...styles.bar, ...style }}>
       {onBack && (
         <button type="button" style={styles.backButton} onClick={onBack} title={backLabel} aria-label={backLabel}>
-          <BackArrow />
+          <ArrowLeftIcon width={24} height={24} />
         </button>
       )}
 
