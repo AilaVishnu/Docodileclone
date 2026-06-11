@@ -372,6 +372,43 @@ const todayIso = (): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+// Build a new visit's save payload by carrying a source visit forward —
+// review patients usually get the same Rx with minor tweaks, so the doctor
+// edits from a copy instead of retyping. Carried over: history, diagnosis,
+// Rx, tests, all notes (patient / private / review), refer-to. Reset because
+// they're specific to each visit: vitals (measured fresh), the complaint
+// (reason for THIS visit), the review/follow-up date. `source` undefined
+// (no prior visit) yields a fully blank draft.
+const copyForwardDraft = (
+  source: VisitDTO | undefined,
+  opts: { visitDate: string; createdByDoctorId?: string | null; appointmentId?: string | null },
+): SaveVisitRequest => ({
+  visitDate: opts.visitDate,
+  // Per-visit — not carried forward.
+  bpSystolic: null, bpDiastolic: null, bpUnit: null,
+  bmi: null, bmiUnit: null, height: null, heightUnit: null,
+  weight: null, weightUnit: null, temperature: null, temperatureUnit: null,
+  pulse: null, pulseUnit: null, waist: null, waistUnit: null,
+  hip: null, hipUnit: null, spo2: null, spo2Unit: null,
+  complaints: null,
+  reviewDate: null, reviewDays: null,
+  // Carried forward from the source visit.
+  familyHistory: source?.familyHistory ?? null,
+  allergies: source?.allergies ?? null,
+  personalHistory: source?.personalHistory ?? null,
+  pastMedicalHistory: source?.pastMedicalHistory ?? null,
+  diagnosis: source?.diagnosis ?? null,
+  notesForPatient: source?.notesForPatient ?? null,
+  privateNotes: source?.privateNotes ?? null,
+  tests: source?.tests ?? null,
+  reviewNotes: source?.reviewNotes ?? null,
+  referDoctorId: source?.referDoctorId ?? null,
+  createdByDoctorId: opts.createdByDoctorId ?? null,
+  appointmentId: opts.appointmentId,
+  sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
+  prescriptions: (source?.prescriptions ?? []).map((p, i) => ({ ...p, id: null, position: i + 1 })),
+});
+
 // Total units to dispense for one Rx row:
 //   qty = ceil( units/dose × doses/day × days )
 // Returns null when any input is missing or unparseable (SOS, "As
@@ -1046,22 +1083,16 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       }
       if (autoCreatedForApptRef.current !== selectedAppointmentId) {
         autoCreatedForApptRef.current = selectedAppointmentId;
-        const draft: SaveVisitRequest = {
+        // Carry the patient's most recent past visit forward (visits are
+        // sorted oldest→newest, so the last one is the latest). Review
+        // patients open pre-filled with their history / diagnosis / Rx /
+        // notes — vitals, complaint and review date start fresh.
+        const lastVisit = visits.length > 0 ? visits[visits.length - 1] : undefined;
+        const draft = copyForwardDraft(lastVisit, {
           visitDate: queueDate,
-          bpSystolic: null, bpDiastolic: null, bpUnit: null,
-          bmi: null, bmiUnit: null, height: null, heightUnit: null,
-          weight: null, weightUnit: null, temperature: null, temperatureUnit: null,
-          pulse: null, pulseUnit: null, waist: null, waistUnit: null,
-          hip: null, hipUnit: null, spo2: null, spo2Unit: null,
-          familyHistory: null, allergies: null, personalHistory: null, pastMedicalHistory: null,
-          complaints: null, diagnosis: null, notesForPatient: null, privateNotes: null, tests: null,
           createdByDoctorId: appointmentDoctorId,
           appointmentId: selectedAppointmentId,
-          referDoctorId: null,
-          reviewDate: null, reviewDays: null, reviewNotes: null,
-          sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
-          prescriptions: [],
-        };
+        });
         void createVisit(selectedPatientId, draft)
           .then(() => refetchVisits())
           .catch((err: Error) => showToast(err.message || "Failed to create visit"));
