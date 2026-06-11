@@ -207,19 +207,36 @@ export function DropdownsSection() {
 
 // ── 8 · Tabs ───────────────────────────────────────────────────────────────────
 export function TabsSection() {
-  const [a, setA] = useState("today");
+  const [pill, setPill] = useState("all");
+  const [pillSm, setPillSm] = useState("info");
+  const [conn, setConn] = useState("clinicA");
   return (
     <Section id="tabs" title="8 · Tabs"
-      tldr={<><From>components/Tabs</From> — white-pill tabs in two sizes: <b>md</b> (large) and <b>sm</b> (compact). md <b>compacts to sm</b> below 1440 (40/r12 → 32/r8).</>}>
-      <Sub title="md (default)">
+      tldr={<><From>components/Tabs</From> — ONE component, two looks. <b>block</b> = white-pill filter row (selected = white pill, dark text) — the queue/Stats/Pharmacy filters. <b>connected</b> = attached page tabs (clinic picker). Pass <code>variant</code>; block takes <code>size</code> md/sm (md compacts to sm below 1440).</>}>
+      <Sub title='block — white-pill filter row (the "View all / At Doc / …" pattern)'
+        note="variant='block'. Selected pill = neutral100 (white) on neutral900 text; idle = transparent / alphaBlack3. Use for status & view filters across the queues, Stats and Pharmacy.">
         <div style={{ maxWidth: 520 }}>
-          <Tabs items={[{ id: "today", label: "Today" }, { id: "upcoming", label: "Upcoming" }, { id: "past", label: "Past" }]} activeId={a} onSelect={setA} />
+          <Tabs variant="block" size="md" activeId={pill} onSelect={setPill}
+            items={[{ id: "all", label: "View all" }, { id: "atdoc", label: "At Doc" }, { id: "ongoing", label: "Ongoing" }, { id: "waiting", label: "Waiting" }, { id: "done", label: "Completed" }]} />
+        </div>
+      </Sub>
+      <Sub title="block · sm — compact filter row">
+        <div style={{ maxWidth: 420 }}>
+          <Tabs variant="block" size="sm" activeId={pillSm} onSelect={setPillSm}
+            items={[{ id: "info", label: "Info" }, { id: "visits", label: "Visits" }, { id: "files", label: "Files" }]} />
+        </div>
+      </Sub>
+      <Sub title="connected — attached page tabs (clinic picker)"
+        note="variant='connected' (default). Rounded-top trapezoid tabs that visually attach to the panel below. Use for top-level workspace navigation, not inline filters.">
+        <div style={{ maxWidth: 520 }}>
+          <Tabs activeId={conn} onSelect={setConn}
+            items={[{ id: "clinicA", label: "Sunrise Clinic" }, { id: "clinicB", label: "Lakeview" }]} />
         </div>
       </Sub>
       <ResponsiveTable rows={[
         ["--tab-md-h", "40px", "32px"],
         ["--tab-md-r", "12px", "8px"],
-      ]} caption={<>Below 1440 the md tab reads like the sm "visit" size. The sm size is always compact.</>} />
+      ]} caption={<>Below 1440 the block <b>md</b> tab compacts to the <b>sm</b> size. The sm size is always compact.</>} />
     </Section>
   );
 }
