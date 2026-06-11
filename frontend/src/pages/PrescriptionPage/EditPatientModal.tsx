@@ -376,7 +376,6 @@ export function EditPatientModal({ isOpen, patient, onClose, onSave, onSaved, on
                         setShowDatePicker(false);
                       }}
                       onClose={() => setShowDatePicker(false)}
-                      style={{ top: "calc(100% + 8px)", left: "auto", right: 0, transform: "none" }}
                     />
                   )}
                 </div>

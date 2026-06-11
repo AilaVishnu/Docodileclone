@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, radii, fonts, spacing } from "../../styles/theme";
+import { colors, radii, fonts, spacing, zIndex } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   backdrop: {
@@ -8,7 +8,9 @@ export const styles: Record<string, CSSProperties> = {
     // Dim the page like the time picker so date selection has the same
     // modal weight + obvious dismiss target.
     backgroundColor: "rgba(0, 0, 0, 0.5)",
-    zIndex: 1050,
+    // Above modals (4000/4100) so a date picker opened from inside a modal
+    // isn't hidden behind it.
+    zIndex: zIndex.popover,
   },
 
   overlay: {
@@ -18,7 +20,7 @@ export const styles: Record<string, CSSProperties> = {
     top: "50%",
     left: "50%",
     transform: "translate(-50%, -50%)",
-    zIndex: 1100,
+    zIndex: zIndex.popover + 1,
   },
 
   container: {
