@@ -881,6 +881,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     setReviewDate(d);
     setReviewDays(String(Math.max(0, daysFromToday(d))));
     setShowReviewDatePicker(false);
+    setDirty(true);
   };
   const changeReviewDays = (raw: string) => {
     const cleaned = raw.replace(/\D/g, "");
@@ -892,6 +893,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // Uncontrolled inputs are remounted via the `key` on the visits wrapper
   // below so they pick up new defaultValues automatically.
   React.useEffect(() => {
+    // Mark that the form now holds THIS visit's data (set in the same state
+    // batch as the fields below, so handleSave's guard sees them in sync).
+    setLoadedVisitId(activeVisit?.id ?? null);
     setReviewDate(activeVisit?.reviewDate ? new Date(activeVisit.reviewDate) : null);
     setReviewDays(activeVisit?.reviewDays != null ? String(activeVisit.reviewDays) : "");
     setReviewNotesValue(activeVisit?.reviewNotes ?? "");
@@ -903,7 +907,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       activeVisit?.prescriptions && activeVisit.prescriptions.length > 0
         ? activeVisit.prescriptions.map(fromRxDTO)
         : Array.from({ length: 5 }, (_, i) => blankRxRow(i + 1));
-    setRxRows(newRows);
+    _setRxRows(newRows); // load — not a user edit, don't flag dirty
 
     // Resolve genericName for every row that has a medicine but no cached
     // generic name (all rows on first load since fromRxDTO sets it to "").
@@ -919,7 +923,8 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
           .then((r) => r.ok ? r.json() : [])
           .then((data: Array<{ genericName?: string; generic_name?: string }>) => {
             const gn = data[0]?.genericName ?? data[0]?.generic_name ?? "Unknown";
-            setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, genericName: gn } : r));
+            // Background enrichment, not a user edit — raw setter, no dirty.
+            _setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, genericName: gn } : r));
           })
           .catch(() => {});
       });
@@ -927,15 +932,16 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
 
     setShowReviewDatePicker(false);
     setVitalState(buildVitalState(activeVisit));
-    setHistoryValues({
+    // Load — raw setters so populating the form is not treated as an edit.
+    _setHistoryValues({
       family_history: activeVisit?.familyHistory ?? "",
       allergies: activeVisit?.allergies ?? "",
       personal_history: activeVisit?.personalHistory ?? "",
       past_medical_history: activeVisit?.pastMedicalHistory ?? "",
     });
-    setDiagnosisValue(activeVisit?.diagnosis ?? "");
-    setComplaintsValue(activeVisit?.complaints ?? "");
-    setTestsValue(activeVisit?.tests ?? "");
+    _setDiagnosisValue(activeVisit?.diagnosis ?? "");
+    _setComplaintsValue(activeVisit?.complaints ?? "");
+    _setTestsValue(activeVisit?.tests ?? "");
     setNotesForPatientValue(activeVisit?.notesForPatient ?? "");
     setPrivateNotesValue(activeVisit?.privateNotes ?? "");
     setReferDoctorId(activeVisit?.referDoctorId ?? null);
