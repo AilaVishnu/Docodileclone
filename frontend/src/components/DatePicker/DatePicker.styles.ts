@@ -33,6 +33,10 @@ export const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     gap: "16px",
     fontFamily: fonts.family.primary,
+    // Pin the weight so day cells never inherit a bold weight from the host
+    // (the sticky-header renders this inside an <h2> at 600). The month title
+    // sets its own 600 below.
+    fontWeight: fonts.weight.regular,
     color: colors.neutral900,
   },
 

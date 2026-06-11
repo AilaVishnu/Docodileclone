@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { styles } from "./DatePicker.styles";
-import { ChevronLeftIcon, ChevronRightIcon } from "../../iconsUtil";
+import { ChevronDown } from "../icons/ChevronDown";
 import { fonts, colors } from "../../styles/theme";
 
 type DatePickerProps = {
@@ -170,7 +170,7 @@ export function DatePicker({ selectedDate, onSelect, onClose, style, disablePast
       <div style={styles.container} ref={containerRef}>
         <div style={styles.header}>
           <button onClick={viewMode === "years" ? (e) => { e.stopPropagation(); setViewDate(new Date(viewDate.getFullYear() - 12, viewDate.getMonth(), 1)); } : viewMode === "months" ? handlePrevYear : handlePrevMonth} style={styles.navButton}>
-            <ChevronLeftIcon style={{ width: 16, height: 16 }} />
+            <span style={{ display: "inline-flex", transform: "rotate(90deg)" }}><ChevronDown size={24} strokeWidth={1.5} color={colors.neutral900} /></span>
           </button>
           <h4
             style={{ ...styles.monthTitle, cursor: "pointer" }}
@@ -185,7 +185,7 @@ export function DatePicker({ selectedDate, onSelect, onClose, style, disablePast
             {viewMode === "years" && `${viewDate.getFullYear() - 6} – ${viewDate.getFullYear() + 5}`}
           </h4>
           <button onClick={viewMode === "years" ? (e) => { e.stopPropagation(); setViewDate(new Date(viewDate.getFullYear() + 12, viewDate.getMonth(), 1)); } : viewMode === "months" ? handleNextYear : handleNextMonth} style={styles.navButton}>
-            <ChevronRightIcon style={{ width: 16, height: 16 }} />
+            <span style={{ display: "inline-flex", transform: "rotate(-90deg)" }}><ChevronDown size={24} strokeWidth={1.5} color={colors.neutral900} /></span>
           </button>
         </div>
 
