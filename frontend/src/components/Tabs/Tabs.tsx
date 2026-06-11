@@ -55,7 +55,7 @@ export function Tabs({
     <div style={container}>
       {/* Block variant wraps tabs in their own strip so the "+ Add"
           actions slot can flex to the right via marginLeft:auto. */}
-      <div style={isBlock ? styles.blockStrip : { display: "contents" }}>
+      <div role="tablist" style={isBlock ? styles.blockStrip : { display: "contents" }}>
         {items.map((item) => {
           const isActive = item.id === activeId;
           const overrideBg = isActive && activeBackgroundColor
@@ -64,6 +64,8 @@ export function Tabs({
           return (
             <button
               key={item.id}
+              role="tab"
+              aria-selected={isActive}
               onClick={() => onSelect(item.id)}
               onContextMenu={item.onContextMenu}
               style={{

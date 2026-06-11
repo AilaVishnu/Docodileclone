@@ -42,37 +42,7 @@ export const styles: Record<string, CSSProperties> = {
     justifyContent: "space-between",
     gap: spacing.m,
   },
-  tabs: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  // Tab pill — Figma 2340:1151 (design-system "tabs" component).
-  // Inactive: alphaBlack0 bg + alphaBlack3 text, 12px radius, paragraph-m
-  // typography (Inter 16/22). Active: white bg with neutral900 text.
-  tab: {
-    height: "var(--tab-md-h, 40px)",
-    // Flex-center so the label sits dead-centre on both axes regardless of
-    // the line-height vs fixed-height delta.
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    // Horizontal padding is tier-aware via --rxq-tab-padx (16px default,
-    // 12px on the 1200–1439 tier). Vertical stays at spacing.xs.
-    padding: `${spacing.xs} var(--rxq-tab-padx, 16px)`,
-    borderRadius: "var(--tab-md-r, 12px)",
-    border: "none",
-    backgroundColor: colors.alphaBlack0,
-    color: colors.alphaBlack3,
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.m,
-    lineHeight: fonts.lineHeight.m,
-    cursor: "pointer",
-  },
-  tabActive: {
-    backgroundColor: colors.neutral100,
-    color: colors.neutral900,
-  },
+  // (Filter tabs now use the shared <Tabs variant="block"> component.)
   viewToggle: {
     display: "inline-flex",
     alignItems: "center",

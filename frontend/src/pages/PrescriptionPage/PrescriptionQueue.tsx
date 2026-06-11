@@ -10,6 +10,7 @@ import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { ChevronDown } from "../../components/icons/ChevronDown";
 import { StatusBadge } from "../../components/AppointmentQueue/StatusBadge";
+import { Tabs } from "../../components/Tabs";
 import { colors, radii } from "../../styles/theme";
 import { styles } from "./PrescriptionQueue.styles";
 import { Toast } from "../../components/Toast";
@@ -262,23 +263,12 @@ export function PrescriptionQueue({ onSelect, refreshKey }: PrescriptionQueuePro
       />
 
       <div style={styles.controls}>
-        <div style={styles.tabs} role="tablist" aria-label="Filter by status">
-          {TAB_ITEMS.map((t) => {
-            const active = t.id === statusFilter;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                style={{ ...styles.tab, ...(active ? styles.tabActive : null) }}
-                onClick={() => setStatusFilter(t.id)}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
+        <Tabs
+          variant="block"
+          items={TAB_ITEMS}
+          activeId={statusFilter}
+          onSelect={(id) => setStatusFilter(id as StatusFilter)}
+        />
 
         <div style={styles.viewToggle} aria-label="View mode">
           <button
