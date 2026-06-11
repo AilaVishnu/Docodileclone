@@ -3044,6 +3044,32 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
         <div style={styles.bottomBar}>
           {activeAction === 0 ? (
             <>
+              {/* Complete visit / Save changes — only on the current editable
+                  visit with an appointment (canEditForm is false for past
+                  historic visits). Before completion: "Complete visit" (stamps
+                  the end time + marks the appointment Completed). After
+                  completion: shown as "Save changes" ONLY while there are
+                  unsaved edits, and it persists them WITHOUT reopening the
+                  appointment (status stays Completed). Auto-save still runs on
+                  blur and clears the dirty flag, so the button hides again. */}
+              {canEditForm && selectedAppointmentId && (() => {
+                const completed = (selectedAppointmentStatus ?? "").toUpperCase() === "COMPLETED";
+                if (completed && !dirty) return null;
+                return (
+                  <button
+                    type="button"
+                    style={{ ...styles.barBtn, backgroundColor: colors.secondary400, color: colors.neutral900 }}
+                    // onMouseDown + preventDefault so the handler runs BEFORE the
+                    // focused field blurs — otherwise the blur fires a silent
+                    // auto-save that clears the dirty flag and hides this button
+                    // before the click lands (the "no toast" bug).
+                    onMouseDown={(e) => { e.preventDefault(); void handleCompleteVisit(); }}
+                  >
+                    <BillCheckIcon width={18} height={18} />
+                    <span>{completed ? "Save changes" : "Complete visit"}</span>
+                  </button>
+                );
+              })()}
               <button type="button" style={styles.barBtn} onClick={() => handlePrintPrescription("download")}>
                 <DownloadIcon width={18} height={18} />
                 <span>Download</span>
@@ -3056,11 +3082,17 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                 <ShareIcon width={18} height={18} />
                 <span>Share</span>
               </button>
-              <div style={styles.barDivider} aria-hidden />
-              <button type="button" style={{ ...styles.barBtn, ...styles.barBtnDanger }} onClick={handleClearAll}>
-                <TrashIcon width={18} height={18} />
-                <span>Clear all</span>
-              </button>
+              {/* Clear all wipes the prescription — destructive, so only on the
+                  current editable visit. Past/historic visits are read-only. */}
+              {canEditForm && (
+                <>
+                  <div style={styles.barDivider} aria-hidden />
+                  <button type="button" style={{ ...styles.barBtn, ...styles.barBtnDanger }} onClick={handleClearAll}>
+                    <TrashIcon width={18} height={18} />
+                    <span>Clear all</span>
+                  </button>
+                </>
+              )}
             </>
           ) : (
             <>
