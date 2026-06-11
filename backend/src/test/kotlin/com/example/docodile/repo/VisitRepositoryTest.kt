@@ -53,7 +53,7 @@ class VisitRepositoryTest @Autowired constructor(
         entityManager.persist(Visit(clinic = clinicB, patient = patientB, visitDate = LocalDate.of(2026, 4, 1))) // different clinic
         entityManager.flush()
 
-        val found = visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAsc(clinicA.id, patientA.id)
+        val found = visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAscCreatedAtAsc(clinicA.id, patientA.id)
 
         assertEquals(2, found.size, "should only return visits for clinic A + patient A")
         assertEquals(LocalDate.of(2026, 5, 22), found[0].visitDate)
