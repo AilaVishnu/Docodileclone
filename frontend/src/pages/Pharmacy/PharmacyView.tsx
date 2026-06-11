@@ -8,6 +8,7 @@ import { MedIllustration } from "./MedIllustration";
 import { Modal } from "../../components/Modal/Modal";
 import { Button } from "../../components/Button";
 import { IconButton } from "../../components/IconButton";
+import { Tabs } from "../../components/Tabs";
 import { colors, fonts, spacing, radii } from "../../styles/theme";
 import { PlusIcon } from "../../iconsUtil";
 import { ReactComponent as SearchIcon } from "../../assets/search.svg";
@@ -151,24 +152,17 @@ export function PharmacyView() {
         </div>
 
         <div style={styles.toolbarRight}>
-          <div style={styles.sortGroup} role="radiogroup" aria-label="Sort by">
-            {[
-              { value: "alpha" as const, label: "A–Z" },
-              { value: "form" as const, label: "Form" },
-              { value: "attention" as const, label: "Attention" },
-            ].map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                role="radio"
-                aria-checked={groupBy === opt.value}
-                style={{ ...styles.sortChip, ...(groupBy === opt.value ? styles.sortChipActive : null) }}
-                onClick={() => setGroupBy(opt.value)}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          <Tabs
+            variant="block"
+            inline
+            items={[
+              { id: "alpha", label: "A–Z" },
+              { id: "form", label: "Form" },
+              { id: "attention", label: "Attention" },
+            ]}
+            activeId={groupBy}
+            onSelect={(id) => setGroupBy(id as GroupBy)}
+          />
           <div style={styles.viewToggle} aria-label="View mode">
             <button
               type="button"
