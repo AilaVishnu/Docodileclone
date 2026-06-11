@@ -2029,6 +2029,10 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
             transition: "opacity 0.15s ease",
           }}
           aria-disabled={!canEditForm}
+          // Any descendant input/textarea/select change bubbles here — flag
+          // unsaved edits so the "Save changes" button surfaces on an
+          // already-completed visit only after the doctor actually edits.
+          onChange={() => { if (canEditForm) setDirty(true); }}
           // Save-on-blur: any descendant input / textarea / select that
           // loses focus triggers a silent save. React.onBlur surfaces the
           // bubbled focusout, so a single handler at the form root covers
@@ -2810,6 +2814,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                     e.preventDefault();
                                     setReferDoctorId(d.id);
                                     setReferOpen(false);
+                                    setDirty(true);
                                   }}
                                 >
                                   <span style={styles.referMenuItemName}>{d.name}</span>
