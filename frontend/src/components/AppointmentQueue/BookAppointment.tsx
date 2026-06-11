@@ -837,7 +837,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
                   unit="yrs"
                   unitWidth={38}
-                  unitColor={colors.neutral400}
+                  unitColor={colors.neutral600}
                   inputMode="numeric"
                   invalid={!!errors.dob}
                   ariaLabel="Age in years"
@@ -856,7 +856,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
                   unit="mos"
                   unitWidth={38}
-                  unitColor={colors.neutral400}
+                  unitColor={colors.neutral600}
                   inputMode="numeric"
                   invalid={!!errors.dob}
                   ariaLabel="Age in months"
