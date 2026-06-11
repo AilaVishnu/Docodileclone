@@ -137,9 +137,15 @@ DECISION (per the 4-question review):
 - _Not done (deliberate, flagged):_ (a) full `<DataTable>` component; (b) the `PatientFilesPage` → `AppointmentQueue.styles` cross-page coupling still stands — it now inherits the shared header look transitively, but ideally imports `tableStyles` + its own container; (c) unknown rx statuses now render as a grey pill (StatusBadge fallback) instead of grey text — minor, arguably nicer.
 - ⚠️ NOT click-tested live (login wall) — `tsc --noEmit` 0 errors. Spot-check please: **prescription queue** pills (esp. a started session → "Ongoing" sage pill; and that the appointment queue's live timer is unaffected) and the **Stats** overdue/dues table header (now soft-black, lighter).
 
-## 8. Icons — _built, ready for review_
+## 8. Icons — _🔧 PARTIAL: safe-cleanup shipped 2026-06-11; rest deferred_
 IDs: `ICON-dups-1a..5b`, `ICON-chevron-1..3`, `ICON-close-1..4`, `ICON-size-*`, `ICON-color-*`, `ICON-CANON-*`.
-Decision: one `<Icon name size color>` @24 + currentColor; delete 11 dead files; strip baked colours.
+DECISION:
+- **Canonical approved** ("icon-canon proposed ones are fine"): one `<Icon name size color>` @24 + `currentColor`, every asset normalized to `viewBox 0 0 24 24`.
+- **Scope = SAFE CLEANUP ONLY** (user's pick, since the live app can't be click-tested behind the login wall). The risky/visual parts are deferred.
+- ✅ BUILT (shipped): **deleted the 8 truly-dead `.svg` files** (verified 0 refs): `circle-outline`, `circle-outline-2`, `chevron-down-dark`, `chevron-down-light`, `horizontal-line-short-2`, `vertical-line-tall`, `stethoscope-cup`, `curved-connector`. Gallery imports/tiles for those updated so the build stays green.
+  - ⚠️ **Audit was wrong:** it listed 11 dead files, but **3 are still in use** — `bill-check-small.svg` (PrescriptionPage:9), `users-group-rounded.svg` (PrescriptionPage:22), `paid-stamp.svg` (BillCard:6) — so only 8 were deleted.
+- ⏸️ **DEFERRED (needs click-testing — visual changes):** the shared `<Icon>` component + registry; stripping baked hex → `currentColor` on the ~11 colour-baked assets (would re-colour icons across screens); merging the LIVE look-alikes (`restart`/`restart-24` differ on stroke width, etc.); swapping inline ✕/chevron redraws for the component. (Note the ChatPanel single-diagonal ✕ "slash" bug from `ICON-close-2` was already fixed in the Buttons phase via `IconButton`.)
+- `tsc --noEmit` 0 errors.
 
 ## 9. Colors outside tokens — _✅ BUILT 2026-06-11_
 IDs: `CLR-grey-1..9`, `CLR-amber-1..3`, `CLR-red-1..4`, `CLR-invalidfill-1/2`, `CLR-green-1..3`.
