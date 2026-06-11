@@ -50,6 +50,25 @@ input[type="checkbox"] {
   accent-color: #202020;
 }
 
+/* .dark-radio — fully custom radio so BOTH the unchecked ring and the checked
+   fill read in neutral900 (#202020, same as the field icons). accent-color
+   alone only tints the checked state; the unchecked ring stays browser-grey. */
+input[type="radio"].dark-radio {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 1.5px solid #202020; /* neutral900 ring */
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="radio"].dark-radio:checked {
+  background: radial-gradient(circle, #202020 0 4px, transparent 5px);
+}
+
 /* Single grey for all placeholders across the app — matches Figma's
    input-field idle state (border + icon + placeholder share neutral300).
    Split per vendor prefix: a single comma-list gets discarded wholesale

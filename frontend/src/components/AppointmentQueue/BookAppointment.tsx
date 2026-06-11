@@ -770,13 +770,13 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   if (hasManualAge) setForm((prev) => ({ ...prev, age: "", dob: "" }));
                   setShowDobPicker(true);
                 }}
-                style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: spacing.xs, opacity: hasManualAge ? 0.4 : 1 }}
+                style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: spacing.xs, opacity: patientFieldsLocked ? 1 : hasManualAge ? 0.4 : 1 }}
               >
                 <CalendarIcon style={styles.iconFieldIcon} />
                 <span style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>DOB</span>
               </span>
               <input
-                style={{ ...styles.iconFieldInput, opacity: hasManualAge ? 0.4 : 1 }}
+                style={{ ...styles.iconFieldInput, opacity: patientFieldsLocked ? 1 : hasManualAge ? 0.4 : 1 }}
                 type="text"
                 placeholder="dd mm yyyy"
                 disabled={patientFieldsLocked}
@@ -837,6 +837,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
                   unit="yrs"
                   unitWidth={38}
+                  unitColor={colors.neutral400}
                   inputMode="numeric"
                   invalid={!!errors.dob}
                   ariaLabel="Age in years"
@@ -855,6 +856,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
                   unit="mos"
                   unitWidth={38}
+                  unitColor={colors.neutral400}
                   inputMode="numeric"
                   invalid={!!errors.dob}
                   ariaLabel="Age in months"
@@ -872,6 +874,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             {["Male", "Female", "Other"].map((g) => (
               <label key={g} style={styles.radioLabel}>
                 <input
+                  className="dark-radio"
                   type="radio"
                   name="gender"
                   checked={form.gender === g}

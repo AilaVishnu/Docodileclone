@@ -29,6 +29,8 @@ export type MeasureFieldProps = {
   onFocus?: () => void;
   /** Fixed unit-chip width (px). Defaults to a 44px minimum. */
   unitWidth?: number;
+  /** Override the unit-chip text colour (e.g. match a placeholder grey). */
+  unitColor?: string;
   /** "box" = white field for forms (price/qty); default cream = the vitals look. */
   box?: boolean;
   // BP variant
@@ -40,7 +42,7 @@ export type MeasureFieldProps = {
 
 export function MeasureField({
   value, onChange, unit, onToggleUnit, prefix, placeholder, invalid, dense, box,
-  inputMode = "numeric", ariaLabel, onKeyDown, onFocus, unitWidth, bp, value2 = "", onChange2, ariaLabel2,
+  inputMode = "numeric", ariaLabel, onKeyDown, onFocus, unitWidth, unitColor, bp, value2 = "", onChange2, ariaLabel2,
 }: MeasureFieldProps) {
   const switchable = !!onToggleUnit;
   const height = dense ? 28 : "var(--input-h, 40px)";
@@ -99,7 +101,7 @@ export function MeasureField({
               display: "flex", alignItems: "center", justifyContent: "center", whiteSpace: "nowrap",
               fontSize: fonts.size.s, fontFamily: fonts.family.primary, background: colors.neutral100, border: "none",
               borderLeft: `${strokes.xs} solid ${colors.neutral200}`,
-              color: switchable ? colors.neutral800 : colors.neutral500, cursor: switchable ? "pointer" : "default" }}>{unit}</button>
+              color: unitColor ?? (switchable ? colors.neutral800 : colors.neutral500), cursor: switchable ? "pointer" : "default" }}>{unit}</button>
         )}
       </div>
     );
@@ -132,7 +134,7 @@ export function MeasureField({
             fontSize: fonts.size.s, fontFamily: fonts.family.primary,
             backgroundColor: colors.neutral100,
             border: `${strokes.xs} solid ${invalid ? colors.red200 : switchable ? colors.primary500 : colors.primary300}`,
-            color: switchable ? colors.neutral800 : colors.neutral500,
+            color: unitColor ?? (switchable ? colors.neutral800 : colors.neutral500),
             borderRadius: `0 ${R}px ${R}px 0`,
             cursor: switchable ? "pointer" : "default",
           }}
