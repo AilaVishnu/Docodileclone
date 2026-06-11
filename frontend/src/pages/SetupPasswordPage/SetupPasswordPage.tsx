@@ -268,7 +268,7 @@ export function SetupPasswordPage() {
           </div>
 
           {error && (
-            <p style={{ fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: "#e53935", margin: 0 }}>
+            <p style={{ fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.red100, margin: 0 }}>
               {error}
             </p>
           )}

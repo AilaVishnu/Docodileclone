@@ -646,7 +646,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             </div>
           )}
           <div style={{ position: "relative" }}>
-            <div style={{ ...styles.iconField, ...(errors.name ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}), ...(patientFieldsLocked ? { opacity: 0.65 } : {}) }}>
+            <div style={{ ...styles.iconField, ...(errors.name ? { borderBottomColor: colors.red200, backgroundColor: colors.redAlpha10 } : {}), ...(patientFieldsLocked ? { opacity: 0.65 } : {}) }}>
               <UserHandsIcon style={styles.iconFieldIcon} />
               <input
                 style={styles.iconFieldInput}
@@ -684,7 +684,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
           <div style={styles.row}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ ...styles.iconField, ...(errors.email ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}), ...(patientFieldsLocked ? { opacity: 0.65 } : {}) }}>
+              <div style={{ ...styles.iconField, ...(errors.email ? { borderBottomColor: colors.red200, backgroundColor: colors.redAlpha10 } : {}), ...(patientFieldsLocked ? { opacity: 0.65 } : {}) }}>
                 <LetterIcon style={styles.iconFieldIcon} />
                 <input
                   style={styles.iconFieldInput}
@@ -703,7 +703,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               )}
             </div>
             <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
-            <div style={{ ...styles.iconField, ...(errors.phone ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}), ...(patientFieldsLocked ? { opacity: 0.65 } : {}) }}>
+            <div style={{ ...styles.iconField, ...(errors.phone ? { borderBottomColor: colors.red200, backgroundColor: colors.redAlpha10 } : {}), ...(patientFieldsLocked ? { opacity: 0.65 } : {}) }}>
               <PhoneIcon style={styles.iconFieldIcon} />
               <input
                 style={styles.iconFieldInput}
@@ -759,7 +759,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
           </div>
 
           <div style={styles.row}>
-            <div style={{ ...styles.iconField, position: "relative", flex: 1, minWidth: 0, ...(errors.dob ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}), ...(patientFieldsLocked ? { opacity: 0.65, pointerEvents: "none" as const } : {}) }}>
+            <div style={{ ...styles.iconField, position: "relative", flex: 1, minWidth: 0, ...(errors.dob ? { borderBottomColor: colors.red200, backgroundColor: colors.redAlpha10 } : {}), ...(patientFieldsLocked ? { opacity: 0.65, pointerEvents: "none" as const } : {}) }}>
               <span
                 onClick={() => {
                   if (patientFieldsLocked) return;
@@ -817,7 +817,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 minWidth: 0,
                 gap: spacing.xs,
                 justifyContent: "flex-start",
-                ...(errors.dob ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}),
+                ...(errors.dob ? { borderBottomColor: colors.red200, backgroundColor: colors.redAlpha10 } : {}),
                 ...(patientFieldsLocked ? { opacity: 0.65, pointerEvents: "none" as const } : {}),
               }}
             >
@@ -980,7 +980,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             // stays editable). New-booking flow is unaffected.
             const timeLocked = !!editingAppointment && form.isWalkin;
             return (
-            <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative", ...(errors.time ? { borderColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
+            <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative", ...(errors.time ? { borderColor: colors.red200, backgroundColor: colors.redAlpha10 } : {}) }}>
             <div
               style={{ ...styles.iconField, borderBottom: "none", cursor: timeLocked ? "not-allowed" : "pointer", padding: 0, opacity: timeLocked ? 0.65 : 1 }}
               onClick={() => { if (!timeLocked) setShowTimePicker(true); }}

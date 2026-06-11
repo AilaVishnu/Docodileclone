@@ -1935,7 +1935,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     // misleading screen on its way to the actual chart.
     if (selectedPatientId !== null) {
       return (
-        <div ref={pageRootRef} style={{ padding: 40, textAlign: "center", color: "#888", fontFamily: "'Inter', sans-serif", fontSize: 14 }}>
+        <div ref={pageRootRef} style={{ padding: 40, textAlign: "center", color: colors.neutral500, fontFamily: "'Inter', sans-serif", fontSize: 14 }}>
           Loading patient file…
         </div>
       );
@@ -3341,7 +3341,7 @@ function AISoapDraftModal({
           style={{
             background: "none",
             border: "none",
-            color: value ? "#2c6e49" : "#aaa",
+            color: value ? colors.secondary600 : colors.neutral400,
             cursor: value ? "pointer" : "default",
             textDecoration: "underline",
             fontSize: 12,
@@ -3351,7 +3351,7 @@ function AISoapDraftModal({
           Apply to {target}
         </button>
       </div>
-      <div style={{ minHeight: 32, padding: "8px 10px", background: "#fafafa", borderRadius: 6, fontSize: 13, color: value ? "#222" : "#888", whiteSpace: "pre-wrap" }}>
+      <div style={{ minHeight: 32, padding: "8px 10px", background: colors.neutral150, borderRadius: 6, fontSize: 13, color: value ? colors.neutral900 : colors.neutral500, whiteSpace: "pre-wrap" }}>
         {value || "—"}
       </div>
     </div>
@@ -3364,9 +3364,9 @@ function AISoapDraftModal({
           <h3 style={{ margin: 0, fontSize: 18 }}>AI SOAP draft</h3>
           <IconButton ariaLabel="Close" onClick={onClose} />
         </div>
-        {loading && <p style={{ color: "#666", fontStyle: "italic" }}>Drafting…</p>}
+        {loading && <p style={{ color: colors.neutral600, fontStyle: "italic" }}>Drafting…</p>}
         {!loading && error && !data?.subjective && (
-          <p style={{ color: "#b54040", fontSize: 13 }}>AI unavailable: {error}</p>
+          <p style={{ color: colors.red200, fontSize: 13 }}>AI unavailable: {error}</p>
         )}
         {data && !loading && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -3374,7 +3374,7 @@ function AISoapDraftModal({
             <Section label="Objective" value={data.objective} onApply={onApplyObjective} target="Private notes" />
             <Section label="Assessment" value={data.assessment} onApply={onApplyDiagnosis} target="Diagnosis" />
             <Section label="Plan" value={data.plan} onApply={onApplyPlan} target="Notes for patient" />
-            <p style={{ fontSize: 11, color: "#888", margin: 0 }}>AI-generated — review before applying.</p>
+            <p style={{ fontSize: 11, color: colors.neutral500, margin: 0 }}>AI-generated — review before applying.</p>
           </div>
         )}
       </div>

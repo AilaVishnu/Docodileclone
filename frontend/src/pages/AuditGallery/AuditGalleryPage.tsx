@@ -29,7 +29,7 @@ const CATS: [string, string, "shipped" | "review"][] = [
   ["cards", "6 · Cards", "shipped"],
   ["tables", "7 · Tables", "shipped"],
   ["icons", "8 · Icons", "review"],
-  ["colors", "9 · Colors", "review"],
+  ["colors", "9 · Colors", "shipped"],
   ["type", "10 · Type / Space", "review"],
   ["pages", "11 · Pages", "review"],
 ];

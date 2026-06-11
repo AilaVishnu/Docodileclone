@@ -141,9 +141,17 @@ DECISION (per the 4-question review):
 IDs: `ICON-dups-1a..5b`, `ICON-chevron-1..3`, `ICON-close-1..4`, `ICON-size-*`, `ICON-color-*`, `ICON-CANON-*`.
 Decision: one `<Icon name size color>` @24 + currentColor; delete 11 dead files; strip baked colours.
 
-## 9. Colors outside tokens — _built, ready for review_
+## 9. Colors outside tokens — _✅ BUILT 2026-06-11_
 IDs: `CLR-grey-1..9`, `CLR-amber-1..3`, `CLR-red-1..4`, `CLR-invalidfill-1/2`, `CLR-green-1..3`.
-Decision: approve each off-token→token mapping (greys→neutral*, ambers→yellow*, reds→red*, invalid fill→redAlpha10).
+DECISION (per verdicts):
+- **Grey ramp → neutral\*** — do all suggested: `#222`→neutral900 · `#555`→neutral700 · `#666`→neutral600 · `#888`→neutral500 · `#aaa`→neutral400 · `#bbb`→neutral300 · `#fafafa`→neutral150. (`#444`/`#999` had **no live usage** → skipped.)
+- **Amber banners → CLR-amber-3** (the tokenized look): `yellowAlpha10` fill / `yellow200` border / `neutral900` text. Both off-token banners (AddReportModal, PrescriptionPage.styles) repointed.
+- **Clinical reds → red100/200** — do suggested: `#E53E3E`/`#e53935`→red100 · `#b54040`→red200. (`#C0392B`/CLR-red-3 was **already fixed** in the Dropdowns phase → skipped.)
+- **Invalid-field tint → CLR-invalidfill-2** = `redAlpha10`. All 7 `rgba(255,0,0,0.05)` sites (TextInput.styles + 6× BookAppointment) repointed.
+- **Pharmacy CSV greens → secondary ONLY** (user override: "instead of green200, secondary only"): `#2C6E49` text/accent/border → `secondary600`; `#F1F8F3` fill → `secondary50`. No `green200` used. (Also converted the one `#2C6E49` in PrescriptionPage's AI-SOAP area for consistency.)
+- ✅ BUILT: ~25 literals across 10 files swapped to tokens (PharmacyView, PrescriptionPage(+.styles), HomePage, FileViewer, SetupPasswordPage, AddServiceModal, AddReportModal, TextInput.styles, BookAppointment). The 2 amber borders became template literals to interpolate `colors.yellow200`. `tsc --noEmit` 0 errors.
+- _Excluded (intentionally literal, untouched):_ art/illustration files + the print stylesheet.
+- ⚠️ NOT click-tested live (login wall). Spot-check: Pharmacy CSV import zone (greens now olive/sage; greys now neutral), the AI-SOAP amber banner (text now near-black on soft yellow), and an invalid form field tint (Book Appointment).
 
 ## 10. Typography / spacing — _built, ready for review_
 IDs: `TYPE-scale`+`TYPE-1..23`, `SPACE-scale`+`SPACE-1..9`, `RAD-scale`+`RAD-1..5`.

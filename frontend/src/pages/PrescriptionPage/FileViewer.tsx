@@ -33,7 +33,7 @@ type Arrow = { id: string; type: "arrow"; x1: number; y1: number; x2: number; y2
 type Rect = { id: string; type: "rect"; x: number; y: number; w: number; h: number; author: string; createdAt: number };
 type Annotation = Pin | PencilStroke | Arrow | Rect;
 
-const ANNOTATION_COLOR = "#E53E3E"; // clinical red
+const ANNOTATION_COLOR = colors.red100; // clinical red
 const PIN_RADIUS = 16;
 
 type Props = {
@@ -1043,7 +1043,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 22,
     height: 22,
     borderRadius: "50%",
-    backgroundColor: "#E53E3E",
+    backgroundColor: colors.red100,
     color: colors.neutral100,
     display: "inline-flex",
     alignItems: "center",

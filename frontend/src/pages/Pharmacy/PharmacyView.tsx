@@ -255,7 +255,7 @@ export function PharmacyView() {
 
       <Toast message={toastMsg} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
       {loading && inventory.length === 0 && (
-        <div style={{ padding: 24, textAlign: "center", color: "#666" }}>Loading inventory…</div>
+        <div style={{ padding: 24, textAlign: "center", color: colors.neutral600 }}>Loading inventory…</div>
       )}
     </div>
   );
@@ -310,7 +310,7 @@ function ImportInventoryBody({ onClose, onImported }: {
   return (
     <div style={{ width: "min(640px, 92vw)", padding: 24, display: "flex", flexDirection: "column", gap: 12 }}>
       <h2 style={{ margin: 0, fontSize: 18 }}>Import inventory (CSV)</h2>
-      <p style={{ margin: 0, fontSize: 13, color: "#666" }}>
+      <p style={{ margin: 0, fontSize: 13, color: colors.neutral600 }}>
         Upload the supplier's <code style={{ fontSize: 12 }}>current_inventory_*.csv</code> file.
         Existing batches refresh in place (matched on name + batch + invoice), new batches are added.
       </p>
@@ -339,32 +339,32 @@ function ImportInventoryBody({ onClose, onImported }: {
           if (f) readFile(f);
         }}
         style={{
-          border: `2px dashed ${dragOver ? "#2c6e49" : "#bbb"}`,
+          border: `2px dashed ${dragOver ? colors.secondary600 : colors.neutral300}`,
           borderRadius: 8,
           padding: 24,
           textAlign: "center",
           cursor: "pointer",
-          background: dragOver ? "#f1f8f3" : "#fafafa",
+          background: dragOver ? colors.secondary50 : colors.neutral150,
           fontSize: 13,
-          color: "#555",
+          color: colors.neutral700,
         }}
       >
         {fileName ? (
           <>
-            <div style={{ fontWeight: 600, color: "#222" }}>{fileName}</div>
-            <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+            <div style={{ fontWeight: 600, color: colors.neutral900 }}>{fileName}</div>
+            <div style={{ fontSize: 12, color: colors.neutral600, marginTop: 4 }}>
               {preview.rows.length} of {preview.rawLines} rows ready to import. Click to pick a different file.
             </div>
           </>
         ) : (
           <>
-            <div style={{ fontWeight: 600, color: "#222" }}>Click to choose a CSV file</div>
-            <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>…or drag & drop it here.</div>
+            <div style={{ fontWeight: 600, color: colors.neutral900 }}>Click to choose a CSV file</div>
+            <div style={{ fontSize: 12, color: colors.neutral600, marginTop: 4 }}>…or drag & drop it here.</div>
           </>
         )}
       </div>
 
-      {error && <span style={{ fontSize: 12, color: "#b54040" }}>{error}</span>}
+      {error && <span style={{ fontSize: 12, color: colors.red200 }}>{error}</span>}
 
       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
         <Button variant="light" size="sm" onClick={onClose} disabled={importing}>Cancel</Button>

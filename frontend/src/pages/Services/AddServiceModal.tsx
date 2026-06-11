@@ -219,7 +219,7 @@ export function AddServiceModal({ isOpen, onClose, onSave, initial }: Props) {
         </div>
 
         {saveError && (
-          <div style={{ padding: "0 24px", color: "#b54040", fontSize: 13 }}>
+          <div style={{ padding: "0 24px", color: colors.red200, fontSize: 13 }}>
             {saveError}
           </div>
         )}

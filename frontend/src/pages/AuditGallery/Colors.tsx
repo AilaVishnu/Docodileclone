@@ -153,10 +153,17 @@ const FieldMock = ({
 
 export function ColorsCategory() {
   return (
-    <Section id="colors" title="9 · Colors outside tokens">
+    <Section id="colors" title="9 · Colors outside tokens" status="shipped">
       <Note>
-        Each card shows an OFF-TOKEN colour found in the codebase (hex + usage count + a site or two) next to the nearest
-        existing token it should map to. Approve a row to mean “replace the literal with this token”.
+        <b>SHIPPED.</b> Every off-token literal below was replaced with its mapped token: the grey
+        ramp → <code>neutral*</code>; the two amber banners → the tokenized <b>CLR-amber-3</b> look
+        (<code>yellowAlpha10</code> / <code>yellow200</code> / <code>neutral900</code>); clinical
+        reds → <code>red100</code>/<code>red200</code>; the invalid-field tint → <code>redAlpha10</code>{" "}
+        (<b>CLR-invalidfill-2</b>); and the Pharmacy CSV greens → the <b>secondary olive ramp only</b>{" "}
+        (no green200, per review: <code>secondary600</code> / <code>secondary50</code>).{" "}
+        <code>#444</code> &amp; <code>#999</code> had no live usage and <code>#C0392B</code>{" "}
+        (CLR-red-3) was already fixed in the Dropdowns phase — all skipped. Art / illustration /
+        print files stay literal by design.
       </Note>
 
       {/* ── CLR-grey ─────────────────────────────────────────────────────── */}
@@ -294,8 +301,8 @@ export function ColorsCategory() {
 
       {/* ── CLR-green ────────────────────────────────────────────────────── */}
       <Sub
-        title="Pharmacy CSV greens → secondary*/green200"
-        note="The pharmacy CSV summary uses two greens that aren't in the palette at all (PharmacyView.tsx:341-366). Closest existing tokens are the secondary olive ramp and green200."
+        title="Pharmacy CSV greens → secondary* (no green200)"
+        note="SHIPPED → the secondary olive ramp ONLY, per review (no green200): #2C6E49 text/accent/border → secondary600, #F1F8F3 fill → secondary50."
       >
         <Pair
           id="CLR-green-1"
@@ -309,8 +316,8 @@ export function ColorsCategory() {
         />
         <Pair
           id="CLR-green-3"
-          off={{ value: "#2C6E49", name: "#2C6E49", sites: "PharmacyView.tsx:366 (accent)" }}
-          token={{ value: colors.green200, name: "green200", sub: "#1FC16B" }}
+          off={{ value: "#2C6E49", name: "#2C6E49", sites: "PharmacyView.tsx (accent)" }}
+          token={{ value: colors.secondary600, name: "secondary600", sub: "#6C8145 · was green200" }}
         />
       </Sub>
 

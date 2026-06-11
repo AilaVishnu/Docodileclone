@@ -30,6 +30,6 @@ export const styles: Record<string, CSSProperties> = {
   },
   errorContainer: {
     borderBottom: `1px solid ${colors.red200}`,
-    backgroundColor: "rgba(255, 0, 0, 0.05)",
+    backgroundColor: colors.redAlpha10,
   },
 };

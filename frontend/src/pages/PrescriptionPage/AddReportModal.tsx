@@ -642,12 +642,12 @@ const styles: Record<string, React.CSSProperties> = {
   uploadError: {
     margin: 0,
     padding: `${spacing.s} ${spacing.m}`,
-    backgroundColor: "#FFF3CD",
-    border: `1px solid #FFEAA7`,
+    backgroundColor: colors.yellowAlpha10,
+    border: `1px solid ${colors.yellow200}`,
     borderRadius: radii.m,
     fontFamily: fonts.family.primary,
     fontSize: fonts.control.sm,
-    color: "#856404",
+    color: colors.neutral900,
   },
   footer: {
     display: "flex",

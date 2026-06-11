@@ -306,7 +306,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         return (
           <div>
             <h1 style={styles.title}>{activeTab}</h1>
-            <p style={{ marginTop: '12px', color: '#666' }}>This section is currently under development.</p>
+            <p style={{ marginTop: '12px', color: colors.neutral600 }}>This section is currently under development.</p>
           </div>
         );
     }
