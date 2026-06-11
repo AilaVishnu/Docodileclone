@@ -1509,14 +1509,21 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
 
   const handleSave = async (opts?: { silent?: boolean }) => {
     if (!activeVisit || !selectedPatientId) return;
+    // Never write the form to a visit it wasn't loaded from. During a visit
+    // switch the active visit changes one render before the form repopulates;
+    // saving in that gap would copy the old visit's data onto the new one (and
+    // blank the old). Skip until the form has caught up to the active visit.
+    if (loadedVisitId !== activeVisit.id) return;
     setSaving(true);
     try {
       await updateVisit(activeVisit.id, buildSaveRequest());
       await refetchVisits();
+      setDirty(false);
       // The doctor's just-saved schedule is now the clinic's latest for any
       // medicines in this visit — clear the autofill cache so the next entry
       // re-fetches and reflects those edits.
       clinicWideRxCacheRef.current.clear();
+      // Auto-saves stay silent; only explicit actions toast.
       if (!opts?.silent) showToast("Visit saved");
     } catch (e) {
       // Auto-saves stay quiet on success but should still surface
