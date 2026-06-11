@@ -358,6 +358,9 @@ body {
     --book-col-form: 480px;
     --book-col-right: 280px;
     --book-grid-gap: 12px;
+    /* Compact tier: the content panel's main flex gap (the gap between every
+       page's sticky header and its body) tightens via --main-gap to 16px. */
+    --main-gap: 16px;
 
     /* Prescription vitals — one fewer column + tighter gap at compact.
        --rx-content-max holds (fixed cap, gutters absorb the difference). */

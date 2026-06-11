@@ -15,13 +15,17 @@ interface PageHeaderProps {
   wrapTitle?: boolean;
   /** Override / extend the outer bar style (e.g. a page whose shell uses non-standard padding). */
   style?: CSSProperties;
+  /** Override / extend the inner 3-zone row (max-width / padding). Use when a page
+   *  needs its right actions to align with the TopNav avatar rather than the
+   *  capped content grid. */
+  innerStyle?: CSSProperties;
 }
 
 /**
  * Shared sticky app-bar for full-page views. Three zones: back (left),
  * title (center), actions (right). See PageHeader.styles.ts for layout notes.
  */
-export function PageHeader({ title, onBack, backLabel = "Back", actions, wrapTitle = true, style }: PageHeaderProps) {
+export function PageHeader({ title, onBack, backLabel = "Back", actions, wrapTitle = true, style, innerStyle }: PageHeaderProps) {
   return (
     <header style={{ ...styles.bar, ...style }}>
       {onBack && (
@@ -30,7 +34,7 @@ export function PageHeader({ title, onBack, backLabel = "Back", actions, wrapTit
         </button>
       )}
 
-      <div style={styles.inner}>
+      <div style={{ ...styles.inner, ...innerStyle }}>
         {/* empty left cell balances the right actions cell so the title stays centered */}
         <div />
 

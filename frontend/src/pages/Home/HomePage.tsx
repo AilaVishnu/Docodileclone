@@ -252,7 +252,9 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       padding: "var(--page-pad-top) var(--page-pad-x) var(--page-pad-bottom)",
       display: "flex",
       flexDirection: "column" as const,
-      gap: "24px",
+      // Sticky header → page body gap. Generous (24) on the baseline tier,
+      // tighter (16) on the compact tier via --main-gap (set in globals.css).
+      gap: "var(--main-gap, 24px)",
       flex: 1,
       minHeight: 0,                       // let the flex child shrink so it can scroll
       overflowY: "auto" as const,

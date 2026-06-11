@@ -561,6 +561,10 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       <PageHeader
         onBack={() => onBack()}
         backLabel="Back to Appointments"
+        // Span the full bar (no content cap) and use TopNav's right padding
+        // (spacing.xl = 24px) so the Advanced toggle right-aligns with the
+        // avatar at any viewport.
+        innerStyle={{ maxWidth: "none", paddingRight: spacing.xl }}
         title={
           editingAppointment ? (
             "Edit Appointment"

@@ -14,7 +14,7 @@ export const styles: Record<string, CSSProperties> = {
     gap: "12px",
     padding: "24px",
     backgroundColor: colors.neutral100,
-    borderRadius: "16px 16px 0 0", // top-only (torn zigzag below); 12 → 16 to match cards
+    borderRadius: "8px 8px 0 0", // top-only (torn zigzag below); 8 to match the other cards on Book Appointment (radii.m)
     flex: 1,
   },
 
@@ -188,8 +188,9 @@ export const styles: Record<string, CSSProperties> = {
   toggleActive: {
     padding: "4px 10px",
     border: "none",
-    backgroundColor: colors.active.shade100,
-    color: colors.neutral900,
+    // Inverted: black bg + cream/white symbol so the active state really pops.
+    backgroundColor: colors.neutral900,
+    color: colors.neutral100,
     fontSize: fonts.size.s,
     fontWeight: 600,
     cursor: "pointer",
