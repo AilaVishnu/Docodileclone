@@ -334,15 +334,16 @@ function MockCalendar({ showButton, disablePast }: { showButton?: boolean; disab
         <span style={{ fontWeight: 600, fontSize: fonts.size.m, color: colors.neutral900 }}>June 2026</span>
         <span style={{ color: colors.neutral700 }}>›</span>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, textAlign: "center" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, textAlign: "center" }}>
         {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((d, i) => <div key={i} style={{ fontSize: 9, color: colors.neutral500 }}>{d}</div>)}
         {days.map(d => {
           const isToday = d === today;
           const isPast = !!disablePast && d < today;
           return (
-            <div key={d} style={{ aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: fonts.size.xs,
+            <div key={d} style={{ aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: fonts.size.s, fontWeight: fonts.weight.semibold,
               borderRadius: "50%", background: isToday ? colors.active.shade500 : "transparent",
-              color: isToday ? colors.neutral100 : colors.neutral900, opacity: isPast ? 0.35 : 1 }}>{d}</div>
+              color: isToday ? colors.neutral100 : isPast ? colors.neutral200 : colors.neutral900 }}>{d}</div>
           );
         })}
       </div>
@@ -364,7 +365,7 @@ export function ToastSection() {
         <Toast message="Saved successfully" isVisible={open} onClose={() => setOpen(false)} />
       </Sub>
       <Sub title="DatePicker — the 3 variants (one component)"
-        note="All 10 date pickers in the app are this same component; they differ only by the two boolean props below.">
+        note="All 10 date pickers in the app are this same component; they differ only by the two boolean props below. Dates: size s · semibold · neutral900 · disabled neutral200 · 6px grid gap.">
         <Row align="flex-start" gap={spacing.xl}>
           <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
             <Label><b>A · header</b> — showDoneButton</Label>

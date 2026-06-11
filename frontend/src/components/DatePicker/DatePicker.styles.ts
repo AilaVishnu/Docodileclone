@@ -78,7 +78,7 @@ export const styles: Record<string, CSSProperties> = {
   daysGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(7, 1fr)",
-    gap: "4px",
+    gap: "6px", // +2px breathing room between dates
   },
 
   dayCell: {
@@ -87,7 +87,9 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: fonts.size.xs,
+    fontSize: fonts.size.s,
+    fontWeight: fonts.weight.semibold,
+    color: colors.neutral900,
     cursor: "pointer",
     borderRadius: "8px",
     transition: "background-color 0.2s",
@@ -109,7 +111,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   disabledDay: {
-    color: colors.neutral300,
+    color: colors.neutral200,
     cursor: "not-allowed",
   },
 
