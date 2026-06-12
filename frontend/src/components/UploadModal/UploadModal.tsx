@@ -101,7 +101,7 @@ export function UploadModal({
 const S: Record<string, React.CSSProperties> = {
   container: { display: "flex", flexDirection: "column", gap: spacing.l, width: "100%", maxHeight: "80vh", overflowY: "auto" },
   header: { position: "relative", textAlign: "center" },
-  title: { margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.semibold, color: colors.neutral900 },
+  title: { margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.regular, color: colors.neutral900 },
   subtitle: { margin: "4px 0 0", fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral600 },
   dropZone: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: `${spacing.xl} ${spacing.l}`, border: `1.5px dashed ${colors.primary400}`, borderRadius: radii.l, backgroundColor: colors.neutral100, cursor: "pointer", width: "100%", boxSizing: "border-box", fontFamily: fonts.family.primary, transition: "background-color 0.15s ease, border-color 0.15s ease" },
   dropZoneActive: { backgroundColor: colors.primary100, borderColor: colors.primary600 },
