@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
+import { colors, fonts, spacing } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   cardBody: {
@@ -16,9 +16,10 @@ export const styles: Record<string, CSSProperties> = {
 
   title: {
     margin: 0,
-    fontSize: fonts.size.h6,
-    lineHeight: fonts.lineHeight.h6,
-    fontWeight: fonts.weight.semibold,
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h5,
+    lineHeight: fonts.lineHeight.h5,
+    fontWeight: fonts.weight.regular,
     color: colors.neutral900,
   },
 
@@ -49,65 +50,6 @@ export const styles: Record<string, CSSProperties> = {
   required: {
     color: colors.red200,
     marginLeft: 2,
-  },
-
-  inputWrap: {
-    display: "flex",
-    alignItems: "center",
-    gap: spacing.xs,
-    border: `${strokes.xs} solid ${colors.neutral200}`,
-    borderRadius: radii.m,
-    padding: `${spacing.xs} ${spacing.s}`,
-    backgroundColor: colors.neutral100,
-  },
-
-  inputWrapError: {
-    borderColor: colors.red200,
-  },
-
-  prefix: {
-    fontSize: fonts.size.s,
-    color: colors.neutral500,
-  },
-
-  suffix: {
-    fontSize: fonts.size.s,
-    color: colors.neutral500,
-  },
-
-  input: {
-    flex: 1,
-    width: "100%",
-    border: "none",
-    outline: "none",
-    background: "transparent",
-    fontSize: fonts.size.s,
-    fontFamily: fonts.family.primary,
-    color: colors.neutral900,
-    minWidth: 0,
-    MozAppearance: "textfield",
-  },
-
-  modeToggle: {
-    display: "inline-flex",
-    border: `${strokes.xs} solid ${colors.neutral200}`,
-    borderRadius: radii.s,
-    overflow: "hidden",
-  },
-
-  modeBtn: {
-    border: "none",
-    background: "transparent",
-    cursor: "pointer",
-    padding: `2px ${spacing.xs}`,
-    fontSize: fonts.size.xs,
-    fontFamily: fonts.family.primary,
-    color: colors.neutral500,
-  },
-
-  modeBtnActive: {
-    backgroundColor: colors.neutral900,
-    color: colors.neutral100,
   },
 
   errorText: {

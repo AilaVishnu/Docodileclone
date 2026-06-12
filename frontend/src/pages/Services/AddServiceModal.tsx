@@ -4,21 +4,9 @@ import { Service, DiscountMode } from "./types";
 import { Modal } from "../../components/Modal";
 import { IconButton } from "../../components/IconButton";
 import { Button } from "../../components/Button";
+import { Field } from "../../components/Field";
 import { MeasureField } from "../../components/MeasureField";
 import { colors, spacing } from "../../styles/theme";
-
-const NO_SPINNER_CLASS = "no-spinner";
-
-if (typeof document !== "undefined" && !document.getElementById("services-modal-style")) {
-  const el = document.createElement("style");
-  el.id = "services-modal-style";
-  el.textContent = `
-    .${NO_SPINNER_CLASS}::-webkit-outer-spin-button,
-    .${NO_SPINNER_CLASS}::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-    .${NO_SPINNER_CLASS} { -moz-appearance: textfield; }
-  `;
-  document.head.appendChild(el);
-}
 
 type Props = {
   isOpen: boolean;
@@ -109,62 +97,42 @@ export function AddServiceModal({ isOpen, onClose, onSave, initial }: Props) {
           <div style={{ ...styles.row, gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)" }}>
             <div style={styles.field}>
               <label style={styles.label}>Name<span style={styles.required}>*</span></label>
-              <div style={{ ...styles.inputWrap, ...(touched && nameError ? styles.inputWrapError : {}) }}>
-                <input
-                  style={styles.input}
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="e.g. Consultation"
-                  autoFocus
-                />
-              </div>
-              {touched && nameError && <div style={styles.errorText}>Name is required</div>}
+              <Field
+                variant="box"
+                value={form.name}
+                onChange={(v) => setForm({ ...form, name: v })}
+                placeholder="e.g. Consultation"
+                autoFocus
+                error={touched && nameError}
+                errorMessage="Name is required"
+              />
             </div>
 
             <div style={styles.field}>
               <label style={styles.label}>Short Form<span style={styles.required}>*</span></label>
-              <div style={{ ...styles.inputWrap, ...(touched && codeError ? styles.inputWrapError : {}) }}>
-                <input
-                  style={{ ...styles.input, textTransform: "uppercase", letterSpacing: "0.04em" }}
-                  value={form.code}
-                  onChange={(e) => setForm({ ...form, code: e.target.value.replace(/\s+/g, "").slice(0, 4) })}
-                  placeholder="GC"
-                  maxLength={4}
-                />
-              </div>
-              {touched && codeError && <div style={styles.errorText}>Short form is required</div>}
+              <Field
+                variant="box"
+                value={form.code}
+                onChange={(v) => setForm({ ...form, code: v.replace(/\s+/g, "").slice(0, 4) })}
+                placeholder="GC"
+                maxLength={4}
+                error={touched && codeError}
+                errorMessage="Short form is required"
+                inputStyle={{ textTransform: "uppercase", letterSpacing: "0.04em" }}
+              />
             </div>
           </div>
 
           <div style={styles.row}>
             <div style={styles.field}>
               <label style={styles.label}>Price<span style={styles.required}>*</span></label>
-              <MeasureField
-                box
-                prefix="₹"
-                value={form.price}
-                onChange={(val) => setForm({ ...form, price: val })}
-                inputMode="decimal"
-                placeholder="0"
-                invalid={touched && !!priceError}
-              />
+              <MeasureField box prefix="₹" value={form.price} onChange={(v) => setForm({ ...form, price: v })} inputMode="decimal" placeholder="0" invalid={touched && !!priceError} />
               {touched && priceError && <div style={styles.errorText}>Enter a valid price</div>}
             </div>
 
             <div style={styles.field}>
               <label style={styles.label}>Duration</label>
-              <div style={{ ...styles.inputWrap, ...(touched && durationError ? styles.inputWrapError : {}) }}>
-                <input
-                  style={styles.input}
-                  type="number"
-                  className={NO_SPINNER_CLASS}
-                  min={0}
-                  value={form.duration}
-                  onChange={(e) => setForm({ ...form, duration: e.target.value })}
-                  placeholder="15"
-                />
-                <span style={styles.suffix}>min</span>
-              </div>
+              <MeasureField box unit="min" value={form.duration} onChange={(v) => setForm({ ...form, duration: v })} inputMode="decimal" placeholder="15" invalid={touched && durationError} />
               {touched && durationError && <div style={styles.errorText}>Invalid duration</div>}
             </div>
           </div>
@@ -172,46 +140,20 @@ export function AddServiceModal({ isOpen, onClose, onSave, initial }: Props) {
           <div style={styles.row}>
             <div style={styles.field}>
               <label style={styles.label}>Discount</label>
-              <div style={styles.inputWrap}>
-                <input
-                  style={styles.input}
-                  type="number"
-                  className={NO_SPINNER_CLASS}
-                  min={0}
-                  value={form.discount}
-                  onChange={(e) => setForm({ ...form, discount: e.target.value })}
-                  placeholder="0"
-                />
-                <div style={styles.modeToggle}>
-                  {(["%", "₹"] as DiscountMode[]).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      style={{ ...styles.modeBtn, ...(form.discountMode === mode ? styles.modeBtnActive : {}) }}
-                      onClick={() => setForm({ ...form, discountMode: mode })}
-                    >
-                      {mode}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <MeasureField
+                box
+                value={form.discount}
+                onChange={(v) => setForm({ ...form, discount: v })}
+                unit={form.discountMode}
+                onToggleUnit={() => setForm({ ...form, discountMode: form.discountMode === "%" ? "₹" : "%" })}
+                inputMode="decimal"
+                placeholder="0"
+              />
             </div>
 
             <div style={styles.field}>
               <label style={styles.label}>GST</label>
-              <div style={styles.inputWrap}>
-                <input
-                  style={styles.input}
-                  type="number"
-                  className={NO_SPINNER_CLASS}
-                  min={0}
-                  max={100}
-                  value={form.gst}
-                  onChange={(e) => setForm({ ...form, gst: e.target.value })}
-                  placeholder="0"
-                />
-                <span style={styles.suffix}>%</span>
-              </div>
+              <MeasureField box unit="%" value={form.gst} onChange={(v) => setForm({ ...form, gst: v })} inputMode="decimal" placeholder="0" />
             </div>
           </div>
         </div>
