@@ -5,7 +5,7 @@ import { Button } from "../Button";
 import { IconButton } from "../IconButton";
 import { DataGrid, GridColumn } from "../DataGrid/DataGrid";
 import { DatePicker } from "../DatePicker/DatePicker";
-import { ChevronDown } from "../icons/ChevronDown";
+import { FillInput } from "../FillInput";
 import { MeasureField } from "../MeasureField";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 import { styles as bill } from "./BillCard.styles";
@@ -19,7 +19,7 @@ import { PlusIcon } from "../../iconsUtil";
 // BillModal — the full-invoice editor that opens from the bill card's expand
 // icon. Reuses Modal, Select, Button, IconButton, DataGrid, DatePicker, the
 // BillCard styles and shared icons. Mock state for now.
-type Line = { id: number; name: string; qty: number; unit: number; gst: number; disc: number };
+type Line = { id: number; name: string; qty: number; unit: number; gst: number; disc: number; discUnit: "%" | "₹" };
 type Patient = { code: string; name: string; meta: string };
 
 const SERVICE_CATALOG: { name: string; price: number }[] = [
@@ -42,14 +42,14 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
 }) {
   const pt: Patient = patient ?? { code: "T001", name: "Ramesh", meta: "M 12" };
   const seedFilled: Line[] = (initialServices && initialServices.length
-    ? initialServices.map((s, i) => ({ id: i, name: s.name, qty: 1, unit: s.price, gst: 0, disc: 0 }))
-    : [{ id: 0, name: "Ear lobe repair", qty: 1, unit: 6000, gst: 0, disc: 0 }]);
+    ? initialServices.map((s, i) => ({ id: i, name: s.name, qty: 1, unit: s.price, gst: 0, disc: 0, discUnit: "₹" as const }))
+    : [{ id: 0, name: "Ear lobe repair", qty: 1, unit: 6000, gst: 0, disc: 0, discUnit: "₹" as const }]);
   const nextId = React.useRef(seedFilled.length + 1);
-  const emptyLine = (): Line => ({ id: nextId.current++, name: "", qty: 1, unit: 0, gst: 0, disc: 0 });
+  const emptyLine = (): Line => ({ id: nextId.current++, name: "", qty: 1, unit: 0, gst: 0, disc: 0, discUnit: "₹" });
 
   // Always one trailing empty row — typing into it fills the row and a fresh
   // empty appears below (same pattern as the New Appointment services list).
-  const [lines, setLines] = useState<Line[]>([...seedFilled, { id: seedFilled.length, name: "", qty: 1, unit: 0, gst: 0, disc: 0 }]);
+  const [lines, setLines] = useState<Line[]>([...seedFilled, { id: seedFilled.length, name: "", qty: 1, unit: 0, gst: 0, disc: 0, discUnit: "₹" }]);
   const [billDate, setBillDate] = useState(new Date(2026, 0, 30));
   const [showCal, setShowCal] = useState(false);
   const [addDue, setAddDue] = useState(false);
@@ -75,8 +75,11 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
     return next.some(isTrailing) ? next : [...next, emptyLine()];
   });
 
+  // Discount per line is either a flat ₹ amount or a % of that line's subtotal.
+  const discAmt = (l: Line) => (l.discUnit === "%" ? (l.qty * l.unit * (l.disc || 0)) / 100 : (l.disc || 0));
+  const lineTotal = (l: Line) => l.qty * l.unit - discAmt(l);
   const billed = lines.reduce((s, l) => s + l.qty * l.unit, 0);
-  const discount = lines.reduce((s, l) => s + (l.disc || 0), 0);
+  const discount = lines.reduce((s, l) => s + discAmt(l), 0);
   const tax = lines.reduce((s, l) => s + (l.qty * l.unit * (l.gst || 0)) / 100, 0);
   const finalAmt = billed - discount + tax + (addDue ? PAST_DUE : 0);
   const recv = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
@@ -84,24 +87,32 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
   const balance = Math.max(0, finalAmt - dep - recv);
   const refund = Math.max(0, dep + recv - finalAmt);
 
-  const cell: React.CSSProperties = { border: "none", outline: "none", background: "transparent", fontFamily: fonts.family.primary, fontSize: fonts.size.m, color: colors.neutral900, width: "100%", padding: 0, textAlign: "center" };
-  const numCell = (l: Line, key: keyof Line, align: "center" | "right" = "center") =>
-    isTrailing(l) ? null : <input style={{ ...cell, textAlign: align }} type="number" value={l[key] as number} onChange={(e) => setLine(l.id, { [key]: key === "qty" ? Math.max(1, Number(e.target.value)) : Number(e.target.value) } as Partial<Line>)} />;
+  // Numeric line-item field → cream FillInput. Stored as a number; blank shows
+  // the placeholder rather than a literal 0.
+  const numFill = (l: Line, key: "qty" | "unit", placeholder: string) => isTrailing(l) ? null : (
+    <FillInput align="center" inputMode="decimal" placeholder={placeholder} ariaLabel={key}
+      value={(l[key] as number) ? String(l[key]) : ""}
+      onChange={(v) => setLine(l.id, { [key]: key === "qty" ? Math.max(1, Math.floor(Number(v)) || 1) : Number(v) || 0 } as Partial<Line>)} />
+  );
 
   const columns: GridColumn<Line>[] = [
     { key: "n", header: "#", width: 26, align: "center", render: (l, i) => (isTrailing(l) ? "" : <span style={{ color: colors.neutral500 }}>{i + 1}</span>) },
     { key: "svc", header: "Service", align: "left", render: (l) => (
-      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-        <input className="bm-combo" list="bm-svc-list" placeholder="Type or pick a service" value={l.name} onChange={(e) => setName(l.id, e.target.value)}
-          style={{ ...cell, textAlign: "left", fontWeight: l.name ? fonts.weight.medium : fonts.weight.regular }} />
-        <ChevronDown size={16} color={colors.neutral400} />
-      </div>
+      <FillInput list="bm-svc-list" placeholder="Type or pick a service" ariaLabel="Service"
+        value={l.name} onChange={(v) => setName(l.id, v)} />
     ) },
-    { key: "qty", header: "Qty", width: 50, render: (l) => numCell(l, "qty") },
-    { key: "unit", header: "Unit ₹", width: 84, render: (l) => numCell(l, "unit") },
-    { key: "gst", header: "GST%", width: 50, render: (l) => numCell(l, "gst") },
-    { key: "disc", header: "Disc", width: 62, render: (l) => numCell(l, "disc") },
-    { key: "tot", header: "Total", width: 84, align: "center", render: (l) => (isTrailing(l) ? "" : <span style={{ fontWeight: fonts.weight.medium }}>{inr(l.qty * l.unit - l.disc)}</span>) },
+    { key: "qty", header: "Qty", width: 54, render: (l) => numFill(l, "qty", "1") },
+    { key: "unit", header: "Unit ₹", width: 84, render: (l) => numFill(l, "unit", "0") },
+    { key: "gst", header: "GST", width: 80, render: (l) => isTrailing(l) ? null : (
+      <MeasureField unit="%" unitWidth={30} inputMode="decimal" ariaLabel="GST percent"
+        value={l.gst ? String(l.gst) : ""} onChange={(v) => setLine(l.id, { gst: Number(v) || 0 })} />
+    ) },
+    { key: "disc", header: "Disc", width: 96, render: (l) => isTrailing(l) ? null : (
+      <MeasureField unit={l.discUnit} unitWidth={30} inputMode="decimal" ariaLabel="Discount"
+        onToggleUnit={() => setLine(l.id, { discUnit: l.discUnit === "%" ? "₹" : "%" })}
+        value={l.disc ? String(l.disc) : ""} onChange={(v) => setLine(l.id, { disc: Number(v) || 0 })} />
+    ) },
+    { key: "tot", header: "Total", width: 84, align: "center", render: (l) => (isTrailing(l) ? "" : <span style={{ fontWeight: fonts.weight.medium }}>{inr(lineTotal(l))}</span>) },
     { key: "x", header: "", width: 40, headerPadding: "12px 4px", cellPadding: "16px 4px", render: (l) => (isTrailing(l) ? "" : (
       <button onClick={() => removeLine(l.id)} aria-label="Remove" style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, display: "flex", justifyContent: "center", width: "100%" }}><TrashIcon width={24} height={24} style={{ flexShrink: 0 }} /></button>
     )) },
@@ -120,8 +131,8 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
       <div style={{ display: "flex", minHeight: 460, fontFamily: fonts.family.primary }}>
         {/* ── Left ─────────────────────────────────────────────────── */}
         <div style={{ flex: "2.1 1 0", minWidth: 0, padding: spacing.xl, display: "flex", flexDirection: "column", gap: spacing.m }}>
-          {/* Patient (cream) */}
-          <div style={{ backgroundColor: colors.primary100, borderRadius: radii.m, padding: `10px ${spacing.m}`, fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 }}>
+          {/* Patient */}
+          <div style={{ backgroundColor: colors.primary300, borderRadius: radii.m, padding: `10px ${spacing.m}`, fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 }}>
             {pt.code} : {pt.name} - {pt.meta}
           </div>
 
@@ -143,7 +154,9 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
             </span>
           </div>
 
-          <DataGrid columns={columns} rows={lines} rowKey={(l) => l.id} size="m" />
+          <div style={{ "--input-h": "32px" } as React.CSSProperties}>
+            <DataGrid columns={columns} rows={lines} rowKey={(l) => l.id} size="m" />
+          </div>
         </div>
 
         {/* ── Right: summary + pay (compact, BillCard styling) ─────── */}
@@ -158,7 +171,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
             <button onClick={() => setAddDue((v) => !v)} style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.active.shade700, fontSize: fonts.size.s, textDecoration: "underline" }}>{addDue ? "Added" : "Add to bill"}</button>
           </div>
 
-          {sumRow("Total billed", inr(billed), false, { gap: 14, paddingTop: spacing.xl })}
+          {sumRow("Total billed", inr(billed))}
           {sumRow("Discount", `− ${inr(discount)}`)}
           {sumRow("Tax", inr(tax))}
           {sumRow("Final amount", inr(finalAmt), true)}
@@ -166,7 +179,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
           {sumRow("Refund", `− ${inr(refund)}`)}
 
           {/* Balance — same treatment as the BillCard "Total" band */}
-          <div style={{ ...bill.totalRow, borderRadius: radii.m }}>
+          <div style={{ ...bill.totalRow, borderRadius: radii.m, marginBottom: spacing.s }}>
             <span style={bill.totalLabel}>Balance</span>
             <span style={bill.totalValue}>₹ {balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>

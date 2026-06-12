@@ -114,10 +114,10 @@ export const styles: Record<string, CSSProperties> = {
 
   totalRow: {
     display: "flex",
-    alignItems: "baseline",
+    alignItems: "center",
     justifyContent: "space-between",
     padding: "8px 12px",
-    backgroundColor: colors.primary100,
+    backgroundColor: colors.neutral150,
   },
 
   totalLabel: {

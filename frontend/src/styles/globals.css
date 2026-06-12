@@ -74,6 +74,13 @@ input[type="radio"].dark-radio:checked {
 .bm-combo::-webkit-calendar-picker-indicator { display: none !important; }
 .bm-combo::-webkit-list-button { display: none !important; }
 
+/* FillInput — borderless cream block. Hide the native datalist indicator (the
+   dropdown opens as you type, no chevron) and any number-input spinner arrows. */
+.fill-input::-webkit-calendar-picker-indicator { display: none !important; }
+.fill-input::-webkit-list-button { display: none !important; }
+.fill-input::-webkit-outer-spin-button,
+.fill-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
 /* Single grey for all placeholders across the app — matches Figma's
    input-field idle state (border + icon + placeholder share neutral300).
    Split per vendor prefix: a single comma-list gets discarded wholesale
