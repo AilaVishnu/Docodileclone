@@ -181,10 +181,10 @@ export function ServicesView() {
                   <td style={{ ...styles.td, ...styles.tdRight }}>
                     <div style={styles.actions}>
                       <button style={styles.iconBtn} onClick={() => openEdit(s)} aria-label="Edit">
-                        <EditPencilIcon width={16} height={16} />
+                        <EditPencilIcon width={24} height={24} />
                       </button>
-                      <button style={{ ...styles.iconBtn, ...styles.iconBtnDanger }} onClick={() => handleDelete(s)} aria-label="Delete">
-                        <TrashIcon width={16} height={16} />
+                      <button style={styles.iconBtn} onClick={() => handleDelete(s)} aria-label="Delete">
+                        <TrashIcon width={24} height={24} />
                       </button>
                     </div>
                   </td>

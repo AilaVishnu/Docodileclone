@@ -1,5 +1,6 @@
 import { CSSProperties } from "react";
 import { colors, fonts, spacing, radii, strokes, fluidSpacing } from "../../styles/theme";
+import { tableHeadCell, tableDivider } from "../../styles/tableStyles";
 
 export const styles: Record<string, CSSProperties> = {
   // Own scroll container filling <main> (like Appointments / Rx Pad / Patient
@@ -110,12 +111,13 @@ export const styles: Record<string, CSSProperties> = {
     tableLayout: "fixed",
   },
 
+  // Header + cell match the shared queue table (tableStyles look + size-m
+  // density + responsive --queue-cell-padx column padding) so Catalog reads as
+  // the same row family.
   th: {
-    padding: "12px 28px",
-    borderBottom: `1px solid ${colors.primary300}`,
-    color: colors.alphaBlack3,
-    fontWeight: 400,
-    fontSize: fonts.size.s,
+    ...tableHeadCell,
+    padding: "12px var(--queue-cell-padx, 28px)",
+    fontSize: fonts.size.m,
     lineHeight: "20px",
     letterSpacing: 0,
     whiteSpace: "nowrap",
@@ -130,13 +132,13 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   td: {
-    padding: "14px 28px",
-    fontSize: fonts.size.s,
+    padding: "10px var(--queue-cell-padx, 28px)",
+    fontSize: fonts.size.m,
     color: colors.neutral900,
     verticalAlign: "middle",
     fontWeight: 400,
     whiteSpace: "nowrap",
-    borderBottom: `1px solid ${colors.primary300}`,
+    borderBottom: tableDivider,
   },
 
   tdName: {
@@ -180,7 +182,7 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: "transparent",
     borderRadius: radii.full,
     cursor: "pointer",
-    color: colors.neutral700,
+    color: colors.neutral900,
   },
 
   iconBtnDanger: {
