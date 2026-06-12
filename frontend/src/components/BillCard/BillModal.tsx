@@ -5,6 +5,7 @@ import { Button } from "../Button";
 import { IconButton } from "../IconButton";
 import { DataGrid, GridColumn } from "../DataGrid/DataGrid";
 import { DatePicker } from "../DatePicker/DatePicker";
+import { ChevronDown } from "../icons/ChevronDown";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 import { styles as bill } from "./BillCard.styles";
 import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
@@ -76,23 +77,26 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
   const balance = Math.max(0, finalAmt - recv);
   const refund = Math.max(0, recv - finalAmt);
 
-  const cell: React.CSSProperties = { border: "none", outline: "none", background: "transparent", fontFamily: fonts.family.primary, fontSize: fonts.size.s, color: colors.neutral900, width: "100%", padding: 0, textAlign: "center" };
+  const cell: React.CSSProperties = { border: "none", outline: "none", background: "transparent", fontFamily: fonts.family.primary, fontSize: fonts.size.m, color: colors.neutral900, width: "100%", padding: 0, textAlign: "center" };
   const numCell = (l: Line, key: keyof Line, align: "center" | "right" = "center") =>
     isTrailing(l) ? null : <input style={{ ...cell, textAlign: align }} type="number" value={l[key] as number} onChange={(e) => setLine(l.id, { [key]: key === "qty" ? Math.max(1, Number(e.target.value)) : Number(e.target.value) } as Partial<Line>)} />;
 
   const columns: GridColumn<Line>[] = [
     { key: "n", header: "#", width: 26, align: "center", render: (l, i) => (isTrailing(l) ? "" : <span style={{ color: colors.neutral500 }}>{i + 1}</span>) },
     { key: "svc", header: "Service", align: "left", render: (l) => (
-      <input list="bm-svc-list" placeholder="Type or pick a service" value={l.name} onChange={(e) => setName(l.id, e.target.value)}
-        style={{ ...cell, textAlign: "left", borderBottom: `${strokes.xs} solid ${colors.neutral300}`, fontWeight: l.name ? fonts.weight.medium : fonts.weight.regular, padding: "2px 0" }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <input list="bm-svc-list" placeholder="Type or pick a service" value={l.name} onChange={(e) => setName(l.id, e.target.value)}
+          style={{ ...cell, textAlign: "left", fontWeight: l.name ? fonts.weight.medium : fonts.weight.regular }} />
+        <ChevronDown size={16} color={colors.neutral400} />
+      </div>
     ) },
     { key: "qty", header: "Qty", width: 50, render: (l) => numCell(l, "qty") },
     { key: "unit", header: "Unit ₹", width: 84, render: (l) => numCell(l, "unit", "right") },
     { key: "gst", header: "GST%", width: 50, render: (l) => numCell(l, "gst") },
     { key: "disc", header: "Disc", width: 62, render: (l) => numCell(l, "disc", "right") },
     { key: "tot", header: "Total", width: 84, align: "right", render: (l) => (isTrailing(l) ? "" : <span style={{ fontWeight: fonts.weight.medium }}>{inr(l.qty * l.unit - l.disc)}</span>) },
-    { key: "x", header: "", width: 30, render: (l) => (isTrailing(l) ? "" : (
-      <button onClick={() => removeLine(l.id)} aria-label="Remove" style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, display: "flex", justifyContent: "center", width: "100%" }}><TrashIcon width={18} height={18} /></button>
+    { key: "x", header: "", width: 44, render: (l) => (isTrailing(l) ? "" : (
+      <button onClick={() => removeLine(l.id)} aria-label="Remove" style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, display: "flex", justifyContent: "center", width: "100%" }}><TrashIcon width={24} height={24} /></button>
     )) },
   ];
 
@@ -108,7 +112,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
       <datalist id="bm-svc-list">{SERVICE_CATALOG.map((s) => <option key={s.name} value={s.name} />)}</datalist>
       <div style={{ display: "flex", minHeight: 460, fontFamily: fonts.family.primary }}>
         {/* ── Left ─────────────────────────────────────────────────── */}
-        <div style={{ flex: "1.7 1 0", minWidth: 0, padding: spacing.xl, display: "flex", flexDirection: "column", gap: spacing.m }}>
+        <div style={{ flex: "2.1 1 0", minWidth: 0, padding: spacing.xl, display: "flex", flexDirection: "column", gap: spacing.m }}>
           {/* Patient (cream) */}
           <div style={{ backgroundColor: colors.primary100, borderRadius: radii.m, padding: `10px ${spacing.m}`, fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 }}>
             {pt.code} : {pt.name} - {pt.meta}
@@ -128,7 +132,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
             </span>
           </div>
 
-          <DataGrid columns={columns} rows={lines} rowKey={(l) => l.id} size="s" />
+          <DataGrid columns={columns} rows={lines} rowKey={(l) => l.id} size="m" />
         </div>
 
         {/* ── Right: summary + pay (compact, BillCard styling) ─────── */}
@@ -174,8 +178,8 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
             <Button variant="dark" size="md" onClick={onClose} style={{ flex: 1 }} iconLeft={<VerifiedBadgeIcon width={18} height={18} style={{ color: colors.neutral100 }} />}>
               {balance > 0 ? `Pay ${inr(balance)}` : "Mark paid"}
             </Button>
-            <IconButton ariaLabel="Print" onClick={() => {}}><PrinterIcon width={18} height={18} /></IconButton>
-            <IconButton ariaLabel="Share" onClick={() => {}}><ShareIcon width={18} height={18} /></IconButton>
+            <IconButton ariaLabel="Print" onClick={() => {}} color={colors.neutral900}><PrinterIcon width={24} height={24} /></IconButton>
+            <IconButton ariaLabel="Share" onClick={() => {}} color={colors.neutral900}><ShareIcon width={24} height={24} /></IconButton>
           </div>
         </div>
       </div>
