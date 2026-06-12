@@ -9,6 +9,7 @@ import { Select } from "../../components/Input/Select/Select";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { styles as queueStyles } from "../../components/AppointmentQueue/AppointmentQueue.styles";
 import { setPendingSessionNav } from "../../components/TopNav/SessionTrayButton";
+import { searchPatientContent, type PatientContentMatch } from "../../api/patientSearch";
 import type { NavTab } from "../../components/SideNav";
 
 // Patient Files — stack of physical-looking folders. Each row is the folder-tab
@@ -136,6 +137,21 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
   useEffect(() => {
     setLimit(PAGE);
   }, [search, sort, dateFrom, dateTo, department, doctorId]);
+
+  // "Notes / prescriptions" matches — fetched from the backend (visits/Rx
+  // aren't loaded here). Debounced; only when there's a real keyword.
+  const [contentMatches, setContentMatches] = useState<PatientContentMatch[]>([]);
+  useEffect(() => {
+    const q = search.trim();
+    if (q.length < 2) { setContentMatches([]); return; }
+    let cancelled = false;
+    const t = window.setTimeout(() => {
+      searchPatientContent(q)
+        .then((m) => { if (!cancelled) setContentMatches(m); })
+        .catch(() => { if (!cancelled) setContentMatches([]); });
+    }, 300);
+    return () => { cancelled = true; window.clearTimeout(t); };
+  }, [search]);
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el || limit >= visible.length) return;
@@ -318,6 +334,70 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
           <div style={styles.indexCount}>
             {loading ? "Loading…" : `${visible.length} of ${patients.length} patients`}
           </div>
+
+          {/* Notes & prescriptions — keyword hits inside visit notes / Rx,
+              fetched from the backend with a highlighted snippet. */}
+          {search.trim().length >= 2 && contentMatches.length > 0 && (
+            <div style={{ marginTop: spacing.xl, display: "flex", flexDirection: "column", gap: spacing.s }}>
+              <h3 style={{
+                margin: 0,
+                paddingInline: spacing.s,
+                fontFamily: fonts.family.primary,
+                fontSize: fonts.size.m,
+                fontWeight: fonts.weight.semibold,
+                color: colors.neutral900,
+              }}>
+                Notes &amp; prescriptions
+              </h3>
+              <div style={queueStyles.tableContainer}>
+              <table style={queueStyles.table}>
+                <colgroup>
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "30%" }} />
+                  <col style={{ width: "auto" }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th style={{ ...queueStyles.th, paddingTop: 0, paddingLeft: 8, paddingRight: 8 }}>#</th>
+                    <th style={{ ...queueStyles.th, paddingTop: 0, paddingLeft: 8, paddingRight: 8 }}>Name</th>
+                    <th style={{ ...queueStyles.th, paddingTop: 0, textAlign: "left" }}>Match</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contentMatches.map((m) => {
+                    const p = patients.find((x) => x.id === m.patientId);
+                    const ageY = m.patientAge != null ? Math.floor(m.patientAge / 12) : null;
+                    const g = m.patientGender ? m.patientGender.charAt(0).toUpperCase() : "";
+                    const meta = g || ageY != null ? `${g}${ageY != null ? `|${ageY}` : ""}` : "";
+                    return (
+                      <tr
+                        key={m.patientId + m.type}
+                        onClick={() => { if (p) handleOpen(p); }}
+                        style={{ ...queueStyles.tr, cursor: p ? "pointer" : "default" }}
+                        onMouseEnter={(e) => { if (p) (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(0,0,0,0.018)"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "transparent"; }}
+                      >
+                        <td style={queueStyles.serialCell}>{m.patientDisplayNo != null ? `T${m.patientDisplayNo}` : "T—"}</td>
+                        <td style={queueStyles.nameCell}>
+                          <div style={queueStyles.nameInner}>
+                            <span style={queueStyles.namePrimary}>
+                              {m.patientName}
+                              {meta ? <span style={{ color: colors.neutral500 }}> | {meta}</span> : null}
+                            </span>
+                          </div>
+                        </td>
+                        <td style={{ ...queueStyles.td, textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <span style={{ color: colors.neutral500 }}>{m.type} · </span>
+                          <HighlightSnippet value={m.snippet} query={search.trim().toLowerCase()} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              </div>
+            </div>
+          )}
       </div>
     </div>
   );
