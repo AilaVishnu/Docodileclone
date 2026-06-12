@@ -132,7 +132,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
             </span>
             <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: spacing.xs, color: colors.neutral900 }}>
               Deposit
-              <div style={{ width: 120 }}>
+              <div style={{ width: 120, "--input-h": "32px" } as React.CSSProperties}>
                 <MeasureField box prefix="₹" placeholder="0" inputMode="decimal" ariaLabel="Deposit amount"
                   value={deposit === "" ? "" : String(deposit)} onChange={(v) => setDeposit(v === "" ? "" : Number(v))} />
               </div>
@@ -167,11 +167,11 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
             <span style={bill.totalValue}>₹ {balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
 
-          <div style={{ display: "flex", gap: spacing.s, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: spacing.s, alignItems: "center", "--input-h": "32px" } as React.CSSProperties}>
             <div style={{ width: 110 }}>
               <Select options={["Cash", "Card", "UPI", "Waive"]} value={payMode} onChange={setPayMode} />
             </div>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <MeasureField box prefix="₹" placeholder={String(balance)} inputMode="decimal" ariaLabel="Amount received"
                 value={received === "" ? "" : String(received)} onChange={(v) => setReceived(v === "" ? "" : Number(v))} />
             </div>
