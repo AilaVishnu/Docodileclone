@@ -92,10 +92,33 @@ DECISION:
 IDs: `MOD-canon`, `MOD-print/bill/service/presets/confirm/slot/ai`, `MOD-CANON-PROPOSED`.
 DECISION (approved the proposed canonical Modal, with 2 tweaks):
 - ✅ Adopt one canonical `<Modal>` shell: tokenized backdrop (one opacity, e.g. `alphaBlack3`), a real **`zIndex` scale** in theme.ts (fixes the 1000→4000 chaos + the base-Modal-sitting-under-its-own-confirm-dialog bug), one radius, one shadow (`shadows.modal`), Esc-to-close + scroll-lock by default.
-- 🔸 **RETAIN each modal's existing background colour** — do NOT unify the surface. White / cream / tint stay per-modal (via a `surface`/bg prop on `<Modal>`).
+- 🔸 ~~**RETAIN each modal's existing background colour** — do NOT unify the surface.~~ **SUPERSEDED 2026-06-12 — surfaces ARE now unified, see "Modal surface + header canon" below.**
 - 🔸 **Close ✕ = the shared IconButton (CLOSE-CANON)** — already done for the ~12 modal closes converted in the Buttons phase; the canonical Modal uses IconButton for its header ✕.
 - ✅ BUILT: rebuilt `<Modal>` (tokenized backdrop / `shadows.modal` / `radii["2xl"]` + Esc + scroll-lock + `surface`/`width`/`level` props, back-compat defaults so the 16 existing callers are unchanged except the z-index fix). Added a `zIndex` scale to theme.ts (modal 4000 — above the sidebar; modalTop 4100 for confirm-over-modal). Migrated the 7 hand-rolled overlays onto `<Modal>` keeping their colours: PrintPreview, BillMedicines (surface transparent — preserves the zigzag), AddService, SchedulePresets, AddStaff delete-confirm (`level="top"`), slot-picker, AI-SOAP.
 - ⚠️ NOT click-tested live (login wall) — recommend a manual pass: open a couple of modals (do they appear ABOVE the sidebar now? does Esc close them? does the bill receipt's torn edge still show the dark backdrop?).
+
+### Modal surface + header canon — REVISED 2026-06-12 (the rulebook)
+Reviewed all ~15 modals side-by-side (audit + Storybook §17). They drifted: 3 surfaces (tray-tint `#F3F3DC` default · white · cream `#F9F9ED`), random widths (360/420/440/460/560/1000/1040), padding 0/24/32, title left vs centre, close as IconButton vs square SVG vs raw `×`. Decisions (user-approved):
+
+**Three modal TYPES:**
+| Type | When | Surface | Title | Close ✕ | Width | Footer |
+| --- | --- | --- | --- | --- | --- | --- |
+| **Confirm** | yes/no, cancel/confirm, "are you sure?", delete/archive | match the form/context surface (white default) | **centred** | top-right | S 400 | buttons centred (light Cancel + dark Confirm) |
+| **Form** | create/edit records (Edit patient, Add service, Pharmacy, New Rx…) | **white** (`neutral100`) | **left** | top-right | M 480 · L 560 | right-aligned (light Cancel + primary Save) |
+| **Workbench** | wide editors / receipts (Bill, Bill & medicines, Print preview) | white (`transparent` only for the torn-edge receipt) | left or section heading | top-right | XL 1040, `padding=0` + internal layout | in-layout (e.g. Pay + print/share icons) |
+
+**Universal (every modal):** radius `radii.2xl` (16) · backdrop `rgba(0,0,0,0.35)` · `shadows.modal` · **close is ALWAYS `<IconButton>` ✕, top-right** (never a raw `×` or one-off square button) · z-index from the scale (modal 4000 / modalTop 4100).
+
+**Width scale:** S 400 · M 480 · L 560 · XL 1040. Pick the nearest; don't invent new numbers.
+
+**Surface exceptions (explicit):**
+- **Add staff → cream `primary100`** (user wants this one to stay distinct from the white form crowd).
+- **Bill & medicines → `transparent`** (the two-card torn-edge receipt floats on the backdrop).
+- Everything else: forms + confirms = **white**.
+
+**Heading:** left for normal modals; **centred only for confirm-type** dialogs. Font = secondary serif, `fonts.size.h6`/`h5`.
+
+**Rollout = doc + Storybook reference only (2026-06-12).** Did NOT mass-migrate. Storybook §17 now shows the three types + the rulebook as the canonical reference. Per-modal migration to the canon is a later sweep (most forms still render the tray-tint default surface today). **A shared `ModalHeader` (title + ✕, alignment baked in) should be promoted from PharmacyView and used everywhere when the migration happens** — that's what stops the header drifting again.
 
 ### Chevron icon — updated 2026-06-11
 The canonical `ChevronDown` now uses the path you provided (`M19 9L12 15L5 9`, strokeWidth 1.5), colour driven by the `color` prop (not hardcoded). Propagates to all 3 dropdown types.

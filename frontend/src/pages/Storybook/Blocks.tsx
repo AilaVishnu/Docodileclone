@@ -117,38 +117,99 @@ export function StickyHeaderBlock() {
 }
 
 // ── 17 · Modals ──────────────────────────────────────────────────────────────────
+// A static mini-shell for the "three types" reference (not interactive — the live
+// demos open the real <Modal> below).
+function ModalTypeCard({ label, spec, surface, center, body }: {
+  label: string; spec: string; surface: string; center?: boolean; body: React.ReactNode;
+}) {
+  return (
+    <div style={{ flex: "1 1 190px", minWidth: 190 }}>
+      <div style={{ background: "rgba(0,0,0,0.35)", borderRadius: radii["2xl"], padding: spacing.l }}>
+        <div style={{ background: surface, borderRadius: radii["2xl"], padding: spacing.m, boxShadow: "0 12px 40px rgba(0,0,0,0.12)" }}>
+          <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: center ? "center" : "flex-start", marginBottom: spacing.s }}>
+            <span style={{ fontFamily: fonts.family.secondary, fontSize: fonts.size.h6, color: colors.neutral900 }}>{label}</span>
+            <span style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", color: colors.neutral700, fontSize: 16, lineHeight: 1 }}>✕</span>
+          </div>
+          {body}
+        </div>
+      </div>
+      <div style={{ marginTop: spacing.xs, fontSize: fonts.size.xs, color: colors.neutral500 }}>{spec}</div>
+    </div>
+  );
+}
+
 export function ModalsBlock() {
   const [open, setOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [billOpen, setBillOpen] = useState(false);
   const [v, setV] = useState("");
+  const miniBar = (w: string | number, c = colors.neutral150) => <div style={{ height: 7, width: w, background: c, borderRadius: 4 }} />;
+  const miniBtn = (text: string, dark?: boolean) => (
+    <span style={{ fontSize: 11, borderRadius: 6, padding: "3px 10px", ...(dark ? { background: colors.neutral900, color: colors.neutral100 } : { border: `${strokes.xs} solid ${colors.neutral300}`, color: colors.neutral900 }) }}>{text}</span>
+  );
   return (
     <Section id="modals" title="17 · Modals"
-      tldr={<><From>components/Modal</From> — one canonical shell: tokenised backdrop, <code>shadows.modal</code>, radius <code>radii.2xl</code>, <b>Esc-to-close + scroll-lock</b> by default. Sits ABOVE the sidebar via <code>zIndex.modal</code> (4000); a dialog opened from inside a modal uses <code>level="top"</code> (4100). Each modal keeps its own surface colour (<code>surface</code> prop).</>}>
-      <Row>
-        <Button variant="primary" onClick={() => setOpen(true)}>Open modal</Button>
-        <Button variant="dark" onClick={() => setBillOpen(true)}>Open bill modal</Button>
-        <DetailTable rows={[
-          ["backdrop", "alphaBlack3 (tokenised)"],
-          ["z-index", "modal 4000 · modalTop 4100"],
-          ["shadow", "shadows.modal"],
-          ["radius", "radii.2xl (16)"],
-          ["behaviour", "Esc-close + scroll-lock"],
-          ["surface", "per-modal (white / cream / tint)"],
-        ]} />
-      </Row>
-      <Modal isOpen={open} onClose={() => setOpen(false)}>
-        <div style={{ padding: spacing.xl, minWidth: 320, maxWidth: 420 }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.m }}>
-            <div style={{ fontFamily: fonts.family.secondary, fontSize: fonts.size.h6, color: colors.neutral900 }}>Edit patient</div>
-            <IconButton ariaLabel="Close" onClick={() => setOpen(false)} />
-          </div>
-          <div style={{ marginTop: spacing.m }}><Label>Name</Label><Field variant="box" value={v} onChange={setV} placeholder="Patient name" /></div>
-          <div style={{ marginTop: spacing.l, display: "flex", gap: spacing.s, justifyContent: "flex-end" }}>
-            <Button variant="light" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button variant="primary" size="sm" onClick={() => setOpen(false)}>Save</Button>
-          </div>
+      tldr={<><From>components/Modal</From> — one canonical shell (tokenised backdrop, <code>shadows.modal</code>, radius <code>radii.2xl</code>, <b>Esc-close + scroll-lock</b>; <code>zIndex.modal</code> 4000 / <code>level="top"</code> 4100). <b>Three TYPES</b> share one rulebook (revised 2026-06-12): <b>Confirm</b> (centred), <b>Form</b> (left title, white), <b>Workbench</b> (wide, <code>padding=0</code>). ✕ is ALWAYS a top-right <code>IconButton</code>. Width scale S 400 · M 480 · L 560 · XL 1040.</>}>
+
+      <Sub title="Three types — the rulebook" note="Surface: forms + confirms = white (Add staff is the lone cream exception); torn-edge receipt = transparent. Heading: left, except confirms are centred.">
+        <Row align="start" wrap>
+          <ModalTypeCard label="Remove item?" spec="Confirm · centred · S 400" surface={colors.neutral100} center
+            body={<><div style={{ display: "flex", justifyContent: "center", marginBottom: spacing.m }}>{miniBar("80%")}</div>
+              <div style={{ display: "flex", gap: spacing.xs, justifyContent: "center" }}>{miniBtn("Cancel")}{miniBtn("Confirm", true)}</div></>} />
+          <ModalTypeCard label="Add service" spec="Form · left · white · M 480" surface={colors.neutral100}
+            body={<><div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: spacing.m }}>{miniBar("100%")}{miniBar("65%")}</div>
+              <div style={{ display: "flex", gap: spacing.xs, justifyContent: "flex-end" }}>{miniBtn("Cancel")}{miniBtn("Save", true)}</div></>} />
+          <ModalTypeCard label="Bill" spec="Workbench · pad 0 · XL 1040" surface={colors.neutral100}
+            body={<div style={{ display: "flex", gap: spacing.s }}>
+              <div style={{ flex: 1.5, display: "flex", flexDirection: "column", gap: 6, borderRight: `${strokes.xs} solid ${colors.neutral200}`, paddingRight: spacing.s }}>{miniBar("100%")}{miniBar("100%")}{miniBar("60%")}</div>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>{miniBar("100%", colors.primary100)}{miniBar("70%", colors.primary100)}{miniBtn("Pay", true)}</div>
+            </div>} />
+        </Row>
+      </Sub>
+
+      <Sub title="Live — open the real component">
+        <Row>
+          <Button variant="primary" onClick={() => setOpen(true)}>Form</Button>
+          <Button variant="light" onClick={() => setConfirmOpen(true)}>Confirm</Button>
+          <Button variant="dark" onClick={() => setBillOpen(true)}>Workbench (Bill)</Button>
+          <DetailTable rows={[
+            ["backdrop", "rgba(0,0,0,0.35)"],
+            ["z-index", "modal 4000 · modalTop 4100"],
+            ["shadow", "shadows.modal"],
+            ["radius", "radii.2xl (16)"],
+            ["close ✕", "IconButton, top-right — always"],
+            ["surface", "forms+confirms white · Add staff cream"],
+            ["width", "S 400 · M 480 · L 560 · XL 1040"],
+          ]} />
+        </Row>
+      </Sub>
+
+      {/* Form — white, left title + ✕, footer right (Cancel/Save) */}
+      <Modal isOpen={open} onClose={() => setOpen(false)} surface={colors.neutral100} width={480}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.m }}>
+          <div style={{ fontFamily: fonts.family.secondary, fontSize: fonts.size.h6, color: colors.neutral900 }}>Edit patient</div>
+          <IconButton ariaLabel="Close" onClick={() => setOpen(false)} />
+        </div>
+        <div style={{ marginTop: spacing.m }}><Label>Name</Label><Field variant="box" value={v} onChange={setV} placeholder="Patient name" /></div>
+        <div style={{ marginTop: spacing.l, display: "flex", gap: spacing.s, justifyContent: "flex-end" }}>
+          <Button variant="light" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="primary" size="sm" onClick={() => setOpen(false)}>Save</Button>
         </div>
       </Modal>
+
+      {/* Confirm — white, centred title + ✕, centred buttons */}
+      <Modal isOpen={confirmOpen} onClose={() => setConfirmOpen(false)} surface={colors.neutral100} width={400}>
+        <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ fontFamily: fonts.family.secondary, fontSize: fonts.size.h6, color: colors.neutral900 }}>Archive patient?</div>
+          <div style={{ position: "absolute", right: 0 }}><IconButton ariaLabel="Close" onClick={() => setConfirmOpen(false)} /></div>
+        </div>
+        <div style={{ marginTop: spacing.s, textAlign: "center", fontSize: fonts.size.m, color: colors.neutral600 }}>They'll move to the archive and stop showing in lists.</div>
+        <div style={{ marginTop: spacing.l, display: "flex", gap: spacing.s, justifyContent: "center" }}>
+          <Button variant="light" size="sm" onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button variant="primary" size="sm" onClick={() => setConfirmOpen(false)}>Archive</Button>
+        </div>
+      </Modal>
+
       <BillModal isOpen={billOpen} onClose={() => setBillOpen(false)} />
     </Section>
   );
