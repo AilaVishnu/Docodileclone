@@ -554,6 +554,22 @@ function matchesQuery(p: Patient, q: string): MatchField | null {
   return null;
 }
 
+// Renders `value` with the matched `query` substring highlighted (the app's
+// light peach + medium weight), Google-style. Case-insensitive, first match.
+function HighlightSnippet({ value, query }: { value: string; query: string }) {
+  const i = value.toLowerCase().indexOf(query.toLowerCase());
+  if (i < 0) return <>{value}</>;
+  return (
+    <>
+      {value.slice(0, i)}
+      <mark style={{ backgroundColor: colors.primary400, color: colors.neutral900, fontWeight: 500, borderRadius: 3, padding: "0 2px" }}>
+        {value.slice(i, i + query.length)}
+      </mark>
+      {value.slice(i + query.length)}
+    </>
+  );
+}
+
 // Funnel glyph for the filter toggle next to the search bar. Inline SVG —
 // matches stroke weight of TopNav icons (1.5).
 function FunnelIcon() {
