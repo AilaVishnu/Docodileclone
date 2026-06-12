@@ -142,13 +142,13 @@ export function ServicesView() {
           </colgroup>
           <thead>
             <tr>
-              <th style={styles.th}>Short Form</th>
+              <th style={{ ...styles.th, textAlign: "center", paddingLeft: 8 }}>Short Form</th>
               <th style={styles.th}>Name</th>
-              <th style={{ ...styles.th, ...styles.thRight }}>Price</th>
-              <th style={{ ...styles.th, ...styles.thRight }}>Duration</th>
-              <th style={{ ...styles.th, ...styles.thRight }}>Discount</th>
-              <th style={{ ...styles.th, ...styles.thRight }}>GST</th>
-              <th style={{ ...styles.th, ...styles.thRight }}></th>
+              <th style={{ ...styles.th, textAlign: "center" }}>Price</th>
+              <th style={{ ...styles.th, textAlign: "center" }}>Duration</th>
+              <th style={{ ...styles.th, textAlign: "center" }}>Discount</th>
+              <th style={{ ...styles.th, textAlign: "center" }}>GST</th>
+              <th style={{ ...styles.th, textAlign: "center", paddingRight: 8 }}></th>
             </tr>
           </thead>
           <tbody>
@@ -172,13 +172,13 @@ export function ServicesView() {
             ) : (
               filtered.map((s) => (
                 <tr key={s.id}>
-                  <td style={styles.td}><span style={styles.codeBadge}>{s.code}</span></td>
-                  <td style={{ ...styles.td, ...styles.tdName }}>{s.name}</td>
-                  <td style={{ ...styles.td, ...styles.tdRight }}>{formatPrice(s.price)}</td>
-                  <td style={{ ...styles.td, ...styles.tdRight, ...styles.tdMuted }}>{formatDuration(s.duration)}</td>
-                  <td style={{ ...styles.td, ...styles.tdRight, ...styles.tdMuted }}>{formatDiscount(s)}</td>
-                  <td style={{ ...styles.td, ...styles.tdRight, ...styles.tdMuted }}>{formatGst(s.gst)}</td>
-                  <td style={{ ...styles.td, ...styles.tdRight }}>
+                  <td style={{ ...styles.td, textAlign: "center", paddingLeft: 8 }}><span style={styles.codeBadge}>{s.code}</span></td>
+                  <td style={styles.td}>{s.name}</td>
+                  <td style={{ ...styles.td, textAlign: "center" }}>{formatPrice(s.price)}</td>
+                  <td style={{ ...styles.td, textAlign: "center", ...styles.tdMuted }}>{formatDuration(s.duration)}</td>
+                  <td style={{ ...styles.td, textAlign: "center", ...styles.tdMuted }}>{formatDiscount(s)}</td>
+                  <td style={{ ...styles.td, textAlign: "center", ...styles.tdMuted }}>{formatGst(s.gst)}</td>
+                  <td style={{ ...styles.td, textAlign: "center", paddingRight: 8 }}>
                     <div style={styles.actions}>
                       <button style={styles.iconBtn} onClick={() => openEdit(s)} aria-label="Edit">
                         <EditPencilIcon width={24} height={24} />
