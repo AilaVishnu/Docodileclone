@@ -4,7 +4,7 @@ import { fetchStatsHighlights } from "../../api/ai";
 import { colors, fonts, spacing, radii, strokes, fluidSpacing } from "../../styles/theme";
 import { tableHeadCell, tableDivider } from "../../styles/tableStyles";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
-import { ChevronDown } from "../../components/icons/ChevronDown";
+import { DateRangeDropdown } from "../../components/DateRangeDropdown/DateRangeDropdown";
 import {
   AgePyramid,
   AreaTrend,
@@ -368,12 +368,13 @@ export function StatsPage() {
       <PageHeader
         title={
           <>
-            <StatsRangePicker
-              range={range}
+            <DateRangeDropdown
+              presets={RANGES}
+              valueId={range}
               customStart={customStart}
               customEnd={customEnd}
-              onPreset={(id) => setRange(id)}
-              onCustom={(s, e) => { setCustomStart(s); setCustomEnd(e); setRange("custom"); }}
+              onSelectPreset={(id) => setRange(id as RangeId)}
+              onSelectCustom={(start, end) => { setCustomStart(start); setCustomEnd(end); setRange("custom"); }}
             />{" "}
             Stats
           </>
@@ -403,112 +404,6 @@ export function StatsPage() {
   );
 }
 
-// ── Date-range dropdown shown in the sticky header: "[label ▾] Stats" ──────────
-const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const fmtShortIso = (iso: string) => {
-  if (!iso) return "";
-  const [, m, d] = iso.split("-").map(Number);
-  return `${d} ${MONTHS_SHORT[m - 1]}`;
-};
-const fmtShortDate = (x: Date) => `${x.getDate()} ${MONTHS_SHORT[x.getMonth()]}`;
-function rangeLabelOf(range: RangeId, cs: string, ce: string): string {
-  if (range === "custom") return cs && ce ? `${fmtShortIso(cs)} – ${fmtShortIso(ce)}` : "Custom range";
-  return RANGES.find((r) => r.id === range)?.label ?? "Today";
-}
-
-function StatsRangePicker({ range, customStart, customEnd, onPreset, onCustom }: {
-  range: RangeId;
-  customStart: string;
-  customEnd: string;
-  onPreset: (id: RangeId) => void;
-  onCustom: (start: string, end: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [view, setView] = useState<"menu" | "cal">("menu");
-  const [vm, setVm] = useState(() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); });
-  const [selStart, setSelStart] = useState<Date | null>(null);
-  const [selEnd, setSelEnd] = useState<Date | null>(null);
-  const ref = React.useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
-
-  const pickDay = (d: Date) => {
-    if (!selStart || selEnd) { setSelStart(d); setSelEnd(null); }
-    else if (d < selStart) { setSelEnd(selStart); setSelStart(d); }
-    else setSelEnd(d);
-  };
-  const applyCustom = () => {
-    if (!selStart || !selEnd) return;
-    const iso = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
-    onCustom(iso(selStart), iso(selEnd));
-    setOpen(false);
-  };
-
-  const year = vm.getFullYear(), month = vm.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  let firstDow = new Date(year, month, 1).getDay();
-  firstDow = firstDow === 0 ? 6 : firstDow - 1;
-  const cells: (number | null)[] = [];
-  for (let i = 0; i < firstDow; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-  const isEnd = (sel: Date | null, d: number) => !!sel && sel.getFullYear() === year && sel.getMonth() === month && sel.getDate() === d;
-  const inRange = (d: number) => !!selStart && !!selEnd && new Date(year, month, d) > selStart && new Date(year, month, d) < selEnd;
-
-  return (
-    <span ref={ref} style={styles.rangeTrigger} onClick={(e) => { e.stopPropagation(); setView("menu"); setOpen((o) => !o); }}>
-      {rangeLabelOf(range, customStart, customEnd)}
-      <ChevronDown open={open} />
-
-      {open && view === "menu" && (
-        <div style={styles.rangePop} onClick={(e) => e.stopPropagation()}>
-          {RANGES.map((r) => (
-            <button
-              key={r.id}
-              style={{ ...styles.rangeItem, ...(r.id === range ? styles.rangeItemActive : null) }}
-              onClick={() => { if (r.id === "custom") { setSelStart(null); setSelEnd(null); setView("cal"); } else { onPreset(r.id); setOpen(false); } }}
-            >
-              {r.label}{r.id === "custom" && <span style={{ color: colors.neutral400 }}>›</span>}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {open && view === "cal" && (
-        <div style={styles.calPop} onClick={(e) => e.stopPropagation()}>
-          <div style={styles.calHead}>
-            <button style={styles.calNav} onClick={() => setVm(new Date(year, month - 1, 1))} aria-label="Previous month">
-              <span style={{ display: "inline-flex", transform: "rotate(90deg)" }}><ChevronDown size={20} strokeWidth={1.5} color={colors.neutral900} /></span>
-            </button>
-            <span style={styles.calMonth}>{vm.toLocaleString("default", { month: "long", year: "numeric" })}</span>
-            <button style={styles.calNav} onClick={() => setVm(new Date(year, month + 1, 1))} aria-label="Next month">
-              <span style={{ display: "inline-flex", transform: "rotate(-90deg)" }}><ChevronDown size={20} strokeWidth={1.5} color={colors.neutral900} /></span>
-            </button>
-          </div>
-          <div style={styles.calGrid}>
-            {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((w) => <div key={w} style={styles.calWd}>{w}</div>)}
-            {cells.map((d, i) => d === null
-              ? <div key={`e${i}`} />
-              : <div key={d}
-                  style={{ ...styles.calDay, ...(inRange(d) ? styles.calDayRange : null), ...((isEnd(selStart, d) || isEnd(selEnd, d)) ? styles.calDayEnd : null) }}
-                  onClick={() => pickDay(new Date(year, month, d))}>{d}</div>
-            )}
-          </div>
-          <div style={styles.calFoot}>
-            <span style={styles.calSel}>
-              {selStart ? (selEnd ? `${fmtShortDate(selStart)} – ${fmtShortDate(selEnd)}` : `${fmtShortDate(selStart)} – pick end`) : "Pick a start date"}
-            </span>
-            <button style={{ ...styles.calDone, ...(!(selStart && selEnd) ? { opacity: 0.4, cursor: "default" } : null) }} disabled={!(selStart && selEnd)} onClick={applyCustom}>Done</button>
-          </div>
-        </div>
-      )}
-    </span>
-  );
-}
 
 // ── Overview tab ─────────────────────────────────────────────────────────────
 
@@ -1607,50 +1502,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%", minWidth: 0, marginTop: "var(--main-gap, 24px)",
     display: "flex", flexDirection: "column", gap: spacing.l,
   },
-  // Date-range dropdown in the sticky header: "[label ▾] Stats".
-  rangeTrigger: {
-    display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer",
-    color: colors.neutral900, backgroundColor: "transparent",
-    border: `${strokes.xs} solid ${colors.primary400}`, borderRadius: radii.m,
-    padding: "4px 12px", position: "relative", whiteSpace: "nowrap",
-  },
-  rangePop: {
-    position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 1200,
-    backgroundColor: colors.neutral100, border: `${strokes.xs} solid ${colors.neutral200}`,
-    borderRadius: radii.l, padding: spacing["2xs"], minWidth: 188,
-    boxShadow: "2px 2px 12px 0px rgba(0,0,0,0.08)", textAlign: "left",
-  },
-  rangeItem: {
-    display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between",
-    border: "none", background: "transparent", textAlign: "left", cursor: "pointer",
-    fontSize: fonts.size.s, fontFamily: fonts.family.primary, color: colors.neutral900,
-    padding: `${spacing.xs} ${spacing.s}`, borderRadius: radii.m, whiteSpace: "nowrap",
-  },
-  rangeItemActive: { backgroundColor: colors.neutral150 },
-  calPop: {
-    position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 1200, width: 280,
-    backgroundColor: colors.neutral100, border: `${strokes.xs} solid ${colors.neutral200}`,
-    borderRadius: radii.l, padding: spacing.m, boxShadow: "2px 2px 12px 0px rgba(0,0,0,0.08)",
-    fontFamily: fonts.family.primary, color: colors.neutral900, fontWeight: fonts.weight.regular,
-  },
-  calHead: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.s },
-  calNav: { background: "none", border: "none", cursor: "pointer", padding: 2, display: "inline-flex", color: colors.neutral900 },
-  calMonth: { fontSize: fonts.size.m, fontWeight: fonts.weight.semibold },
-  calGrid: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 },
-  calWd: { textAlign: "center", fontSize: fonts.size.xs, color: colors.neutral500, paddingBottom: 2 },
-  calDay: {
-    height: 30, display: "flex", alignItems: "center", justifyContent: "center",
-    fontSize: fonts.size.s, fontWeight: fonts.weight.semibold, color: colors.neutral900,
-    cursor: "pointer", borderRadius: radii.m,
-  },
-  calDayRange: { backgroundColor: colors.primary100, borderRadius: 0 },
-  calDayEnd: { backgroundColor: colors.active.shade600, color: colors.neutral100 },
-  calFoot: { display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: spacing.s, gap: spacing.s },
-  calSel: { fontSize: fonts.size.xs, color: colors.neutral600 },
-  calDone: {
-    border: "none", borderRadius: radii.full, backgroundColor: colors.neutral900, color: colors.neutral100,
-    fontSize: fonts.size.s, padding: "6px 18px", cursor: "pointer",
-  },
+  // (The header date-range control is the shared <DateRangeDropdown>.)
   title: {
     margin: 0, textAlign: "center", fontFamily: fonts.family.secondary,
     fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.regular, color: colors.neutral900,
