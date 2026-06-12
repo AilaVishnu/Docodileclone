@@ -259,7 +259,7 @@ export function AddReportModal({
             <h2 style={styles.title}>{titleCopy}</h2>
             <p style={styles.subtitle}>{headerSubtitle}</p>
           </div>
-          <IconButton ariaLabel="Close" onClick={onClose} />
+          <IconButton ariaLabel="Close" onClick={onClose} style={{ position: "absolute", top: 0, right: 0 }} />
         </header>
 
         {/* Drop zone — clickable, also accepts drag/drop. Stays visible even
@@ -462,10 +462,8 @@ const styles: Record<string, React.CSSProperties> = {
     overflowY: "auto",
   },
   header: {
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: spacing.m,
+    position: "relative",
+    textAlign: "center",
   },
   title: {
     margin: 0,
@@ -646,7 +644,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   footer: {
     display: "flex",
-    justifyContent: "flex-end",
+    justifyContent: "center",
     gap: spacing.s,
   },
 };
