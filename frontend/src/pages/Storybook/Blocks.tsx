@@ -7,6 +7,7 @@
 import React, { useState } from "react";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 import { Modal } from "../../components/Modal";
+import { BillModal } from "../../components/BillCard/BillModal";
 import { Button } from "../../components/Button";
 import { IconButton } from "../../components/IconButton";
 import { Field } from "../../components/Field";
@@ -118,12 +119,14 @@ export function StickyHeaderBlock() {
 // ── 17 · Modals ──────────────────────────────────────────────────────────────────
 export function ModalsBlock() {
   const [open, setOpen] = useState(false);
+  const [billOpen, setBillOpen] = useState(false);
   const [v, setV] = useState("");
   return (
     <Section id="modals" title="17 · Modals"
       tldr={<><From>components/Modal</From> — one canonical shell: tokenised backdrop, <code>shadows.modal</code>, radius <code>radii.2xl</code>, <b>Esc-to-close + scroll-lock</b> by default. Sits ABOVE the sidebar via <code>zIndex.modal</code> (4000); a dialog opened from inside a modal uses <code>level="top"</code> (4100). Each modal keeps its own surface colour (<code>surface</code> prop).</>}>
       <Row>
         <Button variant="primary" onClick={() => setOpen(true)}>Open modal</Button>
+        <Button variant="dark" onClick={() => setBillOpen(true)}>Open bill modal</Button>
         <DetailTable rows={[
           ["backdrop", "alphaBlack3 (tokenised)"],
           ["z-index", "modal 4000 · modalTop 4100"],
@@ -146,6 +149,7 @@ export function ModalsBlock() {
           </div>
         </div>
       </Modal>
+      <BillModal isOpen={billOpen} onClose={() => setBillOpen(false)} />
     </Section>
   );
 }
