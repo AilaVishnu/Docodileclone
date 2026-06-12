@@ -740,9 +740,6 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // visit — so during a visit switch the previous visit's form data can never
   // be saved onto the newly-selected visit (the data-bleed-between-visits bug).
   const [loadedVisitId, setLoadedVisitId] = React.useState<string | null>(null);
-  // AI SOAP draft modal — opens on the ✨ AI draft button next to the
-  // Complaints/Diagnosis row. Fetched on open; applies per-field on demand.
-  const [aiSoapOpen, setAiSoapOpen] = React.useState<boolean>(false);
   // Visits are loaded ASC by visit_date, so the latest one sits at the
   // tail of the array — that's "today's visit", the one whose SessionBar
   // Editability is purely a function of the visit's session lifecycle, not
@@ -2403,30 +2400,6 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   )}
                 </div>
 
-                {/* AI Draft trigger — pulls a structured SOAP from whatever
-              the doctor's already typed (complaints/diagnosis/private notes
-              + vitals) and offers it back as suggestions to apply per-field.
-              Hidden when there's no active visit or the form is read-only. */}
-                {canEditForm && activeVisit && (
-                  <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
-                    <button
-                      type="button"
-                      onClick={() => setAiSoapOpen(true)}
-                      style={{
-                        background: colors.secondary700,
-                        color: colors.neutral100,
-                        border: "none",
-                        padding: "6px 14px",
-                        borderRadius: 999,
-                        cursor: "pointer",
-                        fontSize: 12,
-                      }}
-                    >
-                      ✨ AI draft
-                    </button>
-                  </div>
-                )}
-
                 {/* Figma node 2057:6283 — Complaints + Diagnosis cards laid out
               side-by-side. Each card is a multi-line cream textarea with the
               dictate icons docked at the bottom-right corner and a kebab
@@ -3086,17 +3059,6 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
         )}
       </Modal>
 
-      {aiSoapOpen && activeVisit && (
-        <AISoapDraftModal
-          visitId={activeVisit.id}
-          onClose={() => setAiSoapOpen(false)}
-          onApplyComplaints={(v) => setComplaintsValue((prev) => prev ? `${prev}\n${v}` : v)}
-          onApplyDiagnosis={(v) => setDiagnosisValue((prev) => prev ? `${prev}\n${v}` : v)}
-          onApplyPlan={(v) => setNotesForPatientValue((prev) => prev ? `${prev}\n${v}` : v)}
-          onApplyObjective={(v) => setPrivateNotesValue((prev) => prev ? `${prev}\n${v}` : v)}
-        />
-      )}
-
       {/* Slot picker — patient has 2+ appointments today and was opened
           without a specific one. Asks which slot this consultation is for. */}
       <Modal
@@ -3180,89 +3142,3 @@ const slotPickerStyles: Record<string, React.CSSProperties> = {
   },
 };
 
-// AI SOAP draft modal — fetches a structured Subjective/Objective/Assessment/
-// Plan from the current visit's free-text notes + vitals via the AI service.
-// Each block has an "Apply" button that appends into the matching form
-// field; the doctor stays in control of what lands on the chart.
-function AISoapDraftModal({
-  visitId,
-  onClose,
-  onApplyComplaints,
-  onApplyDiagnosis,
-  onApplyPlan,
-  onApplyObjective,
-}: {
-  visitId: string;
-  onClose: () => void;
-  onApplyComplaints: (v: string) => void;
-  onApplyDiagnosis: (v: string) => void;
-  onApplyPlan: (v: string) => void;
-  onApplyObjective: (v: string) => void;
-}) {
-  const [data, setData] = React.useState<import("../../api/ai").SoapDraft | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    import("../../api/ai").then(({ fetchVisitSoapDraft }) =>
-      fetchVisitSoapDraft(visitId)
-        .then((d) => {
-          setData(d);
-          if (d.error) setError(d.error);
-        })
-        .catch((e) => setError((e as Error).message))
-        .finally(() => setLoading(false))
-    );
-  }, [visitId]);
-
-  const Section = ({ label, value, onApply, target }: { label: string; value: string; onApply: (v: string) => void; target: string }) => (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <strong style={{ fontSize: 13 }}>{label}</strong>
-        <button
-          type="button"
-          disabled={!value}
-          onClick={() => { onApply(value); }}
-          style={{
-            background: "none",
-            border: "none",
-            color: value ? colors.secondary600 : colors.neutral400,
-            cursor: value ? "pointer" : "default",
-            textDecoration: "underline",
-            fontSize: 12,
-            padding: 0,
-          }}
-        >
-          Apply to {target}
-        </button>
-      </div>
-      <div style={{ minHeight: 32, padding: "8px 10px", background: colors.neutral150, borderRadius: 6, fontSize: 13, color: value ? colors.neutral900 : colors.neutral500, whiteSpace: "pre-wrap" }}>
-        {value || "—"}
-      </div>
-    </div>
-  );
-
-  return (
-    <Modal isOpen onClose={onClose} surface={colors.neutral100} width={560} padding={20}>
-      <div style={{ maxHeight: "90vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
-          <h3 style={{ margin: 0, fontSize: 18 }}>AI SOAP draft</h3>
-          <IconButton ariaLabel="Close" onClick={onClose} />
-        </div>
-        {loading && <p style={{ color: colors.neutral600, fontStyle: "italic" }}>Drafting…</p>}
-        {!loading && error && !data?.subjective && (
-          <p style={{ color: colors.red200, fontSize: 13 }}>AI unavailable: {error}</p>
-        )}
-        {data && !loading && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <Section label="Subjective" value={data.subjective} onApply={onApplyComplaints} target="Complaints" />
-            <Section label="Objective" value={data.objective} onApply={onApplyObjective} target="Private notes" />
-            <Section label="Assessment" value={data.assessment} onApply={onApplyDiagnosis} target="Diagnosis" />
-            <Section label="Plan" value={data.plan} onApply={onApplyPlan} target="Notes for patient" />
-            <p style={{ fontSize: 11, color: colors.neutral500, margin: 0 }}>AI-generated — review before applying.</p>
-          </div>
-        )}
-      </div>
-    </Modal>
-  );
-}
