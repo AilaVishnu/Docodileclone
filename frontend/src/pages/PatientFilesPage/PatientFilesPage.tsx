@@ -428,9 +428,9 @@ function matchesQuery(p: Patient, q: string): MatchField | null {
 // matches stroke weight of TopNav icons (1.5).
 function FunnelIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
-        d="M2 3h14l-5.5 7v5l-3-1.5V10L2 3z"
+        d="M3 5h18l-7 8v7l-4-2v-5L3 5z"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
@@ -476,7 +476,7 @@ function DateTrigger({
       style={{
         ...styles.dateTrigger,
         borderColor: active || filled ? colors.neutral900 : colors.neutral300,
-        color: filled ? colors.neutral900 : colors.neutral500,
+        color: filled ? colors.neutral900 : colors.neutral400,
       }}
     >
       <span>
@@ -667,7 +667,10 @@ const styles: Record<string, React.CSSProperties> = {
   dateTrigger: {
     flex: 1,
     minWidth: 0,
-    height: 40,
+    // Track the shared input height so it matches the Select boxes on both
+    // tiers (40px baseline / 32px compact). Was hardcoded 40 → taller than the
+    // Selects below 1440.
+    height: "var(--input-h, 40px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -676,9 +679,10 @@ const styles: Record<string, React.CSSProperties> = {
     border: `1px solid ${colors.neutral300}`,
     borderRadius: radii.m,
     backgroundColor: colors.neutral100,
+    boxSizing: "border-box",
     cursor: "pointer",
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.m,
+    fontSize: fonts.control.md, // match the Select value/placeholder size
     transition: "border-color 0.15s ease, color 0.15s ease",
     overflow: "hidden",
     whiteSpace: "nowrap",
