@@ -13,6 +13,8 @@ export type GridColumn<T> = {
   /** Fixed column width (colgroup). Omit for the flexible column. */
   width?: number | string;
   align?: "left" | "center" | "right";
+  headerPadding?: string;
+  cellPadding?: string;
   render: (row: T, index: number) => React.ReactNode;
 };
 
@@ -24,8 +26,8 @@ export function DataGrid<T>({ columns, rows, rowKey, size = "m" }: {
   size?: "m" | "s";
 }) {
   const fs = size === "s" ? fonts.size.s : fonts.size.m;
-  const th = (a?: GridColumn<T>["align"]): CSSProperties => ({ ...tableHeadCell, fontSize: fs, fontWeight: fonts.weight.regular, padding: "12px 10px", whiteSpace: "nowrap", textAlign: a ?? "center" });
-  const td = (a?: GridColumn<T>["align"]): CSSProperties => ({ fontSize: fs, color: colors.neutral900, padding: "16px 10px", borderBottom: tableDivider, verticalAlign: "middle", textAlign: a ?? "center" });
+  const th = (c: GridColumn<T>): CSSProperties => ({ ...tableHeadCell, fontSize: fs, fontWeight: fonts.weight.regular, padding: c.headerPadding ?? "12px 10px", whiteSpace: "nowrap", textAlign: c.align ?? "center" });
+  const td = (c: GridColumn<T>): CSSProperties => ({ fontSize: fs, color: colors.neutral900, padding: c.cellPadding ?? "16px 10px", borderBottom: tableDivider, verticalAlign: "middle", textAlign: c.align ?? "center" });
   return (
     <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
       <colgroup>
@@ -34,11 +36,11 @@ export function DataGrid<T>({ columns, rows, rowKey, size = "m" }: {
         ))}
       </colgroup>
       <thead>
-        <tr>{columns.map((c) => <th key={c.key} style={th(c.align)}>{c.header}</th>)}</tr>
+        <tr>{columns.map((c) => <th key={c.key} style={th(c)}>{c.header}</th>)}</tr>
       </thead>
       <tbody>
         {rows.map((r, i) => (
-          <tr key={rowKey(r, i)}>{columns.map((c) => <td key={c.key} style={td(c.align)}>{c.render(r, i)}</td>)}</tr>
+          <tr key={rowKey(r, i)}>{columns.map((c) => <td key={c.key} style={td(c)}>{c.render(r, i)}</td>)}</tr>
         ))}
       </tbody>
     </table>

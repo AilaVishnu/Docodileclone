@@ -53,9 +53,13 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
   const [billDate, setBillDate] = useState(new Date(2026, 0, 30));
   const [showCal, setShowCal] = useState(false);
   const [addDue, setAddDue] = useState(false);
-  const [payMode, setPayMode] = useState("Cash");
-  const [received, setReceived] = useState<number | "">("");
+  // One payment line by default; "+" splits the bill across modes (Cash + UPI…).
+  const [payments, setPayments] = useState<{ mode: string; amount: number | "" }[]>([{ mode: "Cash", amount: "" }]);
   const [deposit, setDeposit] = useState<number | "">("");
+  const setPayment = (i: number, patch: Partial<{ mode: string; amount: number | "" }>) =>
+    setPayments((ps) => ps.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
+  const addPayment = () => setPayments((ps) => [...ps, { mode: "Cash", amount: "" }]);
+  const removePayment = (i: number) => setPayments((ps) => (ps.length === 1 ? ps : ps.filter((_, idx) => idx !== i)));
   const PAST_DUE = 2500;
 
   const isTrailing = (l: Line) => l.name.trim() === "";
@@ -75,7 +79,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
   const discount = lines.reduce((s, l) => s + (l.disc || 0), 0);
   const tax = lines.reduce((s, l) => s + (l.qty * l.unit * (l.gst || 0)) / 100, 0);
   const finalAmt = billed - discount + tax + (addDue ? PAST_DUE : 0);
-  const recv = Number(received) || 0;
+  const recv = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
   const dep = Number(deposit) || 0;
   const balance = Math.max(0, finalAmt - dep - recv);
   const refund = Math.max(0, dep + recv - finalAmt);
@@ -98,7 +102,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
     { key: "gst", header: "GST%", width: 50, render: (l) => numCell(l, "gst") },
     { key: "disc", header: "Disc", width: 62, render: (l) => numCell(l, "disc") },
     { key: "tot", header: "Total", width: 84, align: "center", render: (l) => (isTrailing(l) ? "" : <span style={{ fontWeight: fonts.weight.medium }}>{inr(l.qty * l.unit - l.disc)}</span>) },
-    { key: "x", header: "", width: 56, render: (l) => (isTrailing(l) ? "" : (
+    { key: "x", header: "", width: 40, headerPadding: "12px 4px", cellPadding: "16px 4px", render: (l) => (isTrailing(l) ? "" : (
       <button onClick={() => removeLine(l.id)} aria-label="Remove" style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, display: "flex", justifyContent: "center", width: "100%" }}><TrashIcon width={24} height={24} style={{ flexShrink: 0 }} /></button>
     )) },
   ];
@@ -167,18 +171,29 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
             <span style={bill.totalValue}>₹ {balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
 
-          <div style={{ display: "flex", gap: spacing.s, alignItems: "center", "--input-h": "32px" } as React.CSSProperties}>
-            <div style={{ width: 110 }}>
-              <Select options={["Cash", "Card", "UPI", "Waive"]} value={payMode} onChange={setPayMode} />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <MeasureField box prefix="₹" placeholder={String(balance)} inputMode="decimal" ariaLabel="Amount received"
-                value={received === "" ? "" : String(received)} onChange={(v) => setReceived(v === "" ? "" : Number(v))} />
-            </div>
-          </div>
-          <button onClick={() => {}} style={{ border: "none", background: "transparent", color: colors.secondary700, cursor: "pointer", fontSize: fonts.size.s, display: "inline-flex", alignItems: "center", gap: 4, alignSelf: "flex-start" }}>
-            <PlusIcon style={{ width: 14, height: 14 }} /> Payment mode (split)
-          </button>
+          {payments.map((p, i) => {
+            const last = i === payments.length - 1;
+            return (
+              <div key={i} style={{ display: "flex", gap: spacing.s, alignItems: "center", "--input-h": "32px" } as React.CSSProperties}>
+                <div style={{ width: 110 }}>
+                  <Select options={["Cash", "Card", "UPI", "Waive"]} value={p.mode} onChange={(m) => setPayment(i, { mode: m })} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <MeasureField box prefix="₹" placeholder={i === 0 ? String(balance) : "0"} inputMode="decimal" ariaLabel="Amount"
+                    value={p.amount === "" ? "" : String(p.amount)} onChange={(v) => setPayment(i, { amount: v === "" ? "" : Number(v) })} />
+                </div>
+                {last ? (
+                  <IconButton ariaLabel="Add payment mode (split)" onClick={addPayment} color={colors.neutral900}>
+                    <PlusIcon style={{ width: 20, height: 20 }} />
+                  </IconButton>
+                ) : (
+                  <IconButton ariaLabel="Remove payment mode" onClick={() => removePayment(i)} color={colors.neutral900}>
+                    <TrashIcon width={20} height={20} />
+                  </IconButton>
+                )}
+              </div>
+            );
+          })}
 
           {/* Pay + print/share icons (saves vertical space) */}
           <div style={{ marginTop: "auto", display: "flex", gap: spacing.s, alignItems: "center" }}>
