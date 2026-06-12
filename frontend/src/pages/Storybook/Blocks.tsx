@@ -34,7 +34,7 @@ const Bar = ({ w = 60, h = 8, c = dim }: { w?: number | string; h?: number; c?: 
 // ── 14 · Header (TopNav) ────────────────────────────────────────────────────────
 export function HeaderBlock() {
   return (
-    <Section id="header" title="14 · Header (TopNav)"
+    <Section id="header" title="22 · Header (TopNav)"
       tldr={<>Top chrome: fixed-width <b>search</b> on the left, action cluster + avatar on the right; the <b>gap between them stretches/squeezes</b> with the window (search width is fixed, not fluid). Compacts at &lt;1440. Sits at <code>zIndex.sticky</code> (3000).</>}>
       <Stage>
         {/* genuinely resizes: heights/widths read the live CSS vars */}
@@ -64,7 +64,7 @@ export function HeaderBlock() {
 export function SidebarBlock() {
   const items = ["Home","Appts","Rx Pad","Patients","Bills","Stats"];
   return (
-    <Section id="sidebar" title="15 · Left sidebar (SideNav)"
+    <Section id="sidebar" title="23 · Left sidebar (SideNav)"
       tldr={<>A <b>fixed 80px</b> icon rail (icon + short label under each), one form at every size — <b>no expand, no responsive step</b> (80px = 60px highlight + 10px gutters). Active item gets the cream highlight box. Sits at <code>zIndex.sticky</code> (3000).</>}>
       <Stage>
         <div style={{ width: "var(--sidenav-w, 80px)", display: "flex", flexDirection: "column", gap: spacing.xs,
@@ -104,7 +104,7 @@ const HeaderAction = ({ label }: { label: string }) => (
 
 export function StickyHeaderBlock() {
   return (
-    <Section id="sticky-header" title="16 · Sticky header (PageHeader)"
+    <Section id="sticky-header" title="24 · Sticky header (PageHeader)"
       tldr={<><From>components/PageHeader</From> — ONE shared sticky app-bar with three zones: <b>back</b> (left) · <b>title</b> (centred — can hold an inline dropdown) · <b>actions</b> (right icons). Parks under the TopNav as the page scrolls (the page's <code>main</code> owns the scroll). Below are the two shapes it actually takes in the app.</>}>
       <Sub title="Queue header — centred title with an inline box dropdown" note="AppointmentQueue / PrescriptionQueue: the title is a clickable date box-pill (1px primary400 · radii.m · ChevronDown → DatePicker) plus a label word.">
         <Stage pad="0px">
@@ -170,7 +170,7 @@ export function ModalsBlock() {
     <span style={{ fontSize: 11, borderRadius: 6, padding: "3px 10px", ...(dark ? { background: colors.neutral900, color: colors.neutral100 } : { border: `${strokes.xs} solid ${colors.neutral300}`, color: colors.neutral900 }) }}>{text}</span>
   );
   return (
-    <Section id="modals" title="17 · Modals"
+    <Section id="modals" title="25 · Modals"
       tldr={<><From>components/Modal</From> — one canonical shell (tokenised backdrop, <code>shadows.modal</code>, radius <code>radii.2xl</code>, <b>Esc-close + scroll-lock</b>; <code>zIndex.modal</code> 4000 / <code>level="top"</code> 4100). <b>Three TYPES</b> share one rulebook (revised 2026-06-12): <b>Confirm</b> (centred), <b>Form</b> (left title, white), <b>Workbench</b> (wide, <code>padding=0</code>). ✕ is ALWAYS a top-right <code>IconButton</code>. Width scale S 400 · M 480 · L 560 · XL 1040.</>}>
 
       <Sub title="Three types — the rulebook" note="Surface: forms + confirms = white (Add staff is the lone cream exception); torn-edge receipt = transparent. Heading: left, except confirms are centred.">
@@ -277,7 +277,7 @@ export function LoginBlock() {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   return (
-    <Section id="login" title="18 · Login form"
+    <Section id="login" title="26 · Login form"
       tldr={<>Centered card on the splash, width <code>--login-card-w</code> (520 → 480 below 1440). Themed surface (<code>active.shade100</code>), radius 16, heavy padding. Built from the canonical <code>Field</code> + <code>Button</code>.</>}>
       <Stage pad={spacing.xl} bg={colors.neutral150}>
         <div style={{ width: "var(--login-card-w, 520px)", maxWidth: "100%", margin: "0 auto", background: colors.active.shade100,
@@ -302,7 +302,7 @@ export function ChatBlock() {
       borderRadius: radii.l, padding: `${spacing.xs} ${spacing.s}`, fontSize: fonts.size.s }}>{text}</div>
   );
   return (
-    <Section id="chat" title="19 · Chat"
+    <Section id="chat" title="27 · Chat"
       tldr={<>Right-side slide-over panel: header with an <code>IconButton</code> close, a scrolling message list (mine right / theirs left), and a <code>Field</code> + send <code>Button</code> docked at the bottom.</>}>
       <Stage pad={spacing.s}>
         <div style={{ width: 340, maxWidth: "100%", height: 360, display: "flex", flexDirection: "column",

@@ -6,19 +6,25 @@
 import React, { useState } from "react";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 import { Label } from "./kit";
-import { TypographySection, ColorsSection, IconsSection, SpacingSection } from "./Foundations";
+import { TypographySection, ColorsSection, IconsSection, SpacingSection, LayeringSection } from "./Foundations";
 import {
   ButtonsSection, InputsSection, DropdownsSection, TabsSection, CardsSection,
   ControlsSection, BadgesSection, TablesSection, ToastSection,
 } from "./Elements";
 import {
+  IconButtonSection, MeasureFieldSection, FillInputSection, DataGridSection,
+  PageHeaderSection, PopoverMenuSection, UploadModalSection,
+} from "./Components";
+import {
   HeaderBlock, SidebarBlock, StickyHeaderBlock, ModalsBlock, LoginBlock, ChatBlock,
 } from "./Blocks";
+import { PrinciplesSection, ModalRulebookSection, AccessibilitySection, ChangelogSection } from "./Guidelines";
 
 const NAV: { group: string; items: [string, string][] }[] = [
-  { group: "Foundations", items: [["typography","1 · Text"],["colors","2 · Color"],["icons","3 · Icons"],["spacing","4 · Spacing"]] },
-  { group: "Elements", items: [["buttons","5 · Buttons"],["inputs","6 · Inputs"],["dropdowns","7 · Dropdowns"],["tabs","8 · Tabs"],["cards","9 · Cards"],["controls","10 · Tags/Switch"],["badges","11 · Badges"],["tables","12 · Tables"],["toast","13 · Toast/Date"]] },
-  { group: "Blocks", items: [["header","14 · Header"],["sidebar","15 · Sidebar"],["sticky-header","16 · Sticky header"],["modals","17 · Modals"],["login","18 · Login"],["chat","19 · Chat"]] },
+  { group: "Foundations", items: [["typography","1 · Text"],["colors","2 · Color"],["icons","3 · Icons"],["spacing","4 · Spacing"],["layering","5 · Layering"]] },
+  { group: "Components", items: [["buttons","6 · Buttons"],["inputs","7 · Inputs"],["dropdowns","8 · Dropdowns"],["tabs","9 · Tabs"],["cards","10 · Cards"],["controls","11 · Tags/Switch"],["badges","12 · Badges"],["tables","13 · Tables"],["toast","14 · Toast/Date"],["iconbutton","15 · IconButton"],["measurefield","16 · MeasureField"],["fillinput","17 · FillInput"],["datagrid","18 · DataGrid"],["pageheader","19 · PageHeader"],["popovermenu","20 · PopoverMenu"],["uploadmodal","21 · UploadModal"]] },
+  { group: "Patterns", items: [["header","22 · Header"],["sidebar","23 · Sidebar"],["sticky-header","24 · Sticky header"],["modals","25 · Modals"],["login","26 · Login"],["chat","27 · Chat"]] },
+  { group: "Guidelines", items: [["principles","28 · Principles"],["modal-rulebook","29 · Modal rules"],["accessibility","30 · A11y"],["changelog","31 · Changelog"]] },
 ];
 
 export function StorybookPage() {
@@ -42,7 +48,8 @@ export function StorybookPage() {
           <h1 style={{ fontSize: fonts.size.h4, fontWeight: fonts.weight.semibold, color: colors.neutral900, margin: 0 }}>Storybook</h1>
           <p style={{ color: colors.neutral600, fontSize: fonts.size.s, marginTop: spacing.xs, maxWidth: 760, lineHeight: 1.55 }}>
             The single source of truth for Docodile's design system — <b>Foundations</b> (tokens),{" "}
-            <b>Elements</b> (components) and <b>Blocks</b> (composed views). Every specimen is the{" "}
+            <b>Components</b> (every shared component, with variants · states · props), <b>Patterns</b>{" "}
+            (composed views) and <b>Guidelines</b> (the written rules). Every specimen is the{" "}
             <b>real component rendered live</b>, so this page can't drift from production. Responsiveness
             decisions reference the <b>1440px</b> breakpoint (≥1440 baseline · 1200–1439 compact · 1200 min).
           </p>
@@ -69,10 +76,13 @@ export function StorybookPage() {
       </div>
 
       <div style={{ marginTop: spacing.xl }}>
+        {/* Foundations */}
         <TypographySection />
         <ColorsSection />
         <IconsSection />
         <SpacingSection />
+        <LayeringSection />
+        {/* Components */}
         <ButtonsSection />
         <InputsSection />
         <DropdownsSection />
@@ -82,16 +92,29 @@ export function StorybookPage() {
         <BadgesSection />
         <TablesSection />
         <ToastSection />
+        <IconButtonSection />
+        <MeasureFieldSection />
+        <FillInputSection />
+        <DataGridSection />
+        <PageHeaderSection />
+        <PopoverMenuSection />
+        <UploadModalSection />
+        {/* Patterns */}
         <HeaderBlock />
         <SidebarBlock />
         <StickyHeaderBlock />
         <ModalsBlock />
         <LoginBlock />
         <ChatBlock />
+        {/* Guidelines */}
+        <PrinciplesSection />
+        <ModalRulebookSection />
+        <AccessibilitySection />
+        <ChangelogSection />
       </div>
 
       <div style={{ marginTop: spacing["3xl"], padding: `${spacing.l} 0`, color: colors.neutral400, fontSize: fonts.size.xs, textAlign: "center" }}>
-        End of Storybook · Foundations · Elements · Blocks
+        End of Storybook · Foundations · Components · Patterns · Guidelines
       </div>
     </div>
   );

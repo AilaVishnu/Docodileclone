@@ -26,7 +26,7 @@ import { Section, Sub, Row, Label, Rule, From, Specimen, DetailTable, Responsive
 export function ButtonsSection() {
   const variants = ["primary","primaryLight","secondary","secondaryLight","dark","light"] as const;
   return (
-    <Section id="buttons" title="5 · Buttons"
+    <Section id="buttons" title="6 · Buttons"
       tldr={<><From>components/Button</From> — 6 variants × 2 sizes. <b>primary</b> main action · <b>dark</b> destructive confirm (filled black, not red) · <b>secondary</b> themed solid · <b>primaryLight/secondaryLight</b> themed outline · <b>light</b> neutral cancel. Disabled is grey everywhere; text colour = the outline colour.</>}>
 
       <Sub title="Variants × size × state" note="Hover any button to see its hover state.">
@@ -89,7 +89,7 @@ export function InputsSection() {
   const [sys, setSys] = useState("120"); const [dia, setDia] = useState("80"); const [bpU, setBpU] = useState("mmHg");
   const [ageY, setAgeY] = useState("5"); const [ageM, setAgeM] = useState("3");
   return (
-    <Section id="inputs" title="6 · Input fields"
+    <Section id="inputs" title="7 · Input fields"
       tldr={<><From>components/Field</From> is the ONE text input — three looks by context: <b>underline</b> (most forms) · <b>box</b> (boxed forms) · <b>pill</b> (search only). One invalid state. <code>TextInput</code> is a thin alias of <code>Field variant="underline"</code>.</>}>
       <Sub title="Field — variants & states">
         <Specimen
@@ -170,7 +170,7 @@ export function DropdownsSection() {
   const [s2, setS2] = useState("Hydrafacial");
   const [u, setU] = useState("");
   return (
-    <Section id="dropdowns" title="7 · Dropdowns"
+    <Section id="dropdowns" title="8 · Dropdowns"
       tldr={<>Triggers share ONE menu surface: thin <code>primary300</code> border + <code>shadows.menu</code>, cream hover, <code>primary100</code> selected, canonical <code>ChevronDown</code> @16. Three trigger styles: <b>Select</b> (box · forms) · <b>inline header pill</b> (box · the date/scope dropdown in the sticky <code>PageHeader</code>) · <b>UnderlineSelect</b> (the booking form). Heights compact via <code>--input-h</code>.</>}>
       <Sub title="Select — box trigger">
         <Specimen
@@ -211,7 +211,7 @@ export function TabsSection() {
   const [pillSm, setPillSm] = useState("info");
   const [conn, setConn] = useState("clinicA");
   return (
-    <Section id="tabs" title="8 · Tabs"
+    <Section id="tabs" title="9 · Tabs"
       tldr={<><From>components/Tabs</From> — ONE component, two looks. <b>block</b> = white-pill filter row (selected = white pill, dark text) — the queue/Stats/Pharmacy filters. <b>connected</b> = attached page tabs (clinic picker). Pass <code>variant</code>; block takes <code>size</code> md/sm (md compacts to sm below 1440).</>}>
       <Sub title='block — white-pill filter row (the "View all / At Doc / …" pattern)'
         note="variant='block'. Selected pill = neutral100 (white) on neutral900 text; idle = transparent / alphaBlack3. Use for status & view filters across the queues, Stats and Pharmacy.">
@@ -250,7 +250,7 @@ export function CardsSection() {
     </>
   );
   return (
-    <Section id="cards" title="9 · Cards"
+    <Section id="cards" title="10 · Cards"
       tldr={<>ONE surface from <From>cardSurface(variant, elevation)</From>. Colour by context: <b>surface</b> (white) · <b>sage</b> (clinic) · <b>cream</b> (staff/queue). <code>elevation="raised"</code> = the single soft card shadow; radius always 16. Default <code>variant="plain"</code> = transparent layout shell.</>}>
       <Row align="stretch">
         <Card variant="surface" elevation="none" padding="xl" style={{ width: 240 }}>{body("surface · flat", "White — bills, stat tiles.")}</Card>
@@ -270,7 +270,7 @@ export function ControlsSection() {
   const [off, setOff] = useState(false);
   const [sm, setSm] = useState(true);
   return (
-    <Section id="controls" title="10 · Tags & Switch"
+    <Section id="controls" title="11 · Tags & Switch"
       tldr={<><From>components/Tag</From> — pill chip, <b>outline</b> (filters) or <b>filled</b> (specialty), optional remove ✕. <From>components/Switch</From> — on/off toggle in two sizes; track turns the active theme colour when on.</>}>
       <Sub title="Tag">
         <Row>
@@ -296,7 +296,7 @@ export function ControlsSection() {
 export function BadgesSection() {
   const statuses = ["BOOKED","WAITING","ARRIVED","IN_PROGRESS","COMPLETED","NO_SHOW","CANCELLED"];
   return (
-    <Section id="badges" title="11 · Status badges"
+    <Section id="badges" title="12 · Status badges"
       tldr={<><From>components/AppointmentQueue/StatusBadge</From> — ONE badge for both queues (4px radius, solid pastel, dark text). Pass <code>started</code> → "Ongoing" on sage; the appointment queue passes <code>sessionStartedAt</code> → a live timer counting from the backend session start. <b>PayBadge</b> shows paid/due as an icon.</>}>
       <Sub title="StatusBadge">
         <Row>
@@ -319,7 +319,7 @@ export function TablesSection() {
     { n: "03", name: "Mei-Ling Chen", status: "COMPLETED" },
   ];
   return (
-    <Section id="tables" title="12 · Tables"
+    <Section id="tables" title="13 · Tables"
       tldr={<>Shared header look from <From>styles/tableStyles</From>: <code>tableHeadCell</code> (soft-black <code>alphaBlack3</code> / weight 400) + <code>tableDivider</code> (thin <code>primary300</code>). Per-table padding, font-size and card radius stay local.</>}>
       <Specimen
         details={<DetailTable rows={[
@@ -385,7 +385,7 @@ function MockCalendar({ showButton, disablePast }: { showButton?: boolean; disab
 export function ToastSection() {
   const [open, setOpen] = useState(false);
   return (
-    <Section id="toast" title="13 · Toast & Date picker"
+    <Section id="toast" title="14 · Toast & Date picker"
       tldr={<><From>components/Toast</From> — transient confirmation. <From>components/DatePicker</From> — ONE shared calendar used in <b>10 places</b>; two opt-in booleans give all the variants: <code>showDoneButton</code> (a "Go to today" button) and <code>disablePast</code> (greys past dates). Mocks below (static — the real picker is a popover).</>}>
       <Sub title="Toast">
         <Button variant="secondary" onClick={() => setOpen(true)}>Show toast</Button>

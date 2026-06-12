@@ -4,8 +4,8 @@
 // assets/icons so it can never go stale.
 // ══════════════════════════════════════════════════════════════════════════════
 import React from "react";
-import { colors, fonts, spacing, radii, strokes, shadows, fluidSpacing } from "../../styles/theme";
-import { Section, Sub, Row, Label, Rule, From, ResponsiveTable } from "./kit";
+import { colors, fonts, spacing, radii, strokes, shadows, fluidSpacing, zIndex } from "../../styles/theme";
+import { Section, Sub, Row, Label, Rule, From, ResponsiveTable, DetailTable } from "./kit";
 
 // ── Typography ────────────────────────────────────────────────────────────────
 export function TypographySection() {
@@ -217,6 +217,54 @@ export function SpacingSection() {
         </Row>
         <div style={{ fontSize: 11, color: colors.neutral500, marginTop: spacing.xs }}>
           Reserved: <code>fluidSpacing.*</code> (outer shell) — outerY {fluidSpacing.outerY}, outerX {fluidSpacing.outerX}, sectionGap {fluidSpacing.sectionGap}.
+        </div>
+      </Sub>
+    </Section>
+  );
+}
+
+// ── Layering & motion ───────────────────────────────────────────────────────────
+const ALPHAS: [string, string][] = [
+  ["alphaBlack0 / neutralAlphaBlack", colors.neutralAlphaBlack],
+  ["alphaBlack1", colors.alphaBlack1],
+  ["alphaBlack2", colors.alphaBlack2],
+  ["alphaBlack3 (backdrop)", colors.alphaBlack3],
+  ["greenAlpha10", colors.greenAlpha10],
+  ["yellowAlpha10", colors.yellowAlpha10],
+  ["redAlpha10", colors.redAlpha10],
+];
+export function LayeringSection() {
+  return (
+    <Section id="layering" title="5 · Layering & motion"
+      tldr={<>One stacking order (<From>zIndex.*</From>) and one set of alpha tints — so overlays never fight and tints stay consistent. Motion is deliberately minimal.</>}>
+      <Sub title="z-index — zIndex.*" note="Modals sit ABOVE the fixed sidebar/top-nav; portaled menus must clear modals; toasts win.">
+        <DetailTable rows={[
+          ["dropdown", String(zIndex.dropdown)],
+          ["sticky (SideNav / TopNav)", String(zIndex.sticky)],
+          ["modal", String(zIndex.modal)],
+          ["modalTop (dialog over a modal)", String(zIndex.modalTop)],
+          ["popover (portaled menus)", String(zIndex.popover)],
+          ["toast", String(zIndex.toast)],
+        ]} />
+      </Sub>
+      <Sub title="Opacity / alpha tints" note="Use these tokens for scrims, hover tints and soft status fills — never an inline rgba().">
+        <Row>
+          {ALPHAS.map(([name, val]) => (
+            <div key={name} style={{ display: "flex", flexDirection: "column", gap: spacing["2xs"] }}>
+              <div style={{ width: 96, height: 44, borderRadius: radii.m, background: `repeating-conic-gradient(${colors.neutral200} 0% 25%, ${colors.neutral100} 0% 50%) 50% / 16px 16px` }}>
+                <div style={{ width: "100%", height: "100%", borderRadius: radii.m, background: val, border: `${strokes.xs} solid ${colors.neutral200}` }} />
+              </div>
+              <Label>{name}</Label>
+            </div>
+          ))}
+        </Row>
+      </Sub>
+      <Sub title="Motion" note="No motion tokens yet — keep it quiet. Hover/scrim fades use 0.15s ease; menu hover 0.12s ease. Avoid entrance animation on modals/menus.">
+        <div style={{ display: "inline-flex", alignItems: "center", gap: spacing.s, fontSize: fonts.size.s, color: colors.neutral700 }}>
+          <span style={{ width: 80, height: 32, borderRadius: radii.m, background: colors.neutral150, border: `${strokes.xs} solid ${colors.neutral200}`, transition: "background-color 0.15s ease", cursor: "pointer" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = colors.primary100)}
+            onMouseLeave={(e) => (e.currentTarget.style.background = colors.neutral150)} />
+          hover me — 0.15s ease
         </div>
       </Sub>
     </Section>

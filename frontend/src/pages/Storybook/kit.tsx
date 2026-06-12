@@ -103,3 +103,44 @@ export const Specimen = ({ children, details }: { children: React.ReactNode; det
     <div style={{ flex: "0 1 auto" }}>{details}</div>
   </div>
 );
+
+// Props/API table — the canonical per-component reference (Medium-depth template).
+export const PropsTable = ({ rows }: { rows: { name: string; type: string; def?: React.ReactNode; desc: React.ReactNode }[] }) => (
+  <div style={{ marginTop: spacing.s, overflowX: "auto" }}>
+    <table style={{ borderCollapse: "collapse", fontSize: fonts.size.xs, fontFamily: fonts.family.primary, minWidth: 520, width: "100%" }}>
+      <thead>
+        <tr style={{ borderBottom: `${strokes.s} solid ${colors.neutral200}` }}>
+          {["Prop", "Type", "Default", "Notes"].map((h, i) => (
+            <th key={i} style={{ textAlign: "left", padding: "6px 16px 6px 0", color: colors.neutral500, fontWeight: fonts.weight.medium, whiteSpace: "nowrap" }}>{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r, i) => (
+          <tr key={i} style={{ borderBottom: `${strokes.xs} solid ${colors.neutral150}`, verticalAlign: "top" }}>
+            <td style={{ padding: "6px 16px 6px 0", color: colors.neutral900, fontFamily: "monospace", whiteSpace: "nowrap" }}>{r.name}</td>
+            <td style={{ padding: "6px 16px 6px 0", color: colors.secondary700, fontFamily: "monospace", whiteSpace: "nowrap" }}>{r.type}</td>
+            <td style={{ padding: "6px 16px 6px 0", color: colors.neutral500, fontFamily: "monospace", whiteSpace: "nowrap" }}>{r.def ?? "—"}</td>
+            <td style={{ padding: "6px 0", color: colors.neutral600, lineHeight: 1.5 }}>{r.desc}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
+// State / variant grid — each cell is a live specimen with a caption below it,
+// so a component's states (default · hover · disabled · error…) and variants sit
+// side by side on one neutral stage.
+export const StateGrid = ({ items, bg = colors.neutral100, minCol = 150 }:
+  { items: { label: React.ReactNode; node: React.ReactNode }[]; bg?: string; minCol?: number }) => (
+  <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fill, minmax(${minCol}px, 1fr))`, gap: spacing.m,
+    background: bg, border: `${strokes.xs} solid ${colors.neutral200}`, borderRadius: radii.m, padding: spacing.l }}>
+    {items.map((it, i) => (
+      <div key={i} style={{ display: "flex", flexDirection: "column", gap: spacing.xs, alignItems: "flex-start" }}>
+        <div style={{ display: "flex", alignItems: "center", minHeight: 40 }}>{it.node}</div>
+        <div style={{ fontSize: 11, color: colors.neutral500, fontFamily: fonts.family.primary }}>{it.label}</div>
+      </div>
+    ))}
+  </div>
+);
