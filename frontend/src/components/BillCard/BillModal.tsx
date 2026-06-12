@@ -85,18 +85,18 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
     { key: "n", header: "#", width: 26, align: "center", render: (l, i) => (isTrailing(l) ? "" : <span style={{ color: colors.neutral500 }}>{i + 1}</span>) },
     { key: "svc", header: "Service", align: "left", render: (l) => (
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-        <input list="bm-svc-list" placeholder="Type or pick a service" value={l.name} onChange={(e) => setName(l.id, e.target.value)}
+        <input className="bm-combo" list="bm-svc-list" placeholder="Type or pick a service" value={l.name} onChange={(e) => setName(l.id, e.target.value)}
           style={{ ...cell, textAlign: "left", fontWeight: l.name ? fonts.weight.medium : fonts.weight.regular }} />
         <ChevronDown size={16} color={colors.neutral400} />
       </div>
     ) },
     { key: "qty", header: "Qty", width: 50, render: (l) => numCell(l, "qty") },
-    { key: "unit", header: "Unit ₹", width: 84, render: (l) => numCell(l, "unit", "right") },
+    { key: "unit", header: "Unit ₹", width: 84, render: (l) => numCell(l, "unit") },
     { key: "gst", header: "GST%", width: 50, render: (l) => numCell(l, "gst") },
-    { key: "disc", header: "Disc", width: 62, render: (l) => numCell(l, "disc", "right") },
-    { key: "tot", header: "Total", width: 84, align: "right", render: (l) => (isTrailing(l) ? "" : <span style={{ fontWeight: fonts.weight.medium }}>{inr(l.qty * l.unit - l.disc)}</span>) },
-    { key: "x", header: "", width: 44, render: (l) => (isTrailing(l) ? "" : (
-      <button onClick={() => removeLine(l.id)} aria-label="Remove" style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, display: "flex", justifyContent: "center", width: "100%" }}><TrashIcon width={24} height={24} /></button>
+    { key: "disc", header: "Disc", width: 62, render: (l) => numCell(l, "disc") },
+    { key: "tot", header: "Total", width: 84, align: "center", render: (l) => (isTrailing(l) ? "" : <span style={{ fontWeight: fonts.weight.medium }}>{inr(l.qty * l.unit - l.disc)}</span>) },
+    { key: "x", header: "", width: 56, render: (l) => (isTrailing(l) ? "" : (
+      <button onClick={() => removeLine(l.id)} aria-label="Remove" style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, display: "flex", justifyContent: "center", width: "100%" }}><TrashIcon width={24} height={24} style={{ flexShrink: 0 }} /></button>
     )) },
   ];
 

@@ -69,6 +69,11 @@ input[type="radio"].dark-radio:checked {
   background: radial-gradient(circle, #202020 0 4px, transparent 5px);
 }
 
+/* Combobox inputs that pair a <datalist> with our own ChevronDown — hide the
+   browser's native dropdown indicator (the extra solid triangle). */
+.bm-combo::-webkit-calendar-picker-indicator { display: none !important; }
+.bm-combo::-webkit-list-button { display: none !important; }
+
 /* Single grey for all placeholders across the app — matches Figma's
    input-field idle state (border + icon + placeholder share neutral300).
    Split per vendor prefix: a single comma-list gets discarded wholesale
