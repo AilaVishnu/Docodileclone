@@ -9,6 +9,7 @@ import { Modal } from "../../components/Modal/Modal";
 import { Button } from "../../components/Button";
 import { IconButton } from "../../components/IconButton";
 import { Tabs } from "../../components/Tabs";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { colors, fonts, spacing, radii } from "../../styles/theme";
 import { PlusIcon } from "../../iconsUtil";
 import { ReactComponent as SearchIcon } from "../../assets/search.svg";
@@ -108,28 +109,26 @@ export function PharmacyView() {
 
   return (
     <div style={styles.page}>
-      <div style={styles.header}>
-        <div style={styles.headerSpacer} />
-        <h1 style={styles.title}>Pharmacy Stocks</h1>
-        <div style={{ ...styles.headerActions, display: "flex", gap: 8 }}>
-          <Button
-            variant="light"
-            size="md"
-            onClick={() => setImportOpen(true)}
-          >
-            Import CSV
-          </Button>
-          <Button
-            variant="dark"
-            size="md"
-            iconLeft={<PlusIcon style={{ width: 16, height: 16 }} />}
-            onClick={() => { setEditing(null); setAddOpen(true); }}
-          >
-            Add Stock
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Pharmacy Stocks"
+        actions={
+          <>
+            <Button variant="light" size="md" onClick={() => setImportOpen(true)}>
+              Import CSV
+            </Button>
+            <Button
+              variant="dark"
+              size="md"
+              iconLeft={<PlusIcon style={{ width: 16, height: 16 }} />}
+              onClick={() => { setEditing(null); setAddOpen(true); }}
+            >
+              Add Stock
+            </Button>
+          </>
+        }
+      />
 
+      <div style={styles.content}>
       <div style={styles.toolbar}>
         <div style={styles.toolbarLeft}>
           <div style={styles.searchWrap}>
@@ -200,6 +199,7 @@ export function PharmacyView() {
       ) : (
         <PharmacyShelfView items={items} groupBy={groupBy} onPick={setSelected} />
       )}
+      </div>
 
       <Modal isOpen={selected !== null} onClose={() => setSelected(null)}>
         {selected && <DetailBody med={selected} onClose={() => setSelected(null)} />}

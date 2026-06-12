@@ -9,6 +9,7 @@ import { PharmacyView } from "../Pharmacy";
 import { SettingsPage, DEFAULT_SETTINGS_SECTION, SettingsSection } from "../Settings";
 import { StorybookPage } from "../Storybook";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
+import { ComingSoon } from "../../components/ComingSoon/ComingSoon";
 import { confirmStyles } from "../../components/AddStaffModal/AddStaffModal.styles";
 import { Button } from "../../components/Button";
 import { ChatBubble } from "../../components/Chat/ChatBubble";
@@ -301,6 +302,8 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         return <SettingsPage section={settingsSection} />;
       case "Storybook":
         return <StorybookPage />;
+      case "Billing":
+        return <ComingSoon title="Bills" />;
       default:
         return (
           <div>

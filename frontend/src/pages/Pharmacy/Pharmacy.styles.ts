@@ -1,14 +1,30 @@
 import { CSSProperties } from "react";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes, fluidSpacing } from "../../styles/theme";
 import { tableHeadCell, tableDivider } from "../../styles/tableStyles";
 
 export const styles: Record<string, CSSProperties> = {
+  // Own scroll container filling <main> so the shared sticky <PageHeader> hugs
+  // the top, like the Appointments / Rx Pad / Patient Files modules.
   page: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    display: "flex",
+    flexDirection: "column",
+    padding: `0 ${fluidSpacing.outerX} ${fluidSpacing.outerY}`,
+    overflowY: "auto",
+    overflowX: "hidden",
+    minWidth: 0,
+  },
+  content: {
+    width: "100%",
+    minWidth: 0,
+    marginTop: "var(--main-gap, 24px)",
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,
-    width: "100%",
-    minWidth: 0,
   },
 
   // Centered serif title with primary CTA pinned to the right — 3-col grid
