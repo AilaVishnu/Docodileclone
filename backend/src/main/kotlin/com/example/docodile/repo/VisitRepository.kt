@@ -10,6 +10,24 @@ import java.util.UUID
 interface VisitRepository : JpaRepository<Visit, UUID> {
     fun findAllByClinicIdAndVisitDateBetween(clinicId: UUID, start: LocalDate, end: LocalDate): List<Visit>
 
+    // Keyword search across visit free-text (complaints / diagnosis / notes /
+    // tests / review) for the Patient Files "notes / prescriptions" search.
+    // `q` is a lower-cased "%term%" pattern.
+    @Query("""
+        SELECT v FROM Visit v
+        WHERE v.clinic.id = :clinicId
+          AND (
+            LOWER(v.complaints) LIKE :q
+            OR LOWER(v.diagnosis) LIKE :q
+            OR LOWER(v.notesForPatient) LIKE :q
+            OR LOWER(v.privateNotes) LIKE :q
+            OR LOWER(v.tests) LIKE :q
+            OR LOWER(v.reviewNotes) LIKE :q
+          )
+        ORDER BY v.visitDate DESC
+    """)
+    fun searchNotes(@Param("clinicId") clinicId: UUID, @Param("q") q: String): List<Visit>
+
     @Query("""
         SELECT v FROM Visit v
         WHERE v.clinic.id = :clinicId
