@@ -3,6 +3,7 @@ import { styles } from "./ServicesView.styles";
 import { Service } from "./types";
 import { AddServiceModal } from "./AddServiceModal";
 import { Button } from "../../components/Button";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { PlusIcon } from "../../iconsUtil";
 import { ReactComponent as SearchIcon } from "../../assets/search.svg";
 import { ReactComponent as EditPencilIcon } from "../../assets/icons/edit-pencil.svg";
@@ -107,10 +108,9 @@ export function ServicesView() {
 
   return (
     <div style={styles.page}>
-      <header style={styles.header}>
-        <h1 style={styles.title}>Services</h1>
-      </header>
+      <PageHeader title="Catalog" />
 
+      <div style={styles.content}>
       <div style={styles.toolbar}>
         <div style={styles.searchBox}>
           <SearchIcon style={styles.searchIcon} />
@@ -193,6 +193,7 @@ export function ServicesView() {
             )}
           </tbody>
         </table>
+      </div>
       </div>
 
       <AddServiceModal

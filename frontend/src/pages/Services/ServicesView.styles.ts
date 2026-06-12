@@ -1,12 +1,29 @@
 import { CSSProperties } from "react";
-import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
+import { colors, fonts, spacing, radii, strokes, fluidSpacing } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
+  // Own scroll container filling <main> (like Appointments / Rx Pad / Patient
+  // Files) so the shared sticky <PageHeader> hugs the top. No top padding.
   page: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    display: "flex",
+    flexDirection: "column",
+    padding: `0 ${fluidSpacing.outerX} ${fluidSpacing.outerY}`,
+    overflowY: "auto",
+    overflowX: "hidden",
+  },
+
+  // Content below the sticky header: full width, gapped, header→body gap on top.
+  content: {
+    width: "100%",
+    marginTop: "var(--main-gap, 24px)",
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,
-    width: "100%",
   },
 
   header: {
