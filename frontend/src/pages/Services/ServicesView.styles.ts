@@ -168,7 +168,7 @@ export const styles: Record<string, CSSProperties> = {
 
   actions: {
     display: "flex",
-    justifyContent: "flex-end",
+    justifyContent: "center",
     gap: spacing.xs,
   },
 
