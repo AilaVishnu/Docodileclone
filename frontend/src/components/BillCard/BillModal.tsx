@@ -114,7 +114,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
     ) },
     { key: "tot", header: "Total", width: 80, align: "center", render: (l) => (isTrailing(l) ? "" : <span style={{ fontWeight: fonts.weight.medium }}>{inr(lineTotal(l))}</span>) },
     { key: "x", header: "", width: 38, headerPadding: "8px 4px", cellPadding: "8px 4px", render: (l) => (isTrailing(l) ? "" : (
-      <button onClick={() => removeLine(l.id)} aria-label="Remove" style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, display: "flex", justifyContent: "center", width: "100%" }}><TrashIcon width={24} height={24} style={{ flexShrink: 0 }} /></button>
+      <button onClick={() => removeLine(l.id)} aria-label="Remove" style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, display: "flex", justifyContent: "center", width: "100%" }}><TrashIcon width={20} height={20} style={{ flexShrink: 0 }} /></button>
     )) },
   ];
 
@@ -182,6 +182,12 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
           <div style={{ ...bill.totalRow, borderRadius: radii.m, marginBottom: spacing.s }}>
             <span style={bill.totalLabel}>Balance</span>
             <span style={bill.totalValue}>₹ {balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+
+          {/* ── Payment — its own section (mirrors the "Bill" header above) ── */}
+          <div style={{ borderTop: `${strokes.xs} solid ${colors.neutral200}`, margin: `0 -${spacing.xl}` }} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <h3 style={{ ...bill.title, fontSize: fonts.size.h6 }}>Payment</h3>
           </div>
 
           {payments.map((p, i) => {
