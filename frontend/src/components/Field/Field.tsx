@@ -77,7 +77,7 @@ const variantStyles: Record<FieldVariant, { container: React.CSSProperties; erro
       padding: `0 ${spacing.s}`,
       border: `${strokes.xs} solid ${colors.neutral300}`,
       borderRadius: radii.m,
-      backgroundColor: colors.neutral150,
+      backgroundColor: colors.neutral100,
     },
     error: {
       border: `${strokes.xs} solid ${colors.red200}`,

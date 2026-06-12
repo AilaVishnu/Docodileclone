@@ -142,6 +142,7 @@ export function AddServiceModal({ isOpen, onClose, onSave, initial }: Props) {
               <label style={styles.label}>Discount</label>
               <MeasureField
                 box
+                unitFilled
                 value={form.discount}
                 onChange={(v) => setForm({ ...form, discount: v })}
                 unit={form.discountMode}

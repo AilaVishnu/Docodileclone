@@ -33,6 +33,8 @@ export type MeasureFieldProps = {
   unitColor?: string;
   /** "box" = white field for forms (price/qty); default cream = the vitals look. */
   box?: boolean;
+  /** Fill the switchable unit chip (primary200) so it clearly reads as a button. */
+  unitFilled?: boolean;
   // BP variant
   bp?: boolean;
   value2?: string;
@@ -41,7 +43,7 @@ export type MeasureFieldProps = {
 };
 
 export function MeasureField({
-  value, onChange, unit, onToggleUnit, prefix, placeholder, invalid, dense, box,
+  value, onChange, unit, onToggleUnit, prefix, placeholder, invalid, dense, box, unitFilled,
   inputMode = "numeric", ariaLabel, onKeyDown, onFocus, unitWidth, unitColor, bp, value2 = "", onChange2, ariaLabel2,
 }: MeasureFieldProps) {
   const switchable = !!onToggleUnit;
@@ -99,9 +101,10 @@ export function MeasureField({
           <button type="button" onClick={onToggleUnit} title={switchable ? "Switch unit" : undefined}
             style={{ flexShrink: 0, ...(unitWidth ? { width: unitWidth } : { minWidth: 44 }), padding: `0 ${spacing.xs}`,
               display: "flex", alignItems: "center", justifyContent: "center", whiteSpace: "nowrap",
-              fontSize: fonts.size.s, fontFamily: fonts.family.primary, background: colors.neutral100, border: "none",
-              borderLeft: `${strokes.xs} solid ${colors.neutral200}`,
-              color: unitColor ?? (switchable ? colors.neutral800 : colors.neutral500), cursor: switchable ? "pointer" : "default" }}>{unit}</button>
+              fontSize: fonts.size.s, fontFamily: fonts.family.primary, fontWeight: unitFilled ? fonts.weight.medium : undefined,
+              background: unitFilled ? colors.primary200 : colors.neutral100, border: "none",
+              borderLeft: unitFilled ? "none" : `${strokes.xs} solid ${colors.neutral200}`,
+              color: unitFilled ? colors.neutral900 : (unitColor ?? (switchable ? colors.neutral800 : colors.neutral500)), cursor: switchable ? "pointer" : "default" }}>{unit}</button>
         )}
       </div>
     );
