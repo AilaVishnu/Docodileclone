@@ -236,7 +236,7 @@ export function ModalsBlock() {
       <BillModal isOpen={g === "bill"} onClose={close} />
       {g === "presets" && <SchedulePresetsModal onPick={close} onCustom={close} onDismiss={close} />}
       <Modal isOpen={g === "phDetail"} onClose={close}><DetailBody med={seedMed} onClose={close} /></Modal>
-      <Modal isOpen={g === "phStock"} onClose={close}><StockFormBody initial={null} onClose={close} onSave={close} /></Modal>
+      <Modal isOpen={g === "phStock"} onClose={close} surface={colors.neutral100} padding={spacing.xl}><StockFormBody initial={null} onClose={close} onSave={close} /></Modal>
       <Modal isOpen={g === "phAdjust"} onClose={close}><AdjustQtyBody med={seedMed} onClose={close} onSave={close} /></Modal>
       <Modal isOpen={g === "phDelete"} onClose={close}><DeleteConfirmBody med={seedMed} onCancel={close} onConfirm={close} /></Modal>
       <ImportInventoryBody isOpen={g === "phImport"} onClose={close} onImported={close} />

@@ -222,6 +222,8 @@ export function PharmacyView() {
       <Modal
         isOpen={addOpen || editing !== null}
         onClose={() => { setAddOpen(false); setEditing(null); }}
+        surface={colors.neutral100}
+        padding={spacing.xl}
       >
         <StockFormBody
           initial={editing}
@@ -437,7 +439,7 @@ const ms: Record<string, React.CSSProperties> = {
     border: `1px solid ${colors.neutral200}`, padding: spacing.m,
   },
   twoCol: {
-    display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing.m,
+    display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: spacing.m,
   },
   fieldWrap: {
     display: "flex", flexDirection: "column", gap: 4,
@@ -589,13 +591,13 @@ export function StockFormBody({
     <div style={ms.container}>
       <ModalHeader
         title={isEdit ? "Edit batch" : "Add stock"}
-        subtitle={isEdit ? "Update inventory details for this batch" : "Add a new medicine batch to this clinic's inventory"}
+        subtitle={isEdit ? "Update inventory details for this batch" : undefined}
         onClose={onClose}
       />
 
       {isEdit && initial && <MedIdentityStrip med={initial} />}
 
-      <div style={ms.formCard}>
+      <div style={{ display: "flex", flexDirection: "column", gap: spacing.s }}>
         <Field label="Medicine name *" error={touched && nameError ? "Name is required" : undefined}>
           <InputBox variant="box" value={name} onChange={setName} placeholder="e.g. Paracetamol 500mg" error={touched && nameError} autoFocus />
         </Field>
