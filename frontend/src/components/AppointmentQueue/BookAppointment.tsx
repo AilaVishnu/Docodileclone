@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { styles } from "./BookAppointment.styles";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { PatientSearchRow } from "../PatientSearchRow/PatientSearchRow";
 import { DatePicker } from "../DatePicker/DatePicker";
 import { TimePicker } from "./TimePicker";
 import {
@@ -665,17 +666,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             {showNameSugg && nameSuggestions.length > 0 && (
               <div style={patientSuggStyle}>
                 {nameSuggestions.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    style={patientSuggItem}
-                    onMouseDown={() => fillFromPatient(p)}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.primary100; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-                  >
-                    <span style={{ fontWeight: 500 }}>{p.name}</span>
-                    <span style={{ color: colors.neutral500, fontSize: fonts.size.xs }}>{p.phone ?? ""}</span>
-                  </button>
+                  <PatientSearchRow key={p.id} patient={p} onSelect={fillFromPatient} />
                 ))}
               </div>
             )}
@@ -740,17 +731,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             {showPhoneSugg && phoneSuggestions.length > 0 && (
               <div style={patientSuggStyle}>
                 {phoneSuggestions.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    style={patientSuggItem}
-                    onMouseDown={() => fillFromPatient(p)}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.primary100; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-                  >
-                    <span style={{ fontWeight: 500 }}>{p.name}</span>
-                    <span style={{ color: colors.neutral500, fontSize: fonts.size.xs }}>{p.phone ?? ""}</span>
-                  </button>
+                  <PatientSearchRow key={p.id} patient={p} onSelect={fillFromPatient} />
                 ))}
               </div>
             )}
@@ -1229,18 +1210,3 @@ const patientSuggStyle: React.CSSProperties = {
   padding: spacing["2xs"],
 };
 
-const patientSuggItem: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  padding: `${spacing.xs} ${spacing.s}`,
-  background: "transparent",
-  border: "none",
-  borderRadius: radii.xs,
-  cursor: "pointer",
-  textAlign: "left",
-  gap: spacing.s,
-  fontFamily: fonts.family.primary,
-  fontSize: fonts.size.s,
-  color: colors.neutral900,
-};
