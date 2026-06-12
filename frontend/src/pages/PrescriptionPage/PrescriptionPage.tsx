@@ -7,6 +7,8 @@ import { ReactComponent as PulseIcon } from "../../assets/icons/pulse.svg";
 import { ReactComponent as FileIcon } from "../../assets/icons/file.svg";
 import { ReactComponent as HistoryIcon } from "../../assets/icons/history.svg";
 import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check-small.svg";
+import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
+import { ReactComponent as ShareIcon } from "../../assets/icons/share.svg";
 // Contact-card icons exported from Figma node 2073:3264 (currentColor-normalized)
 import { ReactComponent as LetterIcon } from "../../assets/icons/letter.svg";
 import { ReactComponent as VideocameraIcon } from "../../assets/icons/videocamera.svg";
@@ -1612,6 +1614,47 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     } catch (e) {
       showToast(`Status update failed: ${(e as Error).message}`);
     }
+  };
+
+  // AI summary popover toggle (the floating "AI draft" pill / bottom-bar
+  // summary). Ported alongside the bottom bar.
+  const [showAiSummary, setShowAiSummary] = React.useState(false);
+
+  // Clear all — wipe the editable prescription form back to blanks.
+  const handleClearAll = () => {
+    setVitalState(buildVitalState(undefined));
+    setReviewDate(null);
+    setReviewDays("");
+    setReviewNotesValue("");
+    setRxRows(Array.from({ length: 5 }, (_, i) => blankRxRow(i + 1)));
+    setHistoryValues({
+      family_history: "", allergies: "", personal_history: "", past_medical_history: "",
+    });
+    setDiagnosisValue("");
+    setComplaintsValue("");
+    setTestsValue("");
+    setNotesForPatientValue("");
+    setPrivateNotesValue("");
+  };
+
+  // Download every file in the patient's Files tab (best-effort: triggers a
+  // browser download per file that has a URL).
+  const handleDownloadAllFiles = () => {
+    const downloadable = serverFiles.filter((f) => f.fileUrl);
+    if (!downloadable.length) {
+      showToast("No files to download");
+      return;
+    }
+    downloadable.forEach((f) => {
+      const a = document.createElement("a");
+      a.href = f.fileUrl as string;
+      a.download = f.name || "";
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+    showToast(`Downloading ${downloadable.length} file${downloadable.length === 1 ? "" : "s"}…`);
   };
 
   // Explicitly finish a consultation: save the current form and mark the
