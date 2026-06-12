@@ -6,6 +6,7 @@ import { IconButton } from "../IconButton";
 import { DataGrid, GridColumn } from "../DataGrid/DataGrid";
 import { DatePicker } from "../DatePicker/DatePicker";
 import { ChevronDown } from "../icons/ChevronDown";
+import { MeasureField } from "../MeasureField";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 import { styles as bill } from "./BillCard.styles";
 import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
@@ -54,6 +55,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
   const [addDue, setAddDue] = useState(false);
   const [payMode, setPayMode] = useState("Cash");
   const [received, setReceived] = useState<number | "">("");
+  const [deposit, setDeposit] = useState<number | "">("");
   const PAST_DUE = 2500;
 
   const isTrailing = (l: Line) => l.name.trim() === "";
@@ -74,8 +76,9 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
   const tax = lines.reduce((s, l) => s + (l.qty * l.unit * (l.gst || 0)) / 100, 0);
   const finalAmt = billed - discount + tax + (addDue ? PAST_DUE : 0);
   const recv = Number(received) || 0;
-  const balance = Math.max(0, finalAmt - recv);
-  const refund = Math.max(0, recv - finalAmt);
+  const dep = Number(deposit) || 0;
+  const balance = Math.max(0, finalAmt - dep - recv);
+  const refund = Math.max(0, dep + recv - finalAmt);
 
   const cell: React.CSSProperties = { border: "none", outline: "none", background: "transparent", fontFamily: fonts.family.primary, fontSize: fonts.size.m, color: colors.neutral900, width: "100%", padding: 0, textAlign: "center" };
   const numCell = (l: Line, key: keyof Line, align: "center" | "right" = "center") =>
@@ -100,8 +103,8 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
     )) },
   ];
 
-  const sumRow = (label: string, value: string, strong = false) => (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: fonts.size.m, fontFamily: fonts.family.primary }}>
+  const sumRow = (label: string, value: string, strong = false, extra?: React.CSSProperties) => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: fonts.size.m, fontFamily: fonts.family.primary, ...extra }}>
       <span style={{ color: strong ? colors.neutral900 : colors.neutral600 }}>{label}</span>
       <span style={{ color: colors.neutral900 }}>{value}</span>
     </div>
@@ -128,7 +131,11 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
               )}
             </span>
             <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: spacing.xs, color: colors.neutral900 }}>
-              Deposit <span style={{ display: "inline-flex", alignItems: "center", gap: 4, border: `${strokes.xs} solid ${colors.neutral300}`, borderRadius: radii.m, padding: "6px 10px" }}>₹ 0 <PlusIcon style={{ width: 16, height: 16 }} /></span>
+              Deposit
+              <div style={{ width: 120 }}>
+                <MeasureField box prefix="₹" placeholder="0" inputMode="decimal" ariaLabel="Deposit amount"
+                  value={deposit === "" ? "" : String(deposit)} onChange={(v) => setDeposit(v === "" ? "" : Number(v))} />
+              </div>
             </span>
           </div>
 
@@ -136,7 +143,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
         </div>
 
         {/* ── Right: summary + pay (compact, BillCard styling) ─────── */}
-        <div style={{ flex: "1 1 0", minWidth: 0, borderLeft: `${strokes.xs} solid ${colors.neutral200}`, padding: spacing.l, display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ flex: "1 1 0", minWidth: 0, borderLeft: `${strokes.xs} solid ${colors.neutral200}`, padding: spacing.xl, display: "flex", flexDirection: "column", gap: 14 }}>
           <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <h3 style={{ ...bill.title, fontSize: fonts.size.h6 }}>Bill</h3>
             <div style={{ position: "absolute", right: 0 }}><IconButton ariaLabel="Close" onClick={onClose} /></div>
@@ -147,7 +154,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
             <button onClick={() => setAddDue((v) => !v)} style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.active.shade700, fontSize: fonts.size.s, textDecoration: "underline" }}>{addDue ? "Added" : "Add to bill"}</button>
           </div>
 
-          {sumRow("Total billed", inr(billed))}
+          {sumRow("Total billed", inr(billed), false, { gap: 14, paddingTop: spacing.xl })}
           {sumRow("Discount", `− ${inr(discount)}`)}
           {sumRow("Tax", inr(tax))}
           {sumRow("Final amount", inr(finalAmt), true)}
@@ -164,9 +171,9 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
             <div style={{ width: 110 }}>
               <Select options={["Cash", "Card", "UPI", "Waive"]} value={payMode} onChange={setPayMode} />
             </div>
-            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 4, border: `${strokes.xs} solid ${colors.neutral300}`, borderRadius: radii.m, padding: "0 10px", height: "var(--input-h, 40px)" }}>
-              <span style={{ color: colors.neutral500 }}>₹</span>
-              <input style={{ ...cell, textAlign: "left" }} type="number" placeholder={String(balance)} value={received} onChange={(e) => setReceived(e.target.value === "" ? "" : Number(e.target.value))} />
+            <div style={{ flex: 1 }}>
+              <MeasureField box prefix="₹" placeholder={String(balance)} inputMode="decimal" ariaLabel="Amount received"
+                value={received === "" ? "" : String(received)} onChange={(v) => setReceived(v === "" ? "" : Number(v))} />
             </div>
           </div>
           <button onClick={() => {}} style={{ border: "none", background: "transparent", color: colors.secondary700, cursor: "pointer", fontSize: fonts.size.s, display: "inline-flex", alignItems: "center", gap: 4, alignSelf: "flex-start" }}>
@@ -175,7 +182,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
 
           {/* Pay + print/share icons (saves vertical space) */}
           <div style={{ marginTop: "auto", display: "flex", gap: spacing.s, alignItems: "center" }}>
-            <Button variant="dark" size="md" onClick={onClose} style={{ flex: 1 }} iconLeft={<VerifiedBadgeIcon width={24} height={24} style={{ color: colors.neutral100 }} />}>
+            <Button variant="dark" size="md" onClick={onClose} style={{ flex: 1 }} iconLeft={<VerifiedBadgeIcon width={20} height={20} style={{ color: colors.neutral100 }} />}>
               {balance > 0 ? `Pay ${inr(balance)}` : "Mark paid"}
             </Button>
             <IconButton ariaLabel="Print" onClick={() => {}} color={colors.neutral900}><PrinterIcon width={24} height={24} /></IconButton>
