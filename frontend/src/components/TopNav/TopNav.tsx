@@ -3,10 +3,10 @@ import { colors, fonts, radii, spacing } from '../../styles/theme';
 import { Button } from '../Button';
 import { MessageIcon, BellIcon } from '../../iconsUtil';
 import { StaffIllustration } from '../AddStaffModal/StaffIllustration';
-import { ReactComponent as SearchIcon } from '../../assets/search.svg';
 import { ReactComponent as PlusIcon } from '../../assets/Plus.svg';
 import type { NavTab } from '../SideNav';
 import { SessionTrayButton } from './SessionTrayButton';
+import { HeaderPatientSearch } from './HeaderPatientSearch';
 
 type TopNavProps = {
   onBuildClinic?: () => void;
@@ -223,22 +223,10 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
 
   return (
     <div style={styles.container}>
-      {/* Search Bar */}
-      <div style={styles.searchBarContainer}>
-        <SearchIcon style={{ width: 'var(--search-icon)', height: 'var(--search-icon)', color: '#ABABAB', flexShrink: 0 }} />
-        <input
-          type="text"
-          placeholder="Search for anything..."
-          className="topnav-search-input"
-          style={styles.searchInput}
-        />
-        <style>{`
-          .topnav-search-input::placeholder {
-            color: #ABABAB;
-            opacity: 1;
-          }
-        `}</style>
-      </div>
+      {/* Header patient search — type a name / T-number / phone, pick a
+          patient (standard "T12 : Name (M|age)  +phone" format), opens the
+          chart on the Info tab. */}
+      <HeaderPatientSearch onNavigate={onNavigate} />
 
       <div style={styles.actions}>
         {!isBooking && (
