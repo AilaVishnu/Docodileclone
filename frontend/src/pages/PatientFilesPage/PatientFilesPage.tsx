@@ -323,28 +323,6 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
   );
 }
 
-// ─── One patient file ───────────────────────────────────────────────────────
-
-type Tone = "soft" | "warn" | "info";
-type FileTag = { label: string; tone: Tone };
-
-function tagsFor(p: Patient): FileTag[] {
-  const out: FileTag[] = [];
-  if (p.lastVisitDate == null) {
-    out.push({ label: "New", tone: "info" });
-  } else {
-    const days = Math.floor((Date.now() - new Date(p.lastVisitDate).getTime()) / 86400000);
-    if (days <= 7) out.push({ label: "Recent", tone: "soft" });
-    else if (days >= 180) out.push({ label: "Stale", tone: "warn" });
-  }
-  if (p.age != null) {
-    const years = Math.floor(p.age / 12);
-    if (years < 13) out.push({ label: "Pediatric", tone: "info" });
-    else if (years >= 60) out.push({ label: "Senior", tone: "info" });
-  }
-  return out;
-}
-
 
 // ─── Index row (left pane) ──────────────────────────────────────────────────
 //
@@ -382,21 +360,21 @@ function IndexRow({
     >
       <td style={queueStyles.serialCell}>{code}</td>
       <td style={queueStyles.nameCell}>
+        {/* "<name> - <gender> <age>", all one colour/size (e.g. "Ramesh - M 64"). */}
         <div style={queueStyles.nameInner}>
-          <span style={queueStyles.namePrimary}>{patient.name}</span>
-          {ageShort !== "—" && (
-            <span style={queueStyles.nameMeta}>
-              <span style={queueStyles.nameMetaDot}>|</span>
-              <span>{ageShort}</span>
-            </span>
-          )}
+          <span style={queueStyles.namePrimary}>
+            {patient.name}{ageShort !== "—" ? ` - ${ageShort}` : ""}
+          </span>
         </div>
       </td>
       <td style={{ ...queueStyles.td, textAlign: "center", color: phone === "—" ? colors.neutral400 : undefined }}>{phone}</td>
       <td style={{ ...queueStyles.td, textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {query ? (
           matchField ? (
-            <span style={{ ...styles.tag, ...TAG_TONES.info }}>matched: {matchField}</span>
+            <span>
+              <span style={{ color: colors.neutral500 }}>{matchField.field} · </span>
+              <HighlightSnippet value={matchField.value} query={query} />
+            </span>
           ) : null
         ) : (
           <span style={{ color: email === "—" ? colors.neutral400 : undefined }}>{email}</span>
@@ -415,13 +393,30 @@ function IndexRow({
 // Backend follow-up: when a /api/patients/search?q= endpoint lands that joins
 // visit notes / prescriptions / treatments / services, replace the body of
 // this function with a snippet from the response (e.g. "fever, amoxicillin").
-type MatchField = "name" | "phone" | "email" | "code";
-function matchesQuery(p: Patient, q: string): MatchField | null {
-  if (p.name.toLowerCase().includes(q)) return "name";
-  if ((p.phone ?? "").toLowerCase().includes(q)) return "phone";
-  if ((p.email ?? "").toLowerCase().includes(q)) return "email";
-  if (patientCode(p).toLowerCase().includes(q)) return "code";
+type MatchField = "name" | "phone" | "email" | "ID";
+type Match = { field: MatchField; value: string };
+function matchesQuery(p: Patient, q: string): Match | null {
+  if (p.name.toLowerCase().includes(q)) return { field: "name", value: p.name };
+  if ((p.phone ?? "").toLowerCase().includes(q)) return { field: "phone", value: p.phone! };
+  if ((p.email ?? "").toLowerCase().includes(q)) return { field: "email", value: p.email! };
+  if (patientCode(p).toLowerCase().includes(q)) return { field: "ID", value: patientCode(p) };
   return null;
+}
+
+// Renders `value` with the matched `query` substring highlighted (the app's
+// light peach + medium weight), Google-style. Case-insensitive, first match.
+function HighlightSnippet({ value, query }: { value: string; query: string }) {
+  const i = value.toLowerCase().indexOf(query.toLowerCase());
+  if (i < 0) return <>{value}</>;
+  return (
+    <>
+      {value.slice(0, i)}
+      <mark style={{ backgroundColor: colors.primary400, color: colors.neutral900, fontWeight: 500, borderRadius: 3, padding: "0 2px" }}>
+        {value.slice(i, i + query.length)}
+      </mark>
+      {value.slice(i + query.length)}
+    </>
+  );
 }
 
 // Funnel glyph for the filter toggle next to the search bar. Inline SVG —
@@ -504,7 +499,7 @@ function genderAgeShort(p: Patient): string {
   const g = p.gender ? p.gender.charAt(0).toUpperCase() : "";
   const y = p.age != null ? Math.floor(p.age / 12) : null;
   if (!g && y == null) return "—";
-  if (g && y != null) return `${g}|${y}`;
+  if (g && y != null) return `${g} ${y}`;
   return g || (y != null ? String(y) : "—");
 }
 
@@ -537,14 +532,6 @@ function shortCode(id: string): string {
   const n = Math.abs(h) % 1000;
   return `T${n.toString().padStart(3, "0")}`;
 }
-
-// Tone-specific tag colors — muted so the chips read as labels rather than
-// alerts. Soft = recent/positive; warn = needs attention; info = demographic.
-const TAG_TONES: Record<Tone, React.CSSProperties> = {
-  soft: { backgroundColor: colors.secondary100, color: colors.secondary800 },
-  warn: { backgroundColor: colors.primary300, color: colors.primary800 },
-  info: { backgroundColor: colors.neutral150, color: colors.neutral700 },
-};
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
 
@@ -1109,18 +1096,6 @@ const styles: Record<string, React.CSSProperties> = {
     textDecoration: "none",
     display: "inline-flex",
     alignItems: "center",
-  },
-
-  // Tag chip — used by the index dots and the open-file tag row.
-  tag: {
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.control.xs,
-    fontWeight: fonts.weight.medium,
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
-    padding: "2px 8px",
-    borderRadius: radii.full,
-    lineHeight: "16px",
   },
 
   statusMsg: {
