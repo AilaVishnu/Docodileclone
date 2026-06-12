@@ -834,7 +834,15 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // show the idle "Start Session" state, never a bogus "Session Ended".
   const hadSession =
     activeVisit?.sessionEndedAt != null || (activeVisit?.sessionDurationSec ?? 0) > 0;
+  // An OPEN consultation: the pad was opened (session started) but the visit
+  // was never completed (no end). It must stay editable no matter how old the
+  // visit is — otherwise once it crosses the 24h mark it hard-locks with NO
+  // way to click "Complete visit", leaving the appointment stuck IN_PROGRESS
+  // and a ghost entry in Active Sessions forever.
+  const hasOpenSession =
+    activeVisit?.sessionStartedAt != null && activeVisit?.sessionEndedAt == null;
   const isWithinBuffer = (() => {
+    if (hasOpenSession) return true;
     if (endedAtMs != null && !Number.isNaN(endedAtMs)) {
       // Ended with a real timestamp → resumable for 24h from that moment.
       return Date.now() - endedAtMs < ONE_DAY_MS;
