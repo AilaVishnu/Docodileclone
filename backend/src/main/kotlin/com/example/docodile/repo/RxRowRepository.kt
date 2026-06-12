@@ -11,6 +11,19 @@ import java.util.UUID
 interface RxRowRepository : JpaRepository<RxRow, UUID> {
     fun findByVisitIdOrderByPositionAsc(visitId: UUID): List<RxRow>
 
+    // Keyword search across prescription text for the Patient Files
+    // "notes / prescriptions" search. `q` is a lower-cased "%term%" pattern.
+    @Query("""
+        SELECT r FROM RxRow r
+        WHERE r.visit.patient.clinic.id = :clinicId
+          AND (
+            LOWER(r.medicine) LIKE :q
+            OR LOWER(r.medicineNote) LIKE :q
+            OR LOWER(r.notes) LIKE :q
+          )
+    """)
+    fun searchContent(@Param("clinicId") clinicId: UUID, @Param("q") q: String): List<RxRow>
+
     // Used by VisitService.update() to wipe existing rows before writing the
     // new list. JPQL @Modifying needed because the derived deleteByVisitId
     // would round-trip each row through a SELECT first.
