@@ -101,7 +101,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
   ];
 
   const sumRow = (label: string, value: string, strong = false) => (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0", fontSize: fonts.size.m, fontFamily: fonts.family.primary }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: fonts.size.m, fontFamily: fonts.family.primary }}>
       <span style={{ color: strong ? colors.neutral900 : colors.neutral600 }}>{label}</span>
       <span style={{ color: colors.neutral900 }}>{value}</span>
     </div>
@@ -136,7 +136,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
         </div>
 
         {/* ── Right: summary + pay (compact, BillCard styling) ─────── */}
-        <div style={{ flex: "1 1 0", minWidth: 0, borderLeft: `${strokes.xs} solid ${colors.neutral200}`, padding: spacing.l, display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ flex: "1 1 0", minWidth: 0, borderLeft: `${strokes.xs} solid ${colors.neutral200}`, padding: spacing.l, display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <h3 style={{ ...bill.title, fontSize: fonts.size.h6 }}>Bill</h3>
             <div style={{ position: "absolute", right: 0 }}><IconButton ariaLabel="Close" onClick={onClose} /></div>
