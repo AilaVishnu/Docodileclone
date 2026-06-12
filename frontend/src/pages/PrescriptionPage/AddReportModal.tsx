@@ -472,7 +472,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.h5,
     lineHeight: fonts.lineHeight.h5,
-    fontWeight: fonts.weight.regular,
+    fontWeight: fonts.weight.semibold,
     color: colors.neutral900,
   },
   subtitle: {

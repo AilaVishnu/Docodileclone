@@ -26,7 +26,7 @@ type IconButtonProps = {
 
 const CloseGlyph = ({ s = 24 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth={2} strokeLinecap="round" aria-hidden>
+    strokeWidth={1.5} strokeLinecap="round" aria-hidden>
     <path d="M18 6L6 18M6 6l12 12" />
   </svg>
 );
