@@ -470,8 +470,8 @@ const styles: Record<string, React.CSSProperties> = {
   title: {
     margin: 0,
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.h4,
-    lineHeight: fonts.lineHeight.h4,
+    fontSize: fonts.size.h5,
+    lineHeight: fonts.lineHeight.h5,
     fontWeight: fonts.weight.regular,
     color: colors.neutral900,
   },
