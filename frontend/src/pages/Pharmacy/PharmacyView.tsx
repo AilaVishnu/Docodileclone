@@ -537,6 +537,9 @@ export function StockFormBody({
   onClose: () => void;
   onSave: (data: Omit<Med, "id">) => Promise<void> | void;
 }) {
+  // Expiry is stored as YYYY-MM but shown/typed as MM-YYYY.
+  const toExpiryDisplay = (s: string) => { const m = /^(\d{4})-(\d{2})$/.exec(s); return m ? `${m[2]}-${m[1]}` : s; };
+  const toExpiryStore = (s: string) => { const m = /^(\d{2})-(\d{4})$/.exec(s.trim()); return m ? `${m[2]}-${m[1]}` : s.trim(); };
   const CATEGORY_OPTIONS: MedCategory[] = ["Acne & skin", "Cleansers & soaps", "Topicals", "Tablets", "Serums & boosters"];
   const FORM_OPTIONS: MedForm[] = ["tablet", "syrup", "cream", "spray", "soap", "serum", "drops", "ointment"];
 
@@ -550,7 +553,7 @@ export function StockFormBody({
   const [unitsPerPack, setUnitsPerPack] = useState(String(initial?.unitsPerPack ?? 1));
   const [unitPrice, setUnitPrice] = useState(String(initial?.unitPrice ?? ""));
   const [unitsInStock, setUnitsInStock] = useState(String(initial?.unitsInStock ?? 0));
-  const [expiry, setExpiry] = useState(initial?.expiry ?? "");
+  const [expiry, setExpiry] = useState(toExpiryDisplay(initial?.expiry ?? ""));
   const [discountPct, setDiscountPct] = useState(String(initial?.discountPct ?? 0));
   const [discountMode, setDiscountMode] = useState<"%" | "₹">("%");
   const [gstPct, setGstPct] = useState(String(initial?.gstPct ?? 0));
@@ -574,7 +577,7 @@ export function StockFormBody({
         unitsPerPack: parseInt(unitsPerPack, 10) || 1,
         unitPrice: Number(unitPrice) || 0,
         unitsInStock: parseInt(unitsInStock, 10) || 0,
-        expiry: expiry.trim(),
+        expiry: toExpiryStore(expiry),
         discountPct: Number(discountPct) || 0,
         gstPct: Number(gstPct) || 0,
       });
@@ -642,8 +645,8 @@ export function StockFormBody({
           <Field label="Units in stock">
             <MeasureField box value={unitsInStock} onChange={setUnitsInStock} inputMode="numeric" placeholder="0" />
           </Field>
-          <Field label="Expiry (YYYY-MM)">
-            <InputBox variant="box" value={expiry} onChange={setExpiry} placeholder="2027-03" inputStyle={{ fontSize: fonts.size.s }} />
+          <Field label="Expiry (MM-YYYY)">
+            <InputBox variant="box" value={expiry} onChange={setExpiry} placeholder="03-2027" inputStyle={{ fontSize: fonts.size.s }} />
           </Field>
         </div>
 
