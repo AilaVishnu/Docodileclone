@@ -255,7 +255,7 @@ export function PharmacyView() {
   );
 }
 
-function ImportInventoryBody({ onClose, onImported }: {
+export function ImportInventoryBody({ onClose, onImported }: {
   onClose: () => void;
   onImported: (message: string) => void;
 }) {
@@ -370,7 +370,7 @@ function ImportInventoryBody({ onClose, onImported }: {
   );
 }
 
-function DetailBody({ med, onClose }: { med: Med; onClose: () => void }) {
+export function DetailBody({ med, onClose }: { med: Med; onClose: () => void }) {
   const status = expiryStatus(med.expiry);
   const expiryStyle =
     status === "good" ? styles.expiryGood :
@@ -566,7 +566,7 @@ function MedIdentityStrip({ med }: { med: Med }) {
 // Stock form — used by both Add Stock and Edit batch. Mirrors the
 // EditPatientModal layout: serif header + cream identity strip (edit only)
 // + white form card + ghost/orange footer.
-function StockFormBody({
+export function StockFormBody({
   initial,
   onClose,
   onSave,
@@ -725,7 +725,7 @@ function StockFormBody({
 
 // Adjust units-in-stock — single field, but same modal chrome (header,
 // identity strip, white card, ghost/primary footer) as Edit batch.
-function AdjustQtyBody({
+export function AdjustQtyBody({
   med,
   onClose,
   onSave,
@@ -791,7 +791,7 @@ function AdjustQtyBody({
 
 // Delete confirmation — styled replacement for window.confirm. Same modal
 // chrome as the other two; primary button is red since it's destructive.
-function DeleteConfirmBody({
+export function DeleteConfirmBody({
   med,
   onCancel,
   onConfirm,

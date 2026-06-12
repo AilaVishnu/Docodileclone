@@ -8,6 +8,18 @@ import React, { useState } from "react";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 import { Modal } from "../../components/Modal";
 import { BillModal } from "../../components/BillCard/BillModal";
+// ── Every real modal component, mounted live in the gallery below ──
+import { AddServiceModal } from "../Services/AddServiceModal";
+import { AddStaffModal } from "../../components/AddStaffModal/AddStaffModal";
+import { EditPatientModal } from "../PrescriptionPage/EditPatientModal";
+import { NewPrescriptionModal } from "../PrescriptionPage/NewPrescriptionModal";
+import { AddReportModal } from "../PrescriptionPage/AddReportModal";
+import { BillMedicinesModal } from "../../components/AppointmentQueue/BillMedicinesModal";
+import { PrintPreviewModal } from "../../components/PrintPreviewModal/PrintPreviewModal";
+import { SchedulePresetsModal } from "../../components/DoctorSchedule/SchedulePresetsModal";
+import { DetailBody, StockFormBody, AdjustQtyBody, DeleteConfirmBody, ImportInventoryBody } from "../Pharmacy/PharmacyView";
+import type { Med } from "../Pharmacy/types";
+import type { Patient } from "../../hooks/usePatients";
 import { Button } from "../../components/Button";
 import { IconButton } from "../../components/IconButton";
 import { Field } from "../../components/Field";
@@ -143,6 +155,16 @@ export function ModalsBlock() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [billOpen, setBillOpen] = useState(false);
   const [v, setV] = useState("");
+  // ── Live gallery: one open-id drives every real modal below ──
+  const [g, setG] = useState<string | null>(null);
+  const close = () => setG(null);
+  const seedMed: Med = { id: "m1", name: "ACETUFF P TABLET", category: "Tablets", form: "tablet", invoiceNo: "A00709", batch: "204", packPrice: 30.48, packMrp: 40, unitsPerPack: 10, unitPrice: 4, unitsInStock: 266, expiry: "2027-01", discountPct: 0.02, gstPct: 5 };
+  const seedPatient: Patient = { id: "p1", name: "Ramesh", phone: "+91 98888 88888", email: null, gender: "male", dob: null, age: 768, displayNo: 5, lastVisitDate: "2026-06-01", treatingDoctorIds: [], treatingDepartments: [] };
+  const seedMeds = [
+    { id: "m1", name: "Paracetamol 500mg", unitPrice: 12, qty: 2, inStock: true },
+    { id: "m2", name: "Amoxicillin 500mg", unitPrice: 18, qty: 1, inStock: false },
+  ];
+  const seedHtml = "<html><body style='font-family:Inter,Arial;padding:24px;color:#202020'><h2>Prescription</h2><p>Patient: Ramesh — M 64</p><p>Paracetamol 500mg — 1 tab, thrice a day, 3 days</p></body></html>";
   const miniBar = (w: string | number, c = colors.neutral150) => <div style={{ height: 7, width: w, background: c, borderRadius: 4 }} />;
   const miniBtn = (text: string, dark?: boolean) => (
     <span style={{ fontSize: 11, borderRadius: 6, padding: "3px 10px", ...(dark ? { background: colors.neutral900, color: colors.neutral100 } : { border: `${strokes.xs} solid ${colors.neutral300}`, color: colors.neutral900 }) }}>{text}</span>
@@ -183,6 +205,41 @@ export function ModalsBlock() {
           ]} />
         </Row>
       </Sub>
+
+      <Sub title="Every modal — live components (15)" note="The REAL components with seed data — not mockups. Open each, compare, then we consolidate (the count drops as they collapse onto shared types). Two confirms are nested: open Edit patient → Archive, and Pharmacy delete is its own button.">
+        <Row wrap>
+          <Button variant="light" size="sm" onClick={() => setG("addService")}>Add service</Button>
+          <Button variant="light" size="sm" onClick={() => setG("addStaff")}>Add staff</Button>
+          <Button variant="light" size="sm" onClick={() => setG("editPatient")}>Edit patient (+ archive)</Button>
+          <Button variant="light" size="sm" onClick={() => setG("newRx")}>New prescription</Button>
+          <Button variant="light" size="sm" onClick={() => setG("addReport")}>Add file</Button>
+          <Button variant="light" size="sm" onClick={() => setG("phStock")}>Pharmacy · Add stock</Button>
+          <Button variant="light" size="sm" onClick={() => setG("phDetail")}>Pharmacy · Stock detail</Button>
+          <Button variant="light" size="sm" onClick={() => setG("phAdjust")}>Pharmacy · Adjust qty</Button>
+          <Button variant="light" size="sm" onClick={() => setG("phImport")}>Pharmacy · Import CSV</Button>
+          <Button variant="light" size="sm" onClick={() => setG("phDelete")}>Pharmacy · Remove (confirm)</Button>
+          <Button variant="light" size="sm" onClick={() => setG("billMeds")}>Bill + medicines</Button>
+          <Button variant="light" size="sm" onClick={() => setG("print")}>Print preview</Button>
+          <Button variant="light" size="sm" onClick={() => setG("bill")}>Bill</Button>
+          <Button variant="light" size="sm" onClick={() => setG("presets")}>Schedule presets</Button>
+        </Row>
+      </Sub>
+
+      {/* ── Live gallery instances (each renders only when its id is active) ── */}
+      <AddServiceModal isOpen={g === "addService"} onClose={close} onSave={close} />
+      <AddStaffModal isOpen={g === "addStaff"} onClose={close} onSave={close} clinicDepartments={["Cardiology", "Dermatology", "General Medicine"]} />
+      <EditPatientModal isOpen={g === "editPatient"} patient={seedPatient} onClose={close} onSave={close} />
+      <NewPrescriptionModal isOpen={g === "newRx"} onClose={close} onSelectPatient={close} onAddPatient={close} />
+      <AddReportModal isOpen={g === "addReport"} visits={[]} patientId="p1" onClose={close} onAdd={close} />
+      <BillMedicinesModal isOpen={g === "billMeds"} onClose={close} patientName="Ramesh" medicines={seedMeds} pendingDue={500} pendingDueLabel="Consultation due" />
+      <PrintPreviewModal isOpen={g === "print"} html={seedHtml} onClose={close} />
+      <BillModal isOpen={g === "bill"} onClose={close} />
+      {g === "presets" && <SchedulePresetsModal onPick={close} onCustom={close} onDismiss={close} />}
+      <Modal isOpen={g === "phDetail"} onClose={close}><DetailBody med={seedMed} onClose={close} /></Modal>
+      <Modal isOpen={g === "phStock"} onClose={close}><StockFormBody initial={null} onClose={close} onSave={close} /></Modal>
+      <Modal isOpen={g === "phAdjust"} onClose={close}><AdjustQtyBody med={seedMed} onClose={close} onSave={close} /></Modal>
+      <Modal isOpen={g === "phDelete"} onClose={close}><DeleteConfirmBody med={seedMed} onCancel={close} onConfirm={close} /></Modal>
+      <Modal isOpen={g === "phImport"} onClose={close}><ImportInventoryBody onClose={close} onImported={close} /></Modal>
 
       {/* Form — white, left title + ✕, footer right (Cancel/Save) */}
       <Modal isOpen={open} onClose={() => setOpen(false)} surface={colors.neutral100} width={480}>
