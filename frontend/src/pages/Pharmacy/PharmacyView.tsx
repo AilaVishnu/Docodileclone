@@ -9,6 +9,9 @@ import { Modal } from "../../components/Modal/Modal";
 import { UploadModal } from "../../components/UploadModal";
 import { Button } from "../../components/Button";
 import { IconButton } from "../../components/IconButton";
+import { Field as InputBox } from "../../components/Field";
+import { MeasureField } from "../../components/MeasureField";
+import { Select } from "../../components/Input/Select/Select";
 import { Tabs } from "../../components/Tabs";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { colors, fonts, spacing, radii } from "../../styles/theme";
@@ -397,7 +400,7 @@ const ms: Record<string, React.CSSProperties> = {
   title: {
     margin: 0,
     fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h6, lineHeight: fonts.lineHeight.h6,
+    fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5,
     fontWeight: fonts.weight.regular, color: colors.neutral900,
   },
   subtitle: {
@@ -594,77 +597,60 @@ export function StockFormBody({
 
       <div style={ms.formCard}>
         <Field label="Medicine name *" error={touched && nameError ? "Name is required" : undefined}>
-          <input
-            type="text" value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Paracetamol 500mg"
-            style={ms.textInput}
-          />
+          <InputBox variant="box" value={name} onChange={setName} placeholder="e.g. Paracetamol 500mg" error={touched && nameError} autoFocus />
         </Field>
 
         <div style={ms.twoCol}>
           <Field label="Category">
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value as MedCategory)}
-              style={ms.selectInput}
-            >
-              {CATEGORY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <Select options={CATEGORY_OPTIONS} value={category} onChange={(v) => setCategory(v as MedCategory)} />
           </Field>
           <Field label="Form">
-            <select
-              value={form}
-              onChange={(e) => setForm(e.target.value as MedForm)}
-              style={ms.selectInput}
-            >
-              {FORM_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
-            </select>
+            <Select options={FORM_OPTIONS} value={form} onChange={(v) => setForm(v as MedForm)} />
           </Field>
         </div>
 
         <div style={ms.twoCol}>
           <Field label="Invoice no.">
-            <input type="text" value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} placeholder="e.g. A00709" style={ms.textInput} />
+            <InputBox variant="box" value={invoiceNo} onChange={setInvoiceNo} placeholder="e.g. A00709" />
           </Field>
           <Field label="Batch">
-            <input type="text" value={batch} onChange={(e) => setBatch(e.target.value)} placeholder="e.g. 204" style={ms.textInput} />
+            <InputBox variant="box" value={batch} onChange={setBatch} placeholder="e.g. 204" />
           </Field>
         </div>
 
         <div style={ms.twoCol}>
-          <Field label="Pack price ₹">
-            <input type="text" value={packPrice} onChange={(e) => setPackPrice(e.target.value)} placeholder="0.00" style={ms.textInput} />
+          <Field label="Pack price">
+            <MeasureField box prefix="₹" value={packPrice} onChange={setPackPrice} inputMode="decimal" placeholder="0.00" />
           </Field>
-          <Field label="Pack MRP ₹">
-            <input type="text" value={packMrp} onChange={(e) => setPackMrp(e.target.value)} placeholder="0.00" style={ms.textInput} />
+          <Field label="Pack MRP">
+            <MeasureField box prefix="₹" value={packMrp} onChange={setPackMrp} inputMode="decimal" placeholder="0.00" />
           </Field>
         </div>
 
         <div style={ms.twoCol}>
           <Field label="Units per pack">
-            <input type="text" value={unitsPerPack} onChange={(e) => setUnitsPerPack(e.target.value)} placeholder="1" style={ms.textInput} />
+            <MeasureField box value={unitsPerPack} onChange={setUnitsPerPack} inputMode="numeric" placeholder="1" />
           </Field>
-          <Field label="Unit price ₹">
-            <input type="text" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder="0.00" style={ms.textInput} />
+          <Field label="Unit price">
+            <MeasureField box prefix="₹" value={unitPrice} onChange={setUnitPrice} inputMode="decimal" placeholder="0.00" />
           </Field>
         </div>
 
         <div style={ms.twoCol}>
           <Field label="Units in stock">
-            <input type="text" value={unitsInStock} onChange={(e) => setUnitsInStock(e.target.value)} placeholder="0" style={ms.textInput} />
+            <MeasureField box value={unitsInStock} onChange={setUnitsInStock} inputMode="numeric" placeholder="0" />
           </Field>
           <Field label="Expiry (YYYY-MM)">
-            <input type="text" value={expiry} onChange={(e) => setExpiry(e.target.value)} placeholder="2027-03" style={ms.textInput} />
+            <InputBox variant="box" value={expiry} onChange={setExpiry} placeholder="2027-03" />
           </Field>
         </div>
 
         <div style={ms.twoCol}>
-          <Field label="Discount %">
-            <input type="text" value={discountPct} onChange={(e) => setDiscountPct(e.target.value)} placeholder="0" style={ms.textInput} />
+          <Field label="Discount">
+            <MeasureField box unit="%" value={discountPct} onChange={setDiscountPct} inputMode="decimal" placeholder="0" />
           </Field>
-          <Field label="GST %">
-            <input type="text" value={gstPct} onChange={(e) => setGstPct(e.target.value)} placeholder="0" style={ms.textInput} />
+          <Field label="GST">
+            <MeasureField box unit="%" value={gstPct} onChange={setGstPct} inputMode="decimal" placeholder="0" />
           </Field>
         </div>
 
