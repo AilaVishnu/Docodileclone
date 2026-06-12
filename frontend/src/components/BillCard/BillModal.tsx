@@ -96,24 +96,24 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
   );
 
   const columns: GridColumn<Line>[] = [
-    { key: "n", header: "#", width: 26, align: "center", render: (l, i) => (isTrailing(l) ? "" : <span style={{ color: colors.neutral500 }}>{i + 1}</span>) },
+    { key: "n", header: "#", width: 24, align: "center", render: (l, i) => <span style={{ color: colors.neutral500 }}>{i + 1}</span> },
     { key: "svc", header: "Service", align: "left", render: (l) => (
-      <FillInput list="bm-svc-list" placeholder="Type or pick a service" ariaLabel="Service"
+      <FillInput list="bm-svc-list" placeholder="Type here" ariaLabel="Service"
         value={l.name} onChange={(v) => setName(l.id, v)} />
     ) },
-    { key: "qty", header: "Qty", width: 54, render: (l) => numFill(l, "qty", "1") },
-    { key: "unit", header: "Unit ₹", width: 84, render: (l) => numFill(l, "unit", "0") },
-    { key: "gst", header: "GST", width: 80, render: (l) => isTrailing(l) ? null : (
-      <MeasureField unit="%" unitWidth={30} inputMode="decimal" ariaLabel="GST percent"
+    { key: "qty", header: "Qty", width: 52, render: (l) => numFill(l, "qty", "1") },
+    { key: "unit", header: "Unit ₹", width: 76, render: (l) => numFill(l, "unit", "0") },
+    { key: "gst", header: "GST", width: 72, render: (l) => isTrailing(l) ? null : (
+      <MeasureField unit="%" unitWidth={28} inputMode="decimal" ariaLabel="GST percent"
         value={l.gst ? String(l.gst) : ""} onChange={(v) => setLine(l.id, { gst: Number(v) || 0 })} />
     ) },
-    { key: "disc", header: "Disc", width: 96, render: (l) => isTrailing(l) ? null : (
-      <MeasureField unit={l.discUnit} unitWidth={30} inputMode="decimal" ariaLabel="Discount"
+    { key: "disc", header: "Disc", width: 86, render: (l) => isTrailing(l) ? null : (
+      <MeasureField unit={l.discUnit} unitWidth={28} inputMode="decimal" ariaLabel="Discount"
         onToggleUnit={() => setLine(l.id, { discUnit: l.discUnit === "%" ? "₹" : "%" })}
         value={l.disc ? String(l.disc) : ""} onChange={(v) => setLine(l.id, { disc: Number(v) || 0 })} />
     ) },
-    { key: "tot", header: "Total", width: 84, align: "center", render: (l) => (isTrailing(l) ? "" : <span style={{ fontWeight: fonts.weight.medium }}>{inr(lineTotal(l))}</span>) },
-    { key: "x", header: "", width: 40, headerPadding: "12px 4px", cellPadding: "16px 4px", render: (l) => (isTrailing(l) ? "" : (
+    { key: "tot", header: "Total", width: 80, align: "center", render: (l) => (isTrailing(l) ? "" : <span style={{ fontWeight: fonts.weight.medium }}>{inr(lineTotal(l))}</span>) },
+    { key: "x", header: "", width: 38, headerPadding: "8px 4px", cellPadding: "8px 4px", render: (l) => (isTrailing(l) ? "" : (
       <button onClick={() => removeLine(l.id)} aria-label="Remove" style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, display: "flex", justifyContent: "center", width: "100%" }}><TrashIcon width={24} height={24} style={{ flexShrink: 0 }} /></button>
     )) },
   ];
@@ -126,7 +126,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} surface={colors.neutral100} width={960} padding={0} radius={16}>
+    <Modal isOpen={isOpen} onClose={onClose} surface={colors.neutral100} width={1040} padding={0} radius={16}>
       <datalist id="bm-svc-list">{SERVICE_CATALOG.map((s) => <option key={s.name} value={s.name} />)}</datalist>
       <div style={{ display: "flex", minHeight: 460, fontFamily: fonts.family.primary }}>
         {/* ── Left ─────────────────────────────────────────────────── */}
@@ -139,8 +139,8 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
           {/* Bill date / deposit */}
           <div style={{ display: "flex", alignItems: "center", gap: spacing.m, flexWrap: "wrap" }}>
             <span style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>Bill date</span>
-            <span onClick={() => setShowCal(true)} style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: spacing.xs, border: `${strokes.xs} solid ${colors.neutral300}`, borderRadius: radii.m, padding: "6px 12px", color: colors.neutral900, cursor: "pointer" }}>
-              <CalendarIcon width={24} height={24} style={{ color: colors.neutral900 }} /> {fmtDate(billDate)}
+            <span onClick={() => setShowCal(true)} style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: spacing.xs, height: 30, boxSizing: "border-box", border: `${strokes.xs} solid ${colors.neutral300}`, borderRadius: radii.m, padding: "0 10px", color: colors.neutral900, cursor: "pointer" }}>
+              <CalendarIcon width={20} height={20} style={{ color: colors.neutral900 }} /> {fmtDate(billDate)}
               {showCal && (
                 <DatePicker selectedDate={billDate} showDoneButton onSelect={(d) => { setBillDate(d); setShowCal(false); }} onClose={() => setShowCal(false)} />
               )}
@@ -155,7 +155,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
           </div>
 
           <div style={{ "--input-h": "32px" } as React.CSSProperties}>
-            <DataGrid columns={columns} rows={lines} rowKey={(l) => l.id} size="m" />
+            <DataGrid columns={columns} rows={lines} rowKey={(l) => l.id} size="m" tdPadding="8px 6px" thPadding="8px 6px" />
           </div>
         </div>
 

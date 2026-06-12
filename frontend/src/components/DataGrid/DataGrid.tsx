@@ -18,16 +18,19 @@ export type GridColumn<T> = {
   render: (row: T, index: number) => React.ReactNode;
 };
 
-export function DataGrid<T>({ columns, rows, rowKey, size = "m" }: {
+export function DataGrid<T>({ columns, rows, rowKey, size = "m", tdPadding, thPadding }: {
   columns: GridColumn<T>[];
   rows: T[];
   rowKey: (row: T, index: number) => React.Key;
   /** Cell font size — "m" matches Catalog; "s" is denser (e.g. inside a modal). */
   size?: "m" | "s";
+  /** Grid-wide cell/header padding overrides (a column's own padding still wins). */
+  tdPadding?: string;
+  thPadding?: string;
 }) {
   const fs = size === "s" ? fonts.size.s : fonts.size.m;
-  const th = (c: GridColumn<T>): CSSProperties => ({ ...tableHeadCell, fontSize: fs, fontWeight: fonts.weight.regular, padding: c.headerPadding ?? "12px 10px", whiteSpace: "nowrap", textAlign: c.align ?? "center" });
-  const td = (c: GridColumn<T>): CSSProperties => ({ fontSize: fs, color: colors.neutral900, padding: c.cellPadding ?? "16px 10px", borderBottom: tableDivider, verticalAlign: "middle", textAlign: c.align ?? "center" });
+  const th = (c: GridColumn<T>): CSSProperties => ({ ...tableHeadCell, fontSize: fs, fontWeight: fonts.weight.regular, padding: c.headerPadding ?? thPadding ?? "12px 10px", whiteSpace: "nowrap", textAlign: c.align ?? "center" });
+  const td = (c: GridColumn<T>): CSSProperties => ({ fontSize: fs, color: colors.neutral900, padding: c.cellPadding ?? tdPadding ?? "16px 10px", borderBottom: tableDivider, verticalAlign: "middle", textAlign: c.align ?? "center" });
   return (
     <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
       <colgroup>
