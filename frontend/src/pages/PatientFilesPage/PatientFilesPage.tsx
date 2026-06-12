@@ -288,10 +288,10 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
                 </colgroup>
                 <thead>
                   <tr>
-                    <th style={{ ...queueStyles.th, paddingLeft: 8, paddingRight: 8 }}>#</th>
-                    <th style={{ ...queueStyles.th, paddingLeft: 8, paddingRight: 8 }}>Name</th>
-                    <th style={{ ...queueStyles.th, textAlign: "center" }}>Phone</th>
-                    <th style={{ ...queueStyles.th, textAlign: "left" }}>
+                    <th style={{ ...queueStyles.th, paddingTop: 0, paddingLeft: 8, paddingRight: 8 }}>#</th>
+                    <th style={{ ...queueStyles.th, paddingTop: 0, paddingLeft: 8, paddingRight: 8 }}>Name</th>
+                    <th style={{ ...queueStyles.th, paddingTop: 0, textAlign: "center" }}>Phone</th>
+                    <th style={{ ...queueStyles.th, paddingTop: 0, textAlign: "left" }}>
                       {search.trim() ? "Match" : "Email"}
                     </th>
                   </tr>
