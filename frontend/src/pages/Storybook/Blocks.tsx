@@ -239,7 +239,7 @@ export function ModalsBlock() {
       <Modal isOpen={g === "phStock"} onClose={close}><StockFormBody initial={null} onClose={close} onSave={close} /></Modal>
       <Modal isOpen={g === "phAdjust"} onClose={close}><AdjustQtyBody med={seedMed} onClose={close} onSave={close} /></Modal>
       <Modal isOpen={g === "phDelete"} onClose={close}><DeleteConfirmBody med={seedMed} onCancel={close} onConfirm={close} /></Modal>
-      <Modal isOpen={g === "phImport"} onClose={close}><ImportInventoryBody onClose={close} onImported={close} /></Modal>
+      <ImportInventoryBody isOpen={g === "phImport"} onClose={close} onImported={close} />
 
       {/* Form — white, left title + ✕, footer right (Cancel/Save) */}
       <Modal isOpen={open} onClose={() => setOpen(false)} surface={colors.neutral100} width={480}>

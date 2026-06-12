@@ -1,7 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Modal } from "../../components/Modal/Modal";
-import { IconButton } from "../../components/IconButton";
-import { Button } from "../../components/Button";
+import React, { useEffect, useMemo, useState } from "react";
+import { UploadModal } from "../../components/UploadModal";
 import { Select } from "../../components/Input/Select/Select";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
@@ -106,9 +104,7 @@ export function AddReportModal({
   onAdd,
 }: Props) {
   const [drafts, setDrafts] = useState<DraftEntry[]>([]);
-  const [dragOver, setDragOver] = useState(false);
   const [openPickerFor, setOpenPickerFor] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset drafts whenever the modal opens fresh. Skip revoke for drafts that
   // were "kept" by handleSave (their URL is now owned by the caller).
@@ -149,17 +145,6 @@ export function AddReportModal({
       if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
       return prev.filter((d) => d.id !== id);
     });
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) addFiles(e.target.files);
-    e.target.value = "";
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    if (e.dataTransfer.files) addFiles(e.dataTransfer.files);
-  };
 
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -252,49 +237,22 @@ export function AddReportModal({
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} padding={spacing.xl}>
-      <div style={styles.container}>
-        <header style={styles.header}>
-          <div>
-            <h2 style={styles.title}>{titleCopy}</h2>
-            <p style={styles.subtitle}>{headerSubtitle}</p>
-          </div>
-          <IconButton ariaLabel="Close" onClick={onClose} style={{ position: "absolute", top: 0, right: 0 }} />
-        </header>
-
-        {/* Drop zone — clickable, also accepts drag/drop. Stays visible even
-            after files are added so the user can append more in the same
-            session. */}
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={handleDrop}
-          style={{
-            ...styles.dropZone,
-            ...(dragOver ? styles.dropZoneActive : null),
-          }}
-        >
-          <ArrowUpIcon />
-
-          <span style={styles.dropZoneTitle}>
-            {drafts.length === 0
-              ? "Drag files here, or click to choose"
-              : "Add more files"}
-          </span>
-          <span style={styles.dropZoneHint}>
-            Any file type · multi-select supported
-          </span>
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          onChange={handleFileInput}
-          style={{ display: "none" }}
-        />
-
+    <UploadModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={titleCopy}
+      subtitle={headerSubtitle}
+      dropTitleActive="Add more files"
+      dropHint="Any file type · multi-select supported"
+      hasFiles={drafts.length > 0}
+      multiple
+      onFiles={addFiles}
+      error={uploadError}
+      cancelLabel={uploadError ? "Close anyway" : "Cancel"}
+      confirmLabel={uploading ? "Uploading…" : `Add${drafts.length > 1 ? ` (${drafts.length})` : ""}`}
+      onConfirm={handleSave}
+      confirmDisabled={uploading}
+    >
         {drafts.length > 0 && (
           <div style={styles.draftList}>
             {drafts.map((d) => (
@@ -394,24 +352,7 @@ export function AddReportModal({
           </div>
         )}
 
-        {uploadError && (
-          <p style={styles.uploadError}>{uploadError}</p>
-        )}
-        <footer style={styles.footer}>
-          <Button variant="light" size="sm" onClick={onClose}>
-            {uploadError ? "Close anyway" : "Cancel"}
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleSave}
-            disabled={uploading}
-          >
-            {uploading ? "Uploading…" : `Add${drafts.length > 1 ? ` (${drafts.length})` : ""}`}
-          </Button>
-        </footer>
-      </div>
-    </Modal>
+      </UploadModal>
   );
 }
 
@@ -421,29 +362,6 @@ function fileExt(filename: string): string {
   return (m ? m[1] : "FILE").slice(0, 4).toUpperCase();
 }
 
-// Inline arrow-up glyph matching Figma node 2524:5157 (Linear / Arrows /
-// Arrow Up). Drawn at 24×24 viewBox, rendered slightly larger than the old
-// emoji per design feedback.
-function ArrowUpIcon() {
-  return (
-    <svg
-      width="32"
-      height="32"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden
-      style={{ color: colors.primary700 }}
-    >
-      <path
-        d="M12 4v16M12 4l-5 5M12 4l5 5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 // These are local to the modal — every other dropdown / picker / date input
