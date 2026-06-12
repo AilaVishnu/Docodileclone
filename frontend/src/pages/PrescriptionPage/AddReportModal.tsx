@@ -252,7 +252,7 @@ export function AddReportModal({
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal isOpen={isOpen} onClose={onClose} padding={spacing.xl}>
       <div style={styles.container}>
         <header style={styles.header}>
           <div>
@@ -469,9 +469,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   title: {
     margin: 0,
-    fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h5,
-    lineHeight: fonts.lineHeight.h5,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.h4,
+    lineHeight: fonts.lineHeight.h4,
     fontWeight: fonts.weight.regular,
     color: colors.neutral900,
   },
@@ -648,7 +648,5 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     justifyContent: "flex-end",
     gap: spacing.s,
-    paddingTop: spacing.s,
-    borderTop: `1px solid ${colors.neutral200}`,
   },
 };
