@@ -479,7 +479,6 @@ const ms: Record<string, React.CSSProperties> = {
   },
   footer: {
     display: "flex", justifyContent: "flex-end", gap: spacing.s,
-    paddingTop: spacing.s, borderTop: `1px solid ${colors.neutral200}`,
   },
   btnDanger: {
     fontFamily: fonts.family.primary, fontSize: fonts.control.md,
@@ -553,6 +552,7 @@ export function StockFormBody({
   const [unitsInStock, setUnitsInStock] = useState(String(initial?.unitsInStock ?? 0));
   const [expiry, setExpiry] = useState(initial?.expiry ?? "");
   const [discountPct, setDiscountPct] = useState(String(initial?.discountPct ?? 0));
+  const [discountMode, setDiscountMode] = useState<"%" | "₹">("%");
   const [gstPct, setGstPct] = useState(String(initial?.gstPct ?? 0));
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -599,7 +599,7 @@ export function StockFormBody({
 
       <div style={{ display: "flex", flexDirection: "column", gap: spacing.s }}>
         <Field label="Medicine name *" error={touched && nameError ? "Name is required" : undefined}>
-          <InputBox variant="box" value={name} onChange={setName} placeholder="e.g. Paracetamol 500mg" error={touched && nameError} autoFocus />
+          <InputBox variant="box" value={name} onChange={setName} placeholder="e.g. Paracetamol 500mg" error={touched && nameError} autoFocus inputStyle={{ fontSize: fonts.size.s }} />
         </Field>
 
         <div style={ms.twoCol}>
@@ -613,10 +613,10 @@ export function StockFormBody({
 
         <div style={ms.twoCol}>
           <Field label="Invoice no.">
-            <InputBox variant="box" value={invoiceNo} onChange={setInvoiceNo} placeholder="e.g. A00709" />
+            <InputBox variant="box" value={invoiceNo} onChange={setInvoiceNo} placeholder="e.g. A00709" inputStyle={{ fontSize: fonts.size.s }} />
           </Field>
           <Field label="Batch">
-            <InputBox variant="box" value={batch} onChange={setBatch} placeholder="e.g. 204" />
+            <InputBox variant="box" value={batch} onChange={setBatch} placeholder="e.g. 204" inputStyle={{ fontSize: fonts.size.s }} />
           </Field>
         </div>
 
@@ -643,13 +643,13 @@ export function StockFormBody({
             <MeasureField box value={unitsInStock} onChange={setUnitsInStock} inputMode="numeric" placeholder="0" />
           </Field>
           <Field label="Expiry (YYYY-MM)">
-            <InputBox variant="box" value={expiry} onChange={setExpiry} placeholder="2027-03" />
+            <InputBox variant="box" value={expiry} onChange={setExpiry} placeholder="2027-03" inputStyle={{ fontSize: fonts.size.s }} />
           </Field>
         </div>
 
         <div style={ms.twoCol}>
           <Field label="Discount">
-            <MeasureField box unit="%" value={discountPct} onChange={setDiscountPct} inputMode="decimal" placeholder="0" />
+            <MeasureField box unitFilled value={discountPct} onChange={setDiscountPct} unit={discountMode} onToggleUnit={() => setDiscountMode(discountMode === "%" ? "₹" : "%")} inputMode="decimal" placeholder="0" />
           </Field>
           <Field label="GST">
             <MeasureField box unit="%" value={gstPct} onChange={setGstPct} inputMode="decimal" placeholder="0" />
