@@ -175,7 +175,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
 
           {/* Pay + print/share icons (saves vertical space) */}
           <div style={{ marginTop: "auto", display: "flex", gap: spacing.s, alignItems: "center" }}>
-            <Button variant="dark" size="md" onClick={onClose} style={{ flex: 1 }} iconLeft={<VerifiedBadgeIcon width={18} height={18} style={{ color: colors.neutral100 }} />}>
+            <Button variant="dark" size="md" onClick={onClose} style={{ flex: 1 }} iconLeft={<VerifiedBadgeIcon width={24} height={24} style={{ color: colors.neutral100 }} />}>
               {balance > 0 ? `Pay ${inr(balance)}` : "Mark paid"}
             </Button>
             <IconButton ariaLabel="Print" onClick={() => {}} color={colors.neutral900}><PrinterIcon width={24} height={24} /></IconButton>
