@@ -20,9 +20,11 @@ Reviewing the appointment booking page (BookAppointment). Shipped:
 
 - **Services catalog → DataGrid** — in-place migration (Short Form badge / Name / Price / Duration / Discount / GST + edit/delete action cell), empty/loading/error moved out of the table. Added `/api/tenant/services` MSW mock + `mockServices` + a `ServicesView` story (Default + Empty). Verified — renders identically (badges, muted cols, formatted prices, actions).
 
+- **Pharmacy stock → DataGrid** — 12-col table migrated (right-aligned numerics, invoice link, delete/edit/adjust actions). Turned out to need neither zebra (trAlt was transparent) nor group headers (groupItems just orders); the real need was **horizontal scroll**, so added a `minWidth` prop to DataGrid (wraps in an overflow-x scroller). Presentational, so a `PharmacyListView` story (Default + Empty) with mock Meds — no API. Verified.
+- **DataGrid polish (catalog feedback):** default row padding 16→12; header font → `control.xs` (smaller, both tiers).
+
 Sequenced next (Tier 1 cont.):
-- **Stats "Overdue reviews"** (trivial, read-only) → DataGrid.
-- **Pharmacy stock** → needs small DataGrid additions first (**zebra** + **grouping**), then migrate.
+- **Stats "Overdue reviews"** — only remaining Tier-1 table; trivial 3-col, buried in StatsPage (no story), low value — fold in or skip.
 - **Tables Tier 2** — QueueTable **mock built** (`components/QueueTable/`, DRAFT): shared queue component — render-prop columns (status badge/dropdown, row actions), `rowTone(row)` status backgrounds, `groupBy(row)` separators. **Responsive via CSS-grid columns** (fixed px + flexible `fr`/`minmax`) — the clean equivalent of spacer columns; the story shows the same table at 1080px vs 720px adapting. **Review the mock, then migrate the real AppointmentQueue + PrescriptionQueue onto it** (one at a time, diff against live behaviour).
 
 ## Round 7 — ModalHeader migration + AddStaff field pass

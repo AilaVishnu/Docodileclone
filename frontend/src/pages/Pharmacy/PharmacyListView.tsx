@@ -3,6 +3,7 @@ import { styles } from "./Pharmacy.styles";
 import { Med, GroupBy } from "./types";
 import { formatExpiry } from "./expiry";
 import { groupItems } from "./grouping";
+import { DataGrid, type GridColumn } from "../../components/DataGrid/DataGrid";
 
 type Props = {
   items: Med[];
@@ -14,8 +15,8 @@ type Props = {
 };
 
 export function PharmacyListView({ items, groupBy, onPick, onEdit, onAdjustQty, onDelete }: Props) {
-  const groups = groupItems(items, groupBy);
-  const ordered = groups.flatMap((g) => g.items);
+  // groupItems orders the rows by the active grouping (no visible group headers).
+  const ordered = groupItems(items, groupBy).flatMap((g) => g.items);
 
   if (ordered.length === 0) {
     return (
@@ -27,74 +28,34 @@ export function PharmacyListView({ items, groupBy, onPick, onEdit, onAdjustQty, 
     );
   }
 
-  return (
-    <div style={styles.tableScroll}>
-      <table style={styles.table}>
-        <thead style={styles.thead}>
-          <tr>
-            <th style={styles.th}>Med Name</th>
-            <th style={styles.th}>Invoice No.</th>
-            <th style={styles.th}>Batch</th>
-            <th style={{ ...styles.th, ...styles.thNumeric }}>Pack Price</th>
-            <th style={{ ...styles.th, ...styles.thNumeric }}>MRP</th>
-            <th style={{ ...styles.th, ...styles.thNumeric }}>Per Pack</th>
-            <th style={{ ...styles.th, ...styles.thNumeric }}>Unit Price</th>
-            <th style={{ ...styles.th, ...styles.thNumeric }}>In Stock</th>
-            <th style={styles.th}>Expiry</th>
-            <th style={{ ...styles.th, ...styles.thNumeric }}>Discount</th>
-            <th style={{ ...styles.th, ...styles.thNumeric }}>GST</th>
-            <th style={styles.th}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ordered.map((m, i) => (
-            <tr key={m.id} style={{ ...styles.tr, ...(i % 2 === 1 ? styles.trAlt : null) }}>
-              <td style={styles.td}>{m.name}</td>
-              <td style={styles.td}>
-                <a
-                  style={styles.invoiceLink}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onPick?.(m);
-                  }}
-                  href="#"
-                >
-                  {m.invoiceNo}
-                </a>
-              </td>
-              <td style={styles.td}>{m.batch}</td>
-              <td style={{ ...styles.td, ...styles.tdNumeric }}>{m.packPrice.toFixed(2)}</td>
-              <td style={{ ...styles.td, ...styles.tdNumeric }}>{m.packMrp.toFixed(2)}</td>
-              <td style={{ ...styles.td, ...styles.tdNumeric }}>{m.unitsPerPack}</td>
-              <td style={{ ...styles.td, ...styles.tdNumeric }}>{m.unitPrice.toFixed(2)}</td>
-              <td style={{ ...styles.td, ...styles.tdNumeric }}>{m.unitsInStock}</td>
-              <td style={styles.td}>{formatExpiry(m.expiry)}</td>
-              <td style={{ ...styles.td, ...styles.tdNumeric }}>{m.discountPct.toFixed(2)}</td>
-              <td style={{ ...styles.td, ...styles.tdNumeric }}>{m.gstPct.toFixed(2)}</td>
-              <td style={styles.td}>
-                <button
-                  type="button"
-                  style={styles.actionBtn}
-                  title="Delete batch"
-                  onClick={() => onDelete?.(m)}
-                >↺</button>
-                <button
-                  type="button"
-                  style={styles.actionBtn}
-                  title="Edit batch"
-                  onClick={() => onEdit?.(m)}
-                >✎</button>
-                <button
-                  type="button"
-                  style={styles.actionBtn}
-                  title="Adjust quantity"
-                  onClick={() => onAdjustQty?.(m)}
-                >#</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+  const columns: GridColumn<Med>[] = [
+    { key: "name", header: "Med Name", width: 150, align: "left", render: (m) => m.name },
+    {
+      key: "invoice", header: "Invoice No.", width: 110, align: "left",
+      render: (m) => (
+        <a style={styles.invoiceLink} href="#" onClick={(e) => { e.preventDefault(); onPick?.(m); }}>{m.invoiceNo}</a>
+      ),
+    },
+    { key: "batch", header: "Batch", width: 90, align: "left", render: (m) => m.batch },
+    { key: "packPrice", header: "Pack Price", width: 90, align: "right", render: (m) => m.packPrice.toFixed(2) },
+    { key: "mrp", header: "MRP", width: 80, align: "right", render: (m) => m.packMrp.toFixed(2) },
+    { key: "perPack", header: "Per Pack", width: 80, align: "right", render: (m) => m.unitsPerPack },
+    { key: "unitPrice", header: "Unit Price", width: 90, align: "right", render: (m) => m.unitPrice.toFixed(2) },
+    { key: "inStock", header: "In Stock", width: 80, align: "right", render: (m) => m.unitsInStock },
+    { key: "expiry", header: "Expiry", width: 96, align: "left", render: (m) => formatExpiry(m.expiry) },
+    { key: "discount", header: "Discount", width: 90, align: "right", render: (m) => m.discountPct.toFixed(2) },
+    { key: "gst", header: "GST", width: 72, align: "right", render: (m) => m.gstPct.toFixed(2) },
+    {
+      key: "actions", header: "Actions", width: 110, align: "left",
+      render: (m) => (
+        <>
+          <button type="button" style={styles.actionBtn} title="Delete batch" onClick={() => onDelete?.(m)}>↺</button>
+          <button type="button" style={styles.actionBtn} title="Edit batch" onClick={() => onEdit?.(m)}>✎</button>
+          <button type="button" style={styles.actionBtn} title="Adjust quantity" onClick={() => onAdjustQty?.(m)}>#</button>
+        </>
+      ),
+    },
+  ];
+
+  return <DataGrid columns={columns} rows={ordered} rowKey={(m) => m.id} minWidth={1130} />;
 }
