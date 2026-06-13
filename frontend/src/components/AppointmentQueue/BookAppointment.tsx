@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { styles } from "./BookAppointment.styles";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
-import { PatientSearchRow } from "../PatientSearchRow/PatientSearchRow";
 import { DatePicker } from "../DatePicker/DatePicker";
 import { TimePicker } from "./TimePicker";
 import {
   StethoscopeIcon,
   PulseIcon,
-  UserHandsIcon,
-  LetterIcon,
-  PhoneIcon,
   CalendarIcon,
   HashtagIcon,
   ClockIcon
@@ -164,7 +160,6 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [showDobPicker, setShowDobPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [dobDigits, setDobDigits] = useState("");
   const [toastMessage, setToastMessage] = useState("");
@@ -181,8 +176,6 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const [isAdvanced, setIsAdvanced] = useState(false);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [allPatients, setAllPatients] = useState<any[]>([]);
-  const [showNameSugg, setShowNameSugg] = useState(false);
-  const [showPhoneSugg, setShowPhoneSugg] = useState(false);
   // When the user picks an existing patient from the search dropdown (or is
   // editing an existing appointment), the patient identity fields lock so
   // staff can't accidentally rewrite a patient's name/phone/dob. The user
@@ -236,9 +229,6 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   }, [form.discount, discountMode, form.services]);
 
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const hasDob = dobDigits.length > 0;
-  const hasManualAge = !hasDob && form.age.replace(/[^0-9]/g, "").length > 0;
-
   const formatDob = (digits: string): string => {
     const dd = digits.slice(0, 2);
     const mm = digits.slice(2, 4);
@@ -273,13 +263,6 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       .catch(() => {});
   }, []);
 
-  const nameSuggestions: any[] = form.name.trim().length >= 1
-    ? allPatients.filter((p) => p.name.toLowerCase().includes(form.name.toLowerCase())).slice(0, 6)
-    : [];
-  const phoneSuggestions: any[] = form.phone.replace(/\D/g, "").length >= 6
-    ? allPatients.filter((p) => (p.phone ?? "").replace(/\D/g, "").includes(form.phone.replace(/\D/g, ""))).slice(0, 6)
-    : [];
-
   const fillFromPatient = (p: any) => {
     const clean = (p.phone ?? "").replace(/\D/g, "").slice(-10);
     const formattedPhone = clean.length === 10
@@ -303,8 +286,6 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       age: newDobDigits ? calcAge(newDobDigits) : (p.age ? `${Math.floor(p.age / 12)} / ${p.age % 12}` : prev.age),
     }));
     if (newDobDigits) setDobDigits(newDobDigits);
-    setShowNameSugg(false);
-    setShowPhoneSugg(false);
     // Lock identity fields so the staff can't drift this picked patient's
     // saved data through accidental keystrokes.
     setLockedPatientId(p.id);
@@ -953,21 +934,4 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     </div>
   );
 }
-
-const patientSuggStyle: React.CSSProperties = {
-  position: "absolute",
-  top: "100%",
-  left: 0,
-  right: 0,
-  zIndex: 2000,
-  backgroundColor: colors.neutral100,
-  border: `${strokes.xs} solid ${colors.primary300}`,
-  borderRadius: radii.m,
-  boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
-  display: "flex",
-  flexDirection: "column",
-  overflow: "hidden",
-  marginTop: 4,
-  padding: spacing["2xs"],
-};
 
