@@ -2,6 +2,19 @@
 
 Running record of the component-by-component review (Storybook localhost:6006). Each entry: what was reviewed, the decision, and where it was fixed. Newest first.
 
+## Round 8 — radio font + tables Step 0 (booking-form components sequenced next)
+
+Reviewing the appointment booking page (BookAppointment). Shipped:
+- **Radio label font `control.sm` → `control.md`** — radios now match the input-field / select font at both tiers (the size the user liked). Applies app-wide (gender, role, payment, type).
+- **`Overview/Tables` page** (`src/sb/overviews/Tables.stories.tsx`) — "Step 0" for the tables consolidation: shows the canonical `DataGrid` (default + dense `s`) and a full **inventory** of every tabular surface with its build method + plan (rendered, fittingly, in a DataGrid with tier pills). Migration tiers (1/2/3) to be discussed.
+- **BillCard confirmed reuse-ready** (the "quick bill" component) — already a clean self-contained component with a clear prop interface + story; no change needed.
+
+- **PatientDetailsForm built** (`components/PatientDetailsForm/`) — the name/email/phone/DOB(digit-entry + calendar)/age/gender card lifted out of BookAppointment into a reusable, controlled component (`value`/`onChange` + parent-owned `dobDigits` + `patients` for autocomplete + `locked`/`onSelectExisting`). Story has Default / Locked / WithErrors. Verified in Storybook (renders identical to the booking card). **BookAppointment integration is the next step** (a ~220-line swap in the live booking grid — done carefully on its own, verified via the BookAppointment story).
+
+Sequenced next:
+- **Wire PatientDetailsForm into BookAppointment** (replace the inline card) — then reuse it in NewPrescriptionModal's add-patient view.
+- **DateField / TimeField** — wrap the appointment date/time trigger cards over the existing `DatePicker` / `TimePicker`; align their fonts to the control scale.
+
 ## Round 7 — ModalHeader migration + AddStaff field pass
 
 - **6 modals migrated onto `ModalHeader`** — UploadModal, AddStaffModal, AddServiceModal, EditPatientModal (main header only — archive confirm left as-is per earlier call), NewPrescriptionModal, SchedulePresetsModal. Each now renders `<ModalHeader title=… subtitle=… onClose=… align=…>` instead of hand-rolling the header. Removed the per-file `header`/`title`/`subtitle` style objects + the now-unused `IconButton` imports (EditPatientModal keeps both — its archive confirm still uses them).

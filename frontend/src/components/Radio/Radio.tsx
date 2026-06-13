@@ -32,7 +32,7 @@ export function Radio({ name, value, checked, onChange, label, disabled, color }
         gap: 6,
         cursor: disabled ? "not-allowed" : "pointer",
         fontFamily: fonts.family.primary,
-        fontSize: fonts.control.sm,
+        fontSize: fonts.control.md, // match input fields / selects
         lineHeight: 1,
         color: disabled ? colors.neutral400 : color ?? colors.neutral900,
       }}
