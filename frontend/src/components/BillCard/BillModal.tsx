@@ -5,7 +5,7 @@ import { Button } from "../Button";
 import { IconButton } from "../IconButton";
 import { DataGrid, GridColumn } from "../DataGrid/DataGrid";
 import { DatePicker } from "../DatePicker/DatePicker";
-import { FillInput } from "../FillInput";
+import { Field } from "../Field";
 import { MeasureField } from "../MeasureField";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 import { styles as bill } from "./BillCard.styles";
@@ -90,7 +90,8 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
   // Numeric line-item field → cream FillInput. Stored as a number; blank shows
   // the placeholder rather than a literal 0.
   const numFill = (l: Line, key: "qty" | "unit", placeholder: string) => isTrailing(l) ? null : (
-    <FillInput align="center" inputMode="decimal" placeholder={placeholder} ariaLabel={key}
+    <Field variant="box" fill="filled" align="center" inputMode="decimal" placeholder={placeholder} ariaLabel={key}
+      style={{ padding: "0 8px" }}
       value={(l[key] as number) ? String(l[key]) : ""}
       onChange={(v) => setLine(l.id, { [key]: key === "qty" ? Math.max(1, Math.floor(Number(v)) || 1) : Number(v) || 0 } as Partial<Line>)} />
   );
@@ -98,7 +99,8 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
   const columns: GridColumn<Line>[] = [
     { key: "n", header: "#", width: 24, align: "center", render: (l, i) => <span style={{ color: colors.neutral500 }}>{i + 1}</span> },
     { key: "svc", header: "Service", align: "left", render: (l) => (
-      <FillInput list="bm-svc-list" placeholder="Type here" ariaLabel="Service"
+      <Field variant="box" fill="filled" list="bm-svc-list" placeholder="Type here" ariaLabel="Service"
+        style={{ padding: "0 8px" }}
         value={l.name} onChange={(v) => setName(l.id, v)} />
     ) },
     { key: "qty", header: "Qty", width: 52, render: (l) => numFill(l, "qty", "1") },

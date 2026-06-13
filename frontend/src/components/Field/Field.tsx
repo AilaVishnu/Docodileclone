@@ -13,11 +13,18 @@ import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 // One invalid state everywhere: red200 border + a soft redAlpha10 fill.
 // ─────────────────────────────────────────────────────────────────────────────
 export type FieldVariant = "underline" | "box" | "pill";
+export type FieldFill = "outline" | "filled";
 
 type FieldProps = {
   value: string;
   onChange: (value: string) => void;
   variant?: FieldVariant;
+  /** box/pill only: "outline" (border + white, default) or "filled" (cream, borderless). */
+  fill?: FieldFill;
+  /** Text alignment of the input (e.g. "center" for numbers). */
+  align?: "left" | "center" | "right";
+  /** Bind a native <datalist> id — typing shows the browser's suggestion list. */
+  list?: string;
   placeholder?: string;
   iconLeft?: React.ReactNode;
   iconRight?: React.ReactNode;
@@ -59,45 +66,37 @@ const containerBase: React.CSSProperties = {
   boxSizing: "border-box",
 };
 
-const variantStyles: Record<FieldVariant, { container: React.CSSProperties; error: React.CSSProperties }> = {
-  underline: {
-    container: {
-      // Vertical padding is var-driven so the row compacts at 1200–1439.
-      padding: "var(--input-pady, 6px) 8px",
-      borderBottom: `${strokes.xs} solid ${colors.neutral300}`,
-    },
-    error: {
-      borderBottom: `${strokes.xs} solid ${colors.red200}`,
-      backgroundColor: colors.redAlpha10,
-    },
-  },
-  box: {
-    container: {
-      height: "var(--input-h, 40px)",
-      padding: `0 ${spacing.s}`,
-      border: `${strokes.xs} solid ${colors.neutral300}`,
-      borderRadius: radii.m,
-      backgroundColor: colors.neutral100,
-    },
-    error: {
-      border: `${strokes.xs} solid ${colors.red200}`,
-      backgroundColor: colors.redAlpha10,
-    },
-  },
-  pill: {
-    container: {
-      height: "var(--input-h, 40px)",
-      padding: `0 ${spacing.l}`,
-      border: `${strokes.xs} solid ${colors.primary300}`,
-      borderRadius: radii.full,
-      backgroundColor: colors.neutral100,
-    },
-    error: {
-      border: `${strokes.xs} solid ${colors.red200}`,
-      backgroundColor: colors.redAlpha10,
-    },
-  },
+// Geometry per shape (height / padding / radius). The surface (border + fill)
+// is layered separately so box & pill can be either "outline" or "filled".
+const variantGeometry: Record<FieldVariant, React.CSSProperties> = {
+  // Vertical padding is var-driven so the row compacts at 1200–1439.
+  underline: { padding: "var(--input-pady, 6px) 8px" },
+  box: { height: "var(--input-h, 40px)", padding: `0 ${spacing.s}`, borderRadius: radii.m },
+  pill: { height: "var(--input-h, 40px)", padding: `0 ${spacing.l}`, borderRadius: radii.full },
 };
+
+// Surface = border + background for a (variant, fill) pair. Underline is always
+// just a bottom line (fill has no effect). "outline" is the original look;
+// "filled" is the borderless cream block (absorbs the old FillInput).
+function surfaceFor(variant: FieldVariant, fill: FieldFill): React.CSSProperties {
+  if (variant === "underline") {
+    return { borderBottom: `${strokes.xs} solid ${colors.neutral300}` };
+  }
+  if (fill === "filled") {
+    return { border: "none", backgroundColor: colors.primary100 };
+  }
+  return {
+    border: `${strokes.xs} solid ${variant === "pill" ? colors.primary300 : colors.neutral300}`,
+    backgroundColor: colors.neutral100,
+  };
+}
+
+// One invalid state everywhere: red border + a soft red fill.
+function errorFor(variant: FieldVariant): React.CSSProperties {
+  return variant === "underline"
+    ? { borderBottom: `${strokes.xs} solid ${colors.red200}`, backgroundColor: colors.redAlpha10 }
+    : { border: `${strokes.xs} solid ${colors.red200}`, backgroundColor: colors.redAlpha10 };
+}
 
 function AutoGrowTextarea({ value, onChange, placeholder, maxLength, disabled, inputStyle }: {
   value: string; onChange: (v: string) => void; placeholder?: string; maxLength?: number;
@@ -138,17 +137,18 @@ function AutoGrowTextarea({ value, onChange, placeholder, maxLength, disabled, i
 }
 
 export function Field({
-  value, onChange, variant = "underline", placeholder, iconLeft, iconRight,
+  value, onChange, variant = "underline", fill = "outline", align = "left",
+  list, placeholder, iconLeft, iconRight,
   type = "text", onKeyDown, onBlur, onFocus, error, errorMessage, maxLength,
   multiline, disabled, inputMode, name, autoFocus, ariaLabel, style, inputStyle,
 }: FieldProps) {
-  const v = variantStyles[variant];
   const containerStyle: React.CSSProperties = {
     ...containerBase,
-    ...v.container,
+    ...variantGeometry[variant],
+    ...surfaceFor(variant, fill),
     // multiline drops the fixed height so the textarea can grow.
     ...(multiline ? { height: undefined, alignItems: "flex-start" } : {}),
-    ...(error ? v.error : {}),
+    ...(error ? errorFor(variant) : {}),
     ...(disabled ? { opacity: 0.6 } : {}),
     ...style,
   };
@@ -173,10 +173,11 @@ export function Field({
             disabled={disabled}
             inputMode={inputMode}
             name={name}
+            list={list}
             autoFocus={autoFocus}
             aria-label={ariaLabel}
             className="text-input-field"
-            style={{ ...inputBase, ...inputStyle }}
+            style={{ ...inputBase, textAlign: align, ...inputStyle }}
           />
         )}
 

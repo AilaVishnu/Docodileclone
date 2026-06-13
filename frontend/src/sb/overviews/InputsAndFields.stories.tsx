@@ -6,7 +6,6 @@ import { TextInput } from '../../components/Input/TextInput';
 import { Select } from '../../components/Input/Select/Select';
 import { UnderlineSelect } from '../../components/Input/UnderlineSelect/UnderlineSelect';
 import { MeasureField } from '../../components/MeasureField';
-import { FillInput } from '../../components/FillInput';
 import { DosagePicker } from '../../components/DosagePicker/DosagePicker';
 import { DurationPicker } from '../../components/DurationPicker/DurationPicker';
 import { FrequencyPicker } from '../../components/FrequencyPicker/FrequencyPicker';
@@ -77,9 +76,15 @@ const MeasureFieldDemo: React.FC<React.ComponentProps<typeof MeasureField>> = (p
   );
 };
 
-const FillInputDemo: React.FC<React.ComponentProps<typeof FillInput>> = (props) => {
+// FillInput was folded into Field — this is now Field's filled box variant.
+const FillInputDemo: React.FC<{
+  value?: string;
+  placeholder?: string;
+  align?: 'left' | 'center' | 'right';
+  inputMode?: 'numeric' | 'decimal' | 'text';
+}> = (props) => {
   const [value, setValue] = useState(props.value ?? '');
-  return <FillInput {...props} value={value} onChange={setValue} />;
+  return <Field variant="box" fill="filled" {...props} value={value} onChange={setValue} />;
 };
 
 const DEPARTMENTS = ['Cardiology', 'Dermatology', 'Neurology'];
@@ -193,7 +198,7 @@ export const All: Story = {
         </Wrap>
       </Group>
 
-      <Group label="FillInput — borderless cream fill block">
+      <Group label="Filled box (cream) — formerly FillInput, now Field fill='filled'">
         <Wrap>
           <Slot label="left (names)" w={360}>
             <FillInputDemo value="Paracetamol" placeholder="Item name" />

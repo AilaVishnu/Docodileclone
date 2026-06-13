@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'The canonical text input. Three looks — underline / box / pill — with optional left/right icon slots, an error line, and an auto-growing multiline mode. Heights track the `--input-h` CSS variable responsively.',
+          'The canonical text input. Three shapes — underline / box / pill — and box/pill can be `outline` (border + white) or `filled` (cream, borderless). Plus icon slots, text `align`, an error line, and an auto-growing multiline mode. Heights track `--input-h` responsively.',
       },
     },
   },
@@ -19,6 +19,17 @@ const meta = {
       control: 'inline-radio',
       options: ['underline', 'box', 'pill'],
       table: { defaultValue: { summary: 'underline' } },
+    },
+    fill: {
+      control: 'inline-radio',
+      options: ['outline', 'filled'],
+      table: { defaultValue: { summary: 'outline' } },
+      description: 'box/pill only — outline (border + white) or filled (cream, borderless).',
+    },
+    align: {
+      control: 'inline-radio',
+      options: ['left', 'center', 'right'],
+      table: { defaultValue: { summary: 'left' } },
     },
     type: {
       control: 'select',
@@ -38,6 +49,8 @@ const meta = {
   },
   args: {
     variant: 'box',
+    fill: 'outline',
+    align: 'left',
     placeholder: 'Type here…',
     value: '',
   },
@@ -70,6 +83,35 @@ export const Box: Story = {
 
 export const Pill: Story = {
   args: { variant: 'pill', placeholder: 'Search…', type: 'search' },
+};
+
+/** Filled box — cream, borderless (replaces the old standalone FillInput). */
+export const BoxFilled: Story = {
+  args: { variant: 'box', fill: 'filled', placeholder: 'Amount', align: 'center' },
+};
+
+/** Box & pill × outline / filled, at a glance. */
+export const AllSurfaces: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => {
+    const Demo = ({ v, f }: { v: 'box' | 'pill'; f: 'outline' | 'filled' }) => {
+      const [val, setVal] = useState('');
+      return (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 12, color: '#8F8F8F', marginBottom: 4 }}>{`${v} · ${f}`}</div>
+          <Field variant={v} fill={f} placeholder="Type here…" value={val} onChange={setVal} />
+        </div>
+      );
+    };
+    return (
+      <div>
+        <Demo v="box" f="outline" />
+        <Demo v="box" f="filled" />
+        <Demo v="pill" f="outline" />
+        <Demo v="pill" f="filled" />
+      </div>
+    );
+  },
 };
 
 export const WithError: Story = {

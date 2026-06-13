@@ -275,8 +275,8 @@ export const getStatusLabel = (status: string): string => {
 export const getPayStyle = (status: string): CSSProperties => {
   switch (status?.toUpperCase()) {
     case "PAID":    return { color: colors.green200 };   // brand green
-    case "DUE":     return { color: colors.primary700 }; // warm warning — no amber in system
-    case "NO PAY":  return { color: colors.neutral400 };
+    case "DUE":
+    case "NO PAY":  return { color: colors.primary700 }; // owing → warm warning (no amber in system)
     default:        return { color: colors.neutral400 };
   }
 };

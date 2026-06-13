@@ -9,10 +9,12 @@ Running record of the component-by-component review (Storybook localhost:6006). 
 - **Fix:** `chip` now defaults to control text (`var(--btn-fs)` = 16px); the serif `underline` keeps `h4`. Callers can still override.
 - **Fixed in:** `Input/UnderlineSelect/UnderlineSelect.tsx`. ✅ done, verified (16px), pushed.
 
-### Proposed (pending your go-ahead): unify the input + dropdown surface
-- Field's box/pill are white + border (= "outlined"); there's no "filled" option yet. `FillInput` is a cream-filled, borderless box + text-align. `MeasureField`'s cream value box and the dosing-picker triggers are the same filled-box / filled-dropdown idea.
-- **Plan (additive, staged):** add a `fill: "outline" | "filled"` axis (and `align`) to `Field` so box/pill can be filled → `FillInput` becomes `<Field variant="box" fill="filled" align>`. Add `fill` + `chevron` options to a shared dropdown so `Select` / the 5 pickers / UnderlineSelect-chip converge. Confirm before any broad migration.
-- **Status:** awaiting decision.
+### Unify the input + dropdown surface (decision: do A + B + C)
+- **No Pay = owing** (your call) → `getPayStyle` now renders `"NO PAY"` as the warm "Due" colour (was grey), matching the badge.
+- **Stage A ✅** — `Field` gains `fill: "outline" | "filled"` + `align` + `list`. Default `outline` ⇒ every existing field unchanged; box/pill can now be filled (cream, borderless).
+- **Stage B ✅** — `FillInput` folded into `Field` (`variant="box" fill="filled"`) and **deleted**; Bill modal line items + the inputs overview repointed.
+- **Stage C ⏳ next** — shared dropdown (fill + chevron) to absorb `Select` / the 5 dosing pickers / the UnderlineSelect chip. Will show call-site impact before migrating each.
+- Verified: tsc 0 errors, CRA build compiles, Storybook (Field surfaces + Bill modal) render correctly. Pushed.
 
 ## Round 1
 
