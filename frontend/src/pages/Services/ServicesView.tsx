@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { styles } from "./ServicesView.styles";
+import { DataGrid } from "../../components/DataGrid/DataGrid";
 import { Service } from "./types";
 import { AddServiceModal } from "./AddServiceModal";
 import { Button } from "../../components/Button";
@@ -130,69 +131,48 @@ export function ServicesView() {
       </div>
 
       <div style={styles.tableContainer}>
-        <table style={styles.table}>
-          <colgroup>
-            <col style={{ width: "120px" }} />
-            <col style={{ width: "auto" }} />
-            <col style={{ width: "12%" }} />
-            <col style={{ width: "12%" }} />
-            <col style={{ width: "12%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "96px" }} />
-          </colgroup>
-          <thead>
-            <tr>
-              <th style={{ ...styles.th, textAlign: "center", paddingLeft: 8 }}>Short Form</th>
-              <th style={styles.th}>Name</th>
-              <th style={{ ...styles.th, textAlign: "center" }}>Price</th>
-              <th style={{ ...styles.th, textAlign: "center" }}>Duration</th>
-              <th style={{ ...styles.th, textAlign: "center" }}>Discount</th>
-              <th style={{ ...styles.th, textAlign: "center" }}>GST</th>
-              <th style={{ ...styles.th, textAlign: "center", paddingRight: 8 }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={7} style={styles.empty}>
-                  <div style={styles.emptyTitle}>
-                    {loading ? "Loading…" : error ? "Couldn't load services" : services.length === 0 ? "No services yet" : "No matches"}
+        {filtered.length === 0 ? (
+          <div style={styles.empty}>
+            <div style={styles.emptyTitle}>
+              {loading ? "Loading…" : error ? "Couldn't load services" : services.length === 0 ? "No services yet" : "No matches"}
+            </div>
+            <div>
+              {loading
+                ? "Fetching your clinic's services."
+                : error
+                ? error
+                : services.length === 0
+                ? "Add the services your clinic offers — consultation, procedures, packages."
+                : `Nothing matches "${search}". Try a different term.`}
+            </div>
+          </div>
+        ) : (
+          <DataGrid
+            rows={filtered}
+            rowKey={(s) => s.id}
+            columns={[
+              { key: "code", header: "Short Form", width: 120, align: "center", render: (s) => <span style={styles.codeBadge}>{s.code}</span> },
+              { key: "name", header: "Name", align: "left", render: (s) => s.name },
+              { key: "price", header: "Price", align: "center", render: (s) => formatPrice(s.price) },
+              { key: "duration", header: "Duration", align: "center", render: (s) => <span style={styles.tdMuted}>{formatDuration(s.duration)}</span> },
+              { key: "discount", header: "Discount", align: "center", render: (s) => <span style={styles.tdMuted}>{formatDiscount(s)}</span> },
+              { key: "gst", header: "GST", align: "center", render: (s) => <span style={styles.tdMuted}>{formatGst(s.gst)}</span> },
+              {
+                key: "actions", header: "", width: 96, align: "center",
+                render: (s) => (
+                  <div style={styles.actions}>
+                    <button style={styles.iconBtn} onClick={() => openEdit(s)} aria-label="Edit">
+                      <EditPencilIcon width={24} height={24} />
+                    </button>
+                    <button style={styles.iconBtn} onClick={() => handleDelete(s)} aria-label="Delete">
+                      <TrashIcon width={24} height={24} />
+                    </button>
                   </div>
-                  <div>
-                    {loading
-                      ? "Fetching your clinic's services."
-                      : error
-                      ? error
-                      : services.length === 0
-                      ? "Add the services your clinic offers — consultation, procedures, packages."
-                      : `Nothing matches "${search}". Try a different term.`}
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              filtered.map((s) => (
-                <tr key={s.id}>
-                  <td style={{ ...styles.td, textAlign: "center", paddingLeft: 8 }}><span style={styles.codeBadge}>{s.code}</span></td>
-                  <td style={styles.td}>{s.name}</td>
-                  <td style={{ ...styles.td, textAlign: "center" }}>{formatPrice(s.price)}</td>
-                  <td style={{ ...styles.td, textAlign: "center", ...styles.tdMuted }}>{formatDuration(s.duration)}</td>
-                  <td style={{ ...styles.td, textAlign: "center", ...styles.tdMuted }}>{formatDiscount(s)}</td>
-                  <td style={{ ...styles.td, textAlign: "center", ...styles.tdMuted }}>{formatGst(s.gst)}</td>
-                  <td style={{ ...styles.td, textAlign: "center", paddingRight: 8 }}>
-                    <div style={styles.actions}>
-                      <button style={styles.iconBtn} onClick={() => openEdit(s)} aria-label="Edit">
-                        <EditPencilIcon width={24} height={24} />
-                      </button>
-                      <button style={styles.iconBtn} onClick={() => handleDelete(s)} aria-label="Delete">
-                        <TrashIcon width={24} height={24} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                ),
+              },
+            ]}
+          />
+        )}
       </div>
       </div>
 

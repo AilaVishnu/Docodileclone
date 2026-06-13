@@ -18,8 +18,10 @@ Reviewing the appointment booking page (BookAppointment). Shipped:
 
 - **Tables Tier 1 (started)** — **Archived patients** table migrated to `DataGrid` (columns + a Restore action render-prop; cream card + fetch/empty/error states kept). Added a `/api/patients/archived` MSW mock + `mockArchivedPatients` + an `ArchivedPatientsList` story (Default + Empty) so the page table is now verifiable in Storybook. Pattern for the rest: define `columns` (render-props for actions), keep the page's data/empty states, add a story.
 
+- **Services catalog → DataGrid** — in-place migration (Short Form badge / Name / Price / Duration / Discount / GST + edit/delete action cell), empty/loading/error moved out of the table. Added `/api/tenant/services` MSW mock + `mockServices` + a `ServicesView` story (Default + Empty). Verified — renders identically (badges, muted cols, formatted prices, actions).
+
 Sequenced next (Tier 1 cont.):
-- **Stats "Overdue reviews"** (trivial, read-only) + **Services catalog** (read-only + edit/delete actions) → DataGrid.
+- **Stats "Overdue reviews"** (trivial, read-only) → DataGrid.
 - **Pharmacy stock** → needs small DataGrid additions first (**zebra** + **grouping**), then migrate.
 - **Tables Tier 2** — QueueTable **mock built** (`components/QueueTable/`, DRAFT): shared queue component — render-prop columns (status badge/dropdown, row actions), `rowTone(row)` status backgrounds, `groupBy(row)` separators. **Responsive via CSS-grid columns** (fixed px + flexible `fr`/`minmax`) — the clean equivalent of spacer columns; the story shows the same table at 1080px vs 720px adapting. **Review the mock, then migrate the real AppointmentQueue + PrescriptionQueue onto it** (one at a time, diff against live behaviour).
 

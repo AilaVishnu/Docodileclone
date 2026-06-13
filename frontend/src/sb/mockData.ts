@@ -51,8 +51,6 @@ export const mockPatients: Patient[] = [
   },
 ];
 
-// Doctor ids match mockPatients' treatingDoctorIds (d1/d2). Used by useDoctors
-// (GET /api/doctors) so doctor pickers (NewPrescriptionModal etc.) populate.
 // Archived patients (Settings → Archived patients table).
 export const mockArchivedPatients = [
   { id: 'ap1', name: 'Old Patient One', phone: '+91 90000 11111', gender: 'male', archivedAt: '2026-04-02' },
@@ -60,6 +58,16 @@ export const mockArchivedPatients = [
   { id: 'ap3', name: 'Anonymous', phone: null, gender: null, archivedAt: null },
 ];
 
+// Clinic services catalog (Services page table). ServiceDTO shape (durationMin).
+export const mockServices = [
+  { id: 's1', name: 'Consultation', code: 'GC', price: 500, durationMin: 15, discount: 0, discountMode: '%', gst: 0 },
+  { id: 's2', name: 'Skin Biopsy', code: 'SB', price: 2500, durationMin: 30, discount: 10, discountMode: '%', gst: 18 },
+  { id: 's3', name: 'Dressing', code: 'DR', price: 300, durationMin: 10, discount: 0, discountMode: '%', gst: 0 },
+  { id: 's4', name: 'Laser Session', code: 'LS', price: 4000, durationMin: 45, discount: 500, discountMode: '₹', gst: 18 },
+];
+
+// Doctor ids match mockPatients' treatingDoctorIds (d1/d2). Used by useDoctors
+// (GET /api/doctors) so doctor pickers (NewPrescriptionModal etc.) populate.
 export const mockDoctors: Doctor[] = [
   { id: 'd1', name: 'Dr. Anjali Rao', department: 'Dermatology', specialty: 'Cosmetic Dermatology', registrationNo: 'KMC-12345', qualification: 'MBBS, MD (Dermatology)', medicalCouncil: 'Karnataka Medical Council', experienceYears: 12 },
   { id: 'd2', name: 'Dr. Vikram Nair', department: 'Pediatrics', specialty: 'General Pediatrics', registrationNo: 'KMC-67890', qualification: 'MBBS, DCH', medicalCouncil: 'Karnataka Medical Council', experienceYears: 8 },

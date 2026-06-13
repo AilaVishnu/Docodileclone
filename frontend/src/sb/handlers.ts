@@ -3,7 +3,7 @@
 // render with realistic content instead of erroring on a dead backend.
 import { http, HttpResponse } from 'msw';
 import { API_BASE_URL } from '../apiConfig';
-import { mockPatients, mockDoctors, mockArchivedPatients, mockSuggestions, mockPharmacyStock } from './mockData';
+import { mockPatients, mockDoctors, mockArchivedPatients, mockServices, mockSuggestions, mockPharmacyStock } from './mockData';
 
 const B = API_BASE_URL;
 
@@ -15,6 +15,9 @@ export const handlers = [
 
   // Settings → Archived patients table.
   http.get(`${B}/api/patients/archived`, () => HttpResponse.json(mockArchivedPatients)),
+
+  // Clinic services catalog (Services page table).
+  http.get(`${B}/api/tenant/services`, () => HttpResponse.json(mockServices)),
 
   http.get(`${B}/api/suggestions`, ({ request }) => {
     const field = new URL(request.url).searchParams.get('field') ?? 'default';
