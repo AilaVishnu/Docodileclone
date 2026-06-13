@@ -26,12 +26,15 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "eslintConfig": {
     "extends": [
       "react-app",
-      "react-app/jest"
+      "react-app/jest",
+      "plugin:storybook/recommended"
     ]
   },
   "browserslist": {
@@ -47,6 +50,22 @@
     ]
   },
   "devDependencies": {
-    "@types/sockjs-client": "^1.5.4"
+    "@storybook/addon-a11y": "^10.4.4",
+    "@storybook/addon-docs": "^10.4.4",
+    "@storybook/addon-onboarding": "^10.4.4",
+    "@storybook/preset-create-react-app": "^10.4.4",
+    "@storybook/react-webpack5": "^10.4.4",
+    "@types/sockjs-client": "^1.5.4",
+    "eslint-plugin-storybook": "^10.4.4",
+    "msw": "^2.14.6",
+    "msw-storybook-addon": "^2.0.7",
+    "prop-types": "^15.8.1",
+    "storybook": "^10.4.4",
+    "webpack": "^5.107.2"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
   }
 }

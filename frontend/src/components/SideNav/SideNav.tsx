@@ -22,8 +22,7 @@ export type NavTab =
   | 'Billing'
   | 'Stats'
   | 'Pharmacy'
-  | 'Settings'
-  | 'Storybook';
+  | 'Settings';
 
 type SideNavProps = {
   activeTab: NavTab;
@@ -60,17 +59,6 @@ export function SideNav({ activeTab, onTabChange }: SideNavProps) {
     }
   } as const;
 
-  // Palette icon for the Storybook (design-system) menu entry. Remove this item
-  // (and the 'Storybook' branch in NavTab) to hide the page from end users.
-  const DesignSystemIcon = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22a10 10 0 1 1 10-10c0 2-1.5 3-3 3h-2a2 2 0 0 0-2 2 2 2 0 0 1-2 2h-1Z" />
-      <circle cx="7.5" cy="10.5" r="1.2" />
-      <circle cx="12" cy="7" r="1.2" />
-      <circle cx="16.5" cy="10.5" r="1.2" />
-    </svg>
-  );
-
   // Gear icon for Settings.
   const SettingsIcon = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -92,7 +80,6 @@ export function SideNav({ activeTab, onTabChange }: SideNavProps) {
     { label: 'Stats', display: 'Stats', icon: <BusinessIcon /> },
     { label: 'Pharmacy', display: 'Meds', icon: <PharmacyIcon /> },
     { label: 'Settings', display: 'Config', icon: <SettingsIcon /> },
-    { label: 'Storybook', display: 'Storybook', icon: <DesignSystemIcon /> },
   ];
 
   return (

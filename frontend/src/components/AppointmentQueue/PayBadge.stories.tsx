@@ -1,0 +1,46 @@
+import type { Meta, StoryObj } from '@storybook/react-webpack5';
+import { PayBadge } from './StatusBadge';
+
+const STATUSES = ['PAID', 'DUE', 'UNPAID', 'NO PAY'] as const;
+
+const meta = {
+  title: 'Components/PayBadge',
+  component: PayBadge,
+  tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Icon-only payment indicator for the queue — a check circle for PAID, a danger triangle for everything else (DUE / UNPAID / "NO PAY"). The label is exposed only via the native hover tooltip.',
+      },
+    },
+  },
+  argTypes: {
+    status: { control: 'inline-radio', options: STATUSES },
+  },
+  args: {
+    status: 'PAID',
+  },
+} satisfies Meta<typeof PayBadge>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+export const Paid: Story = {};
+
+export const Due: Story = { args: { status: 'DUE' } };
+
+/** All pay states side by side (hover for the label). */
+export const AllStatuses: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => (
+    <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+      {STATUSES.map((s) => (
+        <div key={s} style={{ textAlign: 'center' }}>
+          <PayBadge status={s} />
+          <div style={{ fontSize: 12, marginTop: 4 }}>{s}</div>
+        </div>
+      ))}
+    </div>
+  ),
+};
