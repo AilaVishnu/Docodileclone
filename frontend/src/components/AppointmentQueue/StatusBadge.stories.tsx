@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { StatusBadge } from './StatusBadge';
 
+// SCHEDULED is omitted here: it's a backend alias of BOOKED and renders the
+// identical "Booked" pill, so the catalog shows it once.
 const STATUSES = [
   'BOOKED',
   'WAITING',
-  'SCHEDULED',
   'ARRIVED',
   'IN_PROGRESS',
   'COMPLETED',

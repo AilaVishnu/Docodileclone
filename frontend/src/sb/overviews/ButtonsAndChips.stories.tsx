@@ -29,9 +29,8 @@ const VARIANTS = [
 ] as const;
 
 const STATUSES = [
-  'BOOKED',
+  'BOOKED', // SCHEDULED is a backend alias of BOOKED — same pill, shown once
   'WAITING',
-  'SCHEDULED',
   'ARRIVED',
   'IN_PROGRESS',
   'COMPLETED',
@@ -39,7 +38,7 @@ const STATUSES = [
   'CANCELLED',
 ] as const;
 
-const PAY_STATUSES = ['PAID', 'DUE', 'UNPAID', 'NO PAY'] as const;
+const PAY_STATUSES = ['PAID', 'DUE'] as const;
 
 const Row: React.FC<{ children: React.ReactNode; label?: string }> = ({ children, label }) => (
   <div style={{ marginBottom: 16 }}>

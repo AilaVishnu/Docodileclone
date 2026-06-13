@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { PayBadge } from './StatusBadge';
 
-const STATUSES = ['PAID', 'DUE', 'UNPAID', 'NO PAY'] as const;
+// Two states: PAID and DUE. Any non-paid value (UNPAID / "NO PAY" / unknown)
+// renders as "Due", so the catalog shows the two real outcomes.
+const STATUSES = ['PAID', 'DUE'] as const;
 
 const meta = {
   title: 'Components/PayBadge',
@@ -11,7 +13,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Icon-only payment indicator for the queue — a check circle for PAID, a danger triangle for everything else (DUE / UNPAID / "NO PAY"). The label is exposed only via the native hover tooltip.',
+          'Icon-only payment indicator for the queue — a check circle for PAID, a danger triangle for DUE (any non-paid status renders as Due). The label is exposed only via the native hover tooltip.',
       },
     },
   },

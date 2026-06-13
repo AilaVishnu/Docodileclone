@@ -41,8 +41,9 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
+/** A "+" made by rotating the canonical ✕ close glyph 45° — same stroke weight, no new icon. */
 export const Plus: Story = {
-  args: { ariaLabel: 'Add', children: <span aria-hidden>＋</span> },
+  args: { ariaLabel: 'Add', style: { transform: 'rotate(45deg)' } },
 };
 
 export const Disabled: Story = { args: { disabled: true } };

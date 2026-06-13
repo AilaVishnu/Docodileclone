@@ -28,7 +28,7 @@ export type AppointmentStatusValue =
   | "NO_SHOW"
   | "CANCELLED";
 
-export type PayStatusValue = "PAID" | "DUE" | "NO PAY";
+export type PayStatusValue = "PAID" | "DUE";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Token maps — directly from Figma variable defs
@@ -41,6 +41,8 @@ const STATUS_CONFIG: Record<
 > = {
   BOOKED: { bg: colors.active.shade300, color: colors.neutral900, label: "Booked" },
   WAITING: { bg: colors.yellow100, color: colors.neutral900, label: "Waiting" },
+  // SCHEDULED is a backend alias of BOOKED (the server emits either for a
+  // pre-arrival appointment) — same pill, so the patient only ever sees "Booked".
   SCHEDULED: { bg: colors.active.shade300, color: colors.neutral900, label: "Booked" },
   ARRIVED: { bg: colors.primary200, color: colors.neutral900, label: "Arrived" },
   IN_PROGRESS: { bg: colors.neutral100, color: colors.neutral900, label: "At Doc" },
@@ -58,17 +60,9 @@ const PAY_CONFIG: Record<
     label: "Paid",
     icon: <CheckCircleIcon width={24} height={24} />,
   },
+  // DUE is the single "owing" state. UNPAID / "NO PAY" / any unknown pay status
+  // all fall through to DUE below, so they render identically with no extra config.
   DUE: {
-    color: colors.neutral900,
-    label: "Due",
-    icon: <DangerTriangleIcon width={24} height={24} />,
-  },
-  UNPAID: {
-    color: colors.neutral900,
-    label: "Due",
-    icon: <DangerTriangleIcon width={24} height={24} />,
-  },
-  "NO PAY": {
     color: colors.neutral900,
     label: "Due",
     icon: <DangerTriangleIcon width={24} height={24} />,
@@ -187,7 +181,7 @@ type PayBadgeProps = {
 
 export function PayBadge({ status }: PayBadgeProps) {
   const key = status?.toUpperCase();
-  const cfg = PAY_CONFIG[key] ?? PAY_CONFIG["NO PAY"];
+  const cfg = PAY_CONFIG[key] ?? PAY_CONFIG.DUE;
 
   return (
     <span
