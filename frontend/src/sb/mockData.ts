@@ -53,6 +53,13 @@ export const mockPatients: Patient[] = [
 
 // Doctor ids match mockPatients' treatingDoctorIds (d1/d2). Used by useDoctors
 // (GET /api/doctors) so doctor pickers (NewPrescriptionModal etc.) populate.
+// Archived patients (Settings → Archived patients table).
+export const mockArchivedPatients = [
+  { id: 'ap1', name: 'Old Patient One', phone: '+91 90000 11111', gender: 'male', archivedAt: '2026-04-02' },
+  { id: 'ap2', name: 'Sunita Verma', phone: '+91 90000 22222', gender: 'female', archivedAt: '2026-03-15' },
+  { id: 'ap3', name: 'Anonymous', phone: null, gender: null, archivedAt: null },
+];
+
 export const mockDoctors: Doctor[] = [
   { id: 'd1', name: 'Dr. Anjali Rao', department: 'Dermatology', specialty: 'Cosmetic Dermatology', registrationNo: 'KMC-12345', qualification: 'MBBS, MD (Dermatology)', medicalCouncil: 'Karnataka Medical Council', experienceYears: 12 },
   { id: 'd2', name: 'Dr. Vikram Nair', department: 'Pediatrics', specialty: 'General Pediatrics', registrationNo: 'KMC-67890', qualification: 'MBBS, DCH', medicalCouncil: 'Karnataka Medical Council', experienceYears: 8 },
