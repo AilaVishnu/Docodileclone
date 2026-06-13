@@ -14,8 +14,9 @@ Reviewing the appointment booking page (BookAppointment). Shipped:
 - **BookAppointment tidied** — removed the patient-card leftovers the extraction orphaned (state/consts/icon imports/PatientSearchRow/patientSuggStyle).
 - **DateField + TimeField built + integrated** (`components/DateField/`, `components/TimeField/`) — the appointment date/time trigger cards lifted into reusable components wrapping the existing `DatePicker` / `TimePicker`; trigger text moved to the **control-scale font** (was body `fs-m`). Wired into BookAppointment (date/time cards), DatePicker/TimePicker/ClockIcon imports dropped there. Stories: Empty / Filled / Disabled (+ WalkIn for TimeField). Verified — date still renders "13 Jun 2026" via `format={formatDate}`, no regression.
 
+- **#2 PatientDetailsForm reused in NewPrescriptionModal** — the add-patient view's hand-rolled name/phone/email/DOB-trigger/age/gender fields replaced with `<PatientDetailsForm>` (booking underline-card look, confirmed). Age format reconciled: HomePage `handleWalkinNew` now parses `"years / months"` (was `Number(age)*12`). Removed NewRx's now-dead phone/age/dob handlers + GENDERS/parseDdMmYyyy/`set` + DatePicker/CalendarIcon/RadioGroup imports. Verified — renders the patient card framed by doctor/service selects, no regression.
+
 Sequenced next:
-- **#2 Reuse PatientDetailsForm** in NewPrescriptionModal's add-patient view (look confirmed = the booking underline-card).
 - **Tables Tier 1** — migrate the 4 read-only tables onto DataGrid.
 - **Tables Tier 2** — QueueTable **mock built** (`components/QueueTable/`, DRAFT): shared queue component — render-prop columns (status badge/dropdown, row actions), `rowTone(row)` status backgrounds, `groupBy(row)` separators. **Responsive via CSS-grid columns** (fixed px + flexible `fr`/`minmax`) — the clean equivalent of spacer columns; the story shows the same table at 1080px vs 720px adapting. **Review the mock, then migrate the real AppointmentQueue + PrescriptionQueue onto it** (one at a time, diff against live behaviour).
 

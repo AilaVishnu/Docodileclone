@@ -5,10 +5,8 @@ import { Button } from "../../components/Button";
 import { Patient, usePatients } from "../../hooks/usePatients";
 import { useDoctors } from "../../hooks/useDoctors";
 import { Select } from "../../components/Input/Select/Select";
-import { RadioGroup } from "../../components/Radio";
 import { Field as TextField } from "../../components/Field";
-import { DatePicker } from "../../components/DatePicker/DatePicker";
-import { CalendarIcon } from "../../iconsUtil";
+import { PatientDetailsForm } from "../../components/PatientDetailsForm";
 import { listServices, ServiceDTO } from "../../api/services";
 import { pickAvatar } from "../../utils/avatar";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
@@ -307,7 +305,6 @@ function PatientRow({
 
 // ─── Add view ────────────────────────────────────────────────────────────────
 
-const GENDERS = ["Male", "Female", "Other"];
 
 function AddView({
   doctorPicker,
@@ -344,50 +341,17 @@ function AddView({
     return () => { cancelled = true; };
   }, []);
 
-  const set = (key: keyof NewPatientDraft) => (val: string) =>
-    setDraft((d) => ({ ...d, [key]: val }));
 
   const onServiceChange = (name: string) => {
     const match = serviceCatalog.find((s) => s.name === name);
     setDraft((d) => ({ ...d, service: name, fee: match ? Number(match.price) || 0 : null }));
   };
 
-  // Phone: digits + spaces + "+", capped to 10 digits (after stripping leading 91).
-  const onPhoneChange = (val: string) => {
-    let v = val.replace(/[^0-9+ ]/g, "");
-    let digits = v.replace(/\D/g, "");
-    if (digits.startsWith("91") && digits.length > 10) digits = digits.substring(2);
-    if (digits.length > 10) return;
-    setDraft((d) => ({ ...d, phone: v }));
-  };
-  const onPhoneBlur = () => {
-    let clean = draft.phone.replace(/\D/g, "");
-    if (clean.startsWith("91") && clean.length > 10) clean = clean.substring(2);
-    clean = clean.substring(0, 10);
-    if (clean.length === 0) { setDraft((d) => ({ ...d, phone: "" })); return; }
-    const next = clean.length > 5
-      ? `+91 ${clean.substring(0, 5)} ${clean.substring(5)}`
-      : `+91 ${clean}`;
-    setDraft((d) => ({ ...d, phone: next }));
-  };
   const phoneDigits = draft.phone.replace(/\D/g, "").replace(/^91/, "");
   const phoneValid = phoneDigits.length === 10;
 
-  // Age: digits only, max 3 chars.
-  const onAgeChange = (val: string) => {
-    const digits = val.replace(/\D/g, "").substring(0, 3);
-    setDraft((d) => ({ ...d, age: digits, ...(digits ? { dob: "" } : {}) }));
-  };
-
-  // DOB: calendar popover.
-  const [showDobPicker, setShowDobPicker] = React.useState(false);
-  const onDobSelect = (date: Date) => {
-    const dd = String(date.getDate()).padStart(2, "0");
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const yyyy = String(date.getFullYear());
-    setDraft((d) => ({ ...d, dob: `${dd} ${mm} ${yyyy}`, age: "" }));
-    setShowDobPicker(false);
-  };
+  // Raw DOB digits (ddmmyyyy) — owned here for PatientDetailsForm.
+  const [dobDigits, setDobDigits] = React.useState("");
 
   const hasDobOrAge = draft.dob.trim().length > 0 || draft.age.trim().length > 0;
 
@@ -412,56 +376,12 @@ function AddView({
     <>
       <div style={styles.formCard}>
         {doctorPicker}
-        <Field label="Name" required>
-          <TextField variant="box" value={draft.name} onChange={set("name")} placeholder="Patient name" />
-        </Field>
-        <div style={styles.twoCol}>
-          <Field label="Phone" required error={draft.phone.length > 0 && !phoneValid ? "Enter a 10-digit number" : undefined}>
-            <TextField
-              variant="box"
-              value={draft.phone}
-              onChange={onPhoneChange}
-              onBlur={onPhoneBlur}
-              placeholder="+91 XXXXX XXXXX"
-            />
-          </Field>
-          <Field label="Email (optional)">
-            <TextField variant="box" value={draft.email} onChange={set("email")} placeholder="hello@example.com" />
-          </Field>
-        </div>
-        <div style={styles.dobAgeRow}>
-          <Field label="DOB" required>
-            <div style={{ position: "relative" }}>
-              <button type="button" onClick={() => setShowDobPicker(true)} style={styles.dobTrigger}>
-                <CalendarIcon style={styles.dobTriggerIcon} />
-                <span style={{ ...styles.dobTriggerText, color: draft.dob ? colors.neutral900 : colors.neutral500 }}>
-                  {draft.dob || "dd mm yyyy"}
-                </span>
-              </button>
-              {showDobPicker && (
-                <div style={styles.dobPickerWrap}>
-                  <DatePicker
-                    selectedDate={parseDdMmYyyy(draft.dob) ?? new Date()}
-                    onSelect={onDobSelect}
-                    onClose={() => setShowDobPicker(false)}
-                  />
-                </div>
-              )}
-            </div>
-          </Field>
-          <span style={styles.dobAgeSeparator}>or</span>
-          <Field label="Age (years)" required>
-            <TextField variant="box" value={draft.age} onChange={onAgeChange} placeholder="Age" />
-          </Field>
-        </div>
-        <Field label="Gender" required>
-          <RadioGroup
-            name="newrx-gender"
-            value={draft.gender}
-            onChange={set("gender")}
-            options={GENDERS}
-          />
-        </Field>
+        <PatientDetailsForm
+          value={{ name: draft.name, email: draft.email, phone: draft.phone, dob: draft.dob, age: draft.age, gender: draft.gender }}
+          onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
+          dobDigits={dobDigits}
+          setDobDigits={setDobDigits}
+        />
         <Field label="Service" required>
           <Select
             options={services}
@@ -485,16 +405,6 @@ function AddView({
       </footer>
     </>
   );
-}
-
-// "dd mm yyyy" → Date (or null on garbage). Used to seed the calendar.
-function parseDdMmYyyy(s: string): Date | null {
-  const m = s.trim().match(/^(\d{1,2})\s+(\d{1,2})\s+(\d{4})$/);
-  if (!m) return null;
-  const dd = Number(m[1]); const mm = Number(m[2]); const yyyy = Number(m[3]);
-  const d = new Date(yyyy, mm - 1, dd);
-  if (d.getFullYear() !== yyyy || d.getMonth() !== mm - 1 || d.getDate() !== dd) return null;
-  return d;
 }
 
 // ─── Styles — match the Pharmacy Add-stock modal exactly ─────────────────────

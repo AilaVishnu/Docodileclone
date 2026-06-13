@@ -178,7 +178,12 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
     gender: d.gender || null,
     // The Add view collects whole years; convert to months to match how
     // booking persists `age` (years × 12 + months).
-    ageMonths: d.age ? Number(d.age) * 12 : null,
+    ageMonths: (() => {
+      // PatientDetailsForm stores age as "years / months" (e.g. "40 / 2").
+      const y = parseInt(d.age.split("/")[0]?.trim() || "0", 10) || 0;
+      const m = parseInt(d.age.split("/")[1]?.trim() || "0", 10) || 0;
+      return (y || m) ? y * 12 + m : null;
+    })(),
     dob: parseDob(d.dob),
     service: d.service || "Consultation",
     // Modal resolves fee from its own copy of the catalog; fall back to the
