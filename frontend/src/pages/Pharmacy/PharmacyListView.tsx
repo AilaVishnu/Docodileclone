@@ -4,6 +4,7 @@ import { Med, GroupBy } from "./types";
 import { formatExpiry } from "./expiry";
 import { groupItems } from "./grouping";
 import { DataGrid, type GridColumn } from "../../components/DataGrid/DataGrid";
+import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 
 type Props = {
   items: Med[];
@@ -46,13 +47,17 @@ export function PharmacyListView({ items, groupBy, onPick, onEdit, onAdjustQty, 
     { key: "discount", header: "Discount", width: 90, align: "right", render: (m) => m.discountPct.toFixed(2) },
     { key: "gst", header: "GST", width: 72, align: "right", render: (m) => m.gstPct.toFixed(2) },
     {
-      key: "actions", header: "Actions", width: 110, align: "left",
+      key: "actions", header: "", width: 48, align: "center",
       render: (m) => (
-        <>
-          <button type="button" style={styles.actionBtn} title="Delete batch" onClick={() => onDelete?.(m)}>↺</button>
-          <button type="button" style={styles.actionBtn} title="Edit batch" onClick={() => onEdit?.(m)}>✎</button>
-          <button type="button" style={styles.actionBtn} title="Adjust quantity" onClick={() => onAdjustQty?.(m)}>#</button>
-        </>
+        <PopoverMenu
+          ariaLabel="Row actions"
+          trigger={<span style={styles.kebab}>⋮</span>}
+          items={[
+            { label: "Edit batch", onClick: () => onEdit?.(m) },
+            { label: "Adjust quantity", onClick: () => onAdjustQty?.(m) },
+            { label: "Delete batch", onClick: () => onDelete?.(m) },
+          ]}
+        />
       ),
     },
   ];

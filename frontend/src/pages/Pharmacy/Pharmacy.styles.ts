@@ -194,6 +194,8 @@ export const styles: Record<string, CSSProperties> = {
   },
   // Secondary info (invoice no., batch) — slightly smaller than the main cells.
   secondaryCell: { fontSize: fonts.control.xs },
+  // Vertical 3-dot (kebab) trigger for the row-actions menu.
+  kebab: { fontSize: fonts.size.l, lineHeight: 1, color: colors.neutral600 },
   actionBtn: {
     display: "inline-flex",
     alignItems: "center",
