@@ -36,7 +36,7 @@ export function PharmacyListView({ items, groupBy, onPick, onEdit, onAdjustQty, 
         <a style={styles.invoiceLink} href="#" onClick={(e) => { e.preventDefault(); onPick?.(m); }}>{m.invoiceNo}</a>
       ),
     },
-    { key: "batch", header: "Batch", width: 90, align: "left", render: (m) => m.batch },
+    { key: "batch", header: "Batch", width: 90, align: "left", render: (m) => <span style={styles.secondaryCell}>{m.batch}</span> },
     { key: "packPrice", header: "Pack Price", width: 90, align: "right", render: (m) => m.packPrice.toFixed(2) },
     { key: "mrp", header: "MRP", width: 80, align: "right", render: (m) => m.packMrp.toFixed(2) },
     { key: "perPack", header: "Per Pack", width: 80, align: "right", render: (m) => m.unitsPerPack },

@@ -190,13 +190,16 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.primary700,
     textDecoration: "none",
     cursor: "pointer",
+    fontSize: fonts.control.xs,
   },
+  // Secondary info (invoice no., batch) — slightly smaller than the main cells.
+  secondaryCell: { fontSize: fonts.control.xs },
   actionBtn: {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
     background: "transparent",
     border: "none",
     cursor: "pointer",

@@ -31,7 +31,7 @@ export function DataGrid<T>({ columns, rows, rowKey, size = "m", tdPadding, thPa
   minWidth?: number;
 }) {
   const fs = size === "s" ? fonts.size.s : fonts.size.m;
-  const th = (c: GridColumn<T>): CSSProperties => ({ ...tableHeadCell, fontSize: fonts.control.xs, fontWeight: fonts.weight.regular, padding: c.headerPadding ?? thPadding ?? "12px 10px", whiteSpace: "nowrap", textAlign: c.align ?? "center" });
+  const th = (c: GridColumn<T>): CSSProperties => ({ ...tableHeadCell, fontSize: fonts.control.sm, fontWeight: fonts.weight.regular, padding: c.headerPadding ?? thPadding ?? "12px 10px", whiteSpace: "nowrap", textAlign: c.align ?? "center" });
   const td = (c: GridColumn<T>): CSSProperties => ({ fontSize: fs, color: colors.neutral900, padding: c.cellPadding ?? tdPadding ?? "12px 10px", borderBottom: tableDivider, verticalAlign: "middle", textAlign: c.align ?? "center" });
   const table = (
     <table style={{ width: "100%", minWidth, borderCollapse: "collapse", tableLayout: "fixed" }}>
