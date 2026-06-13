@@ -96,7 +96,7 @@ export const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.secondary300,
+    backgroundColor: colors.secondary700,
     color: colors.neutral100,
     padding: "4px 12px",
     borderRadius: radii.pill,

@@ -173,7 +173,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     gap: 4,
-    backgroundColor: colors.secondary300,
+    backgroundColor: colors.secondary700,
     color: colors.neutral100,
     borderRadius: radii.pill,
     padding: "3px 10px",

@@ -91,9 +91,9 @@ export function TablesCategory() {
       </Note>
       <Note>
         <i>Before:</i> 6 independently-styled tables, no shared primitive; Stats drifted on header
-        colour + weight; two parallel pill components; and <code>PatientFilesPage</code> still
-        borrows <code>AppointmentQueue.styles</code> (an accidental coupling — left as a follow-up;
-        it now inherits the shared header look transitively).
+        colour + weight; two parallel pill components; and <code>PatientFilesPage</code> borrowed{" "}
+        <code>AppointmentQueue.styles</code> directly (an accidental cross-page coupling — since
+        resolved; see below).
       </Note>
 
       {/* ─────────────────────────────────────────────────────────────────── */}
@@ -412,11 +412,10 @@ export function TablesCategory() {
           </div>
         </Ctx>
         <Note>
-          Accidental coupling: <code>pages/PatientFilesPage/PatientFilesPage.tsx:11</code> imports{" "}
-          <code>AppointmentQueue.styles</code> as <code>queueStyles</code> and reuses its{" "}
-          <code>tableContainer</code> / <code>th</code> / <code>tr</code> / <code>serialCell</code> — so a
-          third page silently inherits the queue table's look through a styles import rather than a shared
-          component.
+          <i>Resolved:</i> <code>PatientFilesPage</code> now composes its table look in its own{" "}
+          <code>PatientFilesPage.styles.ts</code>, built from the shared <code>tableStyles</code>{" "}
+          primitives (<code>tableHeadCell</code> / <code>tableDivider</code>) — identical rendering, no
+          import of <code>AppointmentQueue.styles</code>. The cross-page coupling is gone.
         </Note>
       </Sub>
 

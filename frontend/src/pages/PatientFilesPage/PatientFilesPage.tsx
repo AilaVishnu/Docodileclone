@@ -7,7 +7,7 @@ import { API_BASE_URL } from "../../apiConfig";
 import { ReactComponent as SearchIcon } from "../../assets/search.svg";
 import { Select } from "../../components/Input/Select/Select";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
-import { styles as queueStyles } from "../../components/AppointmentQueue/AppointmentQueue.styles";
+import { tableStyles as queueStyles } from "./PatientFilesPage.styles";
 import { setPendingSessionNav } from "../../components/TopNav/SessionTrayButton";
 import { searchPatientContent, type PatientContentMatch } from "../../api/patientSearch";
 import type { NavTab } from "../../components/SideNav";

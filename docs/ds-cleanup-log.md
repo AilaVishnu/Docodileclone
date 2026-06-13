@@ -2,6 +2,12 @@
 
 Running record of the component-by-component review (Storybook localhost:6006). Each entry: what was reviewed, the decision, and where it was fixed. Newest first.
 
+## Loose ends — 3 flagged follow-ups closed (2026-06-13)
+
+- **Deleted the orphaned shared `QueueTable` mock** (`components/QueueTable/` — .tsx + .stories + index). It was a Tier-2 draft; with the queue migration reverted nothing imports it (verified 0 refs), so it's gone along with its `Components/QueueTable` story.
+- **Clinic-family tag pill unified** (Cat 6 follow-up): ClinicDisplayCard + ClinicInfoCard moved off `secondary300` → **`secondary700`** to match ClinicCard (the Figma-referenced fill; white text reads better on the darker sage).
+- **PatientFilesPage decoupled from the clinical queue** (Cat 7 follow-up): it no longer imports `AppointmentQueue.styles`. New `pages/PatientFilesPage/PatientFilesPage.styles.ts` exports `tableStyles`, composed from the shared `styles/tableStyles` primitives (`tableHeadCell` / `tableDivider`) — identical render, no cross-page dependency. Stale AuditGallery notes updated to say "resolved". `tsc` + build clean.
+
 ## Decision — AppointmentQueue stays its own component (Tier-2 migration reverted)
 
 The Tier-2 experiment of migrating `AppointmentQueue/QueueTable.tsx` onto the shared `QueueTable` was **reverted** (commits c720bf1 + 78e8476 undone). The appointment queue is a component of its own and is left exactly as it was — it already uses the shared `StatusBadge` for status and the `PayBadge` icon for Pay, which is all that was wanted. Its Storybook story (`Patterns/AppointmentQueue/QueueTable`) is the original, untouched. The shared `QueueTable` reverts to its earlier draft/mock state; queues are not being merged into it.
