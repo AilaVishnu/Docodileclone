@@ -18,7 +18,9 @@ Decisions applied:
 - **Filled placeholder → `alphaBlack3`** (translucent) on all filled inputs (Field / Select / SuggestionInput / MeasureField) via an `is-filled` class — the empty-state text now reads on the cream instead of a flat grey.
 - **MeasureField** story reorganised to the matrix `(cream | box+prefix) × (unit-only | unit-switchable)` + `dense` shown as a size note. (with-unit vs dense = independent axes: unit = a chip, dense = 28px height.)
 
-Still open: `UnderlineSelect` removal (fold the booking chip → a `Select` pill, then delete) — the final item.
+- **`UnderlineSelect` slimmed to chip-only** — the dead serif "underline" variant removed; it's now purely the inline chip dropdown (the booking title), with a state-driven chevron + control-font menu items. Kept as a small dedicated component (the chip is a distinct inline control, used once); a full fold into `Select` would over-generalise Select for a single caller, so not done.
+
+**Input consolidation complete.** Deleted: FillInput, DosagePicker, TextInput. Merged: 4 dosing pickers → one `SuggestionInput`. Extended: `Field` (fill/align/list), `Select` (fill/chevron). Consistency: shared `ClearButton` (legible ✕), control fonts across all fields, state-driven chevron, alphaBlack3 filled-placeholder. UnderlineSelect slimmed.
 
 ## Round 2 — input / field family
 

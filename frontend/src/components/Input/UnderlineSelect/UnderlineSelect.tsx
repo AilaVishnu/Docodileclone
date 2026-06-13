@@ -2,23 +2,24 @@ import React, { useState, useRef, useEffect } from "react";
 import { colors, fonts, radii, shadows, zIndex } from "../../../styles/theme";
 import { ChevronDown } from "../../icons/ChevronDown";
 
-type UnderlineSelectOption = {
-  label: string;
-  value: string;
-};
+// ─────────────────────────────────────────────────────────────────────────────
+// UnderlineSelect — an inline "chip" dropdown: a compact outline pill
+// (primary400 border) with a label + chevron, opening the canonical menu. Used
+// inline inside titles (e.g. the booking header "Book an appointment for […]").
+//
+// Named UnderlineSelect for history; the old serif "underline" variant was
+// removed (it was unused everywhere). Chevron is state-driven + menu items use
+// control text, to stay consistent with Select / SuggestionInput.
+// ─────────────────────────────────────────────────────────────────────────────
+type ChipOption = { label: string; value: string };
 
 type UnderlineSelectProps = {
-  options: (string | UnderlineSelectOption)[];
+  options: (string | ChipOption)[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  /** Trigger label size. Defaults to the control/button size (--btn-fs). */
   fontSize?: string;
-  /**
-   * "underline" (default): serif label with an underline.
-   * "chip": sans label inside an outline pill — matches the header date chips
-   * in the queues. Same chevron either way.
-   */
-  variant?: "underline" | "chip";
 };
 
 export function UnderlineSelect({
@@ -26,31 +27,21 @@ export function UnderlineSelect({
   value,
   onChange,
   placeholder = "Select...",
-  fontSize,
-  variant = "underline",
+  fontSize = "var(--btn-fs)",
 }: UnderlineSelectProps) {
-  const isChip = variant === "chip";
-  // Chip is a compact control → default to control text (--btn-fs); the serif
-  // "underline" label keeps the larger h4 display size. Callers can still override.
-  const resolvedFontSize = fontSize ?? (isChip ? "var(--btn-fs)" : fonts.size.h4);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+    const onDoc = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setIsOpen(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  const normalizedOptions: UnderlineSelectOption[] = options.map((opt) =>
-    typeof opt === "string" ? { label: opt, value: opt } : opt
-  );
-
-  const selectedOption = normalizedOptions.find((opt) => opt.value === value);
+  const opts: ChipOption[] = options.map((o) => (typeof o === "string" ? { label: o, value: o } : o));
+  const selected = opts.find((o) => o.value === value);
 
   return (
     <div ref={containerRef} style={{ position: "relative", display: "inline-block" }}>
@@ -62,34 +53,22 @@ export function UnderlineSelect({
           gap: 6,
           cursor: "pointer",
           userSelect: "none",
-          ...(isChip
-            ? {
-                backgroundColor: "transparent",
-                border: `1px solid ${colors.primary400}`,
-                borderRadius: radii.m,
-                padding: "4px 12px",
-              }
-            : {}),
+          backgroundColor: "transparent",
+          border: `1px solid ${colors.primary400}`,
+          borderRadius: radii.m,
+          padding: "4px 12px",
         }}
       >
-        <span
-          style={{
-            fontFamily: isChip ? fonts.family.primary : fonts.family.secondary,
-            fontSize: resolvedFontSize,
-            fontWeight: isChip ? fonts.weight.semibold : 400,
-            color: colors.neutral900,
-            ...(isChip ? {} : { textDecoration: "underline", textUnderlineOffset: "4px" }),
-          }}
-        >
-          {selectedOption ? selectedOption.label : placeholder}
+        <span style={{ fontFamily: fonts.family.primary, fontSize, fontWeight: fonts.weight.semibold, color: colors.neutral900 }}>
+          {selected ? selected.label : placeholder}
         </span>
-        <ChevronDown open={isOpen} />
+        <ChevronDown open={isOpen} color={isOpen ? colors.neutral900 : colors.neutral300} />
       </span>
 
       {isOpen && (
         <div
           style={{
-            // Unified menu spec — see TopNav.dropdown, actionMenu, StatusDropdown.
+            // Canonical menu surface (shared with Select / SuggestionInput).
             position: "absolute",
             top: "calc(100% + 8px)",
             left: 0,
@@ -107,11 +86,11 @@ export function UnderlineSelect({
             gap: "4px",
           }}
         >
-          {normalizedOptions.map((option) => (
+          {opts.map((o) => (
             <div
-              key={option.value}
+              key={o.value}
               onClick={() => {
-                onChange(option.value);
+                onChange(o.value);
                 setIsOpen(false);
               }}
               style={{
@@ -119,7 +98,7 @@ export function UnderlineSelect({
                 cursor: "pointer",
                 borderRadius: radii.m,
                 fontFamily: fonts.family.primary,
-                fontSize: fonts.size.s,
+                fontSize: fonts.control.sm,
                 color: colors.neutral900,
                 backgroundColor: "transparent",
                 transition: "background-color 0.15s",
@@ -131,7 +110,7 @@ export function UnderlineSelect({
                 e.currentTarget.style.backgroundColor = "transparent";
               }}
             >
-              {option.label}
+              {o.label}
             </div>
           ))}
         </div>
