@@ -6,7 +6,6 @@ import { TextInput } from '../../components/Input/TextInput';
 import { Select } from '../../components/Input/Select/Select';
 import { UnderlineSelect } from '../../components/Input/UnderlineSelect/UnderlineSelect';
 import { MeasureField } from '../../components/MeasureField';
-import { DosagePicker } from '../../components/DosagePicker/DosagePicker';
 import { DurationPicker } from '../../components/DurationPicker/DurationPicker';
 import { FrequencyPicker } from '../../components/FrequencyPicker/FrequencyPicker';
 import { FrequencyIntervalPicker } from '../../components/FrequencyIntervalPicker/FrequencyIntervalPicker';
@@ -217,12 +216,6 @@ export const All: Story = {
         note="Focus / click each to open its menu. Each owns its own open state; value is driven by local state here."
       >
         <Wrap>
-          <Slot label="DosagePicker" w={360}>
-            <PickerDemo
-              Component={DosagePicker}
-              extra={{ medicineName: 'Amoxicillin 500mg Tablet', genericName: 'Amoxicillin' }}
-            />
-          </Slot>
           <Slot label="DurationPicker" w={360}>
             <PickerDemo Component={DurationPicker} />
           </Slot>

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { styles } from "./Select.styles";
 import { ChevronDown } from "../../icons/ChevronDown";
-import { zIndex } from "../../../styles/theme";
+import { colors, zIndex } from "../../../styles/theme";
 
 type SelectOption = {
   label: string;
@@ -17,6 +17,10 @@ type SelectProps = {
   iconLeft?: React.ReactNode;
   error?: boolean;
   disabled?: boolean;
+  /** "outline" (border + white, default) or "filled" (cream, borderless). */
+  fill?: "outline" | "filled";
+  /** Show the dropdown chevron. Default true. */
+  chevron?: boolean;
 };
 
 export function Select({
@@ -27,6 +31,8 @@ export function Select({
   iconLeft,
   error = false,
   disabled = false,
+  fill = "outline",
+  chevron = true,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -87,6 +93,11 @@ export function Select({
     ...(active ? styles.containerActive : {}),
     ...(disabled ? styles.containerDisabled : {}),
     ...(error ? styles.errorContainer : {}),
+    // "filled" = cream surface, borderless (border kept transparent so the height
+    // matches the outlined look). Error still shows the red border.
+    ...(fill === "filled"
+      ? { backgroundColor: colors.primary100, borderColor: error ? colors.red200 : "transparent" }
+      : {}),
   };
 
   return (
@@ -107,9 +118,11 @@ export function Select({
         )}
       </div>
 
-      <div style={{ ...styles.arrow, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <ChevronDown open={isOpen} color="currentColor" size={16} strokeWidth={1.5} />
-      </div>
+      {chevron && (
+        <div style={{ ...styles.arrow, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <ChevronDown open={isOpen} color="currentColor" size={16} strokeWidth={1.5} />
+        </div>
+      )}
 
       {isOpen && !disabled && menuRect && createPortal(
         <div

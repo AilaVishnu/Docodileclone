@@ -17,12 +17,18 @@ const meta = {
     docs: {
       description: {
         component:
-          'Box-style dropdown select. Controlled via `value`/`onChange`. Options may be plain strings or `{ label, value }` objects. The menu portals to `<body>` so it escapes clipping ancestors.',
+          'Box-style dropdown select. `fill` = outline (border + white) or filled (cream, borderless); `chevron` toggles the arrow. Controlled via `value`/`onChange`; options may be strings or `{ label, value }`. The menu portals to `<body>` so it escapes clipping ancestors.',
       },
     },
   },
   argTypes: {
     placeholder: { control: 'text' },
+    fill: {
+      control: 'inline-radio',
+      options: ['outline', 'filled'],
+      table: { defaultValue: { summary: 'outline' } },
+    },
+    chevron: { control: 'boolean', table: { defaultValue: { summary: 'true' } } },
     error: { control: 'boolean' },
     disabled: { control: 'boolean' },
     options: { control: false },
@@ -33,6 +39,8 @@ const meta = {
   args: {
     options: STRING_OPTIONS,
     placeholder: 'Select a department',
+    fill: 'outline',
+    chevron: true,
     error: false,
     disabled: false,
   },
@@ -61,3 +69,35 @@ export const ObjectOptions: Story = {
 export const Error: Story = { args: { error: true } };
 
 export const Disabled: Story = { args: { disabled: true } };
+
+/** Filled — cream, borderless (e.g. the dosing-style dropdowns). */
+export const Filled: Story = { args: { fill: 'filled' } };
+
+/** No chevron — for inline/typeahead-style triggers. */
+export const NoChevron: Story = { args: { chevron: false } };
+
+/** outline / filled × chevron, at a glance. */
+export const AllVariants: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => {
+    const Demo = ({ fill, chevron }: { fill: 'outline' | 'filled'; chevron: boolean }) => {
+      const [v, setV] = useState('');
+      return (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 12, color: '#8F8F8F', marginBottom: 4 }}>
+            {`${fill} · chevron ${chevron ? 'on' : 'off'}`}
+          </div>
+          <Select options={STRING_OPTIONS} value={v} onChange={setV} fill={fill} chevron={chevron} placeholder="Select…" />
+        </div>
+      );
+    };
+    return (
+      <div>
+        <Demo fill="outline" chevron />
+        <Demo fill="filled" chevron />
+        <Demo fill="outline" chevron={false} />
+        <Demo fill="filled" chevron={false} />
+      </div>
+    );
+  },
+};

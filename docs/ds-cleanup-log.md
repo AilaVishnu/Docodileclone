@@ -13,7 +13,10 @@ Running record of the component-by-component review (Storybook localhost:6006). 
 - **No Pay = owing** (your call) → `getPayStyle` now renders `"NO PAY"` as the warm "Due" colour (was grey), matching the badge.
 - **Stage A ✅** — `Field` gains `fill: "outline" | "filled"` + `align` + `list`. Default `outline` ⇒ every existing field unchanged; box/pill can now be filled (cream, borderless).
 - **Stage B ✅** — `FillInput` folded into `Field` (`variant="box" fill="filled"`) and **deleted**; Bill modal line items + the inputs overview repointed.
-- **Stage C ⏳ next** — shared dropdown (fill + chevron) to absorb `Select` / the 5 dosing pickers / the UnderlineSelect chip. Will show call-site impact before migrating each.
+- **Stage C (in progress):**
+  - ✅ `DosagePicker` deleted — 0 app usages (dead code). If dosage entry is needed later it's `<Select fill="filled">`.
+  - ✅ `Select` extended with `fill` ("outline" | "filled") + `chevron` (on/off) — additive; its 9 existing usages are unchanged. Gives the outline/filled × chevron matrix.
+  - ⏳ Next: consolidate the 4 prescription-pad pickers (Duration / Frequency / Interval / When) onto a shared combobox primitive — keeping their type-ahead + external API so `PrescriptionPage` is untouched — then fold the booking chip.
 - Verified: tsc 0 errors, CRA build compiles, Storybook (Field surfaces + Bill modal) render correctly. Pushed.
 
 ## Round 1
