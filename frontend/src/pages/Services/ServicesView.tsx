@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { styles } from "./ServicesView.styles";
 import { DataGrid } from "../../components/DataGrid/DataGrid";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { Service } from "./types";
 import { AddServiceModal } from "./AddServiceModal";
 import { Button } from "../../components/Button";
@@ -97,8 +98,12 @@ export function ServicesView() {
     closeModal();
   };
 
-  const handleDelete = async (s: Service) => {
-    if (!window.confirm(`Delete "${s.name}"?`)) return;
+  const [pendingDelete, setPendingDelete] = useState<Service | null>(null);
+  const handleDelete = (s: Service) => setPendingDelete(s);
+  const confirmDelete = async () => {
+    const s = pendingDelete;
+    setPendingDelete(null);
+    if (!s) return;
     try {
       await deleteService(s.id);
       setServices((prev) => prev.filter((x) => x.id !== s.id));
@@ -154,9 +159,9 @@ export function ServicesView() {
               { key: "code", header: "Short Form", width: 120, align: "center", render: (s) => <span style={styles.codeBadge}>{s.code}</span> },
               { key: "name", header: "Name", align: "left", render: (s) => s.name },
               { key: "price", header: "Price", align: "center", render: (s) => formatPrice(s.price) },
-              { key: "duration", header: "Duration", align: "center", render: (s) => <span style={styles.tdMuted}>{formatDuration(s.duration)}</span> },
-              { key: "discount", header: "Discount", align: "center", render: (s) => <span style={styles.tdMuted}>{formatDiscount(s)}</span> },
-              { key: "gst", header: "GST", align: "center", render: (s) => <span style={styles.tdMuted}>{formatGst(s.gst)}</span> },
+              { key: "duration", header: "Duration", align: "center", render: (s) => formatDuration(s.duration) },
+              { key: "discount", header: "Discount", align: "center", render: (s) => formatDiscount(s) },
+              { key: "gst", header: "GST", align: "center", render: (s) => formatGst(s.gst) },
               {
                 key: "actions", header: "", width: 96, align: "center",
                 render: (s) => (
@@ -181,6 +186,17 @@ export function ServicesView() {
         onClose={closeModal}
         onSave={handleSave}
         initial={editing}
+      />
+
+      <ConfirmDialog
+        isOpen={!!pendingDelete}
+        title="Are you sure you want to delete?"
+        message={pendingDelete ? `"${pendingDelete.name}" will be removed from your services catalog.` : undefined}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
       />
     </div>
   );

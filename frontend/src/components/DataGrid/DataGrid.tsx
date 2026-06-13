@@ -30,7 +30,7 @@ export function DataGrid<T>({ columns, rows, rowKey, size = "m", tdPadding, thPa
 }) {
   const fs = size === "s" ? fonts.size.s : fonts.size.m;
   const th = (c: GridColumn<T>): CSSProperties => ({ ...tableHeadCell, fontSize: fs, fontWeight: fonts.weight.regular, padding: c.headerPadding ?? thPadding ?? "12px 10px", whiteSpace: "nowrap", textAlign: c.align ?? "center" });
-  const td = (c: GridColumn<T>): CSSProperties => ({ fontSize: fs, color: colors.neutral900, padding: c.cellPadding ?? tdPadding ?? "16px 10px", borderBottom: tableDivider, verticalAlign: "middle", textAlign: c.align ?? "center" });
+  const td = (c: GridColumn<T>): CSSProperties => ({ fontSize: fs, color: colors.neutral900, padding: c.cellPadding ?? tdPadding ?? "12px 10px", borderBottom: tableDivider, verticalAlign: "middle", textAlign: c.align ?? "center" });
   return (
     <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
       <colgroup>

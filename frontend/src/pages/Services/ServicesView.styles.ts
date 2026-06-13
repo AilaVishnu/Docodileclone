@@ -155,7 +155,7 @@ export const styles: Record<string, CSSProperties> = {
 
   codeBadge: {
     display: "inline-block",
-    fontSize: fonts.size.xs,
+    fontSize: fonts.size.s,
     fontWeight: fonts.weight.semibold,
     color: colors.neutral700,
     backgroundColor: colors.neutral100,
