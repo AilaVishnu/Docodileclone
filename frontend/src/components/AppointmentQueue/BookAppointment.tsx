@@ -25,6 +25,7 @@ import { Button } from "../Button";
 import { MeasureField } from "../MeasureField";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { RadioGroup } from "../Radio";
+import { PatientDetailsForm } from "../PatientDetailsForm";
 import { API_BASE_URL } from "../../apiConfig";
 import { listServices, ServiceDTO } from "../../api/services";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
@@ -637,229 +638,19 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         </Card>
 
         {/* Patient Details Card */}
-        <Card style={{ ...styles.card, ...styles.formCard }}>
-          {patientFieldsLocked && lockedPatientId !== "editing" && (
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--book-clearlink-mb, 6px)" }}>
-              <button
-                type="button"
-                onClick={clearSelectedPatient}
-                style={{ background: "none", border: "none", color: colors.red200, cursor: "pointer", fontSize: fonts.size.xs, textDecoration: "underline", padding: 0 }}
-              >
-                Clear & enter new patient
-              </button>
-            </div>
-          )}
-          <div style={{ position: "relative" }}>
-            <div style={{ ...styles.iconField, ...(errors.name ? { borderBottomColor: colors.red200, backgroundColor: colors.redAlpha10 } : {}), ...(patientFieldsLocked ? { opacity: 0.65 } : {}) }}>
-              <UserHandsIcon style={styles.iconFieldIcon} />
-              <input
-                style={styles.iconFieldInput}
-                placeholder="Name"
-                value={form.name}
-                onChange={(e) => { setForm({ ...form, name: e.target.value }); setShowNameSugg(true); }}
-                onFocus={() => setShowNameSugg(true)}
-                onBlur={() => setTimeout(() => setShowNameSugg(false), 150)}
-                disabled={patientFieldsLocked}
-              />
-            </div>
-            {showNameSugg && nameSuggestions.length > 0 && (
-              <div style={patientSuggStyle}>
-                {nameSuggestions.map((p) => (
-                  <PatientSearchRow key={p.id} patient={p} onSelect={fillFromPatient} />
-                ))}
-              </div>
-            )}
-            {errors.name && (
-              <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
-                Please enter patient name
-              </div>
-            )}
-          </div>
-
-          <div style={styles.row}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ ...styles.iconField, ...(errors.email ? { borderBottomColor: colors.red200, backgroundColor: colors.redAlpha10 } : {}), ...(patientFieldsLocked ? { opacity: 0.65 } : {}) }}>
-                <LetterIcon style={styles.iconFieldIcon} />
-                <input
-                  style={styles.iconFieldInput}
-                  type="text"
-                  placeholder="hello@example.com"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  onBlur={() => setForm((prev) => ({ ...prev, email: prev.email.trim().toLowerCase() }))}
-                  disabled={patientFieldsLocked}
-                />
-              </div>
-              {errors.email && (
-                <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
-                  Please enter a valid email
-                </div>
-              )}
-            </div>
-            <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
-            <div style={{ ...styles.iconField, ...(errors.phone ? { borderBottomColor: colors.red200, backgroundColor: colors.redAlpha10 } : {}), ...(patientFieldsLocked ? { opacity: 0.65 } : {}) }}>
-              <PhoneIcon style={styles.iconFieldIcon} />
-              <input
-                style={styles.iconFieldInput}
-                placeholder="+91 XXXXX XXXXX"
-                value={form.phone}
-                disabled={patientFieldsLocked}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9+ ]/g, "");
-                  let digits = val.replace(/\D/g, "");
-                  if (digits.startsWith("91") && digits.length > 10) digits = digits.substring(2);
-                  if (digits.length > 10) return;
-                  setForm({ ...form, phone: val });
-                  setShowPhoneSugg(true);
-                }}
-                onFocus={() => setShowPhoneSugg(true)}
-                onBlur={() => {
-                  setTimeout(() => setShowPhoneSugg(false), 150);
-                  let clean = form.phone.replace(/\D/g, "");
-                  if (clean.startsWith("91") && clean.length > 10) clean = clean.substring(2);
-                  clean = clean.substring(0, 10);
-                  if (clean.length === 0) { setForm((prev) => ({ ...prev, phone: "" })); return; }
-                  if (clean.length > 5) {
-                    setForm((prev) => ({ ...prev, phone: `+91 ${clean.substring(0, 5)} ${clean.substring(5)}` }));
-                  } else {
-                    setForm((prev) => ({ ...prev, phone: `+91 ${clean}` }));
-                  }
-                }}
-              />
-            </div>
-            {showPhoneSugg && phoneSuggestions.length > 0 && (
-              <div style={patientSuggStyle}>
-                {phoneSuggestions.map((p) => (
-                  <PatientSearchRow key={p.id} patient={p} onSelect={fillFromPatient} />
-                ))}
-              </div>
-            )}
-              {errors.phone && (
-                <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
-                  Please enter a valid phone number
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div style={styles.row}>
-            <div style={{ ...styles.iconField, position: "relative", flex: 1, minWidth: 0, ...(errors.dob ? { borderBottomColor: colors.red200, backgroundColor: colors.redAlpha10 } : {}), ...(patientFieldsLocked ? { opacity: 0.65, pointerEvents: "none" as const } : {}) }}>
-              <span
-                onClick={() => {
-                  if (patientFieldsLocked) return;
-                  if (hasManualAge) setForm((prev) => ({ ...prev, age: "", dob: "" }));
-                  setShowDobPicker(true);
-                }}
-                style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: spacing.xs, opacity: patientFieldsLocked ? 1 : hasManualAge ? 0.4 : 1 }}
-              >
-                <CalendarIcon style={styles.iconFieldIcon} />
-                <span style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>DOB</span>
-              </span>
-              <input
-                style={{ ...styles.iconFieldInput, opacity: patientFieldsLocked ? 1 : hasManualAge ? 0.4 : 1 }}
-                type="text"
-                placeholder="dd mm yyyy"
-                disabled={patientFieldsLocked}
-                onFocus={() => { if (hasManualAge) setForm((prev) => ({ ...prev, age: "", dob: "" })); }}
-                value={formatDob(dobDigits)}
-                onKeyDown={(e) => {
-                  if (e.key === "Backspace") {
-                    e.preventDefault();
-                    const next = dobDigits.slice(0, -1);
-                    setDobDigits(next);
-                    setForm((prev) => ({ ...prev, dob: formatDob(next), age: next.length === 8 ? calcAge(next) : "" }));
-                  } else if (/^[0-9]$/.test(e.key) && dobDigits.length < 8) {
-                    e.preventDefault();
-                    const next = dobDigits + e.key;
-                    setDobDigits(next);
-                    setForm((prev) => ({ ...prev, dob: formatDob(next), age: calcAge(next) }));
-                  }
-                }}
-                onChange={() => { }}
-              />
-              {showDobPicker && (
-                <DatePicker
-                  selectedDate={new Date()}
-                  onSelect={(date: Date) => {
-                    const dd = String(date.getDate()).padStart(2, "0");
-                    const mm = String(date.getMonth() + 1).padStart(2, "0");
-                    const yyyy = String(date.getFullYear());
-                    const digits = dd + mm + yyyy;
-                    setDobDigits(digits);
-                    setForm((prev) => ({ ...prev, dob: formatDob(digits), age: calcAge(digits) }));
-                    setShowDobPicker(false);
-                  }}
-                  onClose={() => setShowDobPicker(false)}
-                />
-              )}
-            </div>
-            <div style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>or</div>
-            <div
-              style={{
-                flex: 1.4,
-                minWidth: 0,
-                display: "flex",
-                alignItems: "center",
-                gap: spacing.xs,
-                opacity: patientFieldsLocked ? 0.65 : hasDob ? 0.4 : 1,
-                ...(patientFieldsLocked ? { pointerEvents: "none" as const } : {}),
-              }}
-            >
-              <span style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>Age</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <MeasureField
-                  value={form.age.split("/")[0]?.trim() || ""}
-                  onChange={(y) => {
-                    const m = form.age.split("/")[1]?.trim() || "";
-                    setDobDigits("");
-                    setForm({ ...form, age: (y || m) ? `${y || "0"} / ${m || "0"}` : "", dob: "" });
-                  }}
-                  onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
-                  unit="yrs"
-                  unitWidth={38}
-                  unitColor={colors.neutral600}
-                  inputMode="numeric"
-                  invalid={!!errors.dob}
-                  ariaLabel="Age in years"
-                />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <MeasureField
-                  value={form.age.split("/")[1]?.trim() || ""}
-                  onChange={(m) => {
-                    const n = parseInt(m, 10);
-                    if (m !== "" && (isNaN(n) || n < 0 || n > 11)) return;
-                    const y = form.age.split("/")[0]?.trim() || "";
-                    setDobDigits("");
-                    setForm({ ...form, age: (y || m) ? `${y || "0"} / ${m || "0"}` : "", dob: "" });
-                  }}
-                  onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
-                  unit="mos"
-                  unitWidth={38}
-                  unitColor={colors.neutral600}
-                  inputMode="numeric"
-                  invalid={!!errors.dob}
-                  ariaLabel="Age in months"
-                />
-              </div>
-            </div>
-          </div>
-          {errors.dob && (
-            <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
-              Please enter date of birth or age
-            </div>
-          )}
-
-          <div style={{ marginTop: "8px" }}>
-            <RadioGroup
-              name="gender"
-              value={form.gender}
-              onChange={(g) => setForm({ ...form, gender: g })}
-              disabled={patientFieldsLocked}
-              options={["Male", "Female", "Other"]}
-            />
-          </div>
-        </Card>
+        <PatientDetailsForm
+          style={{ gridColumn: "2", gridRow: "1" }}
+          value={{ name: form.name, email: form.email, phone: form.phone, dob: form.dob, age: form.age, gender: form.gender }}
+          onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
+          errors={{ name: errors.name, email: errors.email, phone: errors.phone, dob: errors.dob }}
+          dobDigits={dobDigits}
+          setDobDigits={setDobDigits}
+          patients={allPatients}
+          onSelectExisting={fillFromPatient}
+          locked={patientFieldsLocked}
+          showClearLink={patientFieldsLocked && lockedPatientId !== "editing"}
+          onClearLocked={clearSelectedPatient}
+        />
 
         {/* Billing Card */}
         <div style={{ gridColumn: "3", gridRow: "1 / span 2", alignSelf: "stretch" }}>
