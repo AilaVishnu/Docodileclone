@@ -17,7 +17,7 @@ Reviewing the appointment booking page (BookAppointment). Shipped:
 Sequenced next:
 - **#2 Reuse PatientDetailsForm** in NewPrescriptionModal's add-patient view (look confirmed = the booking underline-card).
 - **Tables Tier 1** — migrate the 4 read-only tables onto DataGrid.
-- **Tables Tier 2** — QueueTable: mock the shared queue component first (responsive columns + status tones + grouping) for review before migrating the real queues.
+- **Tables Tier 2** — QueueTable **mock built** (`components/QueueTable/`, DRAFT): shared queue component — render-prop columns (status badge/dropdown, row actions), `rowTone(row)` status backgrounds, `groupBy(row)` separators. **Responsive via CSS-grid columns** (fixed px + flexible `fr`/`minmax`) — the clean equivalent of spacer columns; the story shows the same table at 1080px vs 720px adapting. **Review the mock, then migrate the real AppointmentQueue + PrescriptionQueue onto it** (one at a time, diff against live behaviour).
 
 ## Round 7 — ModalHeader migration + AddStaff field pass
 
