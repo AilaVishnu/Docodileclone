@@ -26,10 +26,13 @@ export function UnderlineSelect({
   value,
   onChange,
   placeholder = "Select...",
-  fontSize = fonts.size.h4,
+  fontSize,
   variant = "underline",
 }: UnderlineSelectProps) {
   const isChip = variant === "chip";
+  // Chip is a compact control → default to control text (--btn-fs); the serif
+  // "underline" label keeps the larger h4 display size. Callers can still override.
+  const resolvedFontSize = fontSize ?? (isChip ? "var(--btn-fs)" : fonts.size.h4);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -72,7 +75,7 @@ export function UnderlineSelect({
         <span
           style={{
             fontFamily: isChip ? fonts.family.primary : fonts.family.secondary,
-            fontSize,
+            fontSize: resolvedFontSize,
             fontWeight: isChip ? fonts.weight.semibold : 400,
             color: colors.neutral900,
             ...(isChip ? {} : { textDecoration: "underline", textUnderlineOffset: "4px" }),

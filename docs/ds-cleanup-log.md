@@ -1,0 +1,38 @@
+# Design-system cleanup log
+
+Running record of the component-by-component review (Storybook localhost:6006). Each entry: what was reviewed, the decision, and where it was fixed. Newest first.
+
+## Round 2 — input / field family
+
+### UnderlineSelect — chip text oversized in Storybook
+- **Finding:** only the `chip` variant is used in the app (`BookAppointment`, passing `fontSize="var(--btn-fs)"`); the `underline` variant is **unused** (only the drift-doc gallery references it). The component default font was `h4` (a heading size), so the chip looked huge in Storybook while the app looked right (it overrode the size).
+- **Fix:** `chip` now defaults to control text (`var(--btn-fs)` = 16px); the serif `underline` keeps `h4`. Callers can still override.
+- **Fixed in:** `Input/UnderlineSelect/UnderlineSelect.tsx`. ✅ done, verified (16px), pushed.
+
+### Proposed (pending your go-ahead): unify the input + dropdown surface
+- Field's box/pill are white + border (= "outlined"); there's no "filled" option yet. `FillInput` is a cream-filled, borderless box + text-align. `MeasureField`'s cream value box and the dosing-picker triggers are the same filled-box / filled-dropdown idea.
+- **Plan (additive, staged):** add a `fill: "outline" | "filled"` axis (and `align`) to `Field` so box/pill can be filled → `FillInput` becomes `<Field variant="box" fill="filled" align>`. Add `fill` + `chevron` options to a shared dropdown so `Select` / the 5 pickers / UnderlineSelect-chip converge. Confirm before any broad migration.
+- **Status:** awaiting decision.
+
+## Round 1
+
+### IconButton — "+" button
+- **Observation:** the `+` in the Plus demo used a small `＋` character; looked weak next to the ✕.
+- **Decision:** make `+` by rotating the canonical ✕ close glyph 45° (same stroke weight, no new icon).
+- **Fixed in:** `IconButton/IconButton.stories.tsx` (the component is unchanged — reuses the built-in ✕). Pattern for the app: `<IconButton style={{ transform: 'rotate(45deg)' }} />`.
+- **Status:** ✅ done, verified, pushed.
+
+### StatusBadge — two "Booked" pills
+- **Observation:** catalog showed two "Booked" badges.
+- **Finding:** the backend emits **two status names — `BOOKED` and `SCHEDULED` — for the same pre-arrival state.** The badge already renders both as one "Booked" pill.
+- **Decision:** keep both in the code (removing one would break live data), document `SCHEDULED` as an alias, and show "Booked" once in the catalog. (A true single name is a backend change — out of frontend scope.)
+- **Fixed in:** `AppointmentQueue/StatusBadge.tsx` (comment), `StatusBadge.stories.tsx`, `ButtonsAndChips` overview.
+- **Status:** ✅ done, verified, pushed.
+
+### PayBadge — three look-alike states (Due / Unpaid / No Pay)
+- **Observation:** three pay badges looked identical.
+- **Finding:** `DUE`, `UNPAID`, `"NO PAY"` already rendered identically ("Due" + danger triangle).
+- **Decision:** `DUE` is the single owing state; any non-paid value falls through to it. Zero visual change, simpler config; `PayStatusValue` narrowed to `"PAID" | "DUE"`.
+- **Fixed in:** `AppointmentQueue/StatusBadge.tsx` (PAY_CONFIG + fallback + type), `PayBadge.stories.tsx`, `ButtonsAndChips` overview.
+- **⚠️ Open question for you:** elsewhere (`AppointmentQueue.styles`) `"NO PAY"` is drawn as neutral grey — which would suggest it means **"no charge"**, not "Due". If "No Pay" should mean *no charge* (no warning), that's a separate small fix — tell me and I'll align it.
+- **Status:** ✅ done (as Due), verified, pushed; semantic question above pending your call.
