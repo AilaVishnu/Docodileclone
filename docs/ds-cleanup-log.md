@@ -2,6 +2,19 @@
 
 Running record of the component-by-component review (Storybook localhost:6006). Each entry: what was reviewed, the decision, and where it was fixed. Newest first.
 
+## Round 6 — overlays (cont.): ModalHeader, Radio, Overlays catalog
+
+Reviewing the `Overview/Overlays` page modal-by-modal. Shipped:
+
+- **New `ModalHeader`** (`components/ModalHeader/`) — canonical modal header: serif **h5** title (+ optional subtitle) + the canonical `IconButton` close (✕). `align="left"` (close right) / `align="center"` (close pinned top-right); omit `onClose` for no close. Story has all 4 variants. (Migrating the 6 standard-header modals onto it is the next step — not yet done.)
+- **Modal default padding 32 → 24** (`spacing.xl`) — "24px on all sides" is now the standard for every modal that doesn't override. Full-bleed modals (BillModal, PrintPreviewModal, Pay Due) set padding 0 explicitly, so they're unaffected. Also shifts a few modals outside the review set (ImportData, Pharmacy add-stock, PrescriptionPage templates) to 24px.
+- **Overlays overview completed** — added triggers for ConfirmDialog, AddServiceModal, EditPatientModal, NewPrescriptionModal (was missing). Added a `/api/doctors` MSW mock + `mockDoctors` so NewPrescriptionModal's doctor picker populates. Basic-Modal demo rebuilt on `ModalHeader` + real Buttons.
+- **New `Radio` + `RadioGroup`** (`components/Radio/`) — fully custom radio (appearance:none) with a **neutral900 ring + dot** (the unchecked ring reads dark too, matching field icons — `accent-color` alone only tints the checked state). `options` take strings or `{label,value,color?,disabled?}` (per-option colour for the red "Waive"); `orientation`, group `disabled`. Story has gender / role / payment / disabled / column.
+- **7 radio sites migrated** → `RadioGroup`: gender (StaffDetailsCard), role (AddStaffModal), payment (BillMedicinesModal, BillCard — disabled when paid), gender+type (BookAppointment), gender (NewPrescriptionModal). AddStaffModal's hand-rolled **"Other role" text input → `Field`** (matched the Specialty/Council "Other" inputs).
+- **Dead code removed**: the `.dark-radio` global CSS (now owned by `Radio`) + the per-file `radioGroup`/`radioLabel`/`radioInput`/`genderGroup`/`radioRow`/`otherRoleInput` style objects across 6 files; trimmed now-unused imports.
+- Verified: `tsc` clean, `npm run build` clean, Storybook renders (AddStaffModal role+gender, BillMedicinesModal payment-with-red-Waive screenshotted).
+- Known leftovers (flagged, not done): NewPrescriptionModal's **Age** field is still a raw `<input>` (should be `Field`); BookAppointment `radioGroupInline`/`radioLabelSmall` styles are pre-existing dead; the 6 standard modals still hand-roll their header (ModalHeader migration pending).
+
 ## Round 5 — overlays / confirm dialogs
 
 - **New shared `ConfirmDialog`** (`components/ConfirmDialog/`) — the one "are you sure?" dialog, built on `<Modal level="top">` (so it floats above whatever opened it). Props: `title`, `message?`, `confirmLabel`, `cancelLabel?`, `destructive?` (red confirm), `hideCancel?` (alert/single-button), `confirmDisabled?`. Story has Default / Destructive / Alert.

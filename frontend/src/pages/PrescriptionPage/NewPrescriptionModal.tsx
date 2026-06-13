@@ -5,6 +5,7 @@ import { Button } from "../../components/Button";
 import { Patient, usePatients } from "../../hooks/usePatients";
 import { useDoctors } from "../../hooks/useDoctors";
 import { Select } from "../../components/Input/Select/Select";
+import { RadioGroup } from "../../components/Radio";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { CalendarIcon } from "../../iconsUtil";
 import { listServices, ServiceDTO } from "../../api/services";
@@ -463,14 +464,12 @@ function AddView({
           </Field>
         </div>
         <Field label="Gender" required>
-          <div style={styles.radioRow}>
-            {GENDERS.map((g) => (
-              <label key={g} style={styles.radioLabel}>
-                <input type="radio" name="newrx-gender" checked={draft.gender === g} onChange={() => set("gender")(g)} />
-                {g}
-              </label>
-            ))}
-          </div>
+          <RadioGroup
+            name="newrx-gender"
+            value={draft.gender}
+            onChange={set("gender")}
+            options={GENDERS}
+          />
         </Field>
         <Field label="Service" required>
           <Select
@@ -574,14 +573,6 @@ const styles: Record<string, React.CSSProperties> = {
   dobTriggerIcon: { width: 16, height: 16, color: colors.neutral900, opacity: 0.8, flexShrink: 0 },
   dobTriggerText: { flex: 1, fontFamily: fonts.family.primary, fontSize: fonts.control.sm },
   dobPickerWrap: { position: "absolute" as const, top: "100%", left: 0, zIndex: 10, marginTop: 4 },
-
-  // Inline-radio gender row — native radios for parity with BookAppointment.
-  radioRow: { display: "flex", gap: spacing.m, alignItems: "center", padding: "4px 0" },
-  radioLabel: {
-    display: "flex", alignItems: "center", gap: spacing["2xs"],
-    fontFamily: fonts.family.primary, fontSize: fonts.control.sm,
-    color: colors.neutral900, cursor: "pointer",
-  },
 
   // Footer with top rule + ghost/primary buttons — same as Add Stock.
   footer: {

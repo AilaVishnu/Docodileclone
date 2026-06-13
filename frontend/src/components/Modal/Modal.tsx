@@ -16,7 +16,7 @@ type ModalProps = {
   surface?: string;
   /** Content width (also caps via maxWidth). Omit for the default min/max. */
   width?: number | string;
-  /** Content padding. Default = spacing["2xl"] (32). */
+  /** Content padding. Default = spacing.xl (24) — the standard modal inset. */
   padding?: number | string;
   /** Content corner radius. Default = radii["2xl"] (16). */
   radius?: number;
@@ -37,7 +37,7 @@ export function Modal({
   children,
   surface = colors.active.shade200,
   width,
-  padding = spacing["2xl"],
+  padding = spacing.xl,
   radius = radii["2xl"],
   shadow = shadows.modal,
   level = "modal",

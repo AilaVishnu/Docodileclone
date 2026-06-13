@@ -5,6 +5,8 @@ import { Card } from "../Card";
 import { StaffDetailsCard } from "../StaffDetailsCard";
 import { Button } from "../Button";
 import { IconButton } from "../IconButton";
+import { Field } from "../Field";
+import { RadioGroup } from "../Radio";
 import { styles } from "./AddStaffModal.styles";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { AdditionalStaffDetailsCard } from "../AdditionalStaffDetailsCard";
@@ -211,49 +213,36 @@ export function AddStaffModal({
 
           <div
             style={{
-              ...roleStyles.radioGroup,
+              marginLeft: 28, // align the group under the Role icon
               ...(errors.role ? { border: "1px solid red", borderRadius: "8px", padding: "8px" } : {}),
             }}
           >
-            {STANDARD_ROLES.map((r) => (
-              <label key={r} style={roleStyles.radioLabel}>
-                <input
-                  type="radio"
-                  name="role"
-                  checked={!isOtherRole && role === r}
-                  onChange={() => {
-                    setIsOtherRole(false);
-                    setRole(r);
-                  }}
-                  style={roleStyles.radioInput}
-                />
-                {r}
-              </label>
-            ))}
-            <label style={roleStyles.radioLabel}>
-              <input
-                type="radio"
-                name="role"
-                checked={isOtherRole}
-                onChange={() => {
+            <RadioGroup
+              name="role"
+              value={isOtherRole ? "Other" : role}
+              onChange={(r) => {
+                if (r === "Other") {
                   setIsOtherRole(true);
                   setRole(""); // clear so the user can type their custom role
-                }}
-                style={roleStyles.radioInput}
-              />
-              Other
-            </label>
+                } else {
+                  setIsOtherRole(false);
+                  setRole(r);
+                }
+              }}
+              options={[...STANDARD_ROLES, "Other"]}
+            />
           </div>
 
           {isOtherRole && (
-            <input
-              type="text"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              placeholder="Enter role"
-              style={roleStyles.otherRoleInput}
-              autoFocus
-            />
+            <div style={{ marginLeft: 28, marginTop: 8 }}>
+              <Field
+                variant="underline"
+                value={role}
+                onChange={setRole}
+                placeholder="Enter role"
+                autoFocus
+              />
+            </div>
           )}
         </div>
       </Card>

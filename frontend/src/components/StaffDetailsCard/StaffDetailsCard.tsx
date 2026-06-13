@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Card } from "../Card";
 import { Field } from "../Field";
+import { RadioGroup } from "../Radio";
 import { styles } from "./StaffDetailsCard.styles";
 
 // SVG icons (replace paths with your actual icons)
@@ -85,42 +86,18 @@ export function StaffDetailsCard({
         errorMessage="Please enter a valid phone number"
       />
 
-      <div style={{ ...styles.genderGroup, ...(errors.gender ? { border: "1px solid red", borderRadius: "8px", padding: "4px" } : {}) }}>
-        <label style={styles.radioLabel}>
-          <input
-            type="radio"
-            name="gender"
-            value="male"
-            checked={gender === "male"}
-            onChange={() => setGender("male")}
-            style={styles.radioInput}
-          />
-          Male
-        </label>
-
-        <label style={styles.radioLabel}>
-          <input
-            type="radio"
-            name="gender"
-            value="female"
-            checked={gender === "female"}
-            onChange={() => setGender("female")}
-            style={styles.radioInput}
-          />
-          Female
-        </label>
-
-        <label style={styles.radioLabel}>
-          <input
-            type="radio"
-            name="gender"
-            value="other"
-            checked={gender === "other"}
-            onChange={() => setGender("other")}
-            style={styles.radioInput}
-          />
-          Other
-        </label>
+      <div style={{ marginTop: 4, ...(errors.gender ? { border: "1px solid red", borderRadius: "8px", padding: "4px" } : {}) }}>
+        <RadioGroup
+          name="gender"
+          value={gender}
+          onChange={(v) => setGender(v as "male" | "female" | "other")}
+          gap={24}
+          options={[
+            { label: "Male", value: "male" },
+            { label: "Female", value: "female" },
+            { label: "Other", value: "other" },
+          ]}
+        />
       </div>
 
     </Card>

@@ -24,6 +24,7 @@ import { Toast } from "../Toast";
 import { Button } from "../Button";
 import { MeasureField } from "../MeasureField";
 import { ConfirmDialog } from "../ConfirmDialog";
+import { RadioGroup } from "../Radio";
 import { API_BASE_URL } from "../../apiConfig";
 import { listServices, ServiceDTO } from "../../api/services";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
@@ -849,20 +850,14 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             </div>
           )}
 
-          <div style={{ ...styles.radioGroup, marginTop: "8px", ...(patientFieldsLocked ? { opacity: 0.65, pointerEvents: "none" as const } : {}) }}>
-            {["Male", "Female", "Other"].map((g) => (
-              <label key={g} style={styles.radioLabel}>
-                <input
-                  className="dark-radio"
-                  type="radio"
-                  name="gender"
-                  checked={form.gender === g}
-                  disabled={patientFieldsLocked}
-                  onChange={() => setForm({ ...form, gender: g })}
-                />
-                {g}
-              </label>
-            ))}
+          <div style={{ marginTop: "8px" }}>
+            <RadioGroup
+              name="gender"
+              value={form.gender}
+              onChange={(g) => setForm({ ...form, gender: g })}
+              disabled={patientFieldsLocked}
+              options={["Male", "Female", "Other"]}
+            />
           </div>
         </Card>
 
@@ -901,19 +896,12 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         <div style={styles.scheduleColumn}>
           {/* Schedule Mini Cards Stack */}
           <Card style={{ ...styles.card, ...styles.scheduleMiniCard }}>
-            <div style={styles.radioGroup}>
-              {["New", "Review"].map((t) => (
-                <label key={t} style={styles.radioLabel}>
-                  <input
-                    type="radio"
-                    name="type"
-                    checked={form.type === t}
-                    onChange={() => setForm({ ...form, type: t })}
-                  />
-                  {t}
-                </label>
-              ))}
-            </div>
+            <RadioGroup
+              name="type"
+              value={form.type}
+              onChange={(t) => setForm({ ...form, type: t })}
+              options={["New", "Review"]}
+            />
           </Card>
 
           {(() => {

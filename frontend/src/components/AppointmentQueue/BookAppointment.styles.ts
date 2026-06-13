@@ -301,22 +301,10 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     width: "100%",
   },
-  radioGroup: {
-    display: "flex",
-    gap: spacing.m,
-  },
   radioGroupInline: {
     display: "flex",
     gap: spacing.s,
     flexWrap: "nowrap",
-  },
-  radioLabel: {
-    display: "flex",
-    alignItems: "center",
-    gap: spacing["2xs"], // was 6px — snapped to 4
-    fontSize: fonts.size.m,
-    cursor: "pointer",
-    color: colors.neutral900,
   },
   radioLabelSmall: {
     display: "flex",

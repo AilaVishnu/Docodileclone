@@ -4,6 +4,7 @@ import { Modal } from "../Modal";
 import { Button } from "../Button";
 import { IconButton } from "../IconButton";
 import { Select } from "../Input/Select/Select";
+import { RadioGroup } from "../Radio";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
 
 type Medicine = {
@@ -320,18 +321,12 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
             </div>
 
             <div style={styles.methodRow}>
-              {["Cash", "Card", "UPI", "Waive"].map((m) => (
-                <label key={m} style={{ ...styles.radioLabel, color: m === "Waive" ? colors.red200 : colors.neutral900 }}>
-                  <input
-                    type="radio"
-                    name="medBillPayment"
-                    checked={paymentMethod === m}
-                    onChange={() => setPaymentMethod(m)}
-                    style={styles.radioInput}
-                  />
-                  {m}
-                </label>
-              ))}
+              <RadioGroup
+                name="medBillPayment"
+                value={paymentMethod}
+                onChange={setPaymentMethod}
+                options={["Cash", "Card", "UPI", { label: "Waive", value: "Waive", color: colors.red200 }]}
+              />
             </div>
 
             <div style={styles.footer}>
@@ -677,18 +672,6 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "center",
     flexWrap: "wrap",
   },
-  radioLabel: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    fontSize: fonts.size.s,
-    cursor: "pointer",
-  },
-  radioInput: {
-    margin: 0,
-    cursor: "pointer",
-  },
-
   toggleGroup: {
     display: "flex",
     border: `1px solid ${colors.neutral300}`,

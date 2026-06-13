@@ -3,12 +3,15 @@
 // render with realistic content instead of erroring on a dead backend.
 import { http, HttpResponse } from 'msw';
 import { API_BASE_URL } from '../apiConfig';
-import { mockPatients, mockSuggestions, mockPharmacyStock } from './mockData';
+import { mockPatients, mockDoctors, mockSuggestions, mockPharmacyStock } from './mockData';
 
 const B = API_BASE_URL;
 
 export const handlers = [
   http.get(`${B}/api/patients`, () => HttpResponse.json(mockPatients)),
+
+  // Clinic doctors — powers useDoctors (doctor pickers in NewPrescriptionModal etc.).
+  http.get(`${B}/api/doctors`, () => HttpResponse.json(mockDoctors)),
 
   http.get(`${B}/api/suggestions`, ({ request }) => {
     const field = new URL(request.url).searchParams.get('field') ?? 'default';

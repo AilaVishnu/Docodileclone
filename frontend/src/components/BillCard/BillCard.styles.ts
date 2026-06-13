@@ -152,21 +152,6 @@ export const styles: Record<string, CSSProperties> = {
     marginTop: spacing.s,
   },
 
-  radioLabel: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    fontSize: fonts.size.m,
-    fontFamily: fonts.family.primary,
-    cursor: "pointer",
-    color: colors.neutral900,
-  },
-
-  radioInput: {
-    margin: 0,
-    cursor: "pointer",
-  },
-
   noteInput: {
     flex: 1,
     border: "none",

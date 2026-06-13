@@ -3,13 +3,19 @@ import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { Page, Group } from '../foundations/_kit';
 import { Button } from '../../components/Button';
 import { Modal } from '../../components/Modal';
+import { ModalHeader } from '../../components/ModalHeader';
 import { UploadModal } from '../../components/UploadModal';
 import { AddStaffModal } from '../../components/AddStaffModal';
 import { BillModal } from '../../components/BillCard/BillModal';
 import { BillMedicinesModal } from '../../components/AppointmentQueue/BillMedicinesModal';
 import { PrintPreviewModal } from '../../components/PrintPreviewModal';
 import { SchedulePresetsModal } from '../../components/DoctorSchedule/SchedulePresetsModal';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { AddServiceModal } from '../../pages/Services/AddServiceModal';
+import { EditPatientModal } from '../../pages/PrescriptionPage/EditPatientModal';
+import { NewPrescriptionModal } from '../../pages/PrescriptionPage/NewPrescriptionModal';
 import type { ScheduleState } from '../../components/DoctorSchedule/scheduleStorage';
+import { mockPatients } from '../mockData';
 import { withClinicSession, withLocalStorage } from '../decorators';
 
 // Consolidation view: modals portal to <body>, so we DON'T render them all at
@@ -69,16 +75,16 @@ const PRINT_HTML = `
 </html>
 `;
 
-const ModalContent = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-    <h2 style={{ margin: 0 }}>Add a doctor</h2>
-    <p style={{ margin: 0, color: '#4a4a4a' }}>
-      Fill in the doctor’s details to add them to your clinic. They’ll appear in the queue and the
-      scheduling grid right away.
-    </p>
-    <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
-      <button type="button">Cancel</button>
-      <button type="button">Save</button>
+const ModalContent = ({ onClose }: { onClose: () => void }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <ModalHeader
+      title="Add a doctor"
+      subtitle="Fill in the doctor’s details to add them to your clinic."
+      onClose={onClose}
+    />
+    <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+      <Button variant="light" size="sm" onClick={onClose}>Cancel</Button>
+      <Button variant="dark" size="sm" onClick={onClose}>Save</Button>
     </div>
   </div>
 );
@@ -86,8 +92,12 @@ const ModalContent = () => (
 type Which =
   | null
   | 'modal'
+  | 'confirm'
   | 'upload'
   | 'addStaff'
+  | 'addService'
+  | 'editPatient'
+  | 'newRx'
   | 'bill'
   | 'billMeds'
   | 'print'
@@ -121,11 +131,23 @@ export const All: Story = {
             <Button variant="dark" onClick={() => setOpen('modal')}>
               Modal (basic)
             </Button>
+            <Button variant="dark" onClick={() => setOpen('confirm')}>
+              ConfirmDialog
+            </Button>
             <Button variant="dark" onClick={() => setOpen('upload')}>
               UploadModal
             </Button>
             <Button variant="dark" onClick={() => setOpen('addStaff')}>
               AddStaffModal
+            </Button>
+            <Button variant="dark" onClick={() => setOpen('addService')}>
+              AddServiceModal
+            </Button>
+            <Button variant="dark" onClick={() => setOpen('editPatient')}>
+              EditPatientModal
+            </Button>
+            <Button variant="dark" onClick={() => setOpen('newRx')}>
+              NewPrescriptionModal
             </Button>
             <Button variant="dark" onClick={() => setOpen('bill')}>
               BillModal
@@ -143,8 +165,21 @@ export const All: Story = {
         </Group>
 
         <Modal isOpen={open === 'modal'} onClose={close}>
-          <ModalContent />
+          <ModalContent onClose={close} />
         </Modal>
+
+        {open === 'confirm' && (
+          <ConfirmDialog
+            isOpen
+            title="Cancel this appointment?"
+            message="The slot will be freed and the patient will need to rebook."
+            confirmLabel="Yes, cancel"
+            cancelLabel="Nope"
+            destructive
+            onConfirm={close}
+            onCancel={close}
+          />
+        )}
 
         {open === 'upload' && (
           <UploadModal
@@ -164,6 +199,29 @@ export const All: Story = {
             onSave={close}
             onClose={close}
             onShowToast={noop}
+          />
+        )}
+
+        {open === 'addService' && (
+          <AddServiceModal isOpen onClose={close} onSave={close} />
+        )}
+
+        {open === 'editPatient' && (
+          <EditPatientModal
+            isOpen
+            patient={mockPatients[0]}
+            onClose={close}
+            onSave={noop}
+            onSaved={close}
+          />
+        )}
+
+        {open === 'newRx' && (
+          <NewPrescriptionModal
+            isOpen
+            onClose={close}
+            onSelectPatient={close}
+            onAddPatient={close}
           />
         )}
 

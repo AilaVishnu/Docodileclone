@@ -1,6 +1,7 @@
 // Shared sample data for Storybook stories + MSW handlers.
 // Kept in one place so every story shows the same realistic clinic data.
 import type { Patient } from '../hooks/usePatients';
+import type { Doctor } from '../hooks/useDoctors';
 import type { Suggestion } from '../hooks/useSuggestions';
 import type { PharmacyStockDTO } from '../api/pharmacy';
 
@@ -48,6 +49,14 @@ export const mockPatients: Patient[] = [
     treatingDepartments: [],
     photoUrl: null,
   },
+];
+
+// Doctor ids match mockPatients' treatingDoctorIds (d1/d2). Used by useDoctors
+// (GET /api/doctors) so doctor pickers (NewPrescriptionModal etc.) populate.
+export const mockDoctors: Doctor[] = [
+  { id: 'd1', name: 'Dr. Anjali Rao', department: 'Dermatology', specialty: 'Cosmetic Dermatology', registrationNo: 'KMC-12345', qualification: 'MBBS, MD (Dermatology)', medicalCouncil: 'Karnataka Medical Council', experienceYears: 12 },
+  { id: 'd2', name: 'Dr. Vikram Nair', department: 'Pediatrics', specialty: 'General Pediatrics', registrationNo: 'KMC-67890', qualification: 'MBBS, DCH', medicalCouncil: 'Karnataka Medical Council', experienceYears: 8 },
+  { id: 'd3', name: 'Dr. Meera Iyer', department: 'General Medicine', specialty: null, registrationNo: null, qualification: 'MBBS', medicalCouncil: null, experienceYears: 5 },
 ];
 
 const SUGGESTION_BANK: Record<string, string[]> = {

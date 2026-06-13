@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { styles } from "./BillCard.styles";
 import { colors, spacing } from "../../styles/theme";
+import { RadioGroup } from "../Radio";
 import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
 import { ReactComponent as ScaleIcon } from "../../assets/icons/scale.svg";
 import { ReactComponent as PaidStamp } from "../../assets/icons/paid-stamp.svg";
@@ -140,24 +141,13 @@ export function BillCard({
         </div>
 
         <div style={styles.methodRow}>
-          {["Cash", "Card", "UPI", "Waive"].map((m) => (
-            <label key={m} style={{
-              ...styles.radioLabel,
-              color: m === "Waive" ? colors.red200 : styles.radioLabel.color,
-              cursor: isPaid ? "not-allowed" : styles.radioLabel.cursor,
-              opacity: isPaid ? 0.7 : 1,
-            }}>
-              <input
-                type="radio"
-                name="billPayment"
-                checked={paymentMethod === m}
-                onChange={() => onPaymentMethodChange(m)}
-                style={styles.radioInput}
-                disabled={isPaid}
-              />
-              {m}
-            </label>
-          ))}
+          <RadioGroup
+            name="billPayment"
+            value={paymentMethod}
+            onChange={onPaymentMethodChange}
+            disabled={isPaid}
+            options={["Cash", "Card", "UPI", { label: "Waive", value: "Waive", color: colors.red200 }]}
+          />
         </div>
       </div>
 
