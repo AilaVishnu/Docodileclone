@@ -100,12 +100,9 @@ export const All: Story = {
       <Group label="IconButton — circular icon-only (square *Icon sizes)">
         <Row>
           <IconButton ariaLabel="Close" />
-          <IconButton ariaLabel="Add" size={32}>
-            <span aria-hidden>＋</span>
-          </IconButton>
-          <IconButton ariaLabel="Large add" size={48}>
-            <span aria-hidden>＋</span>
-          </IconButton>
+          {/* "+" = the canonical ✕ glyph rotated 45° (same as IconButton's Plus story). */}
+          <IconButton ariaLabel="Add" size={32} style={{ transform: 'rotate(45deg)' }} />
+          <IconButton ariaLabel="Large add" size={48} style={{ transform: 'rotate(45deg)' }} />
           <IconButton ariaLabel="Disabled" disabled />
         </Row>
       </Group>

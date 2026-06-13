@@ -2,6 +2,13 @@
 
 Running record of the component-by-component review (Storybook localhost:6006). Each entry: what was reviewed, the decision, and where it was fixed. Newest first.
 
+## Round 4 — buttons & chips
+
+- **Chip/badge fonts → control** — `Tag` + `StatusBadge` moved from body `fonts.size.s` to `fonts.control.sm` (and Switch hint → `control.xs`), so chips/badges step with the control scale at <1440 (same fix as inputs). Button already used `--btn-fs`.
+- **Token tidy** — Button border literal `1.5` → `strokes.s`; StatusBadge radius literal `"4px"` → `radii.xs`.
+- **Overview "+" fixed** — the Buttons & Chips overview's IconButton demos used the weak `＋` glyph; now render the rotated-✕ (same as the IconButton Plus story), so "+" is legible + consistent.
+- Left by decision: button **md-height stays 42** (sm already = input 40; forcing md→40 would collapse sm/md); **`secondary` button stays the always-green CTA** (doesn't theme-swap). Flag if you want either changed.
+
 ## Round 3 — input consistency pass
 
 Audited every field (height / font / state colour / chevron / outline / fill) across both tiers. Shipped:

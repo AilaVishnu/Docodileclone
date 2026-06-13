@@ -86,7 +86,7 @@ const styles: Record<string, CSSProperties> = {
     border: `${strokes.xs} solid ${colors.secondary100}`,
     borderRadius: radii.full,
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.s,
+    fontSize: fonts.control.sm,
     lineHeight: fonts.lineHeight.s,
     color: colors.neutral900,
     whiteSpace: "nowrap" as const,

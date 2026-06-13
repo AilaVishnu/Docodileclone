@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts, radii, spacing } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   base: {
@@ -8,7 +8,7 @@ export const styles: Record<string, CSSProperties> = {
     justifyContent: "center",
     gap: 4,
     borderRadius: radii.pill,
-    borderWidth: 1.5,
+    borderWidth: strokes.s,
     borderStyle: "solid",
     padding: "8px 16px",
     fontWeight: fonts.weight.regular,

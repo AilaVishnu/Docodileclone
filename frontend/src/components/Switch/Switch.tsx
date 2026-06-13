@@ -80,7 +80,7 @@ export function Switch({ checked, onChange, size = "md", hint, ariaLabel, disabl
         />
       </span>
       {hint && (
-        <span style={{ fontSize: fonts.size.xs, color: colors.neutral500 }}>{hint}</span>
+        <span style={{ fontSize: fonts.control.xs, color: colors.neutral500 }}>{hint}</span>
       )}
     </label>
   );

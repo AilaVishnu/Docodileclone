@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { fonts, colors } from "../../styles/theme";
+import { fonts, colors, radii } from "../../styles/theme";
 import { ReactComponent as DangerTriangleIcon } from "../../assets/icons/danger-triangle.svg";
 import { ReactComponent as CheckCircleIcon } from "../../assets/icons/check-circle.svg";
 
@@ -142,7 +142,7 @@ export function StatusBadge({ status, started, sessionStartedAt, onClick }: Stat
   // for emphasis, but that broke visual rhythm against the other s (14)
   // states (Booked / No Show / Completed / …). Picking one keeps the queue
   // row consistent; size.s matches the other badges.
-  const badgeFontSize = fonts.size.s;
+  const badgeFontSize = fonts.control.sm;
 
   return (
     <span
@@ -153,7 +153,7 @@ export function StatusBadge({ status, started, sessionStartedAt, onClick }: Stat
         justifyContent: "center",
         backgroundColor: cfg.bg,
         color: cfg.color,
-        borderRadius: "4px",
+        borderRadius: radii.xs,
         padding: "4px 8px",
         fontSize: badgeFontSize,
         fontFamily: fonts.family.primary,
