@@ -17,6 +17,7 @@ import { ConfirmDialog } from "../ConfirmDialog";
 import { Modal } from "../Modal";
 import { API_BASE_URL } from "../../apiConfig";
 import { listPharmacyStock, deductPharmacyStock } from "../../api/pharmacy";
+import { listServices } from "../../api/services";
 import { getActiveSessions } from "../../api/visits";
 
 type Doctor = {
@@ -83,6 +84,21 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
     const id = window.setInterval(load, 10000);
     return () => { cancelled = true; window.clearInterval(id); };
   }, [refreshKey]);
+  // Service catalog name → short code (e.g. "Consultation" → "GC") so the
+  // queue's Service column shows the clinic's own abbreviations. Fetched once
+  // on mount; the catalog rarely changes within a session.
+  const [serviceCodes, setServiceCodes] = useState<Record<string, string>>({});
+  useEffect(() => {
+    listServices()
+      .then((list) => {
+        const map: Record<string, string> = {};
+        for (const s of list) {
+          if (s.name && s.code) map[s.name.trim().toLowerCase()] = s.code;
+        }
+        setServiceCodes(map);
+      })
+      .catch(() => { /* fall back to the built-in abbreviation */ });
+  }, []);
   const [billingMedicines, setBillingMedicines] = useState<BillingMedicine[]>([]);
   const [billingLoading, setBillingLoading] = useState(false);
   // Clinic pharmacy inventory — drives both the unit prices used when
@@ -475,6 +491,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           <QueueTable
             appointments={activeQueue}
             sessionStarts={sessionStarts}
+            serviceCode={(name) => serviceCodes[name.trim().toLowerCase()]}
             doctorName={doctors.find(d => d.id === activeDoctorId)?.name}
             menuItems={[
               { label: "Edit Appointment", onClick: (apt) => {

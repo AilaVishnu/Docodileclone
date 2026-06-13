@@ -21,11 +21,13 @@ type PopoverMenuProps = {
   items: PopoverMenuItem[];
   /** Where the menu opens relative to the trigger. Default: bottom-right. */
   align?: "left" | "right";
+  /** Open above the trigger instead of below — for rows near the viewport bottom. */
+  openUpward?: boolean;
   /** Optional aria-label for the trigger button. */
   ariaLabel?: string;
 };
 
-export function PopoverMenu({ trigger, items, align = "right", ariaLabel }: PopoverMenuProps) {
+export function PopoverMenu({ trigger, items, align = "right", openUpward, ariaLabel }: PopoverMenuProps) {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -50,7 +52,7 @@ export function PopoverMenu({ trigger, items, align = "right", ariaLabel }: Popo
         {trigger}
       </button>
       {open && (
-        <div style={{ ...styles.menu, ...(align === "left" ? { left: 0, right: "auto" } : {}) }}>
+        <div style={{ ...styles.menu, ...(align === "left" ? { left: 0, right: "auto" } : {}), ...(openUpward ? { top: "auto", bottom: "calc(100% + 4px)" } : {}) }}>
           {items.map((item, i) => (
             <button
               key={i}

@@ -22,7 +22,11 @@ export type QueueColumn<T> = {
   /** Flexible weight (CSS grid fr). Used when no `width`. Default 1. */
   grow?: number;
   align?: "left" | "center" | "right";
-  render: (row: T) => React.ReactNode;
+  /** Set false for columns with absolutely-positioned overlays (status
+   *  dropdown, kebab menu) so the cell's text-truncation clip doesn't cut
+   *  them off. Defaults to true (clip + ellipsis), for plain text columns. */
+  clip?: boolean;
+  render: (row: T, index: number) => React.ReactNode;
 };
 
 type QueueTableProps<T> = {
@@ -49,10 +53,10 @@ export function QueueTable<T>({ columns, rows, rowKey, rowTone, groupBy, hover }
     columnGap: spacing.s,
     padding: `${spacing.s} ${spacing.m}`,
   };
-  const cell = (align?: QueueColumn<T>["align"]): React.CSSProperties => ({
+  const cell = (c: QueueColumn<T>): React.CSSProperties => ({
     minWidth: 0,
-    textAlign: align ?? "left",
-    overflow: "hidden",
+    textAlign: c.align ?? "left",
+    overflow: c.clip === false ? "visible" : "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontFamily: fonts.family.primary,
@@ -64,7 +68,7 @@ export function QueueTable<T>({ columns, rows, rowKey, rowTone, groupBy, hover }
     <div style={{ width: "100%" }}>
       <div style={{ ...rowGrid, borderBottom: `${strokes.s} solid ${colors.primary300}` }}>
         {columns.map((c) => (
-          <div key={c.key} style={{ ...cell(c.align), fontSize: fonts.control.xs, color: colors.alphaBlack3 }}>
+          <div key={c.key} style={{ ...cell(c), fontSize: fonts.control.xs, color: colors.alphaBlack3 }}>
             {c.header}
           </div>
         ))}
@@ -87,7 +91,7 @@ export function QueueTable<T>({ columns, rows, rowKey, rowTone, groupBy, hover }
               onMouseLeave={hover && !tone ? (e) => { e.currentTarget.style.backgroundColor = "transparent"; } : undefined}
             >
               {columns.map((c) => (
-                <div key={c.key} style={cell(c.align)}>{c.render(row)}</div>
+                <div key={c.key} style={cell(c)}>{c.render(row, i)}</div>
               ))}
             </div>
           </React.Fragment>

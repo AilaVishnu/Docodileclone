@@ -105,6 +105,15 @@ const MENU_ITEMS = [
   },
 ];
 
+// Mimics the clinic's services catalog: service name → its short code. This is
+// the real path AppointmentQueue uses (it builds this map from listServices()).
+const SERVICE_CODES: Record<string, string> = {
+  Consultation: 'GC',
+  'Acne Scar Treatment': 'AST',
+  'Laser Hair Removal': 'LHR',
+  Hydrafacial: 'HF',
+};
+
 const meta = {
   title: 'Patterns/AppointmentQueue/QueueTable',
   component: QueueTable,
@@ -124,12 +133,14 @@ const meta = {
     menuItems: { control: false },
     onStatusChange: { control: false },
     sessionStarts: { control: false },
+    serviceCode: { control: false },
   },
   args: {
     appointments: ROWS,
     doctorName: 'Dr. Anita Rao',
     menuItems: MENU_ITEMS,
     onStatusChange: noop,
+    serviceCode: (name: string) => SERVICE_CODES[name],
   },
 } satisfies Meta<typeof QueueTable>;
 
