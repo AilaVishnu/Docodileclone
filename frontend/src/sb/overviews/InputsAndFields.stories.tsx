@@ -110,16 +110,22 @@ export const All: Story = {
       title="Inputs & Fields"
       intro="Every text/value input and dropdown side by side, each driven by local state so typing works. Dosing pickers are shown closed — focus / click to open them. Each sits in a fixed-width slot so widths and heights line up for comparison."
     >
-      <Group label="Field — the canonical text input (underline / box / pill)">
+      <Group label="Field — underline / box / pill · each box & pill is outline OR filled">
         <Wrap>
           <Slot label="underline">
             <FieldDemo variant="underline" placeholder="Patient name" />
           </Slot>
-          <Slot label="box">
+          <Slot label="box · outline">
             <FieldDemo variant="box" placeholder="Email" type="email" />
           </Slot>
-          <Slot label="pill">
+          <Slot label="box · filled (cream)">
+            <FieldDemo variant="box" fill="filled" placeholder="Amount" align="center" />
+          </Slot>
+          <Slot label="pill · outline">
             <FieldDemo variant="pill" placeholder="Search…" type="search" />
+          </Slot>
+          <Slot label="pill · filled (cream)">
+            <FieldDemo variant="pill" fill="filled" placeholder="Search…" />
           </Slot>
           <Slot label="box — error">
             <FieldDemo
@@ -152,10 +158,16 @@ export const All: Story = {
         </Wrap>
       </Group>
 
-      <Group label="Select — box-style dropdown (menu portals to body)">
+      <Group label="Select — dropdown · outline or filled, chevron on/off">
         <Wrap>
-          <Slot label="string options">
+          <Slot label="outline">
             <SelectDemo options={DEPARTMENTS} placeholder="Select a department" />
+          </Slot>
+          <Slot label="filled (cream)">
+            <SelectDemo options={DEPARTMENTS} placeholder="Select a department" fill="filled" />
+          </Slot>
+          <Slot label="filled · no chevron">
+            <SelectDemo options={DEPARTMENTS} placeholder="Select a department" fill="filled" chevron={false} />
           </Slot>
           <Slot label="error">
             <SelectDemo options={DEPARTMENTS} placeholder="Select a department" error />
