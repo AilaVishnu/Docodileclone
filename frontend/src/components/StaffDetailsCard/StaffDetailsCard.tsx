@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Card } from "../Card";
-import { TextInput } from "../Input/TextInput";
+import { Field } from "../Field";
 import { styles } from "./StaffDetailsCard.styles";
 
 // SVG icons (replace paths with your actual icons)
@@ -34,7 +34,8 @@ export function StaffDetailsCard({
 
   return (
     <Card style={styles.card}>
-      <TextInput
+      <Field
+        variant="underline"
         value={name}
         onChange={setName}
         placeholder="Name"
@@ -43,7 +44,8 @@ export function StaffDetailsCard({
         errorMessage="Please enter staff name"
       />
 
-      <TextInput
+      <Field
+        variant="underline"
         type="email"
         value={email}
         onChange={setEmail}
@@ -54,7 +56,8 @@ export function StaffDetailsCard({
         errorMessage="Please enter a valid email"
       />
 
-      <TextInput
+      <Field
+        variant="underline"
         value={phone}
         onChange={(val) => {
           let digits = val.replace(/\D/g, "");

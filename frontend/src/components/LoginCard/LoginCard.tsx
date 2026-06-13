@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { styles } from "./LoginCard.styles";
-import { TextInput } from "../Input/TextInput";
+import { Field } from "../Field";
 import { DomainInput } from "../Input/DomainInput";
 import { Button } from "../Button";
 import { Card } from "../Card";
@@ -179,7 +179,8 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
           />
         )}
 
-        <TextInput
+        <Field
+          variant="underline"
           type="email"
           value={forgotEmail}
           onChange={setForgotEmail}
@@ -246,7 +247,8 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
       )}
 
       {/* Email */}
-      <TextInput
+      <Field
+        variant="underline"
         type="email"
         value={email}
         onChange={setEmail}
@@ -257,7 +259,8 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
 
       {/* Password */}
       <div style={styles.passwordRow}>
-        <TextInput
+        <Field
+          variant="underline"
           type={showPassword ? "text" : "password"}
           value={password}
           onChange={setPassword}

@@ -85,7 +85,7 @@ export function SuggestionInput({
             {value || placeholder}
           </span>
           <span style={styles.chevron}>
-            <ChevronDown open={open} size={16} />
+            <ChevronDown open={open} size={16} color={open ? colors.neutral900 : colors.neutral300} />
           </span>
         </div>
       ) : (

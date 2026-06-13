@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Card } from "../Card";
-import { TextInput } from "../Input/TextInput";
+import { Field } from "../Field";
 import { Select } from "../Input/Select/Select";
 import { styles } from "./AdditionalStaffDetailsCard.styles";
 
@@ -181,7 +181,8 @@ export function AdditionalStaffDetailsCard({
             </div>
             {isOther && (
               <div style={{ marginTop: 8 }}>
-                <TextInput
+                <Field
+                  variant="underline"
                   value={specialty}
                   onChange={setSpecialty}
                   placeholder="Enter specialty"
@@ -213,7 +214,8 @@ export function AdditionalStaffDetailsCard({
         <div style={{ ...styles.section, flexDirection: "row", gap: 12 }}>
           <div style={{ ...styles.section, flex: 1, minWidth: 0 }}>
             <div style={styles.label}>Qualification</div>
-            <TextInput
+            <Field
+              variant="underline"
               value={qualification}
               onChange={setQualification}
               placeholder="MBBS, MD (Dermatology)"
@@ -222,7 +224,8 @@ export function AdditionalStaffDetailsCard({
           </div>
           <div style={{ ...styles.section, flex: 1, minWidth: 0 }}>
             <div style={styles.label}>Experience (years)</div>
-            <TextInput
+            <Field
+              variant="underline"
               value={experienceYears}
               onChange={(val) => setExperienceYears(val.replace(/\D/g, "").slice(0, 2))}
               placeholder="10"
@@ -258,7 +261,8 @@ export function AdditionalStaffDetailsCard({
             </div>
             {isCouncilOther && (
               <div style={{ marginTop: 8 }}>
-                <TextInput
+                <Field
+                  variant="underline"
                   value={medicalCouncil}
                   onChange={setMedicalCouncil}
                   placeholder="Enter council name"
@@ -269,7 +273,8 @@ export function AdditionalStaffDetailsCard({
           </div>
           <div style={{ ...styles.section, flex: 1, minWidth: 0 }}>
             <div style={styles.label}>Reg. No.</div>
-            <TextInput
+            <Field
+              variant="underline"
               value={registrationNo}
               onChange={setRegistrationNo}
               placeholder="ABCDEF"

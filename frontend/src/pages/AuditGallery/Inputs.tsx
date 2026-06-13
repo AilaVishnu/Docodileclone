@@ -7,7 +7,7 @@
 import React, { useState } from "react";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 import { Section, Sub, Tile, Ctx, Note } from "./shared";
-import { TextInput } from "../../components/Input/TextInput/TextInput";   // real, safe to import
+import { Field as TextField } from "../../components/Field";   // real, safe to import
 import { Select } from "../../components/Input/Select/Select";            // real, safe to import
 
 // ── Local helpers ──────────────────────────────────────────────────────────────
@@ -190,7 +190,7 @@ export function InputsCategory() {
       >
         <Tile id="INP-CANON" label="TextInput · underline" src="TextInput.styles.ts" canonical>
           <div style={{ width: 180 }}>
-            <TextInput value="Underline" onChange={() => {}} />
+            <TextField variant="underline" value="Underline" onChange={() => {}} />
           </div>
         </Tile>
         <Tile id="INP-domain" label="DomainInput · 54px box" src="DomainInput.styles.ts">
@@ -218,7 +218,7 @@ export function InputsCategory() {
         {/* canonical */}
         <Ctx id="INP-CANON" where="Design-system TextInput · underline · reads --input-pady · TextInput.styles.ts" canonical>
           <FieldRow label="Medication name">
-            <TextInput value={ti} onChange={setTi} placeholder="Start typing…" />
+            <TextField variant="underline" value={ti} onChange={setTi} placeholder="Start typing…" />
           </FieldRow>
         </Ctx>
 
@@ -274,7 +274,7 @@ export function InputsCategory() {
         {/* INV-1 TextInput invalid */}
         <Ctx id="INV-1" where="TextInput invalid · red200 underline + rgba(255,0,0,0.05) fill · TextInput.styles.ts:31-33">
           <FieldRow label="Quantity">
-            <TextInput value={tiErr} onChange={setTiErr} error errorMessage="Must be a whole number" />
+            <TextField variant="underline" value={tiErr} onChange={setTiErr} error errorMessage="Must be a whole number" />
           </FieldRow>
         </Ctx>
 

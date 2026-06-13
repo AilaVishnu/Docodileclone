@@ -10,7 +10,12 @@ Audited every field (height / font / state colour / chevron / outline / fill) ac
 - **Dead CSS** — repointed the stale `.fill-input` globals rules (FillInput is gone) to `.text-input-field`.
 - Already consistent (no change): heights (`--input-h` 40/32; dense 28), fill (`primary100`), input placeholders (globally `neutral400`).
 
-Still open (queued): chevron-colour rule (Select state-driven vs SuggestionInput neutral700 vs UnderlineSelect neutral600), outline-colour rule (box neutral300 vs pill/cream primary300), MeasureField variant restructure (unit-only / unit-switchable; box+prefix with right-side unit), and the `TextInput` + `UnderlineSelect` deletions.
+Decisions applied:
+- **Chevron is now state-driven** (neutral300 idle → neutral900 open, matching Select; `SuggestionInput` updated, UnderlineSelect inherits it when it folds into Select).
+- **Outline keeps the warm `primary300` border on pill/cream** (box stays `neutral300`) — confirmed, no change.
+- **`TextInput` removed** — its 5 call sites repointed to `<Field variant="underline">`, component deleted. (Two files had a local `Field` helper, so they import it as `Field as TextField`.)
+
+Still open: `UnderlineSelect` removal (fold the booking chip → a `Select` pill, then delete) and the MeasureField variant restructure (unit-only / unit-switchable; box+prefix with right-side unit).
 
 ## Round 2 — input / field family
 
