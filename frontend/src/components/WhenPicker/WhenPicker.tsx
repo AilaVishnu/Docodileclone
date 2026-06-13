@@ -1,5 +1,5 @@
 import React, { CSSProperties, useEffect, useRef, useState } from "react";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes, zIndex } from "../../styles/theme";
 import { ChevronDown } from "../icons/ChevronDown";
 
 const OPTIONS = [
@@ -118,7 +118,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: radii.m,
     padding: spacing["2xs"],
     boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
-    zIndex: 1200,
+    zIndex: zIndex.popover,
     display: "flex",
     flexDirection: "column",
     gap: 2,

@@ -57,7 +57,7 @@ export function HeaderPatientSearch({ onNavigate }: { onNavigate?: (tab: NavTab)
   return (
     <div ref={wrapRef} style={{ position: "relative", flexShrink: 0 }}>
       <div style={styles.bar}>
-        <SearchIcon style={{ width: "var(--search-icon)", height: "var(--search-icon)", color: "#ABABAB", flexShrink: 0 }} />
+        <SearchIcon style={{ width: "var(--search-icon)", height: "var(--search-icon)", color: colors.neutral400, flexShrink: 0 }} />
         <input
           type="text"
           placeholder="Search for anything..."
@@ -67,7 +67,7 @@ export function HeaderPatientSearch({ onNavigate }: { onNavigate?: (tab: NavTab)
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
         />
-        <style>{`.topnav-search-input::placeholder { color: #ABABAB; opacity: 1; }`}</style>
+        <style>{`.topnav-search-input::placeholder { color: ${colors.neutral400}; opacity: 1; }`}</style>
       </div>
 
       {open && query.trim().length > 0 && (

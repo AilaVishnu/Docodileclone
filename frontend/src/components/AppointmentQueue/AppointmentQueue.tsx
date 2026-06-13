@@ -3,7 +3,7 @@ import { Tabs, TabItem } from "../Tabs";
 import { QueueTable, Appointment } from "./QueueTable";
 import { styles } from "./AppointmentQueue.styles";
 import { DatePicker } from "../DatePicker/DatePicker";
-import { colors, fonts, radii, spacing } from "../../styles/theme";
+import { colors, fonts, radii, spacing, zIndex } from "../../styles/theme";
 import { BookAppointment, EditAppointmentData } from "./BookAppointment";
 import { PageHeader } from "../PageHeader/PageHeader";
 import { ChevronDown } from "../icons/ChevronDown";
@@ -720,7 +720,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
         if (pharmacyAmt > 0) services.push({ name: "Pharmacy", price: pharmacyAmt });
         const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         return (
-        <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>
+        <div style={{ ...confirmStyles.overlay, zIndex: zIndex.modalTop }}>
           <div style={{ display: "flex", flexDirection: "column", width: 360, maxWidth: "92vw" }}>
             {/* Receipt card — patient header + bill body + actions, all
                 under one white sheet so the action buttons read as part

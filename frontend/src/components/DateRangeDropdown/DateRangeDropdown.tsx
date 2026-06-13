@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "../icons/ChevronDown";
 import { RangeCalendar } from "../DatePicker/RangeCalendar";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes, zIndex } from "../../styles/theme";
 
 // DateRangeDropdown — a header pill ("[range] ▾") that opens a list of range
 // presets; the special `customId` preset opens an in-place RangeCalendar to
@@ -31,7 +31,7 @@ const s: Record<string, React.CSSProperties> = {
     padding: "4px 12px", position: "relative", whiteSpace: "nowrap",
   },
   menu: {
-    position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 1200,
+    position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: zIndex.popover,
     backgroundColor: colors.neutral100, border: `${strokes.xs} solid ${colors.neutral200}`,
     borderRadius: radii.l, padding: spacing["2xs"], minWidth: 188,
     boxShadow: "2px 2px 12px 0px rgba(0,0,0,0.08)", textAlign: "left",
@@ -43,7 +43,7 @@ const s: Record<string, React.CSSProperties> = {
     padding: `${spacing.xs} ${spacing.s}`, borderRadius: radii.m, whiteSpace: "nowrap",
   },
   itemActive: { backgroundColor: colors.neutral150 },
-  calWrap: { position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 1200 },
+  calWrap: { position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: zIndex.popover },
 };
 
 export function DateRangeDropdown({

@@ -6,7 +6,7 @@ export const styles = {
     // Sage clinic surface — shared with ClinicCard via cardSurface
     // (the lone literal shadow is now the shadows.card token).
     ...cardSurface("sage", "raised"),
-    padding: spacing.xxl,
+    padding: spacing["2xl"],
     width: "373px",
     display: "flex",
     flexDirection: "column" as const,

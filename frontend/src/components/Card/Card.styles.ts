@@ -35,7 +35,7 @@ export const styles: Record<string, CSSProperties> = {
   // Legacy transparent layout shell — wraps page sections. Unchanged: still
   // a flex+gap column with no surface of its own (radii.xxl === 16).
   card: {
-    borderRadius: radii.xxl,
+    borderRadius: radii["2xl"],
     width: "100%",
     display: "flex",
     flexDirection: "column",

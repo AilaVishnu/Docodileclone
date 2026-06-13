@@ -50,7 +50,7 @@ export const styles: Record<string, CSSProperties> = {
   footer: {
     marginTop: spacing.l,
     display: "flex",
-    gap: spacing.xxl,
+    gap: spacing["2xl"],
     justifyContent: "center",
     flexShrink: 0,
   },

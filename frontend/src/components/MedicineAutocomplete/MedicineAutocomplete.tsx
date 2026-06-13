@@ -1,5 +1,5 @@
 import React, { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes, zIndex } from "../../styles/theme";
 import { API_BASE_URL } from "../../apiConfig";
 import { listPharmacyStock } from "../../api/pharmacy";
 
@@ -210,7 +210,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: radii.m,
     padding: spacing["2xs"],
     boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
-    zIndex: 1200,
+    zIndex: zIndex.popover,
     maxHeight: "min(40vh, 320px)",
     overflowY: "auto",
   },

@@ -23,7 +23,7 @@ const adminTheme: Theme = {
   bgImage: AdminBg,
   card: colors.secondary50,
   button: colors.secondary800,
-  buttonText: "#ffffff",
+  buttonText: colors.neutral100,
 };
 
 const staffTheme: Theme = {
@@ -31,7 +31,7 @@ const staffTheme: Theme = {
   bgImage: StaffBg,
   card: colors.primary100,
   button: colors.primary700,
-  buttonText: "#ffffff",
+  buttonText: colors.neutral100,
 };
 
 export function SetupPasswordPage() {
@@ -124,7 +124,7 @@ export function SetupPasswordPage() {
 
   const card: React.CSSProperties = {
     backgroundColor: theme.card,
-    borderRadius: radii.primary,
+    borderRadius: radii["2xl"],
     padding: spacing["2xl"],
     width: 400,
     display: "flex",

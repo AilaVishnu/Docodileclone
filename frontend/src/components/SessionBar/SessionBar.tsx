@@ -1,5 +1,5 @@
 import React, { CSSProperties } from "react";
-import { colors, fonts, radii, spacing } from "../../styles/theme";
+import { colors, fonts, radii, spacing, zIndex } from "../../styles/theme";
 import { ReactComponent as PlayCircleIcon } from "../../assets/icons/play-circle.svg";
 import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
 import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg";
@@ -443,7 +443,7 @@ export function SessionBar({
         transform: translateX(-50%) which creates a new containing block,
         which would otherwise clip this overlay to the bar's bounds. */}
     {showEndConfirm && (
-      <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>
+      <div style={{ ...confirmStyles.overlay, zIndex: zIndex.modalTop }}>
         <div style={confirmStyles.dialog}>
           <h4 style={confirmStyles.title}>Are you sure?</h4>
           <p
@@ -481,7 +481,7 @@ export function SessionBar({
     )}
 
     {showRestartConfirm && (
-      <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>
+      <div style={{ ...confirmStyles.overlay, zIndex: zIndex.modalTop }}>
         <div style={confirmStyles.dialog}>
           <h4 style={confirmStyles.title}>Reset timer?</h4>
           <p

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { colors, fonts, radii, shadows } from "../../../styles/theme";
+import { colors, fonts, radii, shadows, zIndex } from "../../../styles/theme";
 import { ChevronDown } from "../../icons/ChevronDown";
 
 type UnderlineSelectOption = {
@@ -94,7 +94,7 @@ export function UnderlineSelect({
             border: `1px solid ${colors.primary300}`,
             borderRadius: radii.m,
             boxShadow: shadows.menu,
-            zIndex: 1000,
+            zIndex: zIndex.popover,
             minWidth: "200px",
             maxHeight: "260px",
             overflowY: "auto",

@@ -7,7 +7,7 @@ import { HomeView } from "./HomeView";
 import { StatsPage } from "../Stats";
 import { PharmacyView } from "../Pharmacy";
 import { SettingsPage, DEFAULT_SETTINGS_SECTION, SettingsSection } from "../Settings";
-import { colors, fonts, ThemeMode } from "../../styles/theme";
+import { colors, fonts, ThemeMode, zIndex } from "../../styles/theme";
 import { ComingSoon } from "../../components/ComingSoon/ComingSoon";
 import { confirmStyles } from "../../components/AddStaffModal/AddStaffModal.styles";
 import { Button } from "../../components/Button";
@@ -346,7 +346,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
     />
 
     {showConfirm && (
-      <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>
+      <div style={{ ...confirmStyles.overlay, zIndex: zIndex.modalTop }}>
         <div style={confirmStyles.dialog}>
           <h4 style={confirmStyles.title}>Are you sure?</h4>
           <p style={{ margin: 0, fontSize: fonts.size.s, color: colors.neutral600, textAlign: "center" }}>Current booking data will be discarded.</p>
@@ -370,7 +370,7 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
     />
 
     {walkinError && (
-      <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>
+      <div style={{ ...confirmStyles.overlay, zIndex: zIndex.modalTop }}>
         <div style={confirmStyles.dialog}>
           <h4 style={confirmStyles.title}>Walk-in failed</h4>
           <p style={{ margin: 0, fontSize: fonts.size.s, color: colors.neutral600, textAlign: "center" }}>{walkinError}</p>

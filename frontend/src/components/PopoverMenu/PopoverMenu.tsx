@@ -1,5 +1,5 @@
 import React from "react";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes, shadows, zIndex } from "../../styles/theme";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Generic popover menu — a click-trigger that opens a list of action items.
@@ -100,8 +100,8 @@ const styles: Record<string, React.CSSProperties> = {
     padding: spacing["2xs"],
     display: "flex",
     flexDirection: "column",
-    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
-    zIndex: 1000,
+    boxShadow: shadows.menu,
+    zIndex: zIndex.popover,
   },
   item: {
     display: "flex",

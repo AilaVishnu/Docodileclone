@@ -1,7 +1,7 @@
 import React, { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { useSuggestions } from "../../hooks/useSuggestions";
 import { Tag } from "../Tag";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes, shadows, zIndex } from "../../styles/theme";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Multi-tag variant of Autocomplete. Selecting a suggestion (or pressing
@@ -184,8 +184,8 @@ const styles: Record<string, CSSProperties> = {
     padding: spacing["2xs"],
     display: "flex",
     flexDirection: "column",
-    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
-    zIndex: 1000,
+    boxShadow: shadows.menu,
+    zIndex: zIndex.popover,
     maxHeight: "min(50vh, 480px)",
     overflowY: "auto",
   },

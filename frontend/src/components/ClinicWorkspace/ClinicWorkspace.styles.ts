@@ -10,7 +10,7 @@ export const styles: Record<string, CSSProperties> = {
     flex: 1,
     minHeight: 0,
     border: `0px solid ${colors.neutral900}`,
-    borderRadius: `0 ${radii.primary}px ${radii.primary}px ${radii.primary}px`,
+    borderRadius: `0 ${radii["2xl"]}px ${radii["2xl"]}px ${radii["2xl"]}px`,
     display: "flex",
     // Vertical: 80 (7xl) min. Horizontal: 48 (4xl). Gap: 80 (7xl).
     padding: `${spacing["7xl"]} ${spacing["4xl"]}`,

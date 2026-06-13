@@ -236,7 +236,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
             // the peach New Appointment CTA).
             variant={primaryActionVariant === "secondary" ? "secondary" : "primary"}
             size="sm"
-            iconLeft={<PlusIcon style={{ width: 'var(--topnav-cta-icon)', height: 'var(--topnav-cta-icon)', fill: '#fff' }} />}
+            iconLeft={<PlusIcon style={{ width: 'var(--topnav-cta-icon)', height: 'var(--topnav-cta-icon)', fill: colors.neutral100 }} />}
             style={{ padding: '0 var(--topnav-cta-padx)' }}
             onClick={onNewAppointment}
           >

@@ -12,7 +12,7 @@ export const styles: Record<string, CSSProperties> = {
 
   tab: {
     padding: "12px 36px",
-    borderRadius: `${radii.primary}px ${radii.primary}px 0 0`,
+    borderRadius: `${radii["2xl"]}px ${radii["2xl"]}px 0 0`,
     border: 0,
     borderBottom: 0,
     backgroundColor: colors.secondary100,

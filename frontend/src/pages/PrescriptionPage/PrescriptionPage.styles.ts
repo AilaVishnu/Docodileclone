@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts, radii, spacing, strokes, fluidSpacing } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes, fluidSpacing, shadows, zIndex } from "../../styles/theme";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Prescription page — baseline scaffold per Figma node 2057:6224
@@ -1673,8 +1673,8 @@ export const styles: Record<string, CSSProperties> = {
     padding: spacing["2xs"],
     display: "flex",
     flexDirection: "column",
-    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
-    zIndex: 1000,
+    boxShadow: shadows.menu,
+    zIndex: zIndex.popover,
     maxHeight: 240,
     overflowY: "auto" as const,
   },

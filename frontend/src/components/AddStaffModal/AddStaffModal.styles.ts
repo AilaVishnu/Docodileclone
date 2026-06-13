@@ -69,7 +69,7 @@ export const confirmStyles: Record<string, CSSProperties> = {
 
   dialog: {
     background: colors.primary100,
-    borderRadius: radii.xxl,
+    borderRadius: radii["2xl"],
     padding: spacing.xl,
     display: "flex",
     flexDirection: "column",

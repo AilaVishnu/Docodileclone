@@ -13,7 +13,7 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing.s,
     backgroundColor: colors.neutral100,
     border: `1px solid ${colors.neutral200}`,
-    borderRadius: radii.xxl,
+    borderRadius: radii["2xl"],
     padding: `${spacing.s} ${spacing.m}`,
     boxShadow: "0 4px 16px rgba(0, 0, 0, 0.1)",
     zIndex: 4000,

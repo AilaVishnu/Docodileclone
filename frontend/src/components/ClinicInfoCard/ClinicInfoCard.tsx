@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, KeyboardEvent } from "react";
 import { Tag } from "../Tag";
 import { styles } from "./ClinicInfoCard.styles";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes, shadows, zIndex } from "../../styles/theme";
 import { ReactComponent as BuildingIcon } from "../../assets/Buildings.svg";
 import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
 import { ReactComponent as LocationIcon } from "../../assets/Map Point.svg";
@@ -324,8 +324,8 @@ const deptMenuStyle: React.CSSProperties = {
   padding: spacing["2xs"],
   display: "flex",
   flexDirection: "column",
-  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
-  zIndex: 1000,
+  boxShadow: shadows.menu,
+  zIndex: zIndex.popover,
   maxHeight: "min(50vh, 480px)",
   overflowY: "auto",
 };
