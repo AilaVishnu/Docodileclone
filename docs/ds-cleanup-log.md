@@ -25,6 +25,8 @@ Reviewing the appointment booking page (BookAppointment). Shipped:
 
 Sequenced next (Tier 1 cont.):
 - **Stats "Overdue reviews"** — only remaining Tier-1 table; trivial 3-col, buried in StatsPage (no story), low value — fold in or skip.
+- **Tables Tier 2 — Stage 1 done:** shared `QueueTable` made production-ready — group separators now the real **centered vertical line** (was a borderTop) + a `hover` prop (subtle highlight on un-toned rows). Confirmed both queues share the exact shape (#/Name/Phone/Service/Type/Time/Status/trailing); only Status (dropdown vs read-only badge) + trailing cell (Pay+kebab vs View Pad) differ → both fit via render-props + rowTone + groupBy. **Next:** migrate AppointmentQueue (has a story to diff against) then PrescriptionQueue (add a story).
+
 - **Tables Tier 2** — QueueTable **mock built** (`components/QueueTable/`, DRAFT): shared queue component — render-prop columns (status badge/dropdown, row actions), `rowTone(row)` status backgrounds, `groupBy(row)` separators. **Responsive via CSS-grid columns** (fixed px + flexible `fr`/`minmax`) — the clean equivalent of spacer columns; the story shows the same table at 1080px vs 720px adapting. **Review the mock, then migrate the real AppointmentQueue + PrescriptionQueue onto it** (one at a time, diff against live behaviour).
 
 ## Round 7 — ModalHeader migration + AddStaff field pass

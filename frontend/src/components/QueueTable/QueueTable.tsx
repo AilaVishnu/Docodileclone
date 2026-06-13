@@ -33,9 +33,11 @@ type QueueTableProps<T> = {
   rowTone?: (row: T) => string | undefined;
   /** Draw a separator when this key changes between consecutive rows. */
   groupBy?: (row: T) => string;
+  /** Subtle hover highlight on rows that have no tone. */
+  hover?: boolean;
 };
 
-export function QueueTable<T>({ columns, rows, rowKey, rowTone, groupBy }: QueueTableProps<T>) {
+export function QueueTable<T>({ columns, rows, rowKey, rowTone, groupBy, hover }: QueueTableProps<T>) {
   const template = columns
     .map((c) => (c.width != null ? `${c.width}px` : `minmax(0, ${c.grow ?? 1}fr)`))
     .join(" ");
@@ -71,10 +73,19 @@ export function QueueTable<T>({ columns, rows, rowKey, rowTone, groupBy }: Queue
       {rows.map((row, i) => {
         const prev = i > 0 ? rows[i - 1] : undefined;
         const separate = !!(groupBy && prev && groupBy(row) !== groupBy(prev));
+        const tone = rowTone?.(row);
         return (
           <React.Fragment key={rowKey(row)}>
-            {separate && <div style={{ borderTop: `${strokes.s} solid ${colors.neutral200}` }} />}
-            <div style={{ ...rowGrid, backgroundColor: rowTone?.(row) ?? "transparent", borderBottom: `${strokes.xs} solid ${colors.primary300}` }}>
+            {separate && (
+              <div style={{ height: 40, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: 1.5, height: 20, backgroundColor: colors.primary300 }} />
+              </div>
+            )}
+            <div
+              style={{ ...rowGrid, backgroundColor: tone ?? "transparent", borderBottom: `${strokes.xs} solid ${colors.primary300}` }}
+              onMouseEnter={hover && !tone ? (e) => { e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.018)"; } : undefined}
+              onMouseLeave={hover && !tone ? (e) => { e.currentTarget.style.backgroundColor = "transparent"; } : undefined}
+            >
               {columns.map((c) => (
                 <div key={c.key} style={cell(c.align)}>{c.render(row)}</div>
               ))}

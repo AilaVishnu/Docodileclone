@@ -58,7 +58,7 @@ const Demo = ({ width, label }: { width: number; label: string }) => (
   <div style={{ marginBottom: 28 }}>
     <div style={{ fontFamily: fonts.family.primary, fontSize: fonts.control.xs, color: colors.neutral500, marginBottom: 6 }}>{label} — {width}px</div>
     <div style={{ width, background: colors.neutral100, borderRadius: radii.l, padding: 8, boxSizing: 'border-box' }}>
-      <QueueTable columns={columns} rows={sorted} rowKey={(r) => r.id} rowTone={(r) => TONE[r.status]} groupBy={(r) => r.status} />
+      <QueueTable columns={columns} rows={sorted} rowKey={(r) => r.id} rowTone={(r) => TONE[r.status]} groupBy={(r) => r.status} hover />
     </div>
   </div>
 );
