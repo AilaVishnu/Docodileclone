@@ -16,7 +16,8 @@ Running record of the component-by-component review (Storybook localhost:6006). 
 - **Stage C (in progress):**
   - ✅ `DosagePicker` deleted — 0 app usages (dead code). If dosage entry is needed later it's `<Select fill="filled">`.
   - ✅ `Select` extended with `fill` ("outline" | "filled") + `chevron` (on/off) — additive; its 9 existing usages are unchanged. Gives the outline/filled × chevron matrix.
-  - ⏳ Next: consolidate the 4 prescription-pad pickers (Duration / Frequency / Interval / When) onto a shared combobox primitive — keeping their type-ahead + external API so `PrescriptionPage` is untouched — then fold the booking chip.
+  - ✅ The 4 prescription-pad pickers (Duration / Frequency / Interval / When) now share one `SuggestionInput` combobox (`src/components/Input/SuggestionInput/`). ~653 lines of duplicate shell → 159 (thin wrappers) + 253 (shared). Each picker's props are byte-identical, so `PrescriptionPage` is untouched. Verified: tsc 0; DurationPicker auto-format ("3"→3 Days/Weeks/…) + WhenPicker chevron list both render & select.
+  - ⏳ Queued: remove `TextInput` (thin alias of `<Field variant="underline">` — 5 call sites) and `UnderlineSelect` (only the chip is used, in booking — fold into a Select pill, then delete). `MeasureField` keeps its behavior (its cream value box is conceptually a `Field` box-filled).
 - Verified: tsc 0 errors, CRA build compiles, Storybook (Field surfaces + Bill modal) render correctly. Pushed.
 
 ## Round 1
