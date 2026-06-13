@@ -5,7 +5,8 @@ import { Card } from "../Card";
 import { StaffDetailsCard } from "../StaffDetailsCard";
 import { Button } from "../Button";
 import { IconButton } from "../IconButton";
-import { styles, confirmStyles } from "./AddStaffModal.styles";
+import { styles } from "./AddStaffModal.styles";
+import { ConfirmDialog } from "../ConfirmDialog";
 import { AdditionalStaffDetailsCard } from "../AdditionalStaffDetailsCard";
 import { styles as roleStyles } from "../AdditionalStaffDetailsCard/AdditionalStaffDetailsCard.styles";
 import { StaffIllustration } from "./StaffIllustration";
@@ -318,32 +319,19 @@ export function AddStaffModal({
       </div>
     </Modal>
 
-    <Modal
+    <ConfirmDialog
       isOpen={showDeleteConfirm}
-      onClose={() => setShowDeleteConfirm(false)}
-      surface={colors.primary100}
-      width={360}
-      level="top"
-    >
-      <div style={confirmStyles.body}>
-        <h4 style={confirmStyles.title}>Remove this staff member?</h4>
-        <p style={confirmStyles.message}>
-          They'll be removed from this clinic and can no longer log in or be
-          booked. Their past appointments and prescriptions stay on record.
-        </p>
-        <div style={confirmStyles.actions}>
-          <Button variant="light" size="sm" onClick={() => setShowDeleteConfirm(false)}>
-            Nope
-          </Button>
-          <Button variant="dark" size="sm" onClick={() => {
-            setShowDeleteConfirm(false);
-            onDelete?.();
-          }}>
-            Yes
-          </Button>
-        </div>
-      </div>
-    </Modal>
+      title="Remove this staff member?"
+      message="They'll be removed from this clinic and can no longer log in or be booked. Their past appointments and prescriptions stay on record."
+      confirmLabel="Yes"
+      cancelLabel="Nope"
+      destructive
+      onConfirm={() => {
+        setShowDeleteConfirm(false);
+        onDelete?.();
+      }}
+      onCancel={() => setShowDeleteConfirm(false)}
+    />
     </>
   );
 }

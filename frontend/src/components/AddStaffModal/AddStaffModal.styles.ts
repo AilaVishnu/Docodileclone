@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, spacing, fonts, radii } from "../../styles/theme";
+import { colors, spacing, fonts } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   header: {
@@ -45,67 +45,5 @@ export const styles: Record<string, CSSProperties> = {
     cursor: "pointer",
     padding: "10px",
     textDecoration: "underline",
-  },
-};
-
-export const confirmStyles: Record<string, CSSProperties> = {
-  // Shared confirm/dialog chrome. Several screens (AppointmentQueue's Pay Due
-  // + cancel dialogs, BookAppointment, HomePage) render their own small modals
-  // off these — keep `overlay` + `dialog` here even though AddStaffModal itself
-  // now uses the canonical <Modal>. Removing them silently breaks those popups
-  // (they fall back to undefined → no backdrop/positioning).
-  overlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1100,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-
-  dialog: {
-    background: colors.primary100,
-    borderRadius: radii["2xl"],
-    padding: spacing.xl,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: spacing.m,
-    boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
-    minWidth: "200px",
-  },
-
-  body: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: spacing.m,
-  },
-
-  title: {
-    fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h6,
-    fontWeight: fonts.weight.medium,
-    color: colors.neutral900,
-    margin: 0,
-  },
-
-  message: {
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.s,
-    color: colors.neutral700,
-    margin: 0,
-    lineHeight: 1.5,
-    textAlign: "center",
-    maxWidth: "320px",
-  },
-
-  actions: {
-    display: "flex",
-    gap: spacing.m,
   },
 };

@@ -23,7 +23,7 @@ import { Select } from "../Input/Select/Select";
 import { Toast } from "../Toast";
 import { Button } from "../Button";
 import { MeasureField } from "../MeasureField";
-import { confirmStyles } from "../AddStaffModal/AddStaffModal.styles";
+import { ConfirmDialog } from "../ConfirmDialog";
 import { API_BASE_URL } from "../../apiConfig";
 import { listServices, ServiceDTO } from "../../api/services";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
@@ -1158,35 +1158,19 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         onClose={() => setToastMessage("")}
       />
 
-      {pendingDupe && (
-        <div style={confirmStyles.overlay}>
-          <div style={confirmStyles.dialog}>
-            <h4 style={confirmStyles.title}>Are you sure?</h4>
-            <p style={{
-              margin: 0,
-              fontFamily: fonts.family.primary,
-              fontSize: fonts.control.sm,
-              color: colors.neutral600,
-              textAlign: "center",
-              lineHeight: 1.5,
-            }}>
-              {pendingDupe.message}
-            </p>
-            <div style={confirmStyles.actions}>
-              <Button variant="light" size="sm" onClick={() => setPendingDupe(null)}>
-                Nope
-              </Button>
-              <Button variant="dark" size="sm" onClick={() => {
-                const p = pendingDupe;
-                setPendingDupe(null);
-                if (p) void handleBook(p.payStatus, p.successMessage, true);
-              }}>
-                Yes, add anyway
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={!!pendingDupe}
+        title="Are you sure?"
+        message={pendingDupe?.message}
+        confirmLabel="Yes, add anyway"
+        cancelLabel="Nope"
+        onConfirm={() => {
+          const p = pendingDupe;
+          setPendingDupe(null);
+          if (p) void handleBook(p.payStatus, p.successMessage, true);
+        }}
+        onCancel={() => setPendingDupe(null)}
+      />
     </div>
   );
 }

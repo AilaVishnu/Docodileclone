@@ -2,6 +2,19 @@
 
 Running record of the component-by-component review (Storybook localhost:6006). Each entry: what was reviewed, the decision, and where it was fixed. Newest first.
 
+## Round 5 — overlays / confirm dialogs
+
+- **New shared `ConfirmDialog`** (`components/ConfirmDialog/`) — the one "are you sure?" dialog, built on `<Modal level="top">` (so it floats above whatever opened it). Props: `title`, `message?`, `confirmLabel`, `cancelLabel?`, `destructive?` (red confirm), `hideCancel?` (alert/single-button), `confirmDisabled?`. Story has Default / Destructive / Alert.
+- **New Button `danger` variant** — solid red CTA (`red100` → `red200` hover), added to `Button.styles.ts` + the variant union. Powers `ConfirmDialog destructive`.
+- **7 hand-rolled confirm overlays migrated** to `<ConfirmDialog>`, exact labels/handlers preserved:
+  - Remove staff (AddStaffModal) → **red**; Cancel appointment (AppointmentQueue) → **red**; End session (SessionBar) → **red**.
+  - Reset timer (SessionBar), Discard new-booking draft (HomePage), "Yes, add anyway" duplicate (BookAppointment) → **dark** (proceed/reset, not destructive).
+  - Walk-in failed (HomePage) → **alert** (`hideCancel`, single OK).
+- **`confirmStyles` deleted** from `AddStaffModal.styles.ts` + all four cross-folder imports removed (AppointmentQueue, SessionBar, HomePage, BookAppointment). Trimmed now-unused `zIndex`/`Button`/`radii` imports.
+- **Z-index bug fixed** — AppointmentQueue's cancel confirm rendered at the bare `confirmStyles.overlay` z-index (1100, *below* other modals); via `ConfirmDialog`/`Modal level="top"` it's now 4100.
+- **Pay Due popup → `Modal`** — the receipt popup (not a confirm) was borrowing `confirmStyles.overlay` as a backdrop; now wrapped in the canonical `<Modal level="top">` (transparent surface, no padding/radius/shadow; backdrop/esc-close off to keep its X/Cancel-only behaviour). No layout change.
+- Verified: `tsc --noEmit` clean, `npm run build` clean (net +184 B), Storybook all three stories render. Judgment call to flag: **only remove/cancel/end are red**; reset-timer + discard-draft stay dark — say if you want those red too.
+
 ## Round 4 — buttons & chips
 
 - **Chip/badge fonts → control** — `Tag` + `StatusBadge` moved from body `fonts.size.s` to `fonts.control.sm` (and Switch hint → `control.xs`), so chips/badges step with the control scale at <1440 (same fix as inputs). Button already used `--btn-fs`.

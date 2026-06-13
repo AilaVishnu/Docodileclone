@@ -159,4 +159,24 @@ export const variants = {
     },
   },
 
+  // danger — solid red CTA for destructive/irreversible actions (cancel
+  // appointment, end session, remove staff). Used by ConfirmDialog destructive.
+  danger: {
+    default: {
+      backgroundColor: colors.red100,
+      borderColor: colors.red100,
+      color: colors.neutral100,
+    },
+    hover: {
+      backgroundColor: colors.red200,
+      borderColor: colors.red200,
+      color: colors.neutral100,
+    },
+    disabled: {
+      backgroundColor: colors.neutral200,
+      borderColor: colors.neutral200,
+      color: colors.neutral500,
+    },
+  },
+
 };

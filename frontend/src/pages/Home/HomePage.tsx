@@ -7,10 +7,9 @@ import { HomeView } from "./HomeView";
 import { StatsPage } from "../Stats";
 import { PharmacyView } from "../Pharmacy";
 import { SettingsPage, DEFAULT_SETTINGS_SECTION, SettingsSection } from "../Settings";
-import { colors, fonts, ThemeMode, zIndex } from "../../styles/theme";
+import { colors, fonts, ThemeMode } from "../../styles/theme";
 import { ComingSoon } from "../../components/ComingSoon/ComingSoon";
-import { confirmStyles } from "../../components/AddStaffModal/AddStaffModal.styles";
-import { Button } from "../../components/Button";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { ChatBubble } from "../../components/Chat/ChatBubble";
 import { setPendingSessionNav } from "../../components/TopNav/SessionTrayButton";
 import { hydrateScheduleFromBackend } from "../../components/DoctorSchedule/scheduleStorage";
@@ -345,22 +344,15 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       currentUserName={localStorage.getItem("docodile_user_email") ?? ""}
     />
 
-    {showConfirm && (
-      <div style={{ ...confirmStyles.overlay, zIndex: zIndex.modalTop }}>
-        <div style={confirmStyles.dialog}>
-          <h4 style={confirmStyles.title}>Are you sure?</h4>
-          <p style={{ margin: 0, fontSize: fonts.size.s, color: colors.neutral600, textAlign: "center" }}>Current booking data will be discarded.</p>
-          <div style={confirmStyles.actions}>
-            <Button variant="light" size="sm" onClick={() => setShowConfirm(false)}>
-              Nope
-            </Button>
-            <Button variant="dark" size="sm" onClick={handleConfirmNewAppointment}>
-              Yes
-            </Button>
-          </div>
-        </div>
-      </div>
-    )}
+    <ConfirmDialog
+      isOpen={showConfirm}
+      title="Are you sure?"
+      message="Current booking data will be discarded."
+      confirmLabel="Yes"
+      cancelLabel="Nope"
+      onConfirm={handleConfirmNewAppointment}
+      onCancel={() => setShowConfirm(false)}
+    />
 
     <NewPrescriptionModal
       isOpen={showNewRxModal}
@@ -369,17 +361,15 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       onAddPatient={handleWalkinNew}
     />
 
-    {walkinError && (
-      <div style={{ ...confirmStyles.overlay, zIndex: zIndex.modalTop }}>
-        <div style={confirmStyles.dialog}>
-          <h4 style={confirmStyles.title}>Walk-in failed</h4>
-          <p style={{ margin: 0, fontSize: fonts.size.s, color: colors.neutral600, textAlign: "center" }}>{walkinError}</p>
-          <div style={confirmStyles.actions}>
-            <Button variant="dark" size="sm" onClick={() => setWalkinError("")}>OK</Button>
-          </div>
-        </div>
-      </div>
-    )}
+    <ConfirmDialog
+      isOpen={!!walkinError}
+      title="Walk-in failed"
+      message={walkinError}
+      confirmLabel="OK"
+      hideCancel
+      onConfirm={() => setWalkinError("")}
+      onCancel={() => setWalkinError("")}
+    />
     </>
   );
 }

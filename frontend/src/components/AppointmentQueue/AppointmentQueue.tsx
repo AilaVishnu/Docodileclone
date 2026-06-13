@@ -3,7 +3,7 @@ import { Tabs, TabItem } from "../Tabs";
 import { QueueTable, Appointment } from "./QueueTable";
 import { styles } from "./AppointmentQueue.styles";
 import { DatePicker } from "../DatePicker/DatePicker";
-import { colors, fonts, radii, spacing, zIndex } from "../../styles/theme";
+import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { BookAppointment, EditAppointmentData } from "./BookAppointment";
 import { PageHeader } from "../PageHeader/PageHeader";
 import { ChevronDown } from "../icons/ChevronDown";
@@ -13,7 +13,8 @@ import { DoctorStatusCard } from "./DoctorStatusCard";
 import { HeatmapCard } from "./HeatmapCard";
 import { Toast } from "../Toast";
 import { Button } from "../Button";
-import { confirmStyles } from "../AddStaffModal/AddStaffModal.styles";
+import { ConfirmDialog } from "../ConfirmDialog";
+import { Modal } from "../Modal";
 import { API_BASE_URL } from "../../apiConfig";
 import { listPharmacyStock, deductPharmacyStock } from "../../api/pharmacy";
 import { getActiveSessions } from "../../api/visits";
@@ -602,25 +603,19 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
         onClose={() => setToastMessage("")}
       />
 
-      {pendingCancelId && (
-        <div style={confirmStyles.overlay}>
-          <div style={confirmStyles.dialog}>
-            <h4 style={confirmStyles.title}>Are you sure?</h4>
-            <div style={confirmStyles.actions}>
-              <Button variant="light" size="sm" onClick={() => setPendingCancelId(null)}>
-                Nope
-              </Button>
-              <Button variant="dark" size="sm" onClick={() => {
-                const id = pendingCancelId;
-                setPendingCancelId(null);
-                if (id) doStatusChange(id, "CANCELLED");
-              }}>
-                Yes
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={!!pendingCancelId}
+        title="Are you sure?"
+        confirmLabel="Yes"
+        cancelLabel="Nope"
+        destructive
+        onConfirm={() => {
+          const id = pendingCancelId;
+          setPendingCancelId(null);
+          if (id) doStatusChange(id, "CANCELLED");
+        }}
+        onCancel={() => setPendingCancelId(null)}
+      />
 
       <BillMedicinesModal
         isOpen={!!medsBillingApt}
@@ -720,7 +715,18 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
         if (pharmacyAmt > 0) services.push({ name: "Pharmacy", price: pharmacyAmt });
         const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         return (
-        <div style={{ ...confirmStyles.overlay, zIndex: zIndex.modalTop }}>
+        <Modal
+          isOpen
+          onClose={() => setPayDueApt(null)}
+          level="top"
+          surface="transparent"
+          padding={0}
+          radius={0}
+          shadow="none"
+          width={360}
+          closeOnBackdrop={false}
+          closeOnEsc={false}
+        >
           <div style={{ display: "flex", flexDirection: "column", width: 360, maxWidth: "92vw" }}>
             {/* Receipt card — patient header + bill body + actions, all
                 under one white sheet so the action buttons read as part
@@ -898,7 +904,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               backgroundRepeat: "repeat-x",
             }} />
           </div>
-        </div>
+        </Modal>
         );
       })()}
     </div>

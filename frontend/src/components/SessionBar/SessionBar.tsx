@@ -1,5 +1,5 @@
 import React, { CSSProperties } from "react";
-import { colors, fonts, radii, spacing, zIndex } from "../../styles/theme";
+import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { ReactComponent as PlayCircleIcon } from "../../assets/icons/play-circle.svg";
 import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
 import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg";
@@ -7,7 +7,7 @@ import { ReactComponent as ShareIcon } from "../../assets/icons/share.svg";
 import { ReactComponent as RestartIcon } from "../../assets/icons/restart.svg";
 import { ReactComponent as StopCircleIcon } from "../../assets/icons/stop-circle.svg";
 import { Button } from "../Button";
-import { confirmStyles } from "../AddStaffModal/AddStaffModal.styles";
+import { ConfirmDialog } from "../ConfirmDialog";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Floating session toolbar — Figma nodes 2255:10871 (idle) and 2036:5233
@@ -439,83 +439,32 @@ export function SessionBar({
       )}
     </div>
 
-    {/* Rendered as a sibling of the bar (NOT inside it) — the bar uses
-        transform: translateX(-50%) which creates a new containing block,
-        which would otherwise clip this overlay to the bar's bounds. */}
-    {showEndConfirm && (
-      <div style={{ ...confirmStyles.overlay, zIndex: zIndex.modalTop }}>
-        <div style={confirmStyles.dialog}>
-          <h4 style={confirmStyles.title}>Are you sure?</h4>
-          <p
-            style={{
-              margin: 0,
-              fontSize: fonts.size.s,
-              color: colors.neutral600,
-              textAlign: "center",
-            }}
-          >
-            This will close the visit. You can hit Restart later to
-            resume editing if the patient comes back.
-          </p>
-          <div style={confirmStyles.actions}>
-            <Button
-              variant="light"
-              size="sm"
-              onClick={() => setShowEndConfirm(false)}
-            >
-              Nope
-            </Button>
-            <Button
-              variant="dark"
-              size="sm"
-              onClick={() => {
-                setShowEndConfirm(false);
-                handleEnd();
-              }}
-            >
-              Yes, end
-            </Button>
-          </div>
-        </div>
-      </div>
-    )}
+    <ConfirmDialog
+      isOpen={showEndConfirm}
+      title="Are you sure?"
+      message="This will close the visit. You can hit Restart later to resume editing if the patient comes back."
+      confirmLabel="Yes, end"
+      cancelLabel="Nope"
+      destructive
+      onConfirm={() => {
+        setShowEndConfirm(false);
+        handleEnd();
+      }}
+      onCancel={() => setShowEndConfirm(false)}
+    />
 
-    {showRestartConfirm && (
-      <div style={{ ...confirmStyles.overlay, zIndex: zIndex.modalTop }}>
-        <div style={confirmStyles.dialog}>
-          <h4 style={confirmStyles.title}>Reset timer?</h4>
-          <p
-            style={{
-              margin: 0,
-              fontSize: fonts.size.s,
-              color: colors.neutral600,
-              textAlign: "center",
-            }}
-          >
-            It will reset the time and will start from the beginning.
-          </p>
-          <div style={confirmStyles.actions}>
-            <Button
-              variant="light"
-              size="sm"
-              onClick={() => setShowRestartConfirm(false)}
-            >
-              Nope
-            </Button>
-            <Button
-              variant="dark"
-              size="sm"
-              onClick={() => {
-                setShowRestartConfirm(false);
-                handleRestart();
-              }}
-            >
-              Yes, reset
-            </Button>
-          </div>
-        </div>
-      </div>
-    )}
+    <ConfirmDialog
+      isOpen={showRestartConfirm}
+      title="Reset timer?"
+      message="It will reset the time and will start from the beginning."
+      confirmLabel="Yes, reset"
+      cancelLabel="Nope"
+      onConfirm={() => {
+        setShowRestartConfirm(false);
+        handleRestart();
+      }}
+      onCancel={() => setShowRestartConfirm(false)}
+    />
     </>
   );
 }
