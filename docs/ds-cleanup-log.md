@@ -2,6 +2,16 @@
 
 Running record of the component-by-component review (Storybook localhost:6006). Each entry: what was reviewed, the decision, and where it was fixed. Newest first.
 
+## Round 3 — input consistency pass
+
+Audited every field (height / font / state colour / chevron / outline / fill) across both tiers. Shipped:
+- **Legible clear ✕** — new shared `ClearButton` (1.5px stroke, neutral900 SVG, = the canonical close glyph). Replaces the tiny `×` in the combobox (`SuggestionInput`) and the browser's native search ✕ on pill-search (suppressed in globals).
+- **Font tokens** — `Field` + `MeasureField` were on fluid *body* fonts (`fonts.size.*`); moved to *control* fonts (`fonts.control.*`) so all fields share the control scale (16→14 at <1440), matching `Select`.
+- **Dead CSS** — repointed the stale `.fill-input` globals rules (FillInput is gone) to `.text-input-field`.
+- Already consistent (no change): heights (`--input-h` 40/32; dense 28), fill (`primary100`), input placeholders (globally `neutral400`).
+
+Still open (queued): chevron-colour rule (Select state-driven vs SuggestionInput neutral700 vs UnderlineSelect neutral600), outline-colour rule (box neutral300 vs pill/cream primary300), MeasureField variant restructure (unit-only / unit-switchable; box+prefix with right-side unit), and the `TextInput` + `UnderlineSelect` deletions.
+
 ## Round 2 — input / field family
 
 ### UnderlineSelect — chip text oversized in Storybook

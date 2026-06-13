@@ -1,6 +1,7 @@
 import React, { CSSProperties, useEffect, useRef, useState } from "react";
 import { colors, fonts, radii, shadows, spacing, strokes, zIndex } from "../../../styles/theme";
 import { ChevronDown } from "../../icons/ChevronDown";
+import { ClearButton } from "../ClearButton";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SuggestionInput — the shared "editable trigger + filtered suggestion menu +
@@ -69,12 +70,6 @@ export function SuggestionInput({
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const clear = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onChange("");
-    inputRef.current?.focus();
-  };
-
   return (
     <div ref={wrapRef} style={{ ...styles.wrap, ...style }}>
       {chevron ? (
@@ -106,9 +101,7 @@ export function SuggestionInput({
             onFocus={() => setOpen(true)}
           />
           {value && (
-            <button type="button" style={styles.clearBtn} onMouseDown={clear} tabIndex={-1}>
-              ×
-            </button>
+            <ClearButton onClear={() => { onChange(""); inputRef.current?.focus(); }} />
           )}
         </div>
       )}

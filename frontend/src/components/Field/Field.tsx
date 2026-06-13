@@ -1,5 +1,6 @@
 import React, { useRef, useCallback, useEffect } from "react";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { ClearButton } from "../Input/ClearButton";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Field — the one canonical text-input primitive. Three looks, assigned by
@@ -54,7 +55,9 @@ const inputBase: React.CSSProperties = {
   outline: "none",
   backgroundColor: "transparent",
   fontFamily: fonts.family.primary,
-  fontSize: fonts.size.m,
+  // Control text (static per tier: 16 → 14 at <1440), not fluid body — inputs
+  // are fixed-height controls. Keeps Field consistent with Select etc.
+  fontSize: fonts.control.md,
   color: colors.neutral900,
 };
 
@@ -179,6 +182,10 @@ export function Field({
             className="text-input-field"
             style={{ ...inputBase, textAlign: align, ...inputStyle }}
           />
+        )}
+
+        {type === "search" && !!value && !disabled && !multiline && (
+          <ClearButton onClear={() => onChange("")} />
         )}
 
         {iconRight && <span style={{ fontSize: fonts.size.m, lineHeight: 1, color: colors.neutral900, opacity: 0.8 }}>{iconRight}</span>}

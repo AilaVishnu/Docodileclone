@@ -63,7 +63,7 @@ export function MeasureField({
 
   const inputBase: React.CSSProperties = {
     flex: 1, minWidth: 0, height: "100%", border: "none", outline: "none", padding: 0,
-    fontSize: fonts.size.s, fontFamily: fonts.family.primary, color: colors.neutral900,
+    fontSize: fonts.control.sm, fontFamily: fonts.family.primary, color: colors.neutral900,
     backgroundColor: "transparent", textAlign: box ? "left" : "center",
   };
 
@@ -75,7 +75,7 @@ export function MeasureField({
       />
       {bp && (
         <>
-          <span style={{ flexShrink: 0, fontSize: fonts.size.s, color: colors.neutral500, padding: `0 ${spacing["3xs"]}`, userSelect: "none" }}>/</span>
+          <span style={{ flexShrink: 0, fontSize: fonts.control.sm, color: colors.neutral500, padding: `0 ${spacing["3xs"]}`, userSelect: "none" }}>/</span>
           <input
             ref={diaRef} inputMode={inputMode} aria-label={ariaLabel2} aria-invalid={invalid || undefined}
             value={value2} onChange={(e) => onChange2?.(e.target.value)} onKeyDown={onKeyDown} onFocus={onFocus} style={inputBase}
@@ -94,14 +94,14 @@ export function MeasureField({
         border: `${strokes.xs} solid ${invalid ? colors.red200 : colors.neutral300}` }}>
         {prefix && (
           <span style={{ display: "flex", alignItems: "center", padding: `0 ${spacing.s}`, color: colors.neutral500,
-            fontSize: fonts.size.m, borderRight: `${strokes.xs} solid ${colors.neutral200}` }}>{prefix}</span>
+            fontSize: fonts.control.md, borderRight: `${strokes.xs} solid ${colors.neutral200}` }}>{prefix}</span>
         )}
         <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", padding: `0 ${spacing.s}` }}>{inputs}</div>
         {unit && (
           <button type="button" onClick={onToggleUnit} title={switchable ? "Switch unit" : undefined}
             style={{ flexShrink: 0, ...(unitWidth ? { width: unitWidth } : { minWidth: 44 }), padding: `0 ${spacing.xs}`,
               display: "flex", alignItems: "center", justifyContent: "center", whiteSpace: "nowrap",
-              fontSize: fonts.size.s, fontFamily: fonts.family.primary, fontWeight: unitFilled ? fonts.weight.medium : undefined,
+              fontSize: fonts.control.sm, fontFamily: fonts.family.primary, fontWeight: unitFilled ? fonts.weight.medium : undefined,
               background: unitFilled ? colors.primary200 : colors.neutral100, border: "none",
               borderLeft: unitFilled ? "none" : `${strokes.xs} solid ${colors.neutral200}`,
               color: unitFilled ? colors.neutral900 : (unitColor ?? (switchable ? colors.neutral800 : colors.neutral500)), cursor: switchable ? "pointer" : "default" }}>{unit}</button>
@@ -115,7 +115,7 @@ export function MeasureField({
     <div style={{ display: "flex", alignItems: "stretch", height, width: "100%" }}>
       {prefix && (
         <span style={{ display: "flex", alignItems: "center", padding: `0 ${spacing.xs}`, color: colors.neutral500,
-          fontSize: fonts.size.m, background: colors.neutral100,
+          fontSize: fonts.control.md, background: colors.neutral100,
           border: `${strokes.xs} solid ${colors.primary300}`, borderRight: "none",
           borderRadius: `${R}px 0 0 ${R}px` }}>{prefix}</span>
       )}
@@ -134,7 +134,7 @@ export function MeasureField({
           style={{
             flexShrink: 0, ...(unitWidth ? { width: unitWidth } : { minWidth: 44 }), padding: `0 ${spacing.xs}`, height: "100%",
             display: "flex", alignItems: "center", justifyContent: "center", whiteSpace: "nowrap",
-            fontSize: fonts.size.s, fontFamily: fonts.family.primary,
+            fontSize: fonts.control.sm, fontFamily: fonts.family.primary,
             backgroundColor: colors.neutral100,
             border: `${strokes.xs} solid ${invalid ? colors.red200 : switchable ? colors.primary500 : colors.primary300}`,
             color: unitColor ?? (switchable ? colors.neutral800 : colors.neutral500),
