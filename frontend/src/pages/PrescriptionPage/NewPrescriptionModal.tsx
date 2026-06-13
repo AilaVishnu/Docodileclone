@@ -6,6 +6,7 @@ import { Patient, usePatients } from "../../hooks/usePatients";
 import { useDoctors } from "../../hooks/useDoctors";
 import { Select } from "../../components/Input/Select/Select";
 import { RadioGroup } from "../../components/Radio";
+import { Field as TextField } from "../../components/Field";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { CalendarIcon } from "../../iconsUtil";
 import { listServices, ServiceDTO } from "../../api/services";
@@ -209,12 +210,11 @@ function PickView({
               quiet ghost button next to Search instead of a primary in the
               footer, so it can't be mistaken for "submit". */}
           <div style={styles.searchRow}>
-            <input
-              type="text"
+            <TextField
+              variant="box"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={setQuery}
               placeholder="Search by name or phone"
-              style={styles.textInput}
             />
             <button type="button" onClick={onAddNew} style={styles.btnGhostCompact}>
               + Add new patient
@@ -413,21 +413,20 @@ function AddView({
       <div style={styles.formCard}>
         {doctorPicker}
         <Field label="Name" required>
-          <input type="text" value={draft.name} onChange={(e) => set("name")(e.target.value)} placeholder="Patient name" style={styles.textInput} />
+          <TextField variant="box" value={draft.name} onChange={set("name")} placeholder="Patient name" />
         </Field>
         <div style={styles.twoCol}>
           <Field label="Phone" required error={draft.phone.length > 0 && !phoneValid ? "Enter a 10-digit number" : undefined}>
-            <input
-              type="text"
+            <TextField
+              variant="box"
               value={draft.phone}
-              onChange={(e) => onPhoneChange(e.target.value)}
+              onChange={onPhoneChange}
               onBlur={onPhoneBlur}
               placeholder="+91 XXXXX XXXXX"
-              style={styles.textInput}
             />
           </Field>
           <Field label="Email (optional)">
-            <input type="text" value={draft.email} onChange={(e) => set("email")(e.target.value)} placeholder="hello@example.com" style={styles.textInput} />
+            <TextField variant="box" value={draft.email} onChange={set("email")} placeholder="hello@example.com" />
           </Field>
         </div>
         <div style={styles.dobAgeRow}>
@@ -452,7 +451,7 @@ function AddView({
           </Field>
           <span style={styles.dobAgeSeparator}>or</span>
           <Field label="Age (years)" required>
-            <input type="text" value={draft.age} onChange={(e) => onAgeChange(e.target.value)} placeholder="Age" style={styles.textInput} />
+            <TextField variant="box" value={draft.age} onChange={onAgeChange} placeholder="Age" />
           </Field>
         </div>
         <Field label="Gender" required>
@@ -503,11 +502,9 @@ function parseDdMmYyyy(s: string): Date | null {
 const styles: Record<string, React.CSSProperties> = {
   container: { display: "flex", flexDirection: "column", gap: spacing.s, width: 520, maxWidth: "92vw" },
 
-  // White-ish form card containing all fields — same shell as Add Stock.
+  // Fields stack directly on the modal surface (no inner card).
   formCard: {
     display: "flex", flexDirection: "column", gap: spacing.s,
-    backgroundColor: colors.neutral100, borderRadius: radii.xl,
-    border: `1px solid ${colors.neutral200}`, padding: spacing.m,
   },
   twoCol: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing.m },
 
@@ -523,15 +520,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: colors.red200, marginTop: 2,
   },
 
-  // Rounded card-shaped inputs on neutral150 fill — same shape as Add Stock.
-  textInput: {
-    width: "100%", height: "var(--input-h, 40px)", boxSizing: "border-box",
-    padding: `0 ${spacing.s}`,
-    border: `1px solid ${colors.neutral300}`, borderRadius: radii.m,
-    backgroundColor: colors.neutral150,
-    fontFamily: fonts.family.primary, fontSize: fonts.control.sm,
-    color: colors.neutral900, outline: "none",
-  },
   // Search input + Add-new-patient ghost button laid out as one row inside
   // the Field, so the add CTA sits next to its "alternative" (Search) and
   // can't be mistaken for a submit action.
@@ -563,10 +551,10 @@ const styles: Record<string, React.CSSProperties> = {
   dobTriggerText: { flex: 1, fontFamily: fonts.family.primary, fontSize: fonts.control.sm },
   dobPickerWrap: { position: "absolute" as const, top: "100%", left: 0, zIndex: 10, marginTop: 4 },
 
-  // Footer with top rule + ghost/primary buttons — same as Add Stock.
+  // Footer — ghost/primary buttons, no top rule.
   footer: {
     display: "flex", alignItems: "center", justifyContent: "flex-end", gap: spacing.s,
-    paddingTop: spacing.s, borderTop: `1px solid ${colors.neutral200}`,
+    paddingTop: spacing.s,
   },
   // Validate-on-click message — sits to the left of the footer buttons,
   // same red token/typography as the per-field error.
