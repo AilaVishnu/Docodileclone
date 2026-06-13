@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { styles } from "./BookAppointment.styles";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
-import { DatePicker } from "../DatePicker/DatePicker";
-import { TimePicker } from "./TimePicker";
 import {
   StethoscopeIcon,
   PulseIcon,
   CalendarIcon,
-  HashtagIcon,
-  ClockIcon
+  HashtagIcon
 } from "../../iconsUtil";
 import { Card } from "../Card/Card";
 import { PageHeader } from "../PageHeader/PageHeader";
@@ -22,6 +19,8 @@ import { MeasureField } from "../MeasureField";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { RadioGroup } from "../Radio";
 import { PatientDetailsForm } from "../PatientDetailsForm";
+import { DateField } from "../DateField";
+import { TimeField } from "../TimeField";
 import { API_BASE_URL } from "../../apiConfig";
 import { listServices, ServiceDTO } from "../../api/services";
 import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
@@ -158,8 +157,6 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     discount: 0.0,
   });
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [dobDigits, setDobDigits] = useState("");
   const [toastMessage, setToastMessage] = useState("");
@@ -676,78 +673,25 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             />
           </Card>
 
-          {(() => {
-            // Walk-in date is the day the patient arrived — a historical
-            // fact, locked on edit alongside the time. New booking flow
-            // stays interactive.
-            const dateLocked = !!editingAppointment && form.isWalkin;
-            return (
-            <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative" }}>
-              <div
-                style={{ ...styles.iconField, borderBottom: "none", cursor: dateLocked ? "not-allowed" : "pointer", padding: 0, opacity: dateLocked ? 0.65 : 1 }}
-                onClick={() => { if (!dateLocked) setShowDatePicker(true); }}
-                title={dateLocked ? "Walk-in date can't be edited" : undefined}
-              >
-                <CalendarIcon style={styles.iconFieldIcon} />
-                <span style={{ fontSize: fonts.size.m, color: form.date ? colors.neutral900 : colors.neutral400 }}>
-                  {formatDate(form.date) || "Select Date"}
-                </span>
-              </div>
-              {showDatePicker && (
-                <DatePicker
-                  selectedDate={form.date}
-                  onSelect={(date: Date) => {
-                    setForm({ ...form, date });
-                    setShowDatePicker(false);
-                  }}
-                  onClose={() => setShowDatePicker(false)}
-                  disablePast
-                />
-              )}
-            </Card>
-            );
-          })()}
+          <DateField
+            value={form.date}
+            onChange={(date) => setForm({ ...form, date })}
+            format={formatDate}
+            disablePast
+            disabled={!!editingAppointment && form.isWalkin}
+            disabledTitle="Walk-in date can't be edited"
+          />
 
-          {(() => {
-            // A walk-in time is the moment the patient arrived — a historical
-            // fact, not a schedulable slot. Lock the time field on edit so
-            // the receptionist can't rewrite it (the rest of the appointment
-            // stays editable). New-booking flow is unaffected.
-            const timeLocked = !!editingAppointment && form.isWalkin;
-            return (
-            <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative", ...(errors.time ? { borderColor: colors.red200, backgroundColor: colors.redAlpha10 } : {}) }}>
-            <div
-              style={{ ...styles.iconField, borderBottom: "none", cursor: timeLocked ? "not-allowed" : "pointer", padding: 0, opacity: timeLocked ? 0.65 : 1 }}
-              onClick={() => { if (!timeLocked) setShowTimePicker(true); }}
-              title={timeLocked ? "Walk-in time can't be edited" : undefined}
-            >
-              <ClockIcon style={styles.iconFieldIcon} />
-              <span style={{ fontSize: fonts.size.m, color: form.time || form.isWalkin ? colors.neutral900 : colors.neutral400 }}>
-                {form.isWalkin ? "Walk-in" : (form.time || "Select Time")}
-              </span>
-            </div>
-            {showTimePicker && (
-              <TimePicker
-                initialTime={form.time}
-                selectedDate={form.date}
-                onSelect={(time: string) => {
-                  // Manually picking a time clears the walk-in flag — the
-                  // intent is now a specific scheduled appointment.
-                  setForm({ ...form, time, isWalkin: false });
-                  setShowTimePicker(false);
-                }}
-                onWalkin={(time: string) => {
-                  // Same scheduled time as Now, but flag the appointment so
-                  // the queue / bill flow treat it as a walk-in.
-                  setForm({ ...form, time, isWalkin: true });
-                  setShowTimePicker(false);
-                }}
-                onClose={() => setShowTimePicker(false)}
-              />
-            )}
-          </Card>
-            );
-          })()}
+          <TimeField
+            value={form.time}
+            onChange={(time) => setForm({ ...form, time, isWalkin: false })}
+            onWalkin={(time) => setForm({ ...form, time, isWalkin: true })}
+            selectedDate={form.date}
+            isWalkin={form.isWalkin}
+            invalid={!!errors.time}
+            disabled={!!editingAppointment && form.isWalkin}
+            disabledTitle="Walk-in time can't be edited"
+          />
           {errors.time && (
             <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginLeft: 4 }}>
               Please select a time

@@ -11,10 +11,13 @@ Reviewing the appointment booking page (BookAppointment). Shipped:
 
 - **PatientDetailsForm built + integrated** (`components/PatientDetailsForm/`) — the name/email/phone/DOB(digit-entry + calendar)/age/gender card lifted out of BookAppointment into a reusable, controlled component (`value`/`onChange` + parent-owned `dobDigits` + `patients` for autocomplete + `locked`/`onSelectExisting`). Story has Default / Locked / WithErrors. **Wired into BookAppointment** (the inline ~220-line card replaced with `<PatientDetailsForm>`); verified via the BookAppointment story — layout + behaviour identical.
 
+- **BookAppointment tidied** — removed the patient-card leftovers the extraction orphaned (state/consts/icon imports/PatientSearchRow/patientSuggStyle).
+- **DateField + TimeField built + integrated** (`components/DateField/`, `components/TimeField/`) — the appointment date/time trigger cards lifted into reusable components wrapping the existing `DatePicker` / `TimePicker`; trigger text moved to the **control-scale font** (was body `fs-m`). Wired into BookAppointment (date/time cards), DatePicker/TimePicker/ClockIcon imports dropped there. Stories: Empty / Filled / Disabled (+ WalkIn for TimeField). Verified — date still renders "13 Jun 2026" via `format={formatDate}`, no regression.
+
 Sequenced next:
-- **Tidy BookAppointment** — remove the now-vestigial patient-card state/styles/imports (showDobPicker, nameSuggestions/phoneSuggestions, UserHands/Letter/Phone icons, PatientSearchRow, the iconField/formCard/suggestion styles) left behind by the extraction.
-- **Reuse PatientDetailsForm** in NewPrescriptionModal's add-patient view.
-- **DateField / TimeField** — wrap the appointment date/time trigger cards over the existing `DatePicker` / `TimePicker`; align their fonts to the control scale.
+- **#2 Reuse PatientDetailsForm** in NewPrescriptionModal's add-patient view (look confirmed = the booking underline-card).
+- **Tables Tier 1** — migrate the 4 read-only tables onto DataGrid.
+- **Tables Tier 2** — QueueTable: mock the shared queue component first (responsive columns + status tones + grouping) for review before migrating the real queues.
 
 ## Round 7 — ModalHeader migration + AddStaff field pass
 
