@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { styles } from "./AddServiceModal.styles";
 import { Service, DiscountMode } from "./types";
 import { Modal } from "../../components/Modal";
-import { IconButton } from "../../components/IconButton";
+import { ModalHeader } from "../../components/ModalHeader";
 import { Button } from "../../components/Button";
 import { Field } from "../../components/Field";
 import { MeasureField } from "../../components/MeasureField";
@@ -88,10 +88,7 @@ export function AddServiceModal({ isOpen, onClose, onSave, initial }: Props) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} surface={colors.neutral100} width={440} padding={spacing.xl}>
       <div style={styles.cardBody}>
-        <div style={styles.header}>
-          <h3 style={styles.title}>{initial ? "Edit Service" : "Add Service"}</h3>
-          <IconButton ariaLabel="Close" onClick={onClose} />
-        </div>
+        <ModalHeader title={initial ? "Edit Service" : "Add Service"} onClose={onClose} />
 
         <div style={styles.form}>
           <div style={{ ...styles.row, gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)" }}>

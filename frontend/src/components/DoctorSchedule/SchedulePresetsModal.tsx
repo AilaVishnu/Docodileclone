@@ -2,6 +2,7 @@ import React from "react";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { Button } from "../Button";
 import { Modal } from "../Modal";
+import { ModalHeader } from "../ModalHeader";
 import { PRESETS, WeekSchedule } from "./scheduleStorage";
 
 type SchedulePresetsModalProps = {
@@ -14,10 +15,7 @@ export function SchedulePresetsModal({ onPick, onCustom, onDismiss }: SchedulePr
   return (
     <Modal isOpen onClose={onDismiss} surface={colors.primary100} width={560}>
       <div style={styles.body}>
-        <p style={styles.title}>Set your hours</p>
-        <p style={styles.subtitle}>
-          Pick a starting point — you can tweak any day after.
-        </p>
+        <ModalHeader title="Set your hours" subtitle="Pick a starting point — you can tweak any day after." align="center" />
 
         <div style={styles.presetGrid}>
           {PRESETS.map((p) => (
@@ -53,20 +51,6 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: "column",
     alignItems: "center",
     gap: spacing.m,
-  },
-  title: {
-    fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h5,
-    fontWeight: 400,
-    color: colors.neutral900,
-    margin: 0,
-  },
-  subtitle: {
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.s,
-    color: colors.neutral600,
-    margin: 0,
-    textAlign: "center",
   },
   presetGrid: {
     display: "grid",

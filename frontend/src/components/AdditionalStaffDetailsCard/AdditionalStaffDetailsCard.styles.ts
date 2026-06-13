@@ -13,10 +13,18 @@ export const styles: Record<string, CSSProperties> = {
     minWidth: "25vw",
   },
 
-  section: {
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    columnGap: spacing.s,
+    rowGap: spacing.m,
+    alignItems: "start",
+  },
+
+  field: {
     display: "flex",
     flexDirection: "column",
-    gap: spacing.m, // was spacing.s — label-to-input breathing
+    gap: spacing["2xs"], // tight label-to-input (matches AddServiceModal)
   },
 
   sectionTitle: {
@@ -28,40 +36,19 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral900,
   },
 
-  fieldRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: spacing.xs,
-    width: "100%",
-  },
-
-  select: {
-    flex: 1,
-    border: "none",
-    outline: "none",
-    backgroundColor: "transparent",
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.s,
-    color: colors.neutral900,
-    cursor: "pointer",
-  },
-
   label: {
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.s,
-    color: colors.neutral900,
-    opacity: 0.8,
-    },
+    fontSize: fonts.size.xs,
+    fontWeight: fonts.weight.medium,
+    color: colors.neutral700,
+  },
 
     hint: {
     fontFamily: fonts.family.primary,
     fontSize: fonts.size.xs,
     color: colors.neutral900,
     opacity: 0.5,
-    // Sits immediately under the Reg. No. input. The parent section uses
-    // gap: spacing.m which spreads the field and the hint too far apart —
-    // pull the hint up so it reads as a caption of the field.
-    marginTop: -8,
+    marginTop: 2,
     },
 
 };

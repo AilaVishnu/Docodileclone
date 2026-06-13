@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Modal } from "../../components/Modal/Modal";
 import { IconButton } from "../../components/IconButton";
+import { ModalHeader } from "../../components/ModalHeader";
 import { Button } from "../../components/Button";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
@@ -224,13 +225,7 @@ export function EditPatientModal({ isOpen, patient, onClose, onSave, onSaved, on
     <Modal isOpen={isOpen} onClose={onClose}>
       <div style={styles.container}>
         {/* Header */}
-        <header style={styles.header}>
-          <div>
-            <h2 style={styles.title}>Edit Patient Info</h2>
-            <p style={styles.subtitle}>Update personal details for this patient</p>
-          </div>
-          <IconButton ariaLabel="Close" onClick={onClose} />
-        </header>
+        <ModalHeader title="Edit Patient Info" subtitle="Update personal details for this patient" onClose={onClose} />
 
         {/* Patient identity strip — cream bg mirrors the prescription patient card */}
         <div style={styles.identityStrip}>

@@ -2,21 +2,6 @@ import { CSSProperties } from "react";
 import { colors, spacing, fonts } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.m, // was spacing.s
-  },
-
-  title: {
-    fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h5,
-    fontWeight: fonts.weight.regular,
-    margin: 0,
-    color: colors.neutral900,
-  },
-
   topSection: {
     display: "flex",
     gap: spacing.m,         // was spacing.s — between illustration and details

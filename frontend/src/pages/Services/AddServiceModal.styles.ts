@@ -8,21 +8,6 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing.l,
   },
 
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  title: {
-    margin: 0,
-    fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h5,
-    lineHeight: fonts.lineHeight.h5,
-    fontWeight: fonts.weight.regular,
-    color: colors.neutral900,
-  },
-
   form: {
     display: "flex",
     flexDirection: "column",

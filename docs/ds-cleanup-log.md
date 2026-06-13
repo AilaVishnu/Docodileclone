@@ -2,6 +2,18 @@
 
 Running record of the component-by-component review (Storybook localhost:6006). Each entry: what was reviewed, the decision, and where it was fixed. Newest first.
 
+## Round 7 — ModalHeader migration + AddStaff field pass
+
+- **6 modals migrated onto `ModalHeader`** — UploadModal, AddStaffModal, AddServiceModal, EditPatientModal (main header only — archive confirm left as-is per earlier call), NewPrescriptionModal, SchedulePresetsModal. Each now renders `<ModalHeader title=… subtitle=… onClose=… align=…>` instead of hand-rolling the header. Removed the per-file `header`/`title`/`subtitle` style objects + the now-unused `IconButton` imports (EditPatientModal keeps both — its archive confirm still uses them).
+- **Look unchanged** for all except **NewPrescriptionModal**, whose title was the lone outlier at **h6** → now **h5** (the standard). Slightly larger; deliberate consistency fix.
+- **AddStaffModal field pass** (AdditionalStaffDetailsCard) — every field is already a defined component (Field / Select / RadioGroup / MeasureField); nothing un-defined. Changes:
+  - **Qualification + Reg. No.** (and the two "Other" free-text inputs) `Field variant="underline"` → **`box`** (icons kept).
+  - **Experience** → **`MeasureField box unit="yrs"`** (matches AddServiceModal's Duration/Price fields); label "Experience (years)" → "Experience".
+  - **Field labels** (Department, Specialty, …) restyled to AddServiceModal's label (`size.xs` / medium / `neutral700`, no opacity).
+- **AddStaff layout pass** (follow-up): doctor fields now one **2-col grid** (equal columns — Reg. No. lines up under Experience; Medical Council no longer double-width); **icons removed** from Department/Specialty/Qualification/Medical Council/Reg. No.; labels tightened right above each input (`field` gap `2xs`). **Role block** restructured — "Role" + icon on the left, options in a **3-col grid** on the right (new `RadioGroup columns` prop), with space after the modal title.
+- Verified: `tsc` clean, `npm run build` clean, Storybook screenshots (AddStaffModal grid + 3-col role; UploadModal centered header).
+- Leftover (flagged, not done): NewPrescriptionModal's **Age** field is still a raw `<input>` (→ `Field`).
+
 ## Round 6 — overlays (cont.): ModalHeader, Radio, Overlays catalog
 
 Reviewing the `Overview/Overlays` page modal-by-modal. Shipped:

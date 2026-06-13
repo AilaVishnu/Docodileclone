@@ -4,9 +4,9 @@ import { Modal } from "../Modal";
 import { Card } from "../Card";
 import { StaffDetailsCard } from "../StaffDetailsCard";
 import { Button } from "../Button";
-import { IconButton } from "../IconButton";
 import { Field } from "../Field";
 import { RadioGroup } from "../Radio";
+import { ModalHeader } from "../ModalHeader";
 import { styles } from "./AddStaffModal.styles";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { AdditionalStaffDetailsCard } from "../AdditionalStaffDetailsCard";
@@ -196,27 +196,25 @@ export function AddStaffModal({
   return (
     <>
     <Modal isOpen={isOpen} onClose={onClose}>
-      {/* Header */}
-      <div style={styles.header}>
-        <h3 style={styles.title}>Add staff member</h3>
+      <ModalHeader title="Add staff member" onClose={onClose} />
 
-        <IconButton ariaLabel="Close" onClick={onClose} />
-      </div>
-
-      {/* Role section — first after the heading. Drives everything else. */}
-      <Card style={{ ...roleStyles.card, marginBottom: 16 }}>
-        <div style={roleStyles.section}>
+      {/* Role section — first after the heading. "Role" + icon on the left,
+          options in a 3-col grid on the right. Drives everything else. */}
+      <Card style={{ ...roleStyles.card, marginTop: 16, marginBottom: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 40,
+            ...(errors.role ? { border: "1px solid red", borderRadius: "8px", padding: "8px" } : {}),
+          }}
+        >
           <div style={roleStyles.sectionTitle}>
             <RoleIcon />
             <span>Role</span>
           </div>
 
-          <div
-            style={{
-              marginLeft: 28, // align the group under the Role icon
-              ...(errors.role ? { border: "1px solid red", borderRadius: "8px", padding: "8px" } : {}),
-            }}
-          >
+          <div style={{ flex: 1 }}>
             <RadioGroup
               name="role"
               value={isOtherRole ? "Other" : role}
@@ -230,20 +228,20 @@ export function AddStaffModal({
                 }
               }}
               options={[...STANDARD_ROLES, "Other"]}
+              columns={3}
             />
+            {isOtherRole && (
+              <div style={{ marginTop: 8 }}>
+                <Field
+                  variant="underline"
+                  value={role}
+                  onChange={setRole}
+                  placeholder="Enter role"
+                  autoFocus
+                />
+              </div>
+            )}
           </div>
-
-          {isOtherRole && (
-            <div style={{ marginLeft: 28, marginTop: 8 }}>
-              <Field
-                variant="underline"
-                value={role}
-                onChange={setRole}
-                placeholder="Enter role"
-                autoFocus
-              />
-            </div>
-          )}
         </div>
       </Card>
 

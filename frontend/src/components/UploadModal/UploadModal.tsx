@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { Modal } from "../Modal/Modal";
-import { IconButton } from "../IconButton";
+import { ModalHeader } from "../ModalHeader";
 import { Button } from "../Button";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 
@@ -57,11 +57,7 @@ export function UploadModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} padding={spacing.xl} radius={16} width={width} surface={surface}>
       <div style={S.container}>
-        <header style={S.header}>
-          <h2 style={S.title}>{title}</h2>
-          {subtitle && <p style={S.subtitle}>{subtitle}</p>}
-          <IconButton ariaLabel="Close" onClick={onClose} style={{ position: "absolute", top: 0, right: 0 }} />
-        </header>
+        <ModalHeader title={title} subtitle={subtitle} onClose={onClose} align="center" />
 
         <button
           type="button"
@@ -100,9 +96,6 @@ export function UploadModal({
 
 const S: Record<string, React.CSSProperties> = {
   container: { display: "flex", flexDirection: "column", gap: spacing.l, width: "100%", maxHeight: "80vh", overflowY: "auto" },
-  header: { position: "relative", textAlign: "center" },
-  title: { margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.regular, color: colors.neutral900 },
-  subtitle: { margin: "4px 0 0", fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral600 },
   dropZone: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: `${spacing.xl} ${spacing.l}`, border: `1.5px dashed ${colors.primary400}`, borderRadius: radii.l, backgroundColor: colors.neutral100, cursor: "pointer", width: "100%", boxSizing: "border-box", fontFamily: fonts.family.primary, transition: "background-color 0.15s ease, border-color 0.15s ease" },
   dropZoneActive: { backgroundColor: colors.primary100, borderColor: colors.primary600 },
   dropTitle: { fontSize: fonts.control.md, color: colors.neutral900, fontWeight: fonts.weight.medium },

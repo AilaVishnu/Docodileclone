@@ -1,6 +1,6 @@
 import React from "react";
 import { Modal } from "../../components/Modal/Modal";
-import { IconButton } from "../../components/IconButton";
+import { ModalHeader } from "../../components/ModalHeader";
 import { Button } from "../../components/Button";
 import { Patient, usePatients } from "../../hooks/usePatients";
 import { useDoctors } from "../../hooks/useDoctors";
@@ -84,19 +84,11 @@ export function NewPrescriptionModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <div style={styles.container}>
-        <header style={styles.header}>
-          <div>
-            <h2 style={styles.title}>
-              {view === "pick" ? "New Prescription" : "Add new patient"}
-            </h2>
-            <p style={styles.subtitle}>
-              {view === "pick"
-                ? "Pick a patient to start a prescription, or add a new one."
-                : "Fill in the patient's basic details."}
-            </p>
-          </div>
-          <IconButton ariaLabel="Close" onClick={onClose} />
-        </header>
+        <ModalHeader
+          title={view === "pick" ? "New Prescription" : "Add new patient"}
+          subtitle={view === "pick" ? "Pick a patient to start a prescription, or add a new one." : "Fill in the patient's basic details."}
+          onClose={onClose}
+        />
 
         {view === "pick" ? (
           <PickView
@@ -510,9 +502,6 @@ function parseDdMmYyyy(s: string): Date | null {
 
 const styles: Record<string, React.CSSProperties> = {
   container: { display: "flex", flexDirection: "column", gap: spacing.s, width: 520, maxWidth: "92vw" },
-  header: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.m },
-  title: { margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h6, lineHeight: fonts.lineHeight.h6, fontWeight: fonts.weight.regular, color: colors.neutral900 },
-  subtitle: { margin: "4px 0 0", fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral600 },
 
   // White-ish form card containing all fields — same shell as Add Stock.
   formCard: {
