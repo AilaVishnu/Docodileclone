@@ -48,4 +48,5 @@ export const Plus: Story = {
 
 export const Disabled: Story = { args: { disabled: true } };
 
-export const Large: Story = { args: { size: 48 } };
+/** 28px — the dense size used in ChatPanel. (32 is the default; there is no larger size in use.) */
+export const Dense: Story = { args: { ariaLabel: 'Close', size: 28 } };
