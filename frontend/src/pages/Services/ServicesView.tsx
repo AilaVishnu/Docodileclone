@@ -190,7 +190,7 @@ export function ServicesView() {
 
       <ConfirmDialog
         isOpen={!!pendingDelete}
-        title="Are you sure you want to delete?"
+        title="Are you sure?"
         message={pendingDelete ? `"${pendingDelete.name}" will be removed from your services catalog.` : undefined}
         confirmLabel="Delete"
         cancelLabel="Cancel"
