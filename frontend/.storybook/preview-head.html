@@ -1,0 +1,19 @@
+<style>
+  /*
+   * Storybook-only canvas overrides — does NOT affect the app.
+   *
+   * The app's globals.css styles the real app shell: it paints the page with the
+   * --sunset gradient (body { background: var(--sunset) }) and locks scrolling
+   * (html, body { overflow: hidden }) because the app has a fixed sidebar/top-nav
+   * and never scrolls the body. Both leak into the Storybook preview iframe via
+   * the globals.css import. For reviewing components we want a flat, scrollable
+   * surface, so neutralize them here.
+   */
+  html,
+  body {
+    background: #ffffff !important; /* neutral100 — flat, easy to review */
+    overflow: auto !important;
+    height: auto !important;
+    min-height: 100%;
+  }
+</style>
