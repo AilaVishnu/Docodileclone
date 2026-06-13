@@ -70,6 +70,7 @@ export function MeasureField({
   const inputs = (
     <>
       <input
+        className={box ? "text-input-field" : "text-input-field is-filled"}
         inputMode={inputMode} aria-label={ariaLabel} aria-invalid={invalid || undefined}
         value={value} onChange={handleFirstChange} onKeyDown={handleFirstKeyDown} onFocus={onFocus} placeholder={placeholder} style={inputBase}
       />
@@ -77,7 +78,7 @@ export function MeasureField({
         <>
           <span style={{ flexShrink: 0, fontSize: fonts.control.sm, color: colors.neutral500, padding: `0 ${spacing["3xs"]}`, userSelect: "none" }}>/</span>
           <input
-            ref={diaRef} inputMode={inputMode} aria-label={ariaLabel2} aria-invalid={invalid || undefined}
+            ref={diaRef} className={box ? "text-input-field" : "text-input-field is-filled"} inputMode={inputMode} aria-label={ariaLabel2} aria-invalid={invalid || undefined}
             value={value2} onChange={(e) => onChange2?.(e.target.value)} onKeyDown={onKeyDown} onFocus={onFocus} style={inputBase}
           />
         </>

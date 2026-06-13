@@ -179,7 +179,7 @@ export function Field({
             list={list}
             autoFocus={autoFocus}
             aria-label={ariaLabel}
-            className="text-input-field"
+            className={fill === "filled" ? "text-input-field is-filled" : "text-input-field"}
             style={{ ...inputBase, textAlign: align, ...inputStyle }}
           />
         )}

@@ -114,7 +114,7 @@ export function Select({
         {selectedOption ? (
           selectedOption.label
         ) : (
-          <span style={styles.placeholder}>{placeholder}</span>
+          <span style={{ ...styles.placeholder, ...(fill === "filled" ? { color: colors.alphaBlack3 } : {}) }}>{placeholder}</span>
         )}
       </div>
 

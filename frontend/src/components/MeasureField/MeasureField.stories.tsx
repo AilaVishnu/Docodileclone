@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'A value box paired with a unit chip — the shared input behind the vitals grid, price (₹ prefix) and quantity/duration fields. The `cream` look is the default; `box` is a white form field. A switchable unit chip (via `onToggleUnit`) reads as a button, and the `bp` variant adds a second systolic/diastolic input.',
+          'A value box + unit chip. Two independent axes: **unit** — none / fixed chip / switchable (via `onToggleUnit`, reads as a button) — and **surface** — `cream` (default) or `box` (white form field; supports a left `prefix` like ₹ together with a right-side unit). `dense` is a separate 28px height modifier (orthogonal to unit); `bp` adds a second systolic/diastolic input. See **AllVariants** for the matrix.',
       },
     },
   },
@@ -121,4 +121,57 @@ export const BloodPressure: Story = {
 /** The invalid (error) state. */
 export const Invalid: Story = {
   args: { value: '999', unit: 'cm', invalid: true },
+};
+
+/** Box + ₹ prefix AND a right-side unit chip (unit-only). */
+export const BoxPrefixWithUnit: Story = {
+  args: { value: '250', box: true, prefix: '₹', unit: '/ strip' },
+};
+
+/** The matrix: cream vs box+prefix × unit-only vs unit-switchable.
+ *  (`dense` is a separate 28px size modifier, shown last.) */
+export const AllVariants: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => {
+    const Cell = ({ label, children }: { label: string; children: React.ReactNode }) => (
+      <div style={{ marginBottom: 14, width: 300 }}>
+        <div style={{ fontSize: 12, color: '#8F8F8F', marginBottom: 4 }}>{label}</div>
+        {children}
+      </div>
+    );
+    const Switchable = ({ box, prefix, units }: { box?: boolean; prefix?: string; units: [string, string] }) => {
+      const [v, setV] = useState('68');
+      const [i, setI] = useState(0);
+      return (
+        <MeasureField
+          box={box}
+          prefix={prefix}
+          value={v}
+          onChange={setV}
+          unit={units[i]}
+          onToggleUnit={() => setI((x) => (x === 0 ? 1 : 0))}
+          unitFilled
+        />
+      );
+    };
+    return (
+      <div>
+        <Cell label="cream · unit-only">
+          <MeasureField value="170" unit="cm" onChange={() => {}} />
+        </Cell>
+        <Cell label="cream · unit-switchable">
+          <Switchable units={['kg', 'lb']} />
+        </Cell>
+        <Cell label="box + prefix · unit-only">
+          <MeasureField box prefix="₹" value="250" unit="/ strip" onChange={() => {}} />
+        </Cell>
+        <Cell label="box + prefix · unit-switchable">
+          <Switchable box prefix="₹" units={['/ strip', '/ unit']} />
+        </Cell>
+        <Cell label="dense — 28px size modifier (with unit)">
+          <MeasureField value="98.6" unit="°F" dense onChange={() => {}} />
+        </Cell>
+      </div>
+    );
+  },
 };

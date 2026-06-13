@@ -15,7 +15,10 @@ Decisions applied:
 - **Outline keeps the warm `primary300` border on pill/cream** (box stays `neutral300`) — confirmed, no change.
 - **`TextInput` removed** — its 5 call sites repointed to `<Field variant="underline">`, component deleted. (Two files had a local `Field` helper, so they import it as `Field as TextField`.)
 
-Still open: `UnderlineSelect` removal (fold the booking chip → a `Select` pill, then delete) and the MeasureField variant restructure (unit-only / unit-switchable; box+prefix with right-side unit).
+- **Filled placeholder → `alphaBlack3`** (translucent) on all filled inputs (Field / Select / SuggestionInput / MeasureField) via an `is-filled` class — the empty-state text now reads on the cream instead of a flat grey.
+- **MeasureField** story reorganised to the matrix `(cream | box+prefix) × (unit-only | unit-switchable)` + `dense` shown as a size note. (with-unit vs dense = independent axes: unit = a chip, dense = 28px height.)
+
+Still open: `UnderlineSelect` removal (fold the booking chip → a `Select` pill, then delete) — the final item.
 
 ## Round 2 — input / field family
 

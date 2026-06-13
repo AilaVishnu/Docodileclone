@@ -81,7 +81,7 @@ export function SuggestionInput({
           aria-expanded={open}
           aria-label={ariaLabel}
         >
-          <span style={{ ...styles.triggerText, ...(value ? { color: colors.neutral900 } : {}) }}>
+          <span style={{ ...styles.triggerText, color: value ? colors.neutral900 : colors.alphaBlack3 }}>
             {value || placeholder}
           </span>
           <span style={styles.chevron}>
@@ -92,6 +92,7 @@ export function SuggestionInput({
         <div style={styles.inputWrap}>
           <input
             ref={inputRef}
+            className="text-input-field is-filled"
             style={styles.input}
             placeholder={placeholder}
             value={value}

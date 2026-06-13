@@ -93,6 +93,11 @@ textarea::placeholder {
   color: #ABABAB !important; /* colors.neutral400 */
   opacity: 1;
 }
+/* Filled (cream) inputs use a translucent placeholder (alphaBlack3) so the
+   default text reads against the cream fill rather than as a flat grey. */
+.text-input-field.is-filled::placeholder { color: rgba(0, 0, 0, 0.3) !important; }
+.text-input-field.is-filled::-webkit-input-placeholder { color: rgba(0, 0, 0, 0.3) !important; }
+.text-input-field.is-filled::-moz-placeholder { color: rgba(0, 0, 0, 0.3) !important; opacity: 1; }
 input::-webkit-input-placeholder,
 textarea::-webkit-input-placeholder {
   color: #ABABAB !important;
