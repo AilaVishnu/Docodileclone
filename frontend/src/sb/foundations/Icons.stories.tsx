@@ -74,3 +74,50 @@ export const Library: Story = {
     </Page>
   ),
 };
+
+// ── Duplicate concepts — two glyphs for one idea, both live in the app ───────
+const Opt = ({ name, use }: { name: string; use: string }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E3E3E3', borderRadius: 8, background: '#fff', flexShrink: 0 }}>
+      <Icon name={name} />
+    </div>
+    <div>
+      <div style={{ fontSize: 13, color: '#202020' }}>{name}</div>
+      <div style={{ fontSize: 11, color: '#888' }}>{use}</div>
+    </div>
+  </div>
+);
+
+const DUP_PAIRS: { concept: string; a: string; aUse: string; b: string; bUse: string }[] = [
+  { concept: 'calendar', a: 'calendar', aUse: 'Rx pad', b: 'calendar-alt', bUse: 'BillModal · date/patient pickers' },
+  { concept: 'pulse', a: 'pulse', aUse: 'Rx pad', b: 'pulse-alt', bUse: 'BookAppointment (Service)' },
+  { concept: 'envelope', a: 'letter', aUse: 'Rx pad', b: 'mail', bUse: 'Login · Staff · SetupPassword' },
+  { concept: 'restart', a: 'restart', aUse: 'SessionBar', b: 'restart-24', bUse: 'Rx pad' },
+  { concept: 'bill-check', a: 'bill-check', aUse: 'BookAppointment', b: 'bill-check-small', bUse: 'Rx pad' },
+  { concept: 'hourglass', a: 'hourglass', aUse: 'DoctorStatusCard', b: 'hourglass-line', bUse: 'Rx pad' },
+  { concept: 'users group', a: 'users-group', aUse: 'DoctorStatusCard', b: 'users-group-rounded', bUse: 'Rx pad' },
+  { concept: 'person', a: 'user', aUse: 'DoctorStatusCard · Rx pad', b: 'user-hands', bUse: 'Staff · PatientForm' },
+];
+
+/** The 8 "same concept, two glyphs" pairs still live in the app — pick one per row to merge. */
+export const DuplicatePairs: Story = {
+  render: () => (
+    <Page
+      title="Duplicate concepts — pick one per row"
+      intro="Each row is two different glyphs for the same idea, both currently used in the app. Pick the one to keep; I re-point the screens onto it and drop the other."
+    >
+      <div>
+        {DUP_PAIRS.map((p) => (
+          <div
+            key={p.concept}
+            style={{ display: 'grid', gridTemplateColumns: '110px 1fr 1fr', alignItems: 'center', gap: 16, padding: '14px 4px', borderBottom: '1px solid #E3E3E3' }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 500, color: '#202020' }}>{p.concept}</div>
+            <Opt name={p.a} use={p.aUse} />
+            <Opt name={p.b} use={p.bUse} />
+          </div>
+        ))}
+      </div>
+    </Page>
+  ),
+};
