@@ -160,14 +160,19 @@ DECISION (per the 4-question review):
 - _Follow-up:_ (a) full `<DataTable>` component (**still open**); (b) ✅ DONE (2026-06-13) — the `PatientFilesPage` → `AppointmentQueue.styles` cross-page coupling is removed: PatientFilesPage now composes its table look in its own `PatientFilesPage.styles.ts`, built from the shared `tableStyles` primitives (`tableHeadCell` / `tableDivider`); identical rendering, no dependency on the queue component; (c) unknown rx statuses now render as a grey pill (StatusBadge fallback) instead of grey text — minor, arguably nicer.
 - ⚠️ NOT click-tested live (login wall) — `tsc --noEmit` 0 errors. Spot-check please: **prescription queue** pills (esp. a started session → "Ongoing" sage pill; and that the appointment queue's live timer is unaffected) and the **Stats** overdue/dues table header (now soft-black, lighter).
 
-## 8. Icons — _🔧 PARTIAL: safe-cleanup shipped 2026-06-11; rest deferred_
+## 8. Icons — _✅ BUILT: the canonical `<Icon>` system shipped 2026-06-14_
 IDs: `ICON-dups-1a..5b`, `ICON-chevron-1..3`, `ICON-close-1..4`, `ICON-size-*`, `ICON-color-*`, `ICON-CANON-*`.
 DECISION:
 - **Canonical approved** ("icon-canon proposed ones are fine"): one `<Icon name size color>` @24 + `currentColor`, every asset normalized to `viewBox 0 0 24 24`.
 - **Scope = SAFE CLEANUP ONLY** (user's pick, since the live app can't be click-tested behind the login wall). The risky/visual parts are deferred.
 - ✅ BUILT (shipped): **deleted the 8 truly-dead `.svg` files** (verified 0 refs): `circle-outline`, `circle-outline-2`, `chevron-down-dark`, `chevron-down-light`, `horizontal-line-short-2`, `vertical-line-tall`, `stethoscope-cup`, `curved-connector`. Gallery imports/tiles for those updated so the build stays green.
   - ⚠️ **Audit was wrong:** it listed 11 dead files, but **3 are still in use** — `bill-check-small.svg` (PrescriptionPage:9), `users-group-rounded.svg` (PrescriptionPage:22), `paid-stamp.svg` (BillCard:6) — so only 8 were deleted.
-- ⏸️ **DEFERRED (needs click-testing — visual changes):** the shared `<Icon>` component + registry; stripping baked hex → `currentColor` on the ~11 colour-baked assets (would re-colour icons across screens); merging the LIVE look-alikes (`restart`/`restart-24` differ on stroke width, etc.); swapping inline ✕/chevron redraws for the component. (Note the ChatPanel single-diagonal ✕ "slash" bug from `ICON-close-2` was already fixed in the Buttons phase via `IconButton`.)
+- ✅ DONE (2026-06-14) — the deferred work is built + shipped:
+  - **`components/Icon`** is the canonical icon: one `<Icon name size tone|color disabled>`, default **24px / neutral900**, `currentColor`-driven. `size={20}` (small) and `disabled` (→ neutral400) are **props, not new SVGs**; `tone="inherit"`/`"inverse"`/`color` cover the recolour cases.
+  - A **static registry** (`iconRegistry.ts`) holds ~80 icons — static imports, because CRA does NOT apply SVGR to `require.context` (a folder-auto registry silently yields URLs, not components). **`MULTICOLOR_ICONS`** flags brand/illustrative glyphs (check-circle, danger-triangle, paid-stamp, stopwatch, user, …) so `<Icon>` leaves their baked palette alone. **Foundations/Icons** now auto-renders every registered icon (was a hand-listed 25).
+  - **All app consumers migrated** to `<Icon>` (SideNav/TopNav, clinic + staff cards, billing, the whole AppointmentQueue family, the 31-icon Rx pad, pharmacy, the date/time/patient form fields), and **`iconsUtil.tsx` is deleted** — the old 24-wrapper system is gone.
+  - Normalized the monochrome icons' baked `#202020` / off-palette `#1C274C` slate → `currentColor` so they recolour/disable/theme. Deduped the root↔`icons/` twins: kept the in-use glyph for `phone`/`plus` (dropped the dead twins); the genuinely-different `calendar` and `pulse` coexist as `calendar-alt` / `pulse-alt`.
+  - _Still raw (deliberate, out of scope):_ ZeroQueue + logos (illustrations, not icons); the BuildYourClinic onboarding page + the AuditGallery showcase (separate dev surfaces). `tsc` + `build` green throughout; verified per-component in Storybook.
 - `tsc --noEmit` 0 errors.
 
 ## 9. Colors outside tokens — _✅ BUILT 2026-06-11_

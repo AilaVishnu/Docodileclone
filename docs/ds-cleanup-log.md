@@ -2,6 +2,17 @@
 
 Running record of the component-by-component review (Storybook localhost:6006). Each entry: what was reviewed, the decision, and where it was fixed. Newest first.
 
+## Category 8 — Icons: canonical `<Icon>` system built + every consumer migrated (2026-06-14)
+
+Closed the long-deferred icon work end to end (13 commits, `2e8a5f3` → `eb9f0db`).
+
+- **Component:** `components/Icon/Icon.tsx` — one `<Icon name size tone|color disabled>`; 24px/neutral900 default, currentColor-driven; `size={20}` + `disabled` are props (not new SVGs). `tone`: default/muted/disabled/inverse/inherit.
+- **Registry:** `iconRegistry.ts` — ~80 icons via **static** SVGR imports (CRA won't apply SVGR through `require.context` — learned the hard way: it yields URL strings). `MULTICOLOR_ICONS` keeps brand/illustrative glyphs on their palette. `Foundations/Icons` auto-renders the full set (was a hand-listed 25).
+- **Normalize:** monochrome icons' baked `#202020` (+ off-palette `#1C274C` slate) → `currentColor` so they recolour/disable/theme. Nav glyphs now follow active state like Settings already did.
+- **Migration:** all ~26 app consumers swapped from raw `ReactComponent`/`iconsUtil` to `<Icon>` — non-clinical first, then billing/session, then the AppointmentQueue family (story-verified), then the 31-icon Rx pad (subagent + my verify), then the date/time/patient fields. **`iconsUtil.tsx` deleted** — old system retired.
+- **Dedup:** kept the in-use glyph for `phone`/`plus` (dropped the dead `icons/` twins); the genuinely-different `calendar`/`pulse` coexist as `calendar-alt`/`pulse-alt`.
+- **Left raw (deliberate):** ZeroQueue + logos (illustrations); BuildYourClinic onboarding + AuditGallery showcase (separate dev surfaces). tsc + build green at every commit; per-component Storybook verification. Full detail in ui-decisions.md §8.
+
 ## Loose ends — 3 flagged follow-ups closed (2026-06-13)
 
 - **Deleted the orphaned shared `QueueTable` mock** (`components/QueueTable/` — .tsx + .stories + index). It was a Tier-2 draft; with the queue migration reverted nothing imports it (verified 0 refs), so it's gone along with its `Components/QueueTable` story.
