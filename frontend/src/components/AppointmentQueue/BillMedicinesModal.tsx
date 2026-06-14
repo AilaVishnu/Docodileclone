@@ -5,7 +5,7 @@ import { Button } from "../Button";
 import { IconButton } from "../IconButton";
 import { Select } from "../Input/Select/Select";
 import { RadioGroup } from "../Radio";
-import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
+import { Icon } from "../Icon";
 
 type Medicine = {
   id: string;
@@ -214,7 +214,7 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
                           aria-label={`Remove ${m.name}`}
                           title="Remove from bill"
                         >
-                          <TrashIcon width={16} height={16} />
+                          <Icon name="trash" size={16} tone="inherit" />
                         </button>
                       </td>
                     </tr>

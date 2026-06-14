@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { styles } from "./AppointmentQueue.styles";
 import { fonts, colors } from "../../styles/theme";
 import { StatusBadge, PayBadge } from "./StatusBadge";
-import { ReactComponent as ReorderDotsIcon } from "../../assets/icons/reorder.svg";
+import { Icon } from "../Icon";
 import { ZeroQueue } from "./ZeroQueue";
 import { loadStartedSet } from "../../utils/sessionStarted";
 
@@ -215,7 +215,7 @@ function ActionMenu({
         style={styles.actionButton}
         onClick={() => setIsOpen(!isOpen)}
       >
-        <ReorderDotsIcon width={24} height={24} />
+        <Icon name="reorder" size={24} tone="inherit" />
       </button>
       {isOpen && (
         <div

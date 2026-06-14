@@ -2,11 +2,7 @@ import React from "react";
 import { colors, fonts } from "../../styles/theme";
 import { cardSurface } from "../Card/Card.styles";
 import { StaffIllustration } from "../AddStaffModal/StaffIllustration";
-import { ReactComponent as IconStopwatch } from "../../assets/icons/stopwatch.svg";
-import { ReactComponent as IconUser } from "../../assets/icons/user.svg";
-import { ReactComponent as IconHourglass } from "../../assets/icons/hourglass.svg";
-import { ReactComponent as IconUserCheck } from "../../assets/icons/user-check.svg";
-import { ReactComponent as IconUsersGroup } from "../../assets/icons/users-group.svg";
+import { Icon } from "../Icon";
 
 type DoctorStatusCardProps = {
   doctorName: string;
@@ -79,7 +75,7 @@ export function DoctorStatusCard({
         <div style={cardStyles.divider} />
 
         <StatRow
-          icon={<IconStopwatch />}
+          icon={<Icon name="stopwatch" />}
           text={
             <span>
               <span style={statStyles.label}>At the doc : </span>
@@ -91,7 +87,7 @@ export function DoctorStatusCard({
         />
 
         <StatRow
-          icon={<IconUser />}
+          icon={<Icon name="user" />}
           text={
             <span>
               <span style={statStyles.label}>Waiting : </span>
@@ -101,7 +97,7 @@ export function DoctorStatusCard({
         />
 
         <StatRow
-          icon={<IconHourglass />}
+          icon={<Icon name="hourglass" />}
           text={
             <span>
               <span style={statStyles.label}>Wait time : </span>
@@ -111,7 +107,7 @@ export function DoctorStatusCard({
         />
 
         <StatRow
-          icon={<IconUserCheck />}
+          icon={<Icon name="user-check" />}
           text={
             <span>
               <span style={statStyles.label}>Completed : </span>
@@ -123,7 +119,7 @@ export function DoctorStatusCard({
         <div style={cardStyles.divider} />
 
         <StatRow
-          icon={<IconUsersGroup />}
+          icon={<Icon name="users-group" />}
           text={
             <span>
               <span style={statStyles.label}>Total : </span>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { fonts, colors, radii } from "../../styles/theme";
-import { ReactComponent as DangerTriangleIcon } from "../../assets/icons/danger-triangle.svg";
-import { ReactComponent as CheckCircleIcon } from "../../assets/icons/check-circle.svg";
+import { Icon } from "../Icon";
 
 // H:MM:SS once past an hour, MM:SS below.
 const formatTimer = (s: number) => {
@@ -58,14 +57,14 @@ const PAY_CONFIG: Record<
   PAID: {
     color: colors.neutral900,
     label: "Paid",
-    icon: <CheckCircleIcon width={24} height={24} />,
+    icon: <Icon name="check-circle" size={24} />,
   },
   // DUE is the single "owing" state. UNPAID / "NO PAY" / any unknown pay status
   // all fall through to DUE below, so they render identically with no extra config.
   DUE: {
     color: colors.neutral900,
     label: "Due",
-    icon: <DangerTriangleIcon width={24} height={24} />,
+    icon: <Icon name="danger-triangle" size={24} />,
   },
 };
 
