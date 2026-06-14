@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { colors, fonts, radii, spacing } from '../../styles/theme';
 import { Button } from '../Button';
-import { MessageIcon, BellIcon } from '../../iconsUtil';
+import { Icon } from '../Icon';
 import { StaffIllustration } from '../AddStaffModal/StaffIllustration';
-import { ReactComponent as PlusIcon } from '../../assets/Plus.svg';
 import type { NavTab } from '../SideNav';
 import { SessionTrayButton } from './SessionTrayButton';
 import { HeaderPatientSearch } from './HeaderPatientSearch';
@@ -236,7 +235,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
             // the peach New Appointment CTA).
             variant={primaryActionVariant === "secondary" ? "secondary" : "primary"}
             size="sm"
-            iconLeft={<PlusIcon style={{ width: 'var(--topnav-cta-icon)', height: 'var(--topnav-cta-icon)', fill: colors.neutral100 }} />}
+            iconLeft={<Icon name="plus" tone="inverse" style={{ width: 'var(--topnav-cta-icon)', height: 'var(--topnav-cta-icon)' }} />}
             style={{ padding: '0 var(--topnav-cta-padx)' }}
             onClick={onNewAppointment}
           >
@@ -247,10 +246,10 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
         <div style={styles.iconGroup}>
           {onNavigate && <SessionTrayButton onNavigate={onNavigate} />}
           <HoverIconButton>
-            <MessageIcon />
+            <Icon name="message" tone="inherit" />
           </HoverIconButton>
           <HoverIconButton>
-            <BellIcon />
+            <Icon name="bell" tone="inherit" />
           </HoverIconButton>
         </div>
 

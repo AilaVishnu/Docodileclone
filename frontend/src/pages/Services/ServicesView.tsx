@@ -6,7 +6,6 @@ import { Service } from "./types";
 import { AddServiceModal } from "./AddServiceModal";
 import { Button } from "../../components/Button";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
-import { PlusIcon } from "../../iconsUtil";
 import { Icon } from "../../components/Icon";
 import {
   listServices,
@@ -128,7 +127,7 @@ export function ServicesView() {
             <button type="button" style={styles.clearBtn} onClick={() => setSearch("")} aria-label="Clear search">×</button>
           )}
         </div>
-        <Button variant="dark" size="md" iconLeft={<PlusIcon style={{ width: 16, height: 16 }} />} onClick={openAdd}>
+        <Button variant="dark" size="md" iconLeft={<Icon name="plus" tone="inherit" size={16} />} onClick={openAdd}>
           Add Service
         </Button>
       </div>

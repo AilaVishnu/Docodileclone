@@ -1,14 +1,5 @@
 import React from 'react';
-import {
-  HomeIcon,
-  AppointmentsIcon,
-  PrescriptionIcon,
-  PatientFilesIcon,
-  ServicesIcon,
-  BillingIcon,
-  BusinessIcon,
-  PharmacyIcon
-} from '../../iconsUtil';
+import { Icon } from "../Icon";
 import { SideNavItem } from './SideNavItem';
 import { ReactComponent as LogoSmall } from "../../assets/logo-small.svg";
 import { colors } from "../../styles/theme";
@@ -71,14 +62,14 @@ export function SideNav({ activeTab, onTabChange }: SideNavProps) {
   // in the compact sidebar. Keep them separate so the wording can change
   // without touching navigation / persisted tab state.
   const menuItems: { label: NavTab; display: string; icon: React.ReactNode }[] = [
-    { label: 'Home', display: 'Home', icon: <HomeIcon /> },
-    { label: 'Appointments', display: 'Appts', icon: <AppointmentsIcon /> },
-    { label: 'Prescription', display: 'Rx Pad', icon: <PrescriptionIcon /> },
-    { label: 'Patient Files', display: 'Patients', icon: <PatientFilesIcon /> },
-    { label: 'Services', display: 'Catalog', icon: <ServicesIcon /> },
-    { label: 'Billing', display: 'Bills', icon: <BillingIcon /> },
-    { label: 'Stats', display: 'Stats', icon: <BusinessIcon /> },
-    { label: 'Pharmacy', display: 'Meds', icon: <PharmacyIcon /> },
+    { label: 'Home', display: 'Home', icon: <Icon name="home" tone="inherit" /> },
+    { label: 'Appointments', display: 'Appts', icon: <Icon name="appointments" tone="inherit" /> },
+    { label: 'Prescription', display: 'Rx Pad', icon: <Icon name="prescription" tone="inherit" /> },
+    { label: 'Patient Files', display: 'Patients', icon: <Icon name="patient-files" tone="inherit" /> },
+    { label: 'Services', display: 'Catalog', icon: <Icon name="services" tone="inherit" /> },
+    { label: 'Billing', display: 'Bills', icon: <Icon name="billing" tone="inherit" /> },
+    { label: 'Stats', display: 'Stats', icon: <Icon name="business" tone="inherit" /> },
+    { label: 'Pharmacy', display: 'Meds', icon: <Icon name="pharmacy-nav" tone="inherit" /> },
     { label: 'Settings', display: 'Config', icon: <SettingsIcon /> },
   ];
 

@@ -44,7 +44,6 @@ import { ReactComponent as Ic_pen } from "../../assets/icons/pen.svg";
 import { ReactComponent as Ic_pills } from "../../assets/icons/pills.svg";
 import { ReactComponent as Ic_play_circle } from "../../assets/icons/play-circle.svg";
 import { ReactComponent as Ic_play } from "../../assets/icons/play.svg";
-import { ReactComponent as Ic_plus } from "../../assets/icons/plus.svg";
 import { ReactComponent as Ic_printer } from "../../assets/icons/printer.svg";
 import { ReactComponent as Ic_pulse } from "../../assets/icons/pulse.svg";
 import { ReactComponent as Ic_reorder } from "../../assets/icons/reorder.svg";
@@ -100,6 +99,7 @@ import { ReactComponent as Root_map_point } from "../../assets/Map Point.svg";
 import { ReactComponent as Root_stethoscope } from "../../assets/Stethoscope.svg";
 import { ReactComponent as Root_user_hands } from "../../assets/User Hands.svg";
 import { ReactComponent as Root_mask_happy } from "../../assets/Mask Happly.svg";
+import { ReactComponent as Root_plus } from "../../assets/Plus.svg";
 
 export const ICONS: Record<string, SvgComponent> = {
   "arrow-left": Ic_arrow_left,
@@ -134,7 +134,7 @@ export const ICONS: Record<string, SvgComponent> = {
   "pills": Ic_pills,
   "play-circle": Ic_play_circle,
   "play": Ic_play,
-  "plus": Ic_plus,
+  "plus": Root_plus,
   "printer": Ic_printer,
   "pulse": Ic_pulse,
   "reorder": Ic_reorder,
