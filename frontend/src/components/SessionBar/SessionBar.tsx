@@ -1,11 +1,6 @@
 import React, { CSSProperties } from "react";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
-import { ReactComponent as PlayCircleIcon } from "../../assets/icons/play-circle.svg";
-import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
-import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg";
-import { ReactComponent as ShareIcon } from "../../assets/icons/share.svg";
-import { ReactComponent as RestartIcon } from "../../assets/icons/restart.svg";
-import { ReactComponent as StopCircleIcon } from "../../assets/icons/stop-circle.svg";
+import { Icon } from "../Icon";
 import { Button } from "../Button";
 import { ConfirmDialog } from "../ConfirmDialog";
 
@@ -323,17 +318,17 @@ export function SessionBar({
           )}
           {onPrint && (
             <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
-              <PrinterIcon width={24} height={24} />
+              <Icon name="printer" size={24} tone="inherit" />
             </button>
           )}
           {onDownload && (
             <button type="button" style={styles.iconBtn} onClick={onDownload} aria-label="Download">
-              <DownloadIcon width={24} height={24} />
+              <Icon name="download" size={24} tone="inherit" />
             </button>
           )}
           {onShare && (
             <button type="button" style={styles.iconBtn} onClick={onShare} aria-label="Share">
-              <ShareIcon width={24} height={24} />
+              <Icon name="share" size={24} tone="inherit" />
             </button>
           )}
         </div>
@@ -382,17 +377,17 @@ export function SessionBar({
             )}
             {onPrint && (
               <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
-                <PrinterIcon width={24} height={24} />
+                <Icon name="printer" size={24} tone="inherit" />
               </button>
             )}
             {onDownload && (
               <button type="button" style={styles.iconBtn} onClick={onDownload} aria-label="Download">
-                <DownloadIcon width={24} height={24} />
+                <Icon name="download" size={24} tone="inherit" />
               </button>
             )}
             {onShare && (
               <button type="button" style={styles.iconBtn} onClick={onShare} aria-label="Share">
-                <ShareIcon width={24} height={24} />
+                <Icon name="share" size={24} tone="inherit" />
               </button>
             )}
           </div>
@@ -419,7 +414,7 @@ export function SessionBar({
             onClick={() => setShowRestartConfirm(true)}
             aria-label="Restart session timer"
           >
-            <RestartIcon width={18} height={18} />
+            <Icon name="restart" size={18} tone="inherit" />
           </button>
           <button
             type="button"
@@ -427,13 +422,13 @@ export function SessionBar({
             onClick={() => setShowEndConfirm(true)}
             aria-label="End session"
           >
-            <StopCircleIcon width={18} height={18} />
+            <Icon name="stop-circle" size={18} tone="inherit" />
           </button>
         </div>
       ) : (
         // Idle — only the green Start Session button, no other icons.
         <button type="button" style={styles.startBtn} onClick={handleStart} aria-label="Start session">
-          <PlayCircleIcon style={styles.startIcon} width={24} height={24} />
+          <Icon name="play-circle" size={24} tone="inherit" style={styles.startIcon} />
           <span>Start Session</span>
         </button>
       )}

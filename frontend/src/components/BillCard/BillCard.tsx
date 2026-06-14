@@ -2,9 +2,7 @@ import React, { useState } from "react";
 import { styles } from "./BillCard.styles";
 import { colors, spacing } from "../../styles/theme";
 import { RadioGroup } from "../Radio";
-import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
-import { ReactComponent as ScaleIcon } from "../../assets/icons/scale.svg";
-import { ReactComponent as PaidStamp } from "../../assets/icons/paid-stamp.svg";
+import { Icon } from "../Icon";
 
 type BillCardProps = {
   paymentMethod: string;
@@ -57,9 +55,9 @@ export function BillCard({
   return (
     <div style={{ ...styles.wrapper, position: "relative" }}>
       {isPaid && (
-        <PaidStamp
-          width={80}
-          height={80}
+        <Icon
+          name="paid-stamp"
+          size={80}
           style={{
             position: "absolute",
             right: "-35px",
@@ -72,8 +70,8 @@ export function BillCard({
         <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <h3 style={styles.title}>Bill</h3>
           <div style={{ position: "absolute", right: 0, display: "flex", alignItems: "center", gap: spacing.s }}>
-            <PrinterIcon width={20} height={20} style={{ cursor: "pointer" }} />
-            <ScaleIcon width={20} height={20} style={{ cursor: "pointer" }} />
+            <Icon name="printer" size={20} tone="inherit" style={{ cursor: "pointer" }} />
+            <Icon name="scale" size={20} tone="inherit" style={{ cursor: "pointer" }} />
           </div>
         </div>
 
