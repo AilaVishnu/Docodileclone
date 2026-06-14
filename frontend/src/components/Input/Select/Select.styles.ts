@@ -61,6 +61,7 @@ export const styles: Record<string, CSSProperties> = {
 
   select: {
     flex: 1,
+    minWidth: 0,
     height: "100%",
     display: "flex",
     alignItems: "center",
@@ -76,6 +77,16 @@ export const styles: Record<string, CSSProperties> = {
     padding: 0,
     backgroundColor: "transparent",
     cursor: "inherit",
+  },
+
+  // Selected value (and placeholder) — one line, ellipsis on overflow; never wraps.
+  value: {
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    textAlign: "left",
   },
 
   // Placeholder text (shown when no value selected) stays neutral400
