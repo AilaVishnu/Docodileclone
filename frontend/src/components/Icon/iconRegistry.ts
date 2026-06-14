@@ -89,6 +89,13 @@ import { ReactComponent as Nav_back_arrow } from "../../assets/back_arrow.svg";
 import { ReactComponent as Nav_chevron_left } from "../../assets/chevron_left.svg";
 import { ReactComponent as Nav_chevron_right } from "../../assets/chevron_right.svg";
 
+// Form/affordance icons from assets/ root (distinct glyphs from any assets/icons
+// twin — kept under their own names; dedupe later once glyphs are confirmed).
+import { ReactComponent as Root_mail } from "../../assets/Letter.svg";
+import { ReactComponent as Root_key } from "../../assets/Key.svg";
+import { ReactComponent as Root_eye } from "../../assets/Eye.svg";
+import { ReactComponent as Root_eye_closed } from "../../assets/Eye Closed.svg";
+
 export const ICONS: Record<string, SvgComponent> = {
   "arrow-left": Ic_arrow_left,
   "bill-check-small": Ic_bill_check_small,
@@ -164,6 +171,10 @@ export const ICONS: Record<string, SvgComponent> = {
   "back-arrow": Nav_back_arrow,
   "chevron-left": Nav_chevron_left,
   "chevron-right": Nav_chevron_right,
+  "mail": Root_mail,
+  "key": Root_key,
+  "eye": Root_eye,
+  "eye-closed": Root_eye_closed,
 };
 
 /** Sorted list of every registered icon name (used by the gallery). */

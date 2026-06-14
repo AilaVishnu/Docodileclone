@@ -4,10 +4,7 @@ import { Field } from "../Field";
 import { DomainInput } from "../Input/DomainInput";
 import { Button } from "../Button";
 import { Card } from "../Card";
-import { ReactComponent as MailIcon } from "../../assets/Letter.svg";
-import { ReactComponent as PasswordIcon } from "../../assets/Key.svg";
-import { ReactComponent as EyeIcon } from "../../assets/Eye.svg";
-import { ReactComponent as EyeClosedIcon } from "../../assets/Eye Closed.svg";
+import { Icon } from "../Icon";
 import { colors, fonts } from "../../styles/theme";
 import { API_BASE_URL } from "../../apiConfig";
 import { Toast } from "../Toast";
@@ -185,7 +182,7 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
           value={forgotEmail}
           onChange={setForgotEmail}
           placeholder="hello@example.com"
-          iconLeft={<MailIcon />}
+          iconLeft={<Icon name="mail" tone="inherit" />}
           onKeyDown={handleForgotKeyDown}
         />
 
@@ -253,7 +250,7 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
         value={email}
         onChange={setEmail}
         placeholder="hello@example.com"
-        iconLeft={<MailIcon />}
+        iconLeft={<Icon name="mail" tone="inherit" />}
         onKeyDown={handleKeyDown}
       />
 
@@ -265,14 +262,14 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
           value={password}
           onChange={setPassword}
           placeholder="Enter your password"
-          iconLeft={<PasswordIcon />}
+          iconLeft={<Icon name="key" tone="inherit" />}
           onKeyDown={handleKeyDown}
           iconRight={<button
             type="button"
             onClick={() => setShowPassword((p) => !p)}
             style={styles.eyeButton}
           >
-            {showPassword ? <EyeClosedIcon /> : <EyeIcon />}
+            {showPassword ? <Icon name="eye-closed" tone="inherit" /> : <Icon name="eye" tone="inherit" />}
           </button>}
         />
       </div>

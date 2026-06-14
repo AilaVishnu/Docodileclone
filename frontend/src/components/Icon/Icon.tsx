@@ -18,13 +18,16 @@ import { ICONS, MULTICOLOR_ICONS } from "./iconRegistry";
 
 export type IconName = keyof typeof ICONS;
 
-export type IconTone = "default" | "muted" | "disabled" | "inverse";
+export type IconTone = "default" | "muted" | "disabled" | "inverse" | "inherit";
 
 const TONE_COLOR: Record<IconTone, string> = {
   default: colors.neutral900,
   muted: colors.neutral500,
   disabled: colors.neutral400,
   inverse: colors.neutral100,
+  // Inherit the ambient CSS color — for icons placed in a slot that already
+  // sets a colour (Field iconLeft/iconRight, etc.).
+  inherit: "inherit",
 };
 
 export type IconProps = {
