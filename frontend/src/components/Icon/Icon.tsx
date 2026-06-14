@@ -1,5 +1,5 @@
 import React from "react";
-import { colors } from "../../styles/theme";
+import { colors, icon } from "../../styles/theme";
 import { ICONS, MULTICOLOR_ICONS } from "./iconRegistry";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ export type IconProps = {
 
 export function Icon({
   name,
-  size = 24,
+  size = icon.size,
   tone = "default",
   color,
   disabled,

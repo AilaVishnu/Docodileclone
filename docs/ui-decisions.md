@@ -187,9 +187,12 @@ DECISION (per verdicts):
 - _Excluded (intentionally literal, untouched):_ art/illustration files + the print stylesheet.
 - ⚠️ NOT click-tested live (login wall). Spot-check: Pharmacy CSV import zone (greens now olive/sage; greys now neutral), the AI-SOAP amber banner (text now near-black on soft yellow), and an invalid form field tint (Book Appointment).
 
-## 10. Typography / spacing — _built, ready for review_
+## 10. Typography / spacing — _✅ REVIEWED + closed 2026-06-14_
 IDs: `TYPE-scale`+`TYPE-1..23`, `SPACE-scale`+`SPACE-1..9`, `RAD-scale`+`RAD-1..5`.
-Decision: confirm off-scale sizes (9/10/15/22), weight 300, spacing 6/10, radii 3/9/24/40/55 should snap to scale.
+- **Decision (user — "small safe wins only"):** the broad spacing (10px ×52, 6px ×20) + radius (9 ×25, 24/40/55) snapping was **SKIPPED** — high churn, real layout-shift risk on a clinical app that can't be fully click-tested, and imperceptible (6→8, 9→10). Not worth it.
+- **`radii.primary` (20)→16:** already retired from every real component (Card/Login/Hint use `radii["2xl"]`); only the AuditGallery dev pages still reference the token.
+- **Off-scale fonts (9/10px) + `fontWeight: 300`:** inspected — **intentional, not drift.** HeatmapCard/MyHoursCalendar 9/10px are dense weekly-grid micro-labels (20px cells; snapping to caption=11 would overflow); MemoBoard's 300 is a deliberately thin 26px "+" FAB glyph. **Left as-is.**
+- ✅ BUILT: **`icon.size` token** in `theme.ts` (`{ size: 24, sizeSmall: 20 }`); the shared `<Icon>` defaults to it.
 
 ## 11–12. Duplicates / merge — flagged inline in categories 2–7 (picker family, autocompletes, clinic/staff/queue cards, the two tables/status-pills).
 
@@ -204,5 +207,5 @@ Decision: rebuild SetupPasswordPage on shared comps; tokenize Pharmacy CSV zone 
 |-------|----------|---------|
 | `shadows` token | Add a shadow scale to `theme.ts`? (~12 ad-hoc recipes today) | ✅ DONE — `shadows.{menu,modal,card}` (Dropdowns/Modals/Cards phases) |
 | `zIndex` scale | Add a z-index scale? (raw 1000→4000 today) | ✅ DONE — `zIndex` scale added (Modals phase) |
-| `icon.size` token | Make 24px a real token (currently only a comment)? | ⬜ (Category 8 · Icons) |
-| `radii.primary` (20) | Retire the legacy 20px radius in favour of 16? | 🔧 PARTIAL — retired from all cards (→16, Cards phase); Tabs/ClinicTabs/Modal/Workspace/SetupPassword still on it |
+| `icon.size` token | Make 24px a real token (currently only a comment)? | ✅ DONE (2026-06-14) — `icon = { size: 24, sizeSmall: 20 }` in theme.ts; `<Icon>` defaults to it |
+| `radii.primary` (20) | Retire the legacy 20px radius in favour of 16? | ✅ DONE — retired from all real components (→16); only the AuditGallery dev pages still reference the token |

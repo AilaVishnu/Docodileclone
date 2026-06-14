@@ -202,9 +202,17 @@ export const radii = {
   xl: 12,
   "2xl": 16,
   xxl: 16,     // legacy alias for 2xl (do not remove — in use)
-  primary: 20, // legacy (off-system). Cards retired it → 16; only Tabs/ClinicTabs/Modal/Workspace/SetupPassword still use it (mop up in their categories)
+  primary: 20, // legacy (off-system) — retired from all real components (→16, Cards/Login/Hint phases); only the AuditGallery dev pages still reference it.
   pill: 999,   // legacy alias for full
   full: 999,
+};
+
+// Canonical icon box. The shared <Icon> component defaults to `size`; `sizeSmall`
+// is the 20px variant. Formalizes what used to be a bare `24` default (UI audit
+// Category 8 — "make 24px a real token").
+export const icon = {
+  size: 24,
+  sizeSmall: 20,
 };
 
 export const spacing = {
