@@ -1,32 +1,6 @@
 import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
-import {
-  HomeIcon,
-  AppointmentsIcon,
-  PrescriptionIcon,
-  PatientFilesIcon,
-  ServicesIcon,
-  BillingIcon,
-  BusinessIcon,
-  PharmacyIcon,
-  MessageIcon,
-  MessageUnreadIcon,
-  BellIcon,
-  BellActiveIcon,
-  BackIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  UserHandsIcon,
-  LetterIcon,
-  PhoneIcon,
-  CalendarIcon,
-  HashtagIcon,
-  ClockIcon,
-  PlusIcon,
-  StethoscopeIcon,
-  PulseIcon,
-} from '../../iconsUtil';
-import { ChevronDown } from '../../components/icons/ChevronDown';
+import { Icon, ICON_NAMES, MULTICOLOR_ICONS } from '../../components/Icon';
 import { Page, Group, Grid } from './_kit';
 
 const meta = {
@@ -37,71 +11,63 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const ICONS: { name: string; el: React.ReactNode }[] = [
-  { name: 'HomeIcon', el: <HomeIcon /> },
-  { name: 'AppointmentsIcon', el: <AppointmentsIcon /> },
-  { name: 'PrescriptionIcon', el: <PrescriptionIcon /> },
-  { name: 'PatientFilesIcon', el: <PatientFilesIcon /> },
-  { name: 'ServicesIcon', el: <ServicesIcon /> },
-  { name: 'BillingIcon', el: <BillingIcon /> },
-  { name: 'BusinessIcon', el: <BusinessIcon /> },
-  { name: 'PharmacyIcon', el: <PharmacyIcon /> },
-  { name: 'MessageIcon', el: <MessageIcon /> },
-  { name: 'MessageUnreadIcon', el: <MessageUnreadIcon /> },
-  { name: 'BellIcon', el: <BellIcon /> },
-  { name: 'BellActiveIcon', el: <BellActiveIcon /> },
-  { name: 'BackIcon', el: <BackIcon /> },
-  { name: 'ChevronLeftIcon', el: <ChevronLeftIcon /> },
-  { name: 'ChevronRightIcon', el: <ChevronRightIcon /> },
-  { name: 'ChevronDown', el: <ChevronDown size={24} /> },
-  { name: 'UserHandsIcon', el: <UserHandsIcon /> },
-  { name: 'LetterIcon', el: <LetterIcon /> },
-  { name: 'PhoneIcon', el: <PhoneIcon /> },
-  { name: 'CalendarIcon', el: <CalendarIcon /> },
-  { name: 'HashtagIcon', el: <HashtagIcon /> },
-  { name: 'ClockIcon', el: <ClockIcon /> },
-  { name: 'PlusIcon', el: <PlusIcon /> },
-  { name: 'StethoscopeIcon', el: <StethoscopeIcon /> },
-  { name: 'PulseIcon', el: <PulseIcon /> },
-];
+const lineIcons = ICON_NAMES.filter((n) => !MULTICOLOR_ICONS.has(n));
+const multiIcons = ICON_NAMES.filter((n) => MULTICOLOR_ICONS.has(n));
+
+const Cell = ({ name, label, children }: { name: string; label?: string; children: React.ReactNode }) => (
+  <div
+    style={{
+      border: '1px solid #E3E3E3',
+      borderRadius: 10,
+      background: '#fff',
+      padding: '18px 10px 10px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: 12,
+    }}
+  >
+    <div style={{ height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{children}</div>
+    <div style={{ fontSize: 11, color: '#585858', textAlign: 'center', wordBreak: 'break-word' }}>{label ?? name}</div>
+  </div>
+);
 
 export const Library: Story = {
   render: () => (
     <Page
       title="Icons"
-      intro="The icon set exported from iconsUtil.tsx (plus the canonical ChevronDown). These are the named icon components used across the app — import them from '../../iconsUtil'."
+      intro={
+        'Every icon registered in <Icon> — auto-pulled from assets/icons plus the named app/nav icons. ' +
+        'Render with `<Icon name="…" size tone disabled />`. Line icons are monochrome (currentColor, ' +
+        'neutral900 by default, 1.5 stroke, 24px); multicolor icons keep their own baked palette.'
+      }
     >
-      <Group label={`${ICONS.length} icons`}>
-        <Grid min={130}>
-          {ICONS.map(({ name, el }) => (
-            <div
-              key={name}
-              style={{
-                border: '1px solid #E3E3E3',
-                borderRadius: 10,
-                background: '#fff',
-                padding: '18px 10px 10px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 12,
-              }}
-            >
-              <div
-                style={{
-                  height: 28,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#202020',
-                }}
-              >
-                {el}
-              </div>
-              <div style={{ fontSize: 11, color: '#585858', textAlign: 'center', wordBreak: 'break-word' }}>
-                {name}
-              </div>
-            </div>
+      <Group label="Sizes & states">
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Cell name="calendar" label="24 · default"><Icon name="calendar" /></Cell>
+          <Cell name="calendar" label="20 · small"><Icon name="calendar" size={20} /></Cell>
+          <Cell name="calendar" label="muted"><Icon name="calendar" tone="muted" /></Cell>
+          <Cell name="calendar" label="disabled"><Icon name="calendar" disabled /></Cell>
+          <Cell name="calendar" label="recolor"><Icon name="calendar" color="#CF6F2F" /></Cell>
+        </div>
+      </Group>
+
+      <Group label={`Line icons · ${lineIcons.length}`}>
+        <Grid min={120}>
+          {lineIcons.map((name) => (
+            <Cell key={name} name={name}>
+              <Icon name={name} />
+            </Cell>
+          ))}
+        </Grid>
+      </Group>
+
+      <Group label={`Multicolor / illustrative · ${multiIcons.length}`}>
+        <Grid min={120}>
+          {multiIcons.map((name) => (
+            <Cell key={name} name={name}>
+              <Icon name={name} />
+            </Cell>
           ))}
         </Grid>
       </Group>
