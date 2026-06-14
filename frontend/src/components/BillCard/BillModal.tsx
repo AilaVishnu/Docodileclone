@@ -9,12 +9,7 @@ import { Field } from "../Field";
 import { MeasureField } from "../MeasureField";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 import { styles as bill } from "./BillCard.styles";
-import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
-import { ReactComponent as ShareIcon } from "../../assets/icons/share.svg";
-import { ReactComponent as VerifiedBadgeIcon } from "../../assets/icons/verified-badge.svg";
-import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
-import { ReactComponent as CalendarIcon } from "../../assets/calendar.svg";
-import { PlusIcon } from "../../iconsUtil";
+import { Icon } from "../Icon";
 
 // BillModal — the full-invoice editor that opens from the bill card's expand
 // icon. Reuses Modal, Select, Button, IconButton, DataGrid, DatePicker, the
@@ -116,7 +111,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
     ) },
     { key: "tot", header: "Total", width: 80, align: "center", render: (l) => (isTrailing(l) ? "" : <span style={{ fontWeight: fonts.weight.medium }}>{inr(lineTotal(l))}</span>) },
     { key: "x", header: "", width: 38, headerPadding: "8px 4px", cellPadding: "8px 4px", render: (l) => (isTrailing(l) ? "" : (
-      <button onClick={() => removeLine(l.id)} aria-label="Remove" style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, display: "flex", justifyContent: "center", width: "100%" }}><TrashIcon width={20} height={20} style={{ flexShrink: 0 }} /></button>
+      <button onClick={() => removeLine(l.id)} aria-label="Remove" style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, display: "flex", justifyContent: "center", width: "100%" }}><Icon name="trash" size={20} tone="inherit" style={{ flexShrink: 0 }} /></button>
     )) },
   ];
 
@@ -142,7 +137,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
           <div style={{ display: "flex", alignItems: "center", gap: spacing.m, flexWrap: "wrap" }}>
             <span style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>Bill date</span>
             <span onClick={() => setShowCal(true)} style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: spacing.xs, height: 30, boxSizing: "border-box", border: `${strokes.xs} solid ${colors.neutral300}`, borderRadius: radii.m, padding: "0 10px", color: colors.neutral900, cursor: "pointer" }}>
-              <CalendarIcon width={20} height={20} style={{ color: colors.neutral900 }} /> {fmtDate(billDate)}
+              <Icon name="calendar-alt" size={20} color={colors.neutral900} /> {fmtDate(billDate)}
               {showCal && (
                 <DatePicker selectedDate={billDate} showDoneButton onSelect={(d) => { setBillDate(d); setShowCal(false); }} onClose={() => setShowCal(false)} />
               )}
@@ -205,11 +200,11 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
                 </div>
                 {last ? (
                   <IconButton ariaLabel="Add payment mode (split)" onClick={addPayment} color={colors.neutral900}>
-                    <PlusIcon style={{ width: 20, height: 20 }} />
+                    <Icon name="plus" size={20} tone="inherit" />
                   </IconButton>
                 ) : (
                   <IconButton ariaLabel="Remove payment mode" onClick={() => removePayment(i)} color={colors.neutral900}>
-                    <TrashIcon width={20} height={20} />
+                    <Icon name="trash" size={20} tone="inherit" />
                   </IconButton>
                 )}
               </div>
@@ -218,11 +213,11 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
 
           {/* Pay + print/share icons (saves vertical space) */}
           <div style={{ marginTop: "auto", display: "flex", gap: spacing.s, alignItems: "center" }}>
-            <Button variant="dark" size="md" onClick={onClose} style={{ flex: 1 }} iconLeft={<VerifiedBadgeIcon width={20} height={20} style={{ color: colors.neutral100 }} />}>
+            <Button variant="dark" size="md" onClick={onClose} style={{ flex: 1 }} iconLeft={<Icon name="verified-badge" size={20} tone="inverse" />}>
               {balance > 0 ? `Pay ${inr(balance)}` : "Mark paid"}
             </Button>
-            <IconButton ariaLabel="Print" onClick={() => {}} color={colors.neutral900}><PrinterIcon width={24} height={24} /></IconButton>
-            <IconButton ariaLabel="Share" onClick={() => {}} color={colors.neutral900}><ShareIcon width={24} height={24} /></IconButton>
+            <IconButton ariaLabel="Print" onClick={() => {}} color={colors.neutral900}><Icon name="printer" size={24} tone="inherit" /></IconButton>
+            <IconButton ariaLabel="Share" onClick={() => {}} color={colors.neutral900}><Icon name="share" size={24} tone="inherit" /></IconButton>
           </div>
         </div>
       </div>
