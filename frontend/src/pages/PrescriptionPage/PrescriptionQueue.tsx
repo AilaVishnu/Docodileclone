@@ -5,8 +5,7 @@ import { pickAvatar } from "../../utils/avatar";
 import { Button } from "../../components/Button";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { loadStartedSet } from "../../utils/sessionStarted";
-import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
-import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
+import { Icon } from "../../components/Icon";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { ChevronDown } from "../../components/icons/ChevronDown";
 import { StatusBadge } from "../../components/AppointmentQueue/StatusBadge";
@@ -278,7 +277,7 @@ export function PrescriptionQueue({ onSelect, refreshKey }: PrescriptionQueuePro
             aria-label="List view"
             aria-pressed={viewMode === "list"}
           >
-            <ListSortIcon width={20} height={20} strokeWidth={1.5} />
+            <Icon name="list-sort" size={20} tone="inherit" />
           </button>
           <button
             type="button"
@@ -287,7 +286,7 @@ export function PrescriptionQueue({ onSelect, refreshKey }: PrescriptionQueuePro
             aria-label="Grid view"
             aria-pressed={viewMode === "grid"}
           >
-            <WidgetIcon width={20} height={20} strokeWidth={1.5} />
+            <Icon name="widget" size={20} tone="inherit" />
           </button>
         </div>
       </div>

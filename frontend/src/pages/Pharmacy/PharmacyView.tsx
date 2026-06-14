@@ -15,10 +15,7 @@ import { Select } from "../../components/Input/Select/Select";
 import { Tabs } from "../../components/Tabs";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { colors, fonts, spacing, radii } from "../../styles/theme";
-import { PlusIcon } from "../../iconsUtil";
-import { ReactComponent as SearchIcon } from "../../assets/search.svg";
-import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
-import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
+import { Icon } from "../../components/Icon";
 import { listPharmacyStock, bulkCreatePharmacyStock, parseInventoryCsv, createPharmacyStock, updatePharmacyStock, deletePharmacyStock, medToRequest } from "../../api/pharmacy";
 import { Toast } from "../../components/Toast";
 
@@ -123,7 +120,7 @@ export function PharmacyView() {
             <Button
               variant="dark"
               size="md"
-              iconLeft={<PlusIcon style={{ width: 16, height: 16 }} />}
+              iconLeft={<Icon name="plus" size={16} tone="inherit" />}
               onClick={() => { setEditing(null); setAddOpen(true); }}
             >
               Add Stock
@@ -136,7 +133,7 @@ export function PharmacyView() {
       <div style={styles.toolbar}>
         <div style={styles.toolbarLeft}>
           <div style={styles.searchWrap}>
-            <SearchIcon style={styles.searchIcon} />
+            <Icon name="search" tone="inherit" style={styles.searchIcon} />
             <input
               style={styles.searchInput}
               placeholder="Search medicine, batch, invoice…"
@@ -174,7 +171,7 @@ export function PharmacyView() {
               aria-label="List view"
               aria-pressed={view === "list"}
             >
-              <ListSortIcon width={20} height={20} />
+              <Icon name="list-sort" size={20} tone="inherit" />
             </button>
             <button
               type="button"
@@ -183,7 +180,7 @@ export function PharmacyView() {
               aria-label="Shelf view"
               aria-pressed={view === "shelf"}
             >
-              <WidgetIcon width={20} height={20} />
+              <Icon name="widget" size={20} tone="inherit" />
             </button>
           </div>
         </div>

@@ -4,7 +4,7 @@ import { DatePicker } from "../DatePicker/DatePicker";
 import { MeasureField } from "../MeasureField";
 import { RadioGroup } from "../Radio";
 import { PatientSearchRow } from "../PatientSearchRow/PatientSearchRow";
-import { UserHandsIcon, LetterIcon, PhoneIcon, CalendarIcon } from "../../iconsUtil";
+import { Icon } from "../Icon";
 import type { Patient } from "../../hooks/usePatients";
 import { colors, fonts, spacing } from "../../styles/theme";
 import { styles } from "./PatientDetailsForm.styles";
@@ -119,7 +119,7 @@ export function PatientDetailsForm({
       {/* Name */}
       <div style={{ position: "relative" }}>
         <div style={{ ...styles.iconField, ...errField(errors.name), ...(locked ? { opacity: 0.65 } : {}) }}>
-          <UserHandsIcon style={styles.iconFieldIcon} />
+          <Icon name="user-hands" tone="inherit" style={styles.iconFieldIcon} />
           <input
             style={styles.iconFieldInput}
             placeholder="Name"
@@ -144,7 +144,7 @@ export function PatientDetailsForm({
       <div style={styles.row}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ ...styles.iconField, ...errField(errors.email), ...(locked ? { opacity: 0.65 } : {}) }}>
-            <LetterIcon style={styles.iconFieldIcon} />
+            <Icon name="mail" tone="inherit" style={styles.iconFieldIcon} />
             <input
               style={styles.iconFieldInput}
               type="text"
@@ -159,7 +159,7 @@ export function PatientDetailsForm({
         </div>
         <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
           <div style={{ ...styles.iconField, ...errField(errors.phone), ...(locked ? { opacity: 0.65 } : {}) }}>
-            <PhoneIcon style={styles.iconFieldIcon} />
+            <Icon name="phone" tone="inherit" style={styles.iconFieldIcon} />
             <input
               style={styles.iconFieldInput}
               placeholder="+91 XXXXX XXXXX"
@@ -207,7 +207,7 @@ export function PatientDetailsForm({
             }}
             style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: spacing.xs, opacity: locked ? 1 : hasManualAge ? 0.4 : 1 }}
           >
-            <CalendarIcon style={styles.iconFieldIcon} />
+            <Icon name="calendar-alt" tone="inherit" style={styles.iconFieldIcon} />
             <span style={styles.inlineLabel}>DOB</span>
           </span>
           <input

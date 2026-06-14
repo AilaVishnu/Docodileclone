@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { DatePicker } from "../DatePicker/DatePicker";
-import { CalendarIcon } from "../../iconsUtil";
+import { Icon } from "../Icon";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ export function DateField({
         onClick={() => { if (!disabled) setOpen(true); }}
         title={disabled ? disabledTitle : undefined}
       >
-        <CalendarIcon style={{ color: colors.neutral900, width: 24, height: 24, flexShrink: 0 }} />
+        <Icon name="calendar-alt" size={24} color={colors.neutral900} style={{ flexShrink: 0 }} />
         <span style={{ fontFamily: fonts.family.primary, fontSize: fonts.control.md, color: value ? colors.neutral900 : colors.neutral400 }}>
           {value ? format(value) : placeholder}
         </span>

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { TimePicker } from "../AppointmentQueue/TimePicker";
-import { ClockIcon } from "../../iconsUtil";
+import { Icon } from "../Icon";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ export function TimeField({
         onClick={() => { if (!disabled) setOpen(true); }}
         title={disabled ? disabledTitle : undefined}
       >
-        <ClockIcon style={{ color: colors.neutral900, width: 24, height: 24, flexShrink: 0 }} />
+        <Icon name="clock" size={24} color={colors.neutral900} style={{ flexShrink: 0 }} />
         <span style={{ fontFamily: fonts.family.primary, fontSize: fonts.control.md, color: filled ? colors.neutral900 : colors.neutral400 }}>
           {isWalkin ? "Walk-in" : (value || placeholder)}
         </span>

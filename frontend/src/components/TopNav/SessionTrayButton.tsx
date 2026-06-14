@@ -1,6 +1,6 @@
 import React from "react";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
-import { PrescriptionIcon } from "../../iconsUtil";
+import { Icon } from "../Icon";
 import type { Patient } from "../../hooks/usePatients";
 import type { NavTab } from "../SideNav";
 import { getActiveSessions, type ActiveSession } from "../../api/visits";
@@ -169,7 +169,7 @@ export function SessionTrayButton({ onNavigate }: SessionTrayButtonProps) {
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        <PrescriptionIcon />
+        <Icon name="prescription" tone="inherit" />
         <span style={styles.badge}>{sessions.length}</span>
       </button>
 
