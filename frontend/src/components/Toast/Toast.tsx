@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { styles } from "./Toast.styles";
-import { ReactComponent as BuildingIcon } from "../../assets/Buildings.svg";
+import { Icon } from "../Icon";
 
 type ToastProps = {
   message: string;
@@ -24,7 +24,7 @@ export function Toast({ message, isVisible, onClose, duration = 4000, actionLabe
 
   return (
     <div style={styles.container}>
-      <BuildingIcon style={styles.icon} />
+      <Icon name="buildings" tone="inherit" style={styles.icon} />
       <p style={styles.message}>{message}</p>
       {actionLabel && onAction && (
         <button

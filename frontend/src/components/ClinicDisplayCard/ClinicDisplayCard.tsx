@@ -2,10 +2,7 @@ import React from "react";
 import { Clinic } from "../ClinicTabs";
 import { styles } from "./ClinicDisplayCard.styles";
 import { Button } from "../Button";
-import { ReactComponent as BuildingIcon } from "../../assets/Buildings.svg";
-import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
-import { ReactComponent as StethoscopeIcon } from "../../assets/Stethoscope.svg";
-import { ReactComponent as LocationIcon } from "../../assets/Map Point.svg";
+import { Icon } from "../Icon";
 
 type ClinicDisplayCardProps = {
   clinic: Clinic;
@@ -32,7 +29,7 @@ export function ClinicDisplayCard({ clinic, onSelect }: ClinicDisplayCardProps) 
         {/* Building / Name */}
         <div style={styles.infoItem}>
           <div style={styles.iconWrapper}>
-            <BuildingIcon width={24} height={24} />
+            <Icon name="buildings" size={24} tone="inherit" />
           </div>
           <p style={styles.infoText}>{name}</p>
         </div>
@@ -40,7 +37,7 @@ export function ClinicDisplayCard({ clinic, onSelect }: ClinicDisplayCardProps) 
         {/* Phone */}
         <div style={styles.infoItem}>
           <div style={styles.iconWrapper}>
-            <PhoneIcon width={24} height={24} />
+            <Icon name="phone" size={24} tone="inherit" />
           </div>
           <p style={styles.infoText}>{phone || "No phone added"}</p>
         </div>
@@ -48,7 +45,7 @@ export function ClinicDisplayCard({ clinic, onSelect }: ClinicDisplayCardProps) 
         {/* Departments / Tags */}
         <div style={styles.infoItem}>
           <div style={styles.iconWrapper}>
-            <StethoscopeIcon width={24} height={24} />
+            <Icon name="stethoscope" size={24} tone="inherit" />
           </div>
           <div style={styles.tagList}>
             {departments.length > 0 ? (
@@ -66,7 +63,7 @@ export function ClinicDisplayCard({ clinic, onSelect }: ClinicDisplayCardProps) 
         {/* Address */}
         <div style={styles.infoItem}>
           <div style={styles.iconWrapper}>
-            <LocationIcon width={24} height={24} />
+            <Icon name="map-point" size={24} tone="inherit" />
           </div>
           <p style={styles.addressText}>{address || "No address added"}</p>
         </div>

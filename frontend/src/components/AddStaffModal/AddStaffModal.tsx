@@ -12,7 +12,7 @@ import { ConfirmDialog } from "../ConfirmDialog";
 import { AdditionalStaffDetailsCard } from "../AdditionalStaffDetailsCard";
 import { styles as roleStyles } from "../AdditionalStaffDetailsCard/AdditionalStaffDetailsCard.styles";
 import { StaffIllustration } from "./StaffIllustration";
-import { ReactComponent as RoleIcon } from "../../assets/Mask Happly.svg";
+import { Icon } from "../Icon";
 
 // Standard role options that appear as radios. "Other" is a separate entry
 // that reveals a free-text input for custom roles.
@@ -210,7 +210,7 @@ export function AddStaffModal({
           }}
         >
           <div style={roleStyles.sectionTitle}>
-            <RoleIcon />
+            <Icon name="mask-happy" tone="inherit" />
             <span>Role</span>
           </div>
 

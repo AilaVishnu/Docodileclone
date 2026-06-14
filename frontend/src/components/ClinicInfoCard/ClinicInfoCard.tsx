@@ -2,9 +2,7 @@ import React, { useState, useEffect, useRef, KeyboardEvent } from "react";
 import { Tag } from "../Tag";
 import { styles } from "./ClinicInfoCard.styles";
 import { colors, fonts, radii, spacing, strokes, shadows, zIndex } from "../../styles/theme";
-import { ReactComponent as BuildingIcon } from "../../assets/Buildings.svg";
-import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
-import { ReactComponent as LocationIcon } from "../../assets/Map Point.svg";
+import { Icon } from "../Icon";
 import { Clinic } from "../ClinicTabs";
 import { API_BASE_URL } from "../../apiConfig";
 
@@ -157,7 +155,7 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
           ...(fieldsLocked ? styles.locked : {}),
         }}
       >
-        <span style={styles.fieldIcon}><BuildingIcon width={20} height={20} /></span>
+        <span style={styles.fieldIcon}><Icon name="buildings" size={20} tone="inherit" /></span>
         <input
           style={styles.fieldInput}
           value={clinicName}
@@ -176,7 +174,7 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
           ...(!isPhoneValid ? styles.fieldError : {}),
         }}
       >
-        <span style={styles.fieldIcon}><PhoneIcon width={20} height={20} /></span>
+        <span style={styles.fieldIcon}><Icon name="phone" size={20} tone="inherit" /></span>
         <input
           style={styles.fieldInput}
           value={phone}
@@ -190,7 +188,7 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
       {/* Departments — icon + tag list + autocomplete dropdown */}
       <div ref={deptWrapRef} style={{ position: "relative" }}>
         <div style={{ ...styles.specialtyRow, ...(fieldsLocked ? styles.locked : {}) }}>
-          <span style={styles.fieldIcon}><BuildingIcon width={20} height={20} /></span>
+          <span style={styles.fieldIcon}><Icon name="buildings" size={20} tone="inherit" /></span>
           <div style={styles.tagRow}>
             {departments.map((s, i) => (
               <Tag
@@ -243,7 +241,7 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
           ...(fieldsLocked ? styles.locked : {}),
         }}
       >
-        <span style={styles.fieldIcon}><LocationIcon width={20} height={20} /></span>
+        <span style={styles.fieldIcon}><Icon name="map-point" size={20} tone="inherit" /></span>
         <textarea
           style={styles.fieldTextArea}
           value={address}

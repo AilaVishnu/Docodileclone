@@ -4,10 +4,7 @@ import { Field } from "../Field";
 import { RadioGroup } from "../Radio";
 import { styles } from "./StaffDetailsCard.styles";
 
-// SVG icons (replace paths with your actual icons)
-import { ReactComponent as UserIcon } from "../../assets/User Hands.svg";
-import { ReactComponent as MailIcon } from "../../assets/Letter.svg";
-import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
+import { Icon } from "../Icon";
 
 type StaffDetailsCardProps = {
   name: string;
@@ -40,7 +37,7 @@ export function StaffDetailsCard({
         value={name}
         onChange={setName}
         placeholder="Name"
-        iconLeft={<UserIcon />}
+        iconLeft={<Icon name="user-hands" tone="inherit" />}
         error={errors.name}
         errorMessage="Please enter staff name"
       />
@@ -52,7 +49,7 @@ export function StaffDetailsCard({
         onChange={setEmail}
         onBlur={() => setEmail(email.trim().toLowerCase())}
         placeholder="hello@example.com"
-        iconLeft={<MailIcon />}
+        iconLeft={<Icon name="mail" tone="inherit" />}
         error={errors.email}
         errorMessage="Please enter a valid email"
       />
@@ -81,7 +78,7 @@ export function StaffDetailsCard({
           }
         }}
         placeholder="+91 XXXXX XXXXX"
-        iconLeft={<PhoneIcon />}
+        iconLeft={<Icon name="phone" tone="inherit" />}
         error={errors.phone}
         errorMessage="Please enter a valid phone number"
       />

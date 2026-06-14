@@ -41,7 +41,6 @@ import { ReactComponent as Ic_magnifer_bug } from "../../assets/icons/magnifer-b
 import { ReactComponent as Ic_microphone } from "../../assets/icons/microphone.svg";
 import { ReactComponent as Ic_paid_stamp } from "../../assets/icons/paid-stamp.svg";
 import { ReactComponent as Ic_pen } from "../../assets/icons/pen.svg";
-import { ReactComponent as Ic_phone } from "../../assets/icons/phone.svg";
 import { ReactComponent as Ic_pills } from "../../assets/icons/pills.svg";
 import { ReactComponent as Ic_play_circle } from "../../assets/icons/play-circle.svg";
 import { ReactComponent as Ic_play } from "../../assets/icons/play.svg";
@@ -95,6 +94,12 @@ import { ReactComponent as Root_mail } from "../../assets/Letter.svg";
 import { ReactComponent as Root_key } from "../../assets/Key.svg";
 import { ReactComponent as Root_eye } from "../../assets/Eye.svg";
 import { ReactComponent as Root_eye_closed } from "../../assets/Eye Closed.svg";
+import { ReactComponent as Root_buildings } from "../../assets/Buildings.svg";
+import { ReactComponent as Root_phone } from "../../assets/Phone.svg";
+import { ReactComponent as Root_map_point } from "../../assets/Map Point.svg";
+import { ReactComponent as Root_stethoscope } from "../../assets/Stethoscope.svg";
+import { ReactComponent as Root_user_hands } from "../../assets/User Hands.svg";
+import { ReactComponent as Root_mask_happy } from "../../assets/Mask Happly.svg";
 
 export const ICONS: Record<string, SvgComponent> = {
   "arrow-left": Ic_arrow_left,
@@ -125,7 +130,7 @@ export const ICONS: Record<string, SvgComponent> = {
   "microphone": Ic_microphone,
   "paid-stamp": Ic_paid_stamp,
   "pen": Ic_pen,
-  "phone": Ic_phone,
+  "phone": Root_phone,
   "pills": Ic_pills,
   "play-circle": Ic_play_circle,
   "play": Ic_play,
@@ -175,6 +180,11 @@ export const ICONS: Record<string, SvgComponent> = {
   "key": Root_key,
   "eye": Root_eye,
   "eye-closed": Root_eye_closed,
+  "buildings": Root_buildings,
+  "map-point": Root_map_point,
+  "stethoscope": Root_stethoscope,
+  "user-hands": Root_user_hands,
+  "mask-happy": Root_mask_happy,
 };
 
 /** Sorted list of every registered icon name (used by the gallery). */
