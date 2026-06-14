@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { styles } from "./BookAppointment.styles";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
-import {
-  StethoscopeIcon,
-  PulseIcon,
-  CalendarIcon,
-  HashtagIcon
-} from "../../iconsUtil";
+import { Icon } from "../Icon";
 import { Card } from "../Card/Card";
 import { PageHeader } from "../PageHeader/PageHeader";
 import { Switch } from "../Switch/Switch";
@@ -23,10 +18,6 @@ import { DateField } from "../DateField";
 import { TimeField } from "../TimeField";
 import { API_BASE_URL } from "../../apiConfig";
 import { listServices, ServiceDTO } from "../../api/services";
-import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
-import { ReactComponent as EditPencilIcon } from "../../assets/icons/edit-pencil.svg";
-import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check.svg";
-import { ReactComponent as VerifiedBadgeIcon } from "../../assets/icons/verified-badge.svg";
 import { pickAvatar } from "../../utils/avatar";
 
 type Doctor = {
@@ -715,7 +706,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             return (
               <div style={styles.appointmentRow}>
                 <div style={styles.appointmentLabelGroup}>
-                  <StethoscopeIcon style={styles.appointmentIcon} />
+                  <Icon name="stethoscope" tone="inherit" style={styles.appointmentIcon} />
                   <label style={styles.fieldLabel}>Doctor</label>
                 </div>
                 <div style={{ flex: 1, pointerEvents: doctorLocked ? "none" : "auto", opacity: rowOpacity }}>
@@ -742,7 +733,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               {form.services.map((svc, i) => (
                 <div key={i} style={styles.appointmentRow}>
                   <div style={styles.appointmentLabelGroup}>
-                    <PulseIcon style={styles.appointmentIcon} />
+                    <Icon name="pulse-alt" tone="inherit" style={styles.appointmentIcon} />
                     <label style={styles.fieldLabel}>Service</label>
                   </div>
                   <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", pointerEvents: servicesLocked ? "none" : "auto", opacity: rowOpacity }}>
@@ -786,7 +777,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                             flexShrink: 0,
                           }}
                         >
-                          <TrashIcon width={20} height={20} />
+                          <Icon name="trash" size={20} tone="inherit" />
                         </button>
                       );
                     })() : (
@@ -798,7 +789,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               {!servicesLocked && (
                 <div style={styles.appointmentRow}>
                   <div style={styles.appointmentLabelGroup}>
-                    <PulseIcon style={styles.appointmentIcon} />
+                    <Icon name="pulse-alt" tone="inherit" style={styles.appointmentIcon} />
                     <label style={styles.fieldLabel}>Service</label>
                   </div>
                   <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px" }}>
@@ -825,7 +816,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             <>
               {!editingAppointment.readOnly && isDirty && (
                 <button style={styles.pillButtonPrimary} onClick={() => handleBook(editingAppointment.payStatus || "Unpaid")} disabled={submitting}>
-                  <EditPencilIcon width={18} height={18} style={{ color: colors.neutral100 }} />
+                  <Icon name="edit-pencil" size={18} tone="inverse" />
                   {submitting ? "Saving..." : "Save Edits"}
                 </button>
               )}
@@ -844,11 +835,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 onClick={() => handleBook("Unpaid")}
                 disabled={submitting || form.paymentMethod === "Waive"}
               >
-                <CalendarIcon style={{ width: "20px", height: "20px" }} />
+                <Icon name="calendar-alt" size={20} tone="inherit" />
                 {submitting ? "Booking..." : "Book Now Pay Later"}
               </button>
               <button style={styles.pillButtonPrimary} onClick={() => handleBook("Paid")} disabled={submitting}>
-                <VerifiedBadgeIcon style={{ width: "20px", height: "20px", color: colors.neutral100 }} />
+                <Icon name="verified-badge" size={20} tone="inverse" />
                 {submitting ? "Booking..." : "Pay & Book"}
               </button>
             </>
