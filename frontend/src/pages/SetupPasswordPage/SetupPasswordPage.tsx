@@ -5,6 +5,8 @@ import { API_BASE_URL } from "../../apiConfig";
 import AdminBg from "../../assets/admin-illo.svg";
 import StaffBg from "../../assets/staff-illo.svg";
 import { Icon } from "../../components/Icon";
+import { Field } from "../../components/Field";
+import { Button } from "../../components/Button";
 
 type Phase = "loading" | "invalid" | "ready" | "success";
 
@@ -73,8 +75,8 @@ export function SetupPasswordPage() {
       });
   }, [token]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     setError("");
 
     if (password.length < 8) {
@@ -129,24 +131,6 @@ export function SetupPasswordPage() {
     flexDirection: "column",
     gap: spacing.xl,
     boxShadow: "4px 4px 24px rgba(0,0,0,0.10)",
-  };
-
-  const fieldRow: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: spacing.xs,
-    borderBottom: `1px solid ${colors.neutral300}`,
-    padding: spacing.xs,
-  };
-
-  const input: React.CSSProperties = {
-    flex: 1,
-    border: "none",
-    background: "transparent",
-    outline: "none",
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.control.md,
-    color: colors.neutral900,
   };
 
   const btn: React.CSSProperties = {
@@ -232,38 +216,36 @@ export function SetupPasswordPage() {
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
           {/* New password */}
-          <div style={fieldRow}>
-            <Icon name="key" size={24} tone="inherit" style={{ opacity: 0.5, flexShrink: 0 }} />
-            <input
-              style={input}
-              type={showPassword ? "text" : "password"}
-              placeholder="Enter new password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-              required
-            />
-            <button type="button" style={eyeBtn} onClick={() => setShowPassword((v) => !v)}>
-              {showPassword ? <Icon name="eye-closed" size={24} tone="inherit" /> : <Icon name="eye" size={24} tone="inherit" />}
-            </button>
-          </div>
+          <Field
+            variant="underline"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={setPassword}
+            placeholder="Enter new password"
+            iconLeft={<Icon name="key" size={24} tone="inherit" />}
+            iconRight={
+              <button type="button" style={eyeBtn} onClick={() => setShowPassword((v) => !v)}>
+                {showPassword ? <Icon name="eye-closed" size={24} tone="inherit" /> : <Icon name="eye" size={24} tone="inherit" />}
+              </button>
+            }
+            onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
+          />
 
           {/* Confirm password */}
-          <div style={fieldRow}>
-            <Icon name="key" size={24} tone="inherit" style={{ opacity: 0.5, flexShrink: 0 }} />
-            <input
-              style={input}
-              type={showConfirm ? "text" : "password"}
-              placeholder="Confirm password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              autoComplete="new-password"
-              required
-            />
-            <button type="button" style={eyeBtn} onClick={() => setShowConfirm((v) => !v)}>
-              {showConfirm ? <Icon name="eye-closed" size={24} tone="inherit" /> : <Icon name="eye" size={24} tone="inherit" />}
-            </button>
-          </div>
+          <Field
+            variant="underline"
+            type={showConfirm ? "text" : "password"}
+            value={confirm}
+            onChange={setConfirm}
+            placeholder="Confirm password"
+            iconLeft={<Icon name="key" size={24} tone="inherit" />}
+            iconRight={
+              <button type="button" style={eyeBtn} onClick={() => setShowConfirm((v) => !v)}>
+                {showConfirm ? <Icon name="eye-closed" size={24} tone="inherit" /> : <Icon name="eye" size={24} tone="inherit" />}
+              </button>
+            }
+            onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
+          />
 
           {error && (
             <p style={{ fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.red100, margin: 0 }}>
@@ -271,9 +253,15 @@ export function SetupPasswordPage() {
             </p>
           )}
 
-          <button type="submit" style={{ ...btn, marginTop: spacing.xs }} disabled={submitting}>
+          <Button
+            variant={theme === staffTheme ? "primary" : "secondary"}
+            size="md"
+            disabled={submitting}
+            onClick={() => handleSubmit()}
+            style={{ marginTop: spacing.xs, width: "100%" }}
+          >
             {submitting ? "Updating…" : "Update"}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

@@ -196,9 +196,10 @@ IDs: `TYPE-scale`+`TYPE-1..23`, `SPACE-scale`+`SPACE-1..9`, `RAD-scale`+`RAD-1..
 
 ## 11–12. Duplicates / merge — flagged inline in categories 2–7 (picker family, autocompletes, clinic/staff/queue cards, the two tables/status-pills).
 
-## 13. Off-style pages — _built, ready for review (Category 11 in the gallery)_
+## 13. Off-style pages — _✅ DONE 2026-06-14_
 IDs: `PAGE-*` rating table + `PAGE-setup/pharmacy/rx` drift mocks.
-Decision: rebuild SetupPasswordPage on shared comps; tokenize Pharmacy CSV zone + Rx AI-modal/banners.
+- **Pharmacy CSV zone + Rx AI-modal/banners:** tokenized back in Category 9 (colours) — done.
+- **SetupPasswordPage rebuilt on shared comps (2026-06-14):** the 2 hand-rolled password inputs → `<Field variant="underline" type=password iconLeft={key} iconRight={eye toggle}>` and the submit → `<Button variant={staff ? "primary" : "secondary"}>`, mirroring LoginCard. `handleSubmit` made event-optional + Enter-to-submit on the fields; dead `fieldRow`/`input` styles removed; the page theme (admin green / staff peach) preserved. Added a `Patterns/SetupPassword` story (Staff/Admin/Expired) with a MemoryRouter decorator + `/auth/validate-token` MSW mock so it's verifiable. tsc + build clean; verified in Storybook.
 
 ---
 

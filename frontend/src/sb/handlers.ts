@@ -31,4 +31,12 @@ export const handlers = [
 
   // Domain availability check for DomainInput / clinic forms.
   http.get(`${B}/api/tenant/domain/check`, () => HttpResponse.json({ available: true })),
+
+  // Setup-password invite flow (SetupPasswordPage). The token drives the page
+  // theme: "admin" → ADMIN (green), anything else → STAFF (peach).
+  http.get(`${B}/auth/validate-token`, ({ request }) => {
+    const token = new URL(request.url).searchParams.get('token') ?? '';
+    return HttpResponse.json({ valid: true, role: token === 'admin' ? 'ADMIN' : 'STAFF', name: 'Asha Rao' });
+  }),
+  http.post(`${B}/auth/setup-password`, () => HttpResponse.json({ ok: true })),
 ];
