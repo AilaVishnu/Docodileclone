@@ -90,6 +90,8 @@ import { ReactComponent as Root_mask_happy } from "../../assets/Mask Happly.svg"
 import { ReactComponent as Root_plus } from "../../assets/Plus.svg";
 import { ReactComponent as Root_pulse } from "../../assets/pulse.svg";
 import { ReactComponent as Root_clock } from "../../assets/Clock Circle.svg";
+import { ReactComponent as Root_arrow_right } from "../../assets/Arrow Right.svg";
+import { ReactComponent as Root_help } from "../../assets/Help.svg";
 
 export const ICONS: Record<string, SvgComponent> = {
   "arrow-left": Ic_arrow_left,
@@ -165,6 +167,8 @@ export const ICONS: Record<string, SvgComponent> = {
   "user-hands": Root_user_hands,
   "mask-happy": Root_mask_happy,
   "clock": Root_clock,
+  "arrow-right": Root_arrow_right,
+  "help": Root_help,
 };
 
 /** Sorted list of every registered icon name (used by the gallery). */

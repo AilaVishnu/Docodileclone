@@ -7,9 +7,7 @@ import { Button } from "../../components/Button";
 import { API_BASE_URL } from "../../apiConfig";
 import { ClinicInfoCard } from "../../components/ClinicInfoCard";
 import { StaffIllustration } from "../../components/AddStaffModal/StaffIllustration";
-import { ReactComponent as NextIcon } from "../../assets/Arrow Right.svg";
-import { ReactComponent as HelpIcon } from "../../assets/Help.svg";
-import { ReactComponent as PlusIcon } from "../../assets/Plus.svg";
+import { Icon } from "../../components/Icon";
 import { ReactComponent as ClinicRoof } from "../../assets/clinic roof.svg";
 import { ReactComponent as Bush } from "../../assets/bush.svg";
 import { Toast } from "../../components/Toast";
@@ -449,7 +447,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                       {activeClinic.staff.filter((s: Staff) => s.active).length < maxStaffPerClinic && (
                         <div style={styles.staffCardWrapper}>
                           <StaffWindow dashed onClick={handleOpenAddStaff}>
-                            <PlusIcon style={{ width: 32, height: 32 }} />
+                            <Icon name="plus" size={32} tone="inherit" />
                           </StaffWindow>
                           <div style={styles.staffName}>&nbsp;</div>
                           <div style={styles.staffRole}>&nbsp;</div>
@@ -497,10 +495,10 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
 
         {/* Footer actions */}
         <div style={styles.footer}>
-          <Button size="md" variant="secondaryLight" iconRight={<HelpIcon />} style={{ minWidth: 180 }}>
+          <Button size="md" variant="secondaryLight" iconRight={<Icon name="help" tone="inherit" />} style={{ minWidth: 180 }}>
             Help
           </Button>
-          <Button size="md" variant="dark" iconRight={<NextIcon />} style={{ minWidth: 180 }} onClick={async () => {
+          <Button size="md" variant="dark" iconRight={<Icon name="arrow-right" tone="inherit" />} style={{ minWidth: 180 }} onClick={async () => {
             const incomplete = clinics.find(c => !c.name.trim() || !c.phone.trim() || !c.domain.trim() || !c.address.trim());
             if (incomplete) {
               setActiveClinicId(incomplete.id);
