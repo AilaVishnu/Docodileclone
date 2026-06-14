@@ -118,6 +118,7 @@ export const styles: Record<string, CSSProperties> = {
     justifyContent: "space-between",
     padding: "8px 12px",
     backgroundColor: colors.neutral150,
+    borderRadius: "4px", // match the service line-item rows above
   },
 
   totalLabel: {
