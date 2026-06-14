@@ -1,43 +1,10 @@
 import React from "react";
 import { styles } from "./PrescriptionPage.styles";
 import { pickAvatar } from "../../utils/avatar";
-// Action-list icons exported from Figma node 2059:6764 (currentColor-normalized)
-import { ReactComponent as VisitsIcon } from "../../assets/icons/visits.svg";
-import { ReactComponent as PulseIcon } from "../../assets/icons/pulse.svg";
-import { ReactComponent as FileIcon } from "../../assets/icons/file.svg";
-import { ReactComponent as HistoryIcon } from "../../assets/icons/history.svg";
-import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check-small.svg";
-// Contact-card icons exported from Figma node 2073:3264 (currentColor-normalized)
-import { ReactComponent as LetterIcon } from "../../assets/icons/letter.svg";
-import { ReactComponent as VideocameraIcon } from "../../assets/icons/videocamera.svg";
-import { ReactComponent as PenIcon } from "../../assets/icons/pen.svg";
-import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
-// Main content section icons exported from Figma node 2057:6283
-import { ReactComponent as HeartPulseIcon } from "../../assets/icons/heart-pulse.svg";
-import { ReactComponent as HourglassIcon } from "../../assets/icons/hourglass-line.svg";
-import { ReactComponent as ChatSquareCallIcon } from "../../assets/icons/chat-square-call.svg";
-import { ReactComponent as MagniferBugIcon } from "../../assets/icons/magnifer-bug.svg";
-import { ReactComponent as PillsIcon } from "../../assets/icons/pills.svg";
-import { ReactComponent as DocumentIcon } from "../../assets/icons/document-school.svg";
-import { ReactComponent as UsersIcon } from "../../assets/icons/users-group-rounded.svg";
-import { ReactComponent as RestartIcon } from "../../assets/icons/restart-24.svg";
-import { ReactComponent as ChevronIcon } from "../../assets/icons/chevron-up.svg";
-import { ReactComponent as MicIcon } from "../../assets/icons/microphone.svg";
-import { ReactComponent as RewindIcon } from "../../assets/icons/rewind-back-circle.svg";
-import { ReactComponent as ArrowLeftIcon } from "../../assets/icons/arrow-left.svg";
-import { ReactComponent as CalendarIcon } from "../../assets/icons/calendar.svg";
-import { ReactComponent as UserIcon } from "../../assets/icons/user.svg";
+import { Icon } from "../../components/Icon";
 import { Card } from "../../components/Card";
 import { IconButton } from "../../components/IconButton";
 import { MeasureField } from "../../components/MeasureField";
-import { ReactComponent as ReorderIcon } from "../../assets/icons/reorder.svg";
-import { ReactComponent as TuningIcon } from "../../assets/icons/tuning.svg";
-import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg";
-import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
-import { ReactComponent as ShareIcon } from "../../assets/icons/share.svg";
-import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
-import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
-import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 import { Toast } from "../../components/Toast";
@@ -451,16 +418,16 @@ const computeRxTotal = (medicine?: string | null, dosage?: string | null, freque
 // inside the component from real data sources, not hardcoded here.
 type ActionMeta = { icon: React.ReactNode; label: string };
 const ACTION_META: ActionMeta[] = [
-  { icon: <VisitsIcon style={styles.actionIcon} />, label: "Visits" },
+  { icon: <Icon name="visits" tone="inherit" style={styles.actionIcon} />, label: "Visits" },
   // Reports + Files merged into a single "Files" tab — category is now a
   // first-class metadata field on each upload (Reports / Prescriptions /
   // Observations / Admin / Other), with chip filtering below.
-  { icon: <FileIcon style={styles.actionIcon} />, label: "Files" },
-  { icon: <HistoryIcon style={styles.actionIcon} />, label: "Timeline" },
-  { icon: <BillCheckIcon style={styles.actionIcon} />, label: "Bills" },
+  { icon: <Icon name="file" tone="inherit" style={styles.actionIcon} />, label: "Files" },
+  { icon: <Icon name="history" tone="inherit" style={styles.actionIcon} />, label: "Timeline" },
+  { icon: <Icon name="bill-check-small" tone="inherit" style={styles.actionIcon} />, label: "Bills" },
   // Info appended at the END so the other action indices (Visits 0 … Bills 3)
   // are untouched; the nav just RENDERS it first (see NAV_ORDER).
-  { icon: <UserIcon style={styles.actionIcon} />, label: "Info" },
+  { icon: <Icon name="user" tone="inherit" style={styles.actionIcon} />, label: "Info" },
 ];
 
 // Display order for the section nav — Info (index 4) shows first, before Visits.
@@ -1300,11 +1267,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // video / edit) without crowding the section nav beside it.
   const contactMenuItems = [
     ...(selectedPatient?.phone
-      ? [{ icon: <PhoneIcon style={styles.kebabItemIcon} />, label: `${selectedPatient.phone}`, onClick: () => { window.location.href = `tel:${selectedPatient.phone}`; } }]
+      ? [{ icon: <Icon name="phone" tone="inherit" style={styles.kebabItemIcon} />, label: `${selectedPatient.phone}`, onClick: () => { window.location.href = `tel:${selectedPatient.phone}`; } }]
       : []),
-    { icon: <LetterIcon style={styles.kebabItemIcon} />, label: "Email patient", onClick: () => {} },
-    { icon: <VideocameraIcon style={styles.kebabItemIcon} />, label: "Video call", onClick: () => {} },
-    { icon: <PenIcon style={styles.kebabItemIcon} />, label: "Edit patient info", onClick: () => setShowEditPatient(true) },
+    { icon: <Icon name="letter" tone="inherit" style={styles.kebabItemIcon} />, label: "Email patient", onClick: () => {} },
+    { icon: <Icon name="videocamera" tone="inherit" style={styles.kebabItemIcon} />, label: "Video call", onClick: () => {} },
+    { icon: <Icon name="pen" tone="inherit" style={styles.kebabItemIcon} />, label: "Edit patient info", onClick: () => setShowEditPatient(true) },
   ];
 
   // ── Header + right-area content driven by which left-rail action is active.
@@ -1898,7 +1865,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
           aria-label="Back to patients"
           title="Back to patients"
         >
-          <ArrowLeftIcon width={20} height={20} />
+          <Icon name="arrow-left" size={20} tone="inherit" />
         </button>
 
         <div style={styles.rxHeaderPad}>
@@ -2007,11 +1974,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
 
               <Card style={styles.infoFieldsCard}>
                 {[
-                  { icon: <UserIcon style={styles.infoRowIcon} />, label: "Name", value: selectedPatient?.name },
-                  { icon: <LetterIcon style={styles.infoRowIcon} />, label: "Email", value: selectedPatient?.email },
-                  { icon: <PhoneIcon style={styles.infoRowIcon} />, label: "Phone", value: selectedPatient?.phone },
-                  { icon: <CalendarIcon style={styles.infoRowIcon} />, label: "Age", value: selectedPatient?.age != null ? `${Math.floor(selectedPatient.age / 12)} yrs` : null },
-                  { icon: <UserIcon style={styles.infoRowIcon} />, label: "Gender", value: selectedPatient?.gender },
+                  { icon: <Icon name="user" tone="inherit" style={styles.infoRowIcon} />, label: "Name", value: selectedPatient?.name },
+                  { icon: <Icon name="letter" tone="inherit" style={styles.infoRowIcon} />, label: "Email", value: selectedPatient?.email },
+                  { icon: <Icon name="phone" tone="inherit" style={styles.infoRowIcon} />, label: "Phone", value: selectedPatient?.phone },
+                  { icon: <Icon name="calendar" tone="inherit" style={styles.infoRowIcon} />, label: "Age", value: selectedPatient?.age != null ? `${Math.floor(selectedPatient.age / 12)} yrs` : null },
+                  { icon: <Icon name="user" tone="inherit" style={styles.infoRowIcon} />, label: "Gender", value: selectedPatient?.gender },
                 ].map((f) => (
                   <div key={f.label} style={styles.infoRow}>
                     {f.icon}
@@ -2047,7 +2014,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                     const synopsis = parts.join(" · ");
                     return (
                       <div key={v.id} style={styles.timelineItem}>
-                        <span style={styles.timelineDot}><VisitsIcon style={styles.timelineDotIcon} /></span>
+                        <span style={styles.timelineDot}><Icon name="visits" tone="inherit" style={styles.timelineDotIcon} /></span>
                         <div style={styles.timelineContent}>
                           <div style={styles.timelineHead}>
                             <span style={styles.timelineTitle}>{`Visit ${n}`}</span>
@@ -2096,7 +2063,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                     aria-label="List view"
                     aria-pressed={viewMode === "list"}
                   >
-                    <ListSortIcon width={24} height={24} strokeWidth={1.5} />
+                    <Icon name="list-sort" size={24} tone="inherit" />
                   </button>
                   <button
                     type="button"
@@ -2109,7 +2076,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                     aria-label="Grid view"
                     aria-pressed={viewMode === "grid"}
                   >
-                    <WidgetIcon width={24} height={24} strokeWidth={1.5} />
+                    <Icon name="widget" size={24} tone="inherit" />
                   </button>
                 </div>
               </div>
@@ -2142,14 +2109,14 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                     >
                       <span style={styles.reportSerial}>{i + 1}</span>
                       <div style={styles.reportMicChip}>
-                        <MicIcon width={24} height={24} />
+                        <Icon name="microphone" size={24} tone="inherit" />
                       </div>
                       <span style={styles.reportName}>{r.name}</span>
                       <span style={styles.reportCell}>{r.category}</span>
                       <span style={styles.reportCell}>{r.date}</span>
                       <div style={styles.reportActions}>
-                        <DownloadIcon width={24} height={24} />
-                        <ReorderIcon width={20} height={20} style={styles.reorderHandle} />
+                        <Icon name="download" size={24} tone="inherit" />
+                        <Icon name="reorder" size={20} tone="inherit" style={styles.reorderHandle} />
                       </div>
                     </div>
                   ))}
@@ -2180,13 +2147,13 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                           mimeType={r.mimeType}
                           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
                         />
-                        {!(r.mimeType ?? "").startsWith("image/") && <FileIcon style={styles.reportCardThumbIcon} />}
+                        {!(r.mimeType ?? "").startsWith("image/") && <Icon name="file" tone="inherit" style={styles.reportCardThumbIcon} />}
                         <span style={styles.reportCardMic}>
-                          <MicIcon width={20} height={20} />
+                          <Icon name="microphone" size={20} tone="inherit" />
                         </span>
                       </div>
                       <div style={styles.reportCardKebab}>
-                        <ReorderIcon width={20} height={20} />
+                        <Icon name="reorder" size={20} tone="inherit" />
                       </div>
                       <div style={styles.reportCardFooter}>
                         <span style={styles.reportCardName}>{r.name}</span>
@@ -2212,7 +2179,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
             // than dropping straight into a blank session form.
             <section style={styles.rightColumn}>
               <div style={styles.noVisits}>
-                <VisitsIcon width={40} height={40} style={styles.noVisitsIcon} />
+                <Icon name="visits" size={40} tone="inherit" style={styles.noVisitsIcon} />
                 <h3 style={styles.noVisitsTitle}>No visits yet</h3>
                 <p style={styles.noVisitsText}>
                   This patient has no recorded visits. Create one to start
@@ -2273,7 +2240,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                 <div style={styles.sectionCard}>
                   <div style={styles.sectionHeader}>
                     <div style={styles.sectionTitleWrap}>
-                      <HeartPulseIcon style={styles.sectionIcon} />
+                      <Icon name="heart-pulse" tone="inherit" style={styles.sectionIcon} />
                       <h3 style={styles.sectionTitle}>Vitals</h3>
                     </div>
                     <button
@@ -2282,7 +2249,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                       onClick={() => toggleSection("vitals")}
                       aria-label={openSections.vitals ? "Collapse Vitals" : "Expand Vitals"}
                     >
-                      <ChevronIcon
+                      <Icon
+                        name="chevron-up"
+                        tone="inherit"
                         style={{
                           ...styles.sectionIcon,
                           transform: openSections.vitals ? "rotate(0deg)" : "rotate(180deg)",
@@ -2351,7 +2320,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                 <div style={styles.sectionCard}>
                   <div style={styles.sectionHeader}>
                     <div style={styles.sectionTitleWrap}>
-                      <HourglassIcon style={styles.sectionIcon} />
+                      <Icon name="hourglass-line" tone="inherit" style={styles.sectionIcon} />
                       <h3 style={styles.sectionTitle}>History</h3>
                     </div>
                     <button
@@ -2360,7 +2329,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                       onClick={() => toggleSection("history")}
                       aria-label={openSections.history ? "Collapse History" : "Expand History"}
                     >
-                      <ChevronIcon
+                      <Icon
+                        name="chevron-up"
+                        tone="inherit"
                         style={{
                           ...styles.sectionIcon,
                           transform: openSections.history ? "rotate(0deg)" : "rotate(180deg)",
@@ -2408,11 +2379,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   <div style={styles.noteCard}>
                     <div style={styles.noteCardHeader}>
                       <div style={styles.sectionTitleWrap}>
-                        <ChatSquareCallIcon style={styles.sectionIcon} />
+                        <Icon name="chat-square-call" tone="inherit" style={styles.sectionIcon} />
                         <h3 style={styles.sectionTitle}>Complaints</h3>
                       </div>
                       <PopoverMenu
-                        trigger={<ReorderIcon style={styles.reorderHandle} width={24} height={24} />}
+                        trigger={<Icon name="reorder" size={24} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "complaints") }]}
                         ariaLabel="Template options"
                       />
@@ -2434,10 +2405,10 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                           onClick={() => prevVisit?.complaints && setComplaintsValue(prevVisit.complaints)}
                           style={rewindBtnStyle(!prevVisit?.complaints || !canEditForm)}
                         >
-                          <RewindIcon width={20} height={20} />
+                          <Icon name="rewind-back-circle" size={20} tone="inherit" />
                         </button>
                         <button type="button" title="Load template" onClick={() => openTemplates("load", "complaints")} style={rewindBtnStyle(false)}>
-                          <MicIcon width={20} height={20} />
+                          <Icon name="microphone" size={20} tone="inherit" />
                         </button>
                                               </span>
                     </div>
@@ -2445,11 +2416,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   <div style={styles.noteCard}>
                     <div style={styles.noteCardHeader}>
                       <div style={styles.sectionTitleWrap}>
-                        <MagniferBugIcon style={styles.sectionIcon} />
+                        <Icon name="magnifer-bug" tone="inherit" style={styles.sectionIcon} />
                         <h3 style={styles.sectionTitle}>Diagnosis</h3>
                       </div>
                       <PopoverMenu
-                        trigger={<ReorderIcon style={styles.reorderHandle} width={24} height={24} />}
+                        trigger={<Icon name="reorder" size={24} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "diagnosis") }]}
                         ariaLabel="Template options"
                       />
@@ -2471,10 +2442,10 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                           onClick={() => prevVisit?.diagnosis && setDiagnosisValue(prevVisit.diagnosis)}
                           style={rewindBtnStyle(!prevVisit?.diagnosis || !canEditForm)}
                         >
-                          <RewindIcon width={20} height={20} />
+                          <Icon name="rewind-back-circle" size={20} tone="inherit" />
                         </button>
                         <button type="button" title="Load template" onClick={() => openTemplates("load", "diagnosis")} style={rewindBtnStyle(false)}>
-                          <MicIcon width={20} height={20} />
+                          <Icon name="microphone" size={20} tone="inherit" />
                         </button>
                                               </span>
                     </div>
@@ -2485,7 +2456,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                 <div style={styles.sectionCard}>
                   <div style={styles.sectionHeader}>
                     <div style={styles.sectionTitleWrap}>
-                      <PillsIcon style={styles.sectionIcon} />
+                      <Icon name="pills" tone="inherit" style={styles.sectionIcon} />
                       <h3 style={styles.sectionTitle}>Rx</h3>
                     </div>
                     <button
@@ -2494,7 +2465,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                       onClick={() => toggleSection("rx")}
                       aria-label={openSections.rx ? "Collapse Rx" : "Expand Rx"}
                     >
-                      <ChevronIcon
+                      <Icon
+                        name="chevron-up"
+                        tone="inherit"
                         style={{
                           ...styles.sectionIcon,
                           transform: openSections.rx ? "rotate(0deg)" : "rotate(180deg)",
@@ -2578,7 +2551,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                 <div style={styles.rxDataCell}><DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} /></div>
                                 <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={row.notes} onChange={(e) => updateField("notes", e.target.value)} />
                                 <button type="button" style={styles.rxDeleteBtn} onClick={() => removeRxRow(i)} title="Remove medicine">
-                                  <TrashIcon style={{ width: 16, height: 16 }} />
+                                  <Icon name="trash" size={16} tone="inherit" />
                                 </button>
                               </div>
                               {row.thenRows.map((thenRow, ti) => (
@@ -2589,7 +2562,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                   <div style={styles.rxDataCell}><DurationPicker value={thenRow.duration} onChange={(v) => updateThenField(i, ti, "duration", v)} /></div>
                                   <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={thenRow.notes} onChange={(e) => updateThenField(i, ti, "notes", e.target.value)} />
                                   <button type="button" style={styles.rxDeleteBtn} onClick={() => removeThenRow(i, ti)} title="Remove tapering row">
-                                    <TrashIcon style={{ width: 16, height: 16 }} />
+                                    <Icon name="trash" size={16} tone="inherit" />
                                   </button>
                                 </div>
                               ))}
@@ -2631,14 +2604,14 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                             }}
                             style={rewindBtnStyle(!prevVisit?.prescriptions?.length || !canEditForm)}
                           >
-                            <RewindIcon width={20} height={20} />
+                            <Icon name="rewind-back-circle" size={20} tone="inherit" />
                           </button>
                           <button type="button" title="Load template" onClick={() => openTemplates("load", "rx")} style={rewindBtnStyle(false)}>
-                            <MicIcon width={20} height={20} />
+                            <Icon name="microphone" size={20} tone="inherit" />
                           </button>
                                                   </span>
                         <PopoverMenu
-                        trigger={<ReorderIcon style={styles.reorderHandle} width={20} height={20} />}
+                        trigger={<Icon name="reorder" size={20} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "rx") }]}
                         ariaLabel="Template options"
                       />
@@ -2654,11 +2627,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   <div style={styles.noteCard}>
                     <div style={styles.noteCardHeader}>
                       <div style={styles.sectionTitleWrap}>
-                        <DocumentIcon style={styles.sectionIcon} />
+                        <Icon name="document-school" tone="inherit" style={styles.sectionIcon} />
                         <h3 style={styles.sectionTitle}>Notes for Patient</h3>
                       </div>
                       <PopoverMenu
-                        trigger={<ReorderIcon style={styles.reorderHandle} width={20} height={20} />}
+                        trigger={<Icon name="reorder" size={20} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "notes_for_patient") }]}
                         ariaLabel="Template options"
                       />
@@ -2678,10 +2651,10 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                           onClick={() => prevVisit?.notesForPatient && setNotesForPatientValue(prevVisit.notesForPatient)}
                           style={rewindBtnStyle(!prevVisit?.notesForPatient || !canEditForm)}
                         >
-                          <RewindIcon width={20} height={20} />
+                          <Icon name="rewind-back-circle" size={20} tone="inherit" />
                         </button>
                         <button type="button" title="Load template" onClick={() => openTemplates("load", "notes_for_patient")} style={rewindBtnStyle(false)}>
-                          <MicIcon width={20} height={20} />
+                          <Icon name="microphone" size={20} tone="inherit" />
                         </button>
                                               </span>
                     </div>
@@ -2689,11 +2662,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   <div style={{ ...styles.noteCard, ...styles.noteCardPrivate }}>
                     <div style={styles.noteCardHeader}>
                       <div style={styles.sectionTitleWrap}>
-                        <UsersIcon style={styles.sectionIcon} />
+                        <Icon name="users-group-rounded" tone="inherit" style={styles.sectionIcon} />
                         <h3 style={styles.sectionTitle}>Private Notes</h3>
                       </div>
                       <PopoverMenu
-                        trigger={<ReorderIcon style={styles.reorderHandle} width={20} height={20} />}
+                        trigger={<Icon name="reorder" size={20} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "private_notes") }]}
                         ariaLabel="Template options"
                       />
@@ -2714,7 +2687,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   {/* Tests — dictatable with mic/rewind */}
                   <div style={styles.noteRow}>
                     <div style={styles.noteLabel}>
-                      <DocumentIcon style={styles.sectionIcon} />
+                      <Icon name="document-school" tone="inherit" style={styles.sectionIcon} />
                       <span style={styles.noteLabelText}>Tests</span>
                     </div>
                     <div style={styles.noteFieldWrap}>
@@ -2734,15 +2707,15 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                           onClick={() => prevVisit?.tests && setTestsValue(prevVisit.tests)}
                           style={rewindBtnStyle(!prevVisit?.tests || !canEditForm)}
                         >
-                          <RewindIcon width={20} height={20} />
+                          <Icon name="rewind-back-circle" size={20} tone="inherit" />
                         </button>
                         <button type="button" title="Load template" onClick={() => openTemplates("load", "tests")} style={rewindBtnStyle(false)}>
-                          <MicIcon width={20} height={20} />
+                          <Icon name="microphone" size={20} tone="inherit" />
                         </button>
                                               </span>
                     </div>
                     <PopoverMenu
-                        trigger={<ReorderIcon style={styles.reorderHandle} width={20} height={20} />}
+                        trigger={<Icon name="reorder" size={20} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "tests") }]}
                         ariaLabel="Template options"
                       />
@@ -2753,7 +2726,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                 doctor sets referDoctorId and closes the menu. */}
                   <div style={styles.noteRow}>
                     <div style={styles.noteLabel}>
-                      <UsersIcon style={styles.sectionIcon} />
+                      <Icon name="users-group-rounded" tone="inherit" style={styles.sectionIcon} />
                       <span style={styles.noteLabelText}>Refer to</span>
                     </div>
                     <div ref={referWrapRef} style={{ position: "relative" }}>
@@ -2773,9 +2746,10 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                           {referDoctorName || "Select doctor"}
                         </span>
                         <span style={styles.referChevron}>
-                          <ChevronIcon
-                            width={16}
-                            height={16}
+                          <Icon
+                            name="chevron-up"
+                            size={16}
+                            tone="inherit"
                             style={{ transform: referOpen ? "rotate(0deg)" : "rotate(180deg)" }}
                           />
                         </span>
@@ -2816,7 +2790,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   {/* Next Review — date picker + "or ___ days" + notes field */}
                   <div style={styles.noteRow}>
                     <div style={styles.noteLabel}>
-                      <RestartIcon style={styles.sectionIcon} />
+                      <Icon name="restart-24" tone="inherit" style={styles.sectionIcon} />
                       <span style={styles.noteLabelText}>Review</span>
                     </div>
                     <div style={styles.reviewRow}>
@@ -2825,7 +2799,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                           style={styles.reviewDate}
                           onClick={() => setShowReviewDatePicker((v) => !v)}
                         >
-                          <CalendarIcon width={24} height={24} style={{ color: "currentColor" }} />
+                          <Icon name="calendar" size={24} tone="inherit" />
                           <span
                             style={{
                               ...styles.reviewDateText,
@@ -2954,21 +2928,21 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                     // before the click lands (the "no toast" bug).
                     onMouseDown={(e) => { e.preventDefault(); void handleCompleteVisit(); }}
                   >
-                    <BillCheckIcon width={18} height={18} />
+                    <Icon name="bill-check-small" size={18} tone="inherit" />
                     <span>{completed ? "Save changes" : "Complete visit"}</span>
                   </button>
                 );
               })()}
               <button type="button" style={styles.barBtn} onClick={() => handlePrintPrescription("download")}>
-                <DownloadIcon width={18} height={18} />
+                <Icon name="download" size={18} tone="inherit" />
                 <span>Download</span>
               </button>
               <button type="button" style={styles.barBtn} onClick={() => handlePrintPrescription("print")}>
-                <PrinterIcon width={18} height={18} />
+                <Icon name="printer" size={18} tone="inherit" />
                 <span>Print</span>
               </button>
               <button type="button" style={styles.barBtn} onClick={handleShareWhatsApp}>
-                <ShareIcon width={18} height={18} />
+                <Icon name="share" size={18} tone="inherit" />
                 <span>Share</span>
               </button>
               {/* Clear all wipes the prescription — destructive, so only on the
@@ -2977,7 +2951,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                 <>
                   <div style={styles.barDivider} aria-hidden />
                   <button type="button" style={{ ...styles.barBtn, ...styles.barBtnDanger }} onClick={handleClearAll}>
-                    <TrashIcon width={18} height={18} />
+                    <Icon name="trash" size={18} tone="inherit" />
                     <span>Clear all</span>
                   </button>
                 </>
@@ -2986,11 +2960,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
           ) : (
             <>
               <button type="button" style={styles.barBtn} onClick={() => setShowAddModal(true)}>
-                <FileIcon style={{ width: 18, height: 18 }} />
+                <Icon name="file" size={18} tone="inherit" />
                 <span>Add file</span>
               </button>
               <button type="button" style={styles.barBtn} onClick={handleDownloadAllFiles}>
-                <DownloadIcon width={18} height={18} />
+                <Icon name="download" size={18} tone="inherit" />
                 <span>Download all</span>
               </button>
             </>
