@@ -123,10 +123,10 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} surface={colors.neutral150} width={1040} padding={6} radius={16}>
+    <Modal isOpen={isOpen} onClose={onClose} surface="transparent" width={1040} padding={6} radius={16}>
       <datalist id="bm-svc-list">{SERVICE_CATALOG.map((s) => <option key={s.name} value={s.name} />)}</datalist>
-      {/* Three cards (left · right-bill · right-payment) on a neutral150 tray,
-          separated by 6px gaps + 6px inset; each card rounded (radii.m). */}
+      {/* Three cards (left · right-bill · right-payment) float on a transparent
+          tray, separated by 6px gaps + 6px inset; each card rounded (radii.m). */}
       <div style={{ display: "flex", gap: 6, minHeight: 460, fontFamily: fonts.family.primary }}>
         {/* ── Left: patient + line items ───────────────────────────── */}
         <div style={{ flex: "2.1 1 0", minWidth: 0, backgroundColor: colors.neutral100, borderRadius: radii.m, padding: spacing.xl, display: "flex", flexDirection: "column", gap: spacing.m }}>
