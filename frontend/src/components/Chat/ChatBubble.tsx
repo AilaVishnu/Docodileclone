@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { colors, fonts } from "../../styles/theme";
 import { ChatPanel } from "./ChatPanel";
-import { ReactComponent as ChatIcon } from "../../assets/icons/chat-dots.svg";
+import { Icon } from "../Icon";
 
 type Props = {
   clinicId: string;
@@ -42,7 +42,7 @@ export function ChatBubble({ clinicId, currentUserId, currentUserName }: Props) 
         title="Clinic Chat"
         aria-label="Open clinic chat"
       >
-        <ChatIcon width={22} height={22} style={{ color: colors.neutral100 }} />
+        <Icon name="chat-dots" size={22} tone="inverse" />
         {unread > 0 && !open && (
           <div style={styles.badge}>{unread > 99 ? "99+" : unread}</div>
         )}

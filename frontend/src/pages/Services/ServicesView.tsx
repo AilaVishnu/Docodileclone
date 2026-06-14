@@ -7,9 +7,7 @@ import { AddServiceModal } from "./AddServiceModal";
 import { Button } from "../../components/Button";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { PlusIcon } from "../../iconsUtil";
-import { ReactComponent as SearchIcon } from "../../assets/search.svg";
-import { ReactComponent as EditPencilIcon } from "../../assets/icons/edit-pencil.svg";
-import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
+import { Icon } from "../../components/Icon";
 import {
   listServices,
   createService,
@@ -119,7 +117,7 @@ export function ServicesView() {
       <div style={styles.content}>
       <div style={styles.toolbar}>
         <div style={styles.searchBox}>
-          <SearchIcon style={styles.searchIcon} />
+          <Icon name="search" tone="inherit" style={styles.searchIcon} />
           <input
             style={styles.searchInput}
             placeholder="Search by name or short form"
@@ -167,10 +165,10 @@ export function ServicesView() {
                 render: (s) => (
                   <div style={styles.actions}>
                     <button style={styles.iconBtn} onClick={() => openEdit(s)} aria-label="Edit">
-                      <EditPencilIcon width={24} height={24} />
+                      <Icon name="edit-pencil" size={24} tone="inherit" />
                     </button>
                     <button style={styles.iconBtn} onClick={() => handleDelete(s)} aria-label="Delete">
-                      <TrashIcon width={24} height={24} />
+                      <Icon name="trash" size={24} tone="inherit" />
                     </button>
                   </div>
                 ),

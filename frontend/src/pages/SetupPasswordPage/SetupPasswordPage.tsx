@@ -4,9 +4,7 @@ import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { API_BASE_URL } from "../../apiConfig";
 import AdminBg from "../../assets/admin-illo.svg";
 import StaffBg from "../../assets/staff-illo.svg";
-import { ReactComponent as KeyIcon } from "../../assets/Key.svg";
-import { ReactComponent as EyeIcon } from "../../assets/Eye.svg";
-import { ReactComponent as EyeClosedIcon } from "../../assets/Eye Closed.svg";
+import { Icon } from "../../components/Icon";
 
 type Phase = "loading" | "invalid" | "ready" | "success";
 
@@ -235,7 +233,7 @@ export function SetupPasswordPage() {
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
           {/* New password */}
           <div style={fieldRow}>
-            <KeyIcon style={{ width: 24, height: 24, opacity: 0.5, flexShrink: 0 }} />
+            <Icon name="key" size={24} tone="inherit" style={{ opacity: 0.5, flexShrink: 0 }} />
             <input
               style={input}
               type={showPassword ? "text" : "password"}
@@ -246,13 +244,13 @@ export function SetupPasswordPage() {
               required
             />
             <button type="button" style={eyeBtn} onClick={() => setShowPassword((v) => !v)}>
-              {showPassword ? <EyeClosedIcon style={{ width: 24, height: 24 }} /> : <EyeIcon style={{ width: 24, height: 24 }} />}
+              {showPassword ? <Icon name="eye-closed" size={24} tone="inherit" /> : <Icon name="eye" size={24} tone="inherit" />}
             </button>
           </div>
 
           {/* Confirm password */}
           <div style={fieldRow}>
-            <KeyIcon style={{ width: 24, height: 24, opacity: 0.5, flexShrink: 0 }} />
+            <Icon name="key" size={24} tone="inherit" style={{ opacity: 0.5, flexShrink: 0 }} />
             <input
               style={input}
               type={showConfirm ? "text" : "password"}
@@ -263,7 +261,7 @@ export function SetupPasswordPage() {
               required
             />
             <button type="button" style={eyeBtn} onClick={() => setShowConfirm((v) => !v)}>
-              {showConfirm ? <EyeClosedIcon style={{ width: 24, height: 24 }} /> : <EyeIcon style={{ width: 24, height: 24 }} />}
+              {showConfirm ? <Icon name="eye-closed" size={24} tone="inherit" /> : <Icon name="eye" size={24} tone="inherit" />}
             </button>
           </div>
 

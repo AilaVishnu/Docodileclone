@@ -4,7 +4,7 @@ import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { usePatients, Patient } from "../../hooks/usePatients";
 import { useDoctors } from "../../hooks/useDoctors";
 import { API_BASE_URL } from "../../apiConfig";
-import { ReactComponent as SearchIcon } from "../../assets/search.svg";
+import { Icon } from "../../components/Icon";
 import { Select } from "../../components/Input/Select/Select";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { tableStyles as queueStyles } from "./PatientFilesPage.styles";
@@ -192,7 +192,7 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
           filter dropdowns → results list. No right-hand preview. */}
       <div style={styles.content}>
           <div style={styles.searchBox}>
-            <SearchIcon style={styles.searchIcon} />
+            <Icon name="search" tone="inherit" style={styles.searchIcon} />
             <input
               type="text"
               value={search}

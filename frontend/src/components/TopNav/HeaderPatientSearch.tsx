@@ -1,6 +1,6 @@
 import React from "react";
 import { colors, fonts } from "../../styles/theme";
-import { ReactComponent as SearchIcon } from "../../assets/search.svg";
+import { Icon } from "../Icon";
 import { usePatients, type Patient } from "../../hooks/usePatients";
 import { PatientSearchRow } from "../PatientSearchRow/PatientSearchRow";
 import { setPendingSessionNav } from "./SessionTrayButton";
@@ -57,7 +57,7 @@ export function HeaderPatientSearch({ onNavigate }: { onNavigate?: (tab: NavTab)
   return (
     <div ref={wrapRef} style={{ position: "relative", flexShrink: 0 }}>
       <div style={styles.bar}>
-        <SearchIcon style={{ width: "var(--search-icon)", height: "var(--search-icon)", color: colors.neutral400, flexShrink: 0 }} />
+        <Icon name="search" color={colors.neutral400} style={{ width: "var(--search-icon)", height: "var(--search-icon)", flexShrink: 0 }} />
         <input
           type="text"
           placeholder="Search for anything..."

@@ -1,6 +1,6 @@
 import { CSSProperties, ReactNode } from "react";
 import { styles } from "./PageHeader.styles";
-import { ReactComponent as ArrowLeftIcon } from "../../assets/icons/arrow-left.svg";
+import { Icon } from "../Icon";
 
 interface PageHeaderProps {
   /** Title shown centered in the bar. String or rich node (e.g. with an inline dropdown). */
@@ -30,7 +30,7 @@ export function PageHeader({ title, onBack, backLabel = "Back", actions, wrapTit
     <header style={{ ...styles.bar, ...style }}>
       {onBack && (
         <button type="button" style={styles.backButton} onClick={onBack} title={backLabel} aria-label={backLabel}>
-          <ArrowLeftIcon width={24} height={24} />
+          <Icon name="arrow-left" size={24} tone="inherit" />
         </button>
       )}
 
