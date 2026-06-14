@@ -14,7 +14,6 @@ import React from "react";
 type SvgComponent = React.FC<React.SVGProps<SVGSVGElement>>;
 
 import { ReactComponent as Ic_arrow_left } from "../../assets/icons/arrow-left.svg";
-import { ReactComponent as Ic_bill_check_small } from "../../assets/icons/bill-check-small.svg";
 import { ReactComponent as Ic_bill_check } from "../../assets/icons/bill-check.svg";
 import { ReactComponent as Ic_calendar } from "../../assets/icons/calendar.svg";
 import { ReactComponent as Ic_chat_dots } from "../../assets/icons/chat-dots.svg";
@@ -31,7 +30,6 @@ import { ReactComponent as Ic_heart_pulse } from "../../assets/icons/heart-pulse
 import { ReactComponent as Ic_history } from "../../assets/icons/history.svg";
 import { ReactComponent as Ic_hourglass_line } from "../../assets/icons/hourglass-line.svg";
 import { ReactComponent as Ic_hourglass } from "../../assets/icons/hourglass.svg";
-import { ReactComponent as Ic_letter } from "../../assets/icons/letter.svg";
 import { ReactComponent as Ic_list_sort } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as Ic_magnifer_bug } from "../../assets/icons/magnifer-bug.svg";
 import { ReactComponent as Ic_microphone } from "../../assets/icons/microphone.svg";
@@ -40,10 +38,8 @@ import { ReactComponent as Ic_pen } from "../../assets/icons/pen.svg";
 import { ReactComponent as Ic_pills } from "../../assets/icons/pills.svg";
 import { ReactComponent as Ic_play_circle } from "../../assets/icons/play-circle.svg";
 import { ReactComponent as Ic_printer } from "../../assets/icons/printer.svg";
-import { ReactComponent as Ic_pulse } from "../../assets/icons/pulse.svg";
 import { ReactComponent as Ic_reorder } from "../../assets/icons/reorder.svg";
 import { ReactComponent as Ic_restart_24 } from "../../assets/icons/restart-24.svg";
-import { ReactComponent as Ic_restart } from "../../assets/icons/restart.svg";
 import { ReactComponent as Ic_rewind_back_circle } from "../../assets/icons/rewind-back-circle.svg";
 import { ReactComponent as Ic_scale } from "../../assets/icons/scale.svg";
 import { ReactComponent as Ic_share } from "../../assets/icons/share.svg";
@@ -93,13 +89,11 @@ import { ReactComponent as Root_stethoscope } from "../../assets/Stethoscope.svg
 import { ReactComponent as Root_user_hands } from "../../assets/User Hands.svg";
 import { ReactComponent as Root_mask_happy } from "../../assets/Mask Happly.svg";
 import { ReactComponent as Root_plus } from "../../assets/Plus.svg";
-import { ReactComponent as Root_calendar } from "../../assets/calendar.svg";
 import { ReactComponent as Root_pulse } from "../../assets/pulse.svg";
 import { ReactComponent as Root_clock } from "../../assets/Clock Circle.svg";
 
 export const ICONS: Record<string, SvgComponent> = {
   "arrow-left": Ic_arrow_left,
-  "bill-check-small": Ic_bill_check_small,
   "bill-check": Ic_bill_check,
   "calendar": Ic_calendar,
   "chat-dots": Ic_chat_dots,
@@ -116,7 +110,6 @@ export const ICONS: Record<string, SvgComponent> = {
   "history": Ic_history,
   "hourglass-line": Ic_hourglass_line,
   "hourglass": Ic_hourglass,
-  "letter": Ic_letter,
   "list-sort": Ic_list_sort,
   "magnifer-bug": Ic_magnifer_bug,
   "microphone": Ic_microphone,
@@ -127,10 +120,9 @@ export const ICONS: Record<string, SvgComponent> = {
   "play-circle": Ic_play_circle,
   "plus": Root_plus,
   "printer": Ic_printer,
-  "pulse": Ic_pulse,
+  "pulse": Root_pulse,
   "reorder": Ic_reorder,
-  "restart-24": Ic_restart_24,
-  "restart": Ic_restart,
+  "restart": Ic_restart_24,
   "rewind-back-circle": Ic_rewind_back_circle,
   "scale": Ic_scale,
   "share": Ic_share,
@@ -174,8 +166,6 @@ export const ICONS: Record<string, SvgComponent> = {
   "stethoscope": Root_stethoscope,
   "user-hands": Root_user_hands,
   "mask-happy": Root_mask_happy,
-  "calendar-alt": Root_calendar,
-  "pulse-alt": Root_pulse,
   "clock": Root_clock,
 };
 

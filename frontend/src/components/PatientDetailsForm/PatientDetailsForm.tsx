@@ -207,7 +207,7 @@ export function PatientDetailsForm({
             }}
             style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: spacing.xs, opacity: locked ? 1 : hasManualAge ? 0.4 : 1 }}
           >
-            <Icon name="calendar-alt" tone="inherit" style={styles.iconFieldIcon} />
+            <Icon name="calendar" tone="inherit" style={styles.iconFieldIcon} />
             <span style={styles.inlineLabel}>DOB</span>
           </span>
           <input

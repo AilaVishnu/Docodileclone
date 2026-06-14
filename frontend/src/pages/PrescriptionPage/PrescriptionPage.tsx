@@ -424,7 +424,7 @@ const ACTION_META: ActionMeta[] = [
   // Observations / Admin / Other), with chip filtering below.
   { icon: <Icon name="file" tone="inherit" style={styles.actionIcon} />, label: "Files" },
   { icon: <Icon name="history" tone="inherit" style={styles.actionIcon} />, label: "Timeline" },
-  { icon: <Icon name="bill-check-small" tone="inherit" style={styles.actionIcon} />, label: "Bills" },
+  { icon: <Icon name="bill-check" tone="inherit" style={styles.actionIcon} />, label: "Bills" },
   // Info appended at the END so the other action indices (Visits 0 … Bills 3)
   // are untouched; the nav just RENDERS it first (see NAV_ORDER).
   { icon: <Icon name="user" tone="inherit" style={styles.actionIcon} />, label: "Info" },
@@ -1269,7 +1269,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     ...(selectedPatient?.phone
       ? [{ icon: <Icon name="phone" tone="inherit" style={styles.kebabItemIcon} />, label: `${selectedPatient.phone}`, onClick: () => { window.location.href = `tel:${selectedPatient.phone}`; } }]
       : []),
-    { icon: <Icon name="letter" tone="inherit" style={styles.kebabItemIcon} />, label: "Email patient", onClick: () => {} },
+    { icon: <Icon name="mail" tone="inherit" style={styles.kebabItemIcon} />, label: "Email patient", onClick: () => {} },
     { icon: <Icon name="videocamera" tone="inherit" style={styles.kebabItemIcon} />, label: "Video call", onClick: () => {} },
     { icon: <Icon name="pen" tone="inherit" style={styles.kebabItemIcon} />, label: "Edit patient info", onClick: () => setShowEditPatient(true) },
   ];
@@ -1975,7 +1975,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
               <Card style={styles.infoFieldsCard}>
                 {[
                   { icon: <Icon name="user" tone="inherit" style={styles.infoRowIcon} />, label: "Name", value: selectedPatient?.name },
-                  { icon: <Icon name="letter" tone="inherit" style={styles.infoRowIcon} />, label: "Email", value: selectedPatient?.email },
+                  { icon: <Icon name="mail" tone="inherit" style={styles.infoRowIcon} />, label: "Email", value: selectedPatient?.email },
                   { icon: <Icon name="phone" tone="inherit" style={styles.infoRowIcon} />, label: "Phone", value: selectedPatient?.phone },
                   { icon: <Icon name="calendar" tone="inherit" style={styles.infoRowIcon} />, label: "Age", value: selectedPatient?.age != null ? `${Math.floor(selectedPatient.age / 12)} yrs` : null },
                   { icon: <Icon name="user" tone="inherit" style={styles.infoRowIcon} />, label: "Gender", value: selectedPatient?.gender },
@@ -2790,7 +2790,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   {/* Next Review — date picker + "or ___ days" + notes field */}
                   <div style={styles.noteRow}>
                     <div style={styles.noteLabel}>
-                      <Icon name="restart-24" tone="inherit" style={styles.sectionIcon} />
+                      <Icon name="restart" tone="inherit" style={styles.sectionIcon} />
                       <span style={styles.noteLabelText}>Review</span>
                     </div>
                     <div style={styles.reviewRow}>
@@ -2928,7 +2928,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                     // before the click lands (the "no toast" bug).
                     onMouseDown={(e) => { e.preventDefault(); void handleCompleteVisit(); }}
                   >
-                    <Icon name="bill-check-small" size={18} tone="inherit" />
+                    <Icon name="bill-check" size={18} tone="inherit" />
                     <span>{completed ? "Save changes" : "Complete visit"}</span>
                   </button>
                 );

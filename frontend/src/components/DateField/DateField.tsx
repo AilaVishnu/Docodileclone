@@ -50,7 +50,7 @@ export function DateField({
         onClick={() => { if (!disabled) setOpen(true); }}
         title={disabled ? disabledTitle : undefined}
       >
-        <Icon name="calendar-alt" size={24} color={colors.neutral900} style={{ flexShrink: 0 }} />
+        <Icon name="calendar" size={24} color={colors.neutral900} style={{ flexShrink: 0 }} />
         <span style={{ fontFamily: fonts.family.primary, fontSize: fonts.control.md, color: value ? colors.neutral900 : colors.neutral400 }}>
           {value ? format(value) : placeholder}
         </span>

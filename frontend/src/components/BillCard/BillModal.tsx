@@ -137,7 +137,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
           <div style={{ display: "flex", alignItems: "center", gap: spacing.m, flexWrap: "wrap" }}>
             <span style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>Bill date</span>
             <span onClick={() => setShowCal(true)} style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: spacing.xs, height: 30, boxSizing: "border-box", border: `${strokes.xs} solid ${colors.neutral300}`, borderRadius: radii.m, padding: "0 10px", color: colors.neutral900, cursor: "pointer" }}>
-              <Icon name="calendar-alt" size={20} color={colors.neutral900} /> {fmtDate(billDate)}
+              <Icon name="calendar" size={20} color={colors.neutral900} /> {fmtDate(billDate)}
               {showCal && (
                 <DatePicker selectedDate={billDate} showDoneButton onSelect={(d) => { setBillDate(d); setShowCal(false); }} onClose={() => setShowCal(false)} />
               )}

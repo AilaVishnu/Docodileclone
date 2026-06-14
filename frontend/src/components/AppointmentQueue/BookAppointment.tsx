@@ -733,7 +733,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               {form.services.map((svc, i) => (
                 <div key={i} style={styles.appointmentRow}>
                   <div style={styles.appointmentLabelGroup}>
-                    <Icon name="pulse-alt" tone="inherit" style={styles.appointmentIcon} />
+                    <Icon name="pulse" tone="inherit" style={styles.appointmentIcon} />
                     <label style={styles.fieldLabel}>Service</label>
                   </div>
                   <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", pointerEvents: servicesLocked ? "none" : "auto", opacity: rowOpacity }}>
@@ -789,7 +789,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               {!servicesLocked && (
                 <div style={styles.appointmentRow}>
                   <div style={styles.appointmentLabelGroup}>
-                    <Icon name="pulse-alt" tone="inherit" style={styles.appointmentIcon} />
+                    <Icon name="pulse" tone="inherit" style={styles.appointmentIcon} />
                     <label style={styles.fieldLabel}>Service</label>
                   </div>
                   <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px" }}>
@@ -835,7 +835,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 onClick={() => handleBook("Unpaid")}
                 disabled={submitting || form.paymentMethod === "Waive"}
               >
-                <Icon name="calendar-alt" size={20} tone="inherit" />
+                <Icon name="calendar" size={20} tone="inherit" />
                 {submitting ? "Booking..." : "Book Now Pay Later"}
               </button>
               <button style={styles.pillButtonPrimary} onClick={() => handleBook("Paid")} disabled={submitting}>
