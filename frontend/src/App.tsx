@@ -6,7 +6,6 @@ import { HomePage } from './pages/Home';
 import { BuildYourClinicPage } from './pages/BuildYourClinicPage';
 import { ClinicSelectionPage } from './pages/ClinicSelectionPage';
 import { SetupPasswordPage } from './pages/SetupPasswordPage/SetupPasswordPage';
-import { AuditGalleryPage } from './pages/AuditGallery'; // TEMP — UI audit, delete with the route below
 
 function App() {
   const [loginMode, setLoginMode] = useState<"admin" | "staff">("admin");
@@ -82,7 +81,6 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/setup-password" element={<SetupPasswordPage />} />
-        <Route path="/audit" element={<AuditGalleryPage />} /> {/* TEMP — UI audit gallery, delete when review done */}
         <Route path="/*" element={<MainApp
           view={view}
           loginMode={loginMode}
