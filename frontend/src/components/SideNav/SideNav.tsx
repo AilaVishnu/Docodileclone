@@ -66,10 +66,10 @@ export function SideNav({ activeTab, onTabChange }: SideNavProps) {
     { label: 'Appointments', display: 'Appts', icon: <Icon name="appointments" tone="inherit" /> },
     { label: 'Prescription', display: 'Rx Pad', icon: <Icon name="prescription" tone="inherit" /> },
     { label: 'Patient Files', display: 'Patients', icon: <Icon name="patient-files" tone="inherit" /> },
-    { label: 'Services', display: 'Catalog', icon: <Icon name="services" tone="inherit" /> },
+    { label: 'Services', display: 'Catalog', icon: <Icon name="catalog" tone="inherit" /> },
     { label: 'Billing', display: 'Bills', icon: <Icon name="billing" tone="inherit" /> },
     { label: 'Stats', display: 'Stats', icon: <Icon name="business" tone="inherit" /> },
-    { label: 'Pharmacy', display: 'Meds', icon: <Icon name="pharmacy-nav" tone="inherit" /> },
+    { label: 'Pharmacy', display: 'Meds', icon: <Icon name="pill" tone="inherit" /> },
     { label: 'Settings', display: 'Config', icon: <SettingsIcon /> },
   ];
 

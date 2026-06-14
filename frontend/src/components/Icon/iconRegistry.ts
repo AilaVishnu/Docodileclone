@@ -16,12 +16,12 @@ type SvgComponent = React.FC<React.SVGProps<SVGSVGElement>>;
 import { ReactComponent as Ic_arrow_left } from "../../assets/icons/arrow-left.svg";
 import { ReactComponent as Ic_bill_check } from "../../assets/icons/bill-check.svg";
 import { ReactComponent as Ic_calendar } from "../../assets/icons/calendar.svg";
+import { ReactComponent as Ic_catalog } from "../../assets/icons/catalog.svg";
 import { ReactComponent as Ic_chat_dots } from "../../assets/icons/chat-dots.svg";
 import { ReactComponent as Ic_chat_square_call } from "../../assets/icons/chat-square-call.svg";
 import { ReactComponent as Ic_check_circle } from "../../assets/icons/check-circle.svg";
 import { ReactComponent as Ic_chevron_up } from "../../assets/icons/chevron-up.svg";
 import { ReactComponent as Ic_danger_triangle } from "../../assets/icons/danger-triangle.svg";
-import { ReactComponent as Ic_document_outline } from "../../assets/icons/document-outline.svg";
 import { ReactComponent as Ic_document_school } from "../../assets/icons/document-school.svg";
 import { ReactComponent as Ic_download } from "../../assets/icons/download.svg";
 import { ReactComponent as Ic_edit_pencil } from "../../assets/icons/edit-pencil.svg";
@@ -62,7 +62,6 @@ import { ReactComponent as Nav_home } from "../../assets/home.svg";
 import { ReactComponent as Nav_appointments } from "../../assets/appointments.svg";
 import { ReactComponent as Nav_prescription } from "../../assets/prescription.svg";
 import { ReactComponent as Nav_patient_files } from "../../assets/patient_files.svg";
-import { ReactComponent as Nav_services } from "../../assets/services.svg";
 import { ReactComponent as Nav_billing } from "../../assets/billing.svg";
 import { ReactComponent as Nav_business } from "../../assets/business.svg";
 import { ReactComponent as Nav_pharmacy_nav } from "../../assets/pharmacy.svg";
@@ -101,7 +100,6 @@ export const ICONS: Record<string, SvgComponent> = {
   "check-circle": Ic_check_circle,
   "chevron-up": Ic_chevron_up,
   "danger-triangle": Ic_danger_triangle,
-  "document-outline": Ic_document_outline,
   "document-school": Ic_document_school,
   "download": Ic_download,
   "edit-pencil": Ic_edit_pencil,
@@ -121,7 +119,7 @@ export const ICONS: Record<string, SvgComponent> = {
   "plus": Root_plus,
   "printer": Ic_printer,
   "pulse": Root_pulse,
-  "reorder": Ic_reorder,
+  "menu": Ic_reorder,
   "restart": Ic_restart_24,
   "rewind-back-circle": Ic_rewind_back_circle,
   "scale": Ic_scale,
@@ -138,16 +136,16 @@ export const ICONS: Record<string, SvgComponent> = {
   "verified-badge": Ic_verified_badge,
   "videocamera": Ic_videocamera,
   "visits": Ic_visits,
-  "widget": Ic_widget,
+  "grid": Ic_widget,
   "zero-queue": Ic_zero_queue,
   "home": Nav_home,
   "appointments": Nav_appointments,
   "prescription": Nav_prescription,
   "patient-files": Nav_patient_files,
-  "services": Nav_services,
+  "catalog": Ic_catalog,
   "billing": Nav_billing,
   "business": Nav_business,
-  "pharmacy-nav": Nav_pharmacy_nav,
+  "pill": Nav_pharmacy_nav,
   "message": Nav_message,
   "message-unread": Nav_message_unread,
   "bell": Nav_bell,
@@ -185,8 +183,6 @@ export const MULTICOLOR_ICONS = new Set<string>([
   "user-check",
   "user",
   "users-group",
-  "users-group-rounded",
   "zero-queue",
-  "message-unread",
   "bell-active",
 ]);

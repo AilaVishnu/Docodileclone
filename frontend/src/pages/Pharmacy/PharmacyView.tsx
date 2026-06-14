@@ -180,7 +180,7 @@ export function PharmacyView() {
               aria-label="Shelf view"
               aria-pressed={view === "shelf"}
             >
-              <Icon name="widget" size={20} tone="inherit" />
+              <Icon name="grid" size={20} tone="inherit" />
             </button>
           </div>
         </div>

@@ -215,7 +215,7 @@ function ActionMenu({
         style={styles.actionButton}
         onClick={() => setIsOpen(!isOpen)}
       >
-        <Icon name="reorder" size={24} tone="inherit" />
+        <Icon name="menu" size={24} tone="inherit" />
       </button>
       {isOpen && (
         <div

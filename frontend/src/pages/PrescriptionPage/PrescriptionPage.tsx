@@ -2076,7 +2076,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                     aria-label="Grid view"
                     aria-pressed={viewMode === "grid"}
                   >
-                    <Icon name="widget" size={24} tone="inherit" />
+                    <Icon name="grid" size={24} tone="inherit" />
                   </button>
                 </div>
               </div>
@@ -2116,7 +2116,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                       <span style={styles.reportCell}>{r.date}</span>
                       <div style={styles.reportActions}>
                         <Icon name="download" size={24} tone="inherit" />
-                        <Icon name="reorder" size={20} tone="inherit" style={styles.reorderHandle} />
+                        <Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />
                       </div>
                     </div>
                   ))}
@@ -2153,7 +2153,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                         </span>
                       </div>
                       <div style={styles.reportCardKebab}>
-                        <Icon name="reorder" size={20} tone="inherit" />
+                        <Icon name="menu" size={20} tone="inherit" />
                       </div>
                       <div style={styles.reportCardFooter}>
                         <span style={styles.reportCardName}>{r.name}</span>
@@ -2383,7 +2383,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                         <h3 style={styles.sectionTitle}>Complaints</h3>
                       </div>
                       <PopoverMenu
-                        trigger={<Icon name="reorder" size={24} tone="inherit" style={styles.reorderHandle} />}
+                        trigger={<Icon name="menu" size={24} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "complaints") }]}
                         ariaLabel="Template options"
                       />
@@ -2420,7 +2420,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                         <h3 style={styles.sectionTitle}>Diagnosis</h3>
                       </div>
                       <PopoverMenu
-                        trigger={<Icon name="reorder" size={24} tone="inherit" style={styles.reorderHandle} />}
+                        trigger={<Icon name="menu" size={24} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "diagnosis") }]}
                         ariaLabel="Template options"
                       />
@@ -2611,7 +2611,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                           </button>
                                                   </span>
                         <PopoverMenu
-                        trigger={<Icon name="reorder" size={20} tone="inherit" style={styles.reorderHandle} />}
+                        trigger={<Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "rx") }]}
                         ariaLabel="Template options"
                       />
@@ -2631,7 +2631,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                         <h3 style={styles.sectionTitle}>Notes for Patient</h3>
                       </div>
                       <PopoverMenu
-                        trigger={<Icon name="reorder" size={20} tone="inherit" style={styles.reorderHandle} />}
+                        trigger={<Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "notes_for_patient") }]}
                         ariaLabel="Template options"
                       />
@@ -2666,7 +2666,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                         <h3 style={styles.sectionTitle}>Private Notes</h3>
                       </div>
                       <PopoverMenu
-                        trigger={<Icon name="reorder" size={20} tone="inherit" style={styles.reorderHandle} />}
+                        trigger={<Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "private_notes") }]}
                         ariaLabel="Template options"
                       />
@@ -2715,7 +2715,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                               </span>
                     </div>
                     <PopoverMenu
-                        trigger={<Icon name="reorder" size={20} tone="inherit" style={styles.reorderHandle} />}
+                        trigger={<Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "tests") }]}
                         ariaLabel="Template options"
                       />

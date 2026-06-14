@@ -286,7 +286,7 @@ export function PrescriptionQueue({ onSelect, refreshKey }: PrescriptionQueuePro
             aria-label="Grid view"
             aria-pressed={viewMode === "grid"}
           >
-            <Icon name="widget" size={20} tone="inherit" />
+            <Icon name="grid" size={20} tone="inherit" />
           </button>
         </div>
       </div>
