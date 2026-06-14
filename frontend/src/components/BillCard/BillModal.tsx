@@ -7,7 +7,7 @@ import { DataGrid, GridColumn } from "../DataGrid/DataGrid";
 import { DatePicker } from "../DatePicker/DatePicker";
 import { Field } from "../Field";
 import { MeasureField } from "../MeasureField";
-import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
+import { colors, fonts, spacing, radii, strokes, shadows } from "../../styles/theme";
 import { styles as bill } from "./BillCard.styles";
 import { Icon } from "../Icon";
 
@@ -123,13 +123,14 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} surface="transparent" width={1040} padding={6} radius={16}>
+    <Modal isOpen={isOpen} onClose={onClose} surface="transparent" width={1040} padding={0} radius={16} shadow="none">
       <datalist id="bm-svc-list">{SERVICE_CATALOG.map((s) => <option key={s.name} value={s.name} />)}</datalist>
-      {/* Three cards (left · right-bill · right-payment) float on a transparent
-          tray, separated by 6px gaps + 6px inset; each card rounded (radii.m). */}
+      {/* Three independent cards (left · right-bill · right-payment) floating on a
+          transparent tray, separated by 6px gaps. Each carries its own shadow —
+          no enclosing modal frame around the group. */}
       <div style={{ display: "flex", gap: 6, minHeight: 460, fontFamily: fonts.family.primary }}>
         {/* ── Left: patient + line items ───────────────────────────── */}
-        <div style={{ flex: "2.1 1 0", minWidth: 0, backgroundColor: colors.neutral100, borderRadius: radii.m, padding: spacing.xl, display: "flex", flexDirection: "column", gap: spacing.m }}>
+        <div style={{ flex: "2.1 1 0", minWidth: 0, backgroundColor: colors.neutral100, borderRadius: radii.m, boxShadow: shadows.modal, padding: spacing.xl, display: "flex", flexDirection: "column", gap: spacing.m }}>
           {/* Patient */}
           <div style={{ backgroundColor: colors.primary300, borderRadius: radii.m, padding: `10px ${spacing.m}`, fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 }}>
             {pt.code} : {pt.name} - {pt.meta}
@@ -162,7 +163,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
         <div style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
 
           {/* Right-bill card */}
-          <div style={{ backgroundColor: colors.neutral100, borderRadius: radii.m, padding: spacing.xl, display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ backgroundColor: colors.neutral100, borderRadius: radii.m, boxShadow: shadows.modal, padding: spacing.xl, display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <h3 style={{ ...bill.title, fontSize: fonts.size.h5 }}>Bill</h3>
               <div style={{ position: "absolute", right: 0 }}><IconButton ariaLabel="Close" onClick={onClose} /></div>
@@ -188,7 +189,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
           </div>
 
           {/* Right-payment card */}
-          <div style={{ backgroundColor: colors.neutral100, borderRadius: radii.m, padding: spacing.xl, flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ backgroundColor: colors.neutral100, borderRadius: radii.m, boxShadow: shadows.modal, padding: spacing.xl, flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
               <h3 style={{ ...bill.title, fontSize: fonts.size.h5 }}>Payment</h3>
             </div>
