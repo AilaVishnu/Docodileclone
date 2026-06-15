@@ -18,7 +18,7 @@ export type GridColumn<T> = {
   render: (row: T, index: number) => React.ReactNode;
 };
 
-export function DataGrid<T>({ columns, rows, rowKey, size = "m", tdPadding, thPadding, minWidth }: {
+export function DataGrid<T>({ columns, rows, rowKey, size = "m", tdPadding, thPadding, minWidth, onRowClick }: {
   columns: GridColumn<T>[];
   rows: T[];
   rowKey: (row: T, index: number) => React.Key;
@@ -29,6 +29,9 @@ export function DataGrid<T>({ columns, rows, rowKey, size = "m", tdPadding, thPa
   thPadding?: string;
   /** Min table width (px). Wraps in a horizontal scroller for wide tables. */
   minWidth?: number;
+  /** Make rows clickable (pointer cursor + keyboard activation). A cell that
+      needs its own click (e.g. an action button) should stopPropagation. */
+  onRowClick?: (row: T, index: number) => void;
 }) {
   const fs = size === "s" ? fonts.size.s : fonts.size.m;
   const th = (c: GridColumn<T>): CSSProperties => ({ ...tableHeadCell, fontSize: fonts.control.sm, fontWeight: fonts.weight.regular, padding: c.headerPadding ?? thPadding ?? "12px 10px", whiteSpace: "nowrap", textAlign: c.align ?? "center" });
@@ -45,7 +48,15 @@ export function DataGrid<T>({ columns, rows, rowKey, size = "m", tdPadding, thPa
       </thead>
       <tbody>
         {rows.map((r, i) => (
-          <tr key={rowKey(r, i)}>{columns.map((c) => <td key={c.key} style={td(c)}>{c.render(r, i)}</td>)}</tr>
+          <tr
+            key={rowKey(r, i)}
+            onClick={onRowClick ? () => onRowClick(r, i) : undefined}
+            tabIndex={onRowClick ? 0 : undefined}
+            onKeyDown={onRowClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onRowClick(r, i); } } : undefined}
+            style={onRowClick ? { cursor: "pointer" } : undefined}
+          >
+            {columns.map((c) => <td key={c.key} style={td(c)}>{c.render(r, i)}</td>)}
+          </tr>
         ))}
       </tbody>
     </table>

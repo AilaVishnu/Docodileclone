@@ -64,7 +64,11 @@ const handlers = [
   http.get(`${B}/api/visits/:visitId`, () => HttpResponse.json(VISIT)),
   http.put(`${B}/api/visits/:visitId`, () => HttpResponse.json(VISIT)),
   http.get(`${B}/api/active-sessions`, () => HttpResponse.json([])),
-  http.get(`${B}/api/patients/:patientId/files`, () => HttpResponse.json([])),
+  http.get(`${B}/api/patients/:patientId/files`, () => HttpResponse.json([
+    { id: 'f1', name: 'CBC report.pdf', category: 'Reports', investigationDate: '2026-05-30', mimeType: 'application/pdf', createdAt: '2026-05-30T10:00:00' },
+    { id: 'f2', name: 'X-ray chest.jpg', category: 'Reports', investigationDate: '2026-05-28', mimeType: 'image/jpeg', createdAt: '2026-05-28T09:00:00' },
+    { id: 'f3', name: 'Prescription scan.pdf', category: 'Prescriptions', investigationDate: '2026-05-20', mimeType: 'application/pdf', createdAt: '2026-05-20T11:00:00' },
+  ])),
   http.get(`${B}/api/tenant/rx-templates`, () => HttpResponse.json([])),
   http.get(`${B}/api/tenant/rx-history/latest`, () => HttpResponse.json({})),
   http.get(`${B}/api/medicines/search`, () => HttpResponse.json([])),

@@ -38,6 +38,7 @@ import { Button } from "../../components/Button";
 import { Select } from "../../components/Input/Select/Select";
 import { ViewToggle } from "../../components/ViewToggle";
 import { Tabs } from "../../components/Tabs";
+import { DataGrid } from "../../components/DataGrid/DataGrid";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
@@ -2171,45 +2172,26 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
               </div>
 
               {viewMode === "list" ? (
-                /* List table — header row of column captions + data rows. */
-                <div style={styles.reportsTable}>
-                  <div style={styles.reportsHeaderRow}>
-                    <span style={{ textAlign: "center" }}>#</span>
-                    <span></span>
-                    <span>{listViewConfig.nameColumn}</span>
-                    <span style={{ textAlign: "center" }}>Category</span>
-                    <span style={{ textAlign: "center" }}>{listViewConfig.dateColumn}</span>
-                    <span style={{ textAlign: "center" }}>Actions</span>
-                  </div>
-                  {/* Add-file affordance lives in the floating action bar now. */}
-                  {displayRows.map((r, i) => (
-                    <div
-                      key={r.id ?? i}
-                      style={{ ...styles.reportRow, cursor: "pointer" }}
-                      onClick={() => setViewerOpen(r)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          setViewerOpen(r);
-                        }
-                      }}
-                    >
-                      <span style={styles.reportSerial}>{i + 1}</span>
-                      <div style={styles.reportMicChip}>
-                        <Icon name="microphone" size={24} tone="inherit" />
-                      </div>
-                      <span style={styles.reportName}>{r.name}</span>
-                      <span style={styles.reportCell}>{r.category}</span>
-                      <span style={styles.reportCell}>{r.date}</span>
-                      <div style={styles.reportActions}>
+                /* List table — the shared DataGrid (Catalog-styled). Whole row
+                   opens the file in the viewer. */
+                <DataGrid
+                  rows={displayRows}
+                  rowKey={(r, i) => r.id ?? i}
+                  onRowClick={(r) => setViewerOpen(r)}
+                  columns={[
+                    { key: "n", header: "#", width: 40, align: "center", render: (_r, i) => i + 1 },
+                    { key: "mic", header: "", width: 48, align: "center", render: () => <Icon name="microphone" size={24} tone="inherit" /> },
+                    { key: "name", header: listViewConfig.nameColumn, align: "left", render: (r) => r.name },
+                    { key: "cat", header: "Category", width: 140, render: (r) => r.category },
+                    { key: "date", header: listViewConfig.dateColumn, width: 140, render: (r) => r.date },
+                    { key: "act", header: "Actions", width: 110, render: () => (
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: spacing.s }}>
                         <Icon name="download" size={24} tone="inherit" />
-                        <Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />
+                        <Icon name="menu" size={20} tone="inherit" />
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ) },
+                  ]}
+                />
               ) : (
                 /* Grid view — Figma node 2143:11610. Cream cards with a white
                    inner tile (file thumbnail placeholder + mic chip) and
