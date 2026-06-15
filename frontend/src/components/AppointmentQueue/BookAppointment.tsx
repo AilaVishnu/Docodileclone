@@ -222,8 +222,8 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     const mm = digits.slice(2, 4);
     const yyyy = digits.slice(4, 8);
     if (digits.length <= 2) return dd;
-    if (digits.length <= 4) return `${dd} ${mm}`;
-    return `${dd} ${mm} ${yyyy}`;
+    if (digits.length <= 4) return `${dd}-${mm}`;
+    return `${dd}-${mm}-${yyyy}`;
   };
 
   const calcAge = (digits: string): string => {

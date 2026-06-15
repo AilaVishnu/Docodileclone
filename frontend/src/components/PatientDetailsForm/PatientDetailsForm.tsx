@@ -52,8 +52,8 @@ const formatDob = (digits: string): string => {
   const mm = digits.slice(2, 4);
   const yyyy = digits.slice(4, 8);
   if (digits.length <= 2) return dd;
-  if (digits.length <= 4) return `${dd} ${mm}`;
-  return `${dd} ${mm} ${yyyy}`;
+  if (digits.length <= 4) return `${dd}-${mm}`;
+  return `${dd}-${mm}-${yyyy}`;
 };
 
 export function PatientDetailsForm({
@@ -217,7 +217,7 @@ export function PatientDetailsForm({
           <input
             style={{ ...styles.iconFieldInput, opacity: locked ? 1 : hasManualAge ? 0.4 : 1 }}
             type="text"
-            placeholder="dd mm yyyy"
+            placeholder="dd-mm-yyyy"
             disabled={locked}
             onFocus={() => { if (hasManualAge) { setDobDigits(""); onChange({ age: "", dob: "" }); } }}
             value={formatDob(dobDigits)}
