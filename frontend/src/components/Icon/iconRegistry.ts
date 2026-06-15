@@ -11,8 +11,6 @@ import React from "react";
 //
 // MULTICOLOR_ICONS flags brand/illustrative icons that keep their baked palette.
 // ─────────────────────────────────────────────────────────────────────────────
-type SvgComponent = React.FC<React.SVGProps<SVGSVGElement>>;
-
 import { ReactComponent as Ic_arrow_left } from "../../assets/icons/arrow-left.svg";
 import { ReactComponent as Ic_bill_check } from "../../assets/icons/bill-check.svg";
 import { ReactComponent as Ic_calendar } from "../../assets/icons/calendar.svg";
@@ -92,6 +90,8 @@ import { ReactComponent as Root_pulse } from "../../assets/pulse.svg";
 import { ReactComponent as Root_clock } from "../../assets/Clock Circle.svg";
 import { ReactComponent as Root_arrow_right } from "../../assets/Arrow Right.svg";
 import { ReactComponent as Root_help } from "../../assets/Help.svg";
+
+type SvgComponent = React.FC<React.SVGProps<SVGSVGElement>>;
 
 export const ICONS: Record<string, SvgComponent> = {
   "arrow-left": Ic_arrow_left,
