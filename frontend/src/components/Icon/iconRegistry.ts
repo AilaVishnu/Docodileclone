@@ -24,6 +24,7 @@ import { ReactComponent as Ic_danger_triangle } from "../../assets/icons/danger-
 import { ReactComponent as Ic_document_school } from "../../assets/icons/document-school.svg";
 import { ReactComponent as Ic_download } from "../../assets/icons/download.svg";
 import { ReactComponent as Ic_edit_pencil } from "../../assets/icons/edit-pencil.svg";
+import { ReactComponent as Ic_error_circle } from "../../assets/icons/error-circle.svg";
 import { ReactComponent as Ic_file } from "../../assets/icons/file.svg";
 import { ReactComponent as Ic_heart_pulse } from "../../assets/icons/heart-pulse.svg";
 import { ReactComponent as Ic_history } from "../../assets/icons/history.svg";
@@ -108,6 +109,7 @@ export const ICONS: Record<string, SvgComponent> = {
   "document-school": Ic_document_school,
   "download": Ic_download,
   "edit-pencil": Ic_edit_pencil,
+  "error-circle": Ic_error_circle,
   "file": Ic_file,
   "heart-pulse": Ic_heart_pulse,
   "history": Ic_history,
@@ -185,6 +187,7 @@ export const ICON_NAMES: string[] = Object.keys(ICONS).sort();
 export const MULTICOLOR_ICONS = new Set<string>([
   "check-circle",
   "danger-triangle",
+  "error-circle",
   "hourglass",
   "paid-stamp",
   "stopwatch",

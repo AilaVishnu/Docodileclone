@@ -123,9 +123,9 @@ const CATALOG: {
       { msg: 'Please enter clinic domain.', type: 'warning', concept: 'fillField' },
       { msg: 'Enter a valid email address', type: 'warning', concept: 'fillField' },
       { msg: 'Enter clinic domain', type: 'warning', concept: 'fillField' },
-      { msg: 'Invalid email or password', type: 'error', concept: 'authFailed' },
+      { msg: 'Invalid email or password', type: 'error', concept: 'authFailed', icon: 'error-circle' },
       { msg: 'Email ID does not exist', type: 'error', concept: 'authFailed' },
-      { msg: 'Login failed (HTTP 500)', type: 'error', concept: 'authFailed' },
+      { msg: 'Login failed (HTTP 500)', type: 'error', concept: 'authFailed', icon: 'error-circle' },
       { msg: 'Login failed. Please check your credentials.', type: 'error', concept: 'authFailed' },
       { msg: 'Something went wrong. Please try again.', type: 'error', concept: 'failed' },
       { msg: 'Network error. Please check your connection.', type: 'error', concept: 'network' },
@@ -291,6 +291,17 @@ const CATALOG: {
 const FLAT = CATALOG.flatMap((s) => s.items.map((it) => ({ ...it, area: s.domain })));
 const TOTAL = FLAT.length;
 
+// Whole-concept icon assignments: every toast in the concept uses this icon
+// unless the item sets its own `icon` (a per-message `icon` always wins).
+const CONCEPT_ICON: Partial<Record<ConceptKey, string>> = {
+  failed: 'error-circle',
+  network: 'error-circle',
+  fileProblem: 'error-circle',
+};
+
+const iconFor = (t: { concept: ConceptKey; icon?: string }): string | undefined =>
+  t.icon ?? CONCEPT_ICON[t.concept];
+
 // ── shared bits ──────────────────────────────────────────────────────────────
 
 function TypeTag({ type }: { type: ToastType }) {
@@ -350,7 +361,7 @@ export const Catalog: StoryObj = {
             {section.domain} <span style={{ color: colors.neutral400, fontWeight: 400 }}>· {section.items.length}</span>
           </h3>
           {section.items.map((t, i) => (
-            <ToastRow key={`${section.domain}-${i}`} msg={t.msg} type={t.type} icon={t.icon} />
+            <ToastRow key={`${section.domain}-${i}`} msg={t.msg} type={t.type} icon={iconFor(t)} />
           ))}
         </section>
       ))}
@@ -437,7 +448,7 @@ export const ByConcept: StoryObj = {
                 </div>
                 <div style={{ paddingLeft: 56 }}>
                   {items.map((t, i) => (
-                    <ToastRow key={`${c.key}-${i}`} msg={t.msg} type={t.type} icon={t.icon} trailing={t.area} />
+                    <ToastRow key={`${c.key}-${i}`} msg={t.msg} type={t.type} icon={iconFor(t)} trailing={t.area} />
                   ))}
                 </div>
               </section>
