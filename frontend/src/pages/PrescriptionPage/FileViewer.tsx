@@ -569,8 +569,8 @@ export function FileViewer({ file, onBack }: Props) {
           <button type="button" onClick={downloadOriginal} style={styles.iconBtn} title="Download original">
             <DownloadIcon />
           </button>
-          {isImage && (
-            <button type="button" onClick={downloadFlattened} style={{ ...styles.flattenBtn, marginLeft: "auto" }} title="Download with annotations">
+          {isImage && annotations.length > 0 && (
+            <button type="button" onClick={downloadFlattened} style={styles.flattenBtn} title="Download with annotations">
               Download w/ markup
             </button>
           )}
@@ -870,8 +870,10 @@ const styles: Record<string, React.CSSProperties> = {
     height: "min(760px, 80vh)",
   },
   // Left options pane — title, tool rail, and output actions, stacked.
-  // Left rail — a thin floating strip of just the tool icons.
+  // Left rail — a thin floating strip of just the tool icons, sized to fit
+  // them (alignSelf so it doesn't stretch to the pane's full height).
   toolbar: {
+    alignSelf: "flex-start",
     flexShrink: 0,
     display: "flex",
     flexDirection: "column",
@@ -903,6 +905,7 @@ const styles: Record<string, React.CSSProperties> = {
   bottomBar: {
     display: "flex",
     alignItems: "center",
+    justifyContent: "flex-end",
     gap: spacing.s,
     padding: `${spacing.s} ${spacing.m}`,
     borderTop: `1px solid ${colors.neutral200}`,
