@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { colors, fonts, spacing, radii } from "../../styles/theme";
+import { colors, fonts, spacing, radii, shadows } from "../../styles/theme";
 import { Modal } from "../Modal";
 import { Button } from "../Button";
 import { IconButton } from "../IconButton";
@@ -121,11 +121,11 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
     setItems((prev) => prev.filter((m) => m.id !== id));
   };
 
-  // surface transparent: this is a two-card composite (Medicines + the torn-edge Bill
-  // receipt) whose own cards are white — the zigzag cut-outs must show the backdrop
-  // through, not a white panel.
+  // Three floating cards (medicines · bill · payment) on a transparent tray —
+  // mirrors BillModal. surface transparent + shadow none so the 6px gaps show
+  // the backdrop and each card carries its own shadow.
   return (
-    <Modal isOpen={isOpen} onClose={onClose} surface="transparent" shadow="none" width={1000} padding={0}>
+    <Modal isOpen={isOpen} onClose={onClose} surface="transparent" shadow="none" width={1040} padding={0} radius={16}>
       <div style={styles.body}>
         {/* ── Left card: medicines list ─────────────────────────────── */}
         <div style={styles.leftCard}>
@@ -254,12 +254,13 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
           </button>
         </div>
 
-        {/* ── Right side: receipt with zigzag tear ──────────────────── */}
-        <div style={styles.rightWrap}>
-          <div style={styles.rightCard}>
-            <div style={styles.rightHeader}>
+        {/* ── Right column: bill summary + payment (mirrors BillModal) ── */}
+        <div style={styles.rightCol}>
+          {/* Bill summary card */}
+          <div style={styles.rightBillCard}>
+            <div style={styles.cardHeader}>
               <h3 style={styles.billTitle}>Bill</h3>
-              <IconButton ariaLabel="Close" onClick={onClose} />
+              <div style={styles.cardHeaderClose}><IconButton ariaLabel="Close" onClick={onClose} /></div>
             </div>
 
             <div style={styles.fieldsContainer}>
@@ -319,6 +320,13 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
               <span style={styles.totalLabel}>Total</span>
               <span style={styles.totalValue}>{inr(total)}</span>
             </div>
+          </div>
+
+          {/* Payment card */}
+          <div style={styles.rightPayCard}>
+            <div style={styles.payHeader}>
+              <h3 style={styles.billTitle}>Payment</h3>
+            </div>
 
             <div style={styles.methodRow}>
               <RadioGroup
@@ -333,7 +341,7 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
               <Button
                 variant="dark"
                 size="sm"
-                style={{ height: "40px", fontSize: fonts.size.s, padding: "0 20px" }}
+                style={{ width: "100%", height: "40px", fontSize: fonts.size.s }}
                 disabled={items.length === 0 || (!isWaived && total <= 0)}
                 onClick={() => {
                   const billedItems = items
@@ -347,8 +355,6 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
               </Button>
             </div>
           </div>
-
-          <div style={styles.zigzag} />
         </div>
       </div>
     </Modal>
@@ -360,19 +366,21 @@ const styles: Record<string, React.CSSProperties> = {
   body: {
     width: "100%",
     maxHeight: "calc(100vh - 64px)",
+    minHeight: 460,
     display: "flex",
     alignItems: "stretch",
-    gap: 20,
+    gap: 6,
     fontFamily: fonts.family.primary,
   },
 
   // ─── Left card (medicines) ────────────────────────────────────────────
   leftCard: {
-    flex: 1,
+    flex: "2.1 1 0",
     minWidth: 0,
     backgroundColor: colors.neutral100,
-    borderRadius: 16,
-    padding: "20px 24px",
+    borderRadius: radii.m,
+    boxShadow: shadows.modal,
+    padding: spacing.xl,
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,
@@ -502,18 +510,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 500,
   },
 
-  catalogSelect: {
-    width: "100%",
-    padding: "6px 10px",
-    borderRadius: 8,
-    border: `1px solid ${colors.primary300}`,
-    background: colors.neutral100,
-    fontSize: fonts.size.s,
-    color: colors.neutral900,
-    fontFamily: "inherit",
-    cursor: "pointer",
-    outline: "none",
-  },
   addMedicineBtn: {
     alignSelf: "flex-start",
     border: `1px dashed ${colors.neutral300}`,
@@ -527,25 +523,47 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "inherit",
   },
 
-  // ─── Right side: receipt + zigzag ────────────────────────────────────
-  rightWrap: {
-    width: 360,
-    flexShrink: 0,
+  // ─── Right column: bill summary + payment (two stacked cards) ────────
+  rightCol: {
+    flex: "1 1 0",
+    minWidth: 0,
     display: "flex",
     flexDirection: "column",
+    gap: 6,
   },
-  rightCard: {
+  rightBillCard: {
     backgroundColor: colors.neutral100,
-    borderRadius: "16px 16px 0 0",
-    padding: "20px 24px",
+    borderRadius: radii.m,
+    boxShadow: shadows.modal,
+    padding: spacing.xl,
     display: "flex",
     flexDirection: "column",
-    gap: spacing.s,
+    gap: 12,
   },
-  rightHeader: {
+  rightPayCard: {
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.m,
+    boxShadow: shadows.modal,
+    padding: spacing.xl,
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
+  },
+  cardHeader: {
+    position: "relative",
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
+  },
+  cardHeaderClose: {
+    position: "absolute",
+    right: 0,
+  },
+  payHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   billTitle: {
     margin: 0,
@@ -554,15 +572,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: fonts.family.secondary,
     color: colors.neutral900,
     lineHeight: fonts.lineHeight.h5,
-  },
-
-  zigzag: {
-    width: "100%",
-    height: 20,
-    flexShrink: 0,
-    backgroundImage: `linear-gradient(135deg, ${colors.neutral100} 50%, transparent 50%), linear-gradient(225deg, ${colors.neutral100} 50%, transparent 50%)`,
-    backgroundSize: "20px 20px",
-    backgroundRepeat: "repeat-x",
   },
 
   // ─── Bill fields ─────────────────────────────────────────────────────
@@ -649,8 +658,8 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "baseline",
     justifyContent: "space-between",
     padding: "8px 12px",
-    backgroundColor: colors.primary100,
-    borderRadius: 8,
+    backgroundColor: colors.neutral150,
+    borderRadius: radii.m,
   },
   totalLabel: {
     fontSize: fonts.size.m,
@@ -700,8 +709,6 @@ const styles: Record<string, React.CSSProperties> = {
 
   footer: {
     display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: spacing.xs,
+    marginTop: "auto",
   },
 };
