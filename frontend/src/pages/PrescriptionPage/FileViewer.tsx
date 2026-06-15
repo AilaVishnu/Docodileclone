@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { colors, fonts, radii, spacing, shadows } from "../../styles/theme";
 import { API_BASE_URL } from "../../apiConfig";
 import { IconButton } from "../../components/IconButton";
+import { Button } from "../../components/Button";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FileViewer — full-page-style image viewer with annotation overlay. Renders
@@ -566,13 +567,13 @@ export function FileViewer({ file, onBack }: Props) {
           >
             {visible ? <EyeIcon /> : <EyeOffIcon />}
           </ToolBtn>
-          <button type="button" onClick={downloadOriginal} style={styles.iconBtn} title="Download original">
-            <DownloadIcon />
-          </button>
-          {isImage && annotations.length > 0 && (
-            <button type="button" onClick={downloadFlattened} style={styles.flattenBtn} title="Download with annotations">
+          <Button variant="light" size="sm" onClick={downloadOriginal} iconLeft={<DownloadIcon />}>
+            Download raw
+          </Button>
+          {isImage && (
+            <Button variant="primary" size="sm" onClick={downloadFlattened} iconLeft={<DownloadIcon />}>
               Download w/ markup
-            </button>
+            </Button>
           )}
         </div>
       </div>
