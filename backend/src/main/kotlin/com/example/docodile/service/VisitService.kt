@@ -3,6 +3,7 @@ package com.example.docodile.service
 import com.example.docodile.domain.RxRow
 import com.example.docodile.domain.Visit
 import com.example.docodile.repo.AppUserRepository
+import com.example.docodile.repo.AppointmentRepository
 import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.repo.RxRowRepository
@@ -26,6 +27,7 @@ class VisitService(
     private val patientRepository: PatientRepository,
     private val clinicEntityRepository: ClinicEntityRepository,
     private val appUserRepository: AppUserRepository,
+    private val appointmentRepository: AppointmentRepository,
     private val currentUser: CurrentUser
 ) {
     fun listForPatient(patientId: UUID): List<VisitDTO> {
@@ -34,8 +36,20 @@ class VisitService(
         // Strictly this patient's own visits. A phone number can be shared
         // across a family, so visit history must never be merged by phone —
         // each patient row owns its own history.
-        return visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAscCreatedAtAsc(clinicId, patientId)
-            .map { it.toDTO(loadRxRows(it.id)) }
+        val visits = visitRepository
+            .findAllByClinicIdAndPatientIdOrderByVisitDateAscCreatedAtAsc(clinicId, patientId)
+        // Batch-resolve each visit's appointment status in one query so the
+        // pad can lock/label tabs from their own completion state.
+        val statusById = appointmentStatuses(visits.mapNotNull { it.appointmentId })
+        return visits.map { it.toDTO(loadRxRows(it.id), statusById[it.appointmentId]) }
+    }
+
+    // appointmentId -> status, for the given ids (clinic-scoped via the visit
+    // query that produced them). Empty input short-circuits to no query.
+    private fun appointmentStatuses(appointmentIds: List<UUID>): Map<UUID, String?> {
+        val ids = appointmentIds.distinct()
+        if (ids.isEmpty()) return emptyMap()
+        return appointmentRepository.findAllById(ids).associate { it.id to it.status }
     }
 
     // In-progress consultations for the live "Active Sessions" indicator —
@@ -69,8 +83,12 @@ class VisitService(
         val clinicId = currentUser.clinicId()
         val visit = visitRepository.findByIdAndClinicId(visitId, clinicId)
             ?: throw IllegalArgumentException("Visit not found")
-        return visit.toDTO(loadRxRows(visit.id))
+        return visit.toDTO(loadRxRows(visit.id), statusFor(visit.appointmentId))
     }
+
+    // Single-visit appointment status lookup (used on create/update/get).
+    private fun statusFor(appointmentId: UUID?): String? =
+        appointmentId?.let { appointmentRepository.findById(it).orElse(null)?.status }
 
     // Patient Files "notes / prescriptions" search: match the keyword across
     // visit free-text and prescription text, returning one hit per
@@ -142,7 +160,7 @@ class VisitService(
         applyRequest(visit, request, clinicId)
         val saved = visitRepository.save(visit)
         val rxRows = saveRxRows(saved, request.prescriptions)
-        return saved.toDTO(rxRows.map { it.toDTO() })
+        return saved.toDTO(rxRows.map { it.toDTO() }, statusFor(saved.appointmentId))
     }
 
     @Transactional
@@ -156,7 +174,7 @@ class VisitService(
         val saved = visitRepository.save(visit)
         rxRowRepository.deleteByVisitId(saved.id)
         val rxRows = saveRxRows(saved, request.prescriptions)
-        return saved.toDTO(rxRows.map { it.toDTO() })
+        return saved.toDTO(rxRows.map { it.toDTO() }, statusFor(saved.appointmentId))
     }
 
     @Transactional
@@ -262,7 +280,7 @@ class VisitService(
         notes = this.notes
     )
 
-    private fun Visit.toDTO(rxRows: List<RxRowDTO>): VisitDTO = VisitDTO(
+    private fun Visit.toDTO(rxRows: List<RxRowDTO>, appointmentStatus: String? = null): VisitDTO = VisitDTO(
         id = this.id,
         patientId = this.patient?.id ?: UUID(0, 0),
         clinicId = this.clinic?.id ?: UUID(0, 0),
@@ -295,6 +313,7 @@ class VisitService(
         sessionEndedAt = this.sessionEndedAt,
         sessionDurationSec = this.sessionDurationSec,
         appointmentId = this.appointmentId,
+        appointmentStatus = appointmentStatus,
         prescriptions = rxRows
     )
 }

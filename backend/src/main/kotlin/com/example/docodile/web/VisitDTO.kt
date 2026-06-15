@@ -66,5 +66,11 @@ data class VisitDTO(
     // visits). Lets the pad show the visit tied to the open appointment.
     val appointmentId: UUID?,
 
+    // The owning appointment's status (e.g. COMPLETED / IN_PROGRESS / AT_DOC),
+    // resolved server-side. Null when the visit has no appointment. Lets the
+    // prescription pad lock/label each visit tab from its OWN completion state
+    // rather than the appointment the chart was opened through.
+    val appointmentStatus: String?,
+
     val prescriptions: List<RxRowDTO>
 )
