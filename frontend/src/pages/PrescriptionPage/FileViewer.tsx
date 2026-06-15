@@ -311,6 +311,15 @@ export function FileViewer({ file, onBack }: Props) {
             <RectIcon />
           </ToolBtn>
         </div>
+        {/* View toggle — show/hide annotations, set apart from the draw tools. */}
+        <div style={styles.railDivider} aria-hidden />
+        <ToolBtn
+          label={visible ? "Hide annotations" : "Show annotations"}
+          active={!visible}
+          onClick={() => setVisible((v) => !v)}
+        >
+          {visible ? <EyeIcon /> : <EyeOffIcon />}
+        </ToolBtn>
       </aside>
 
       {/* Right pane — title bar · image · actions bar. */}
@@ -558,15 +567,8 @@ export function FileViewer({ file, onBack }: Props) {
       )}
       </div>
 
-        {/* Bottom actions bar — visibility · downloads. */}
+        {/* Bottom actions bar — the two download CTAs. */}
         <div style={styles.bottomBar}>
-          <ToolBtn
-            label={visible ? "Hide annotations" : "Show annotations"}
-            active={!visible}
-            onClick={() => setVisible((v) => !v)}
-          >
-            {visible ? <EyeIcon /> : <EyeOffIcon />}
-          </ToolBtn>
           <Button variant="light" size="sm" onClick={downloadOriginal} iconLeft={<DownloadIcon />}>
             Download raw
           </Button>
@@ -883,6 +885,13 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: colors.neutral100,
     borderRadius: radii.m,
     boxShadow: shadows.modal,
+  },
+  // Thin separator in the rail between the draw tools and the view toggle.
+  railDivider: {
+    width: 20,
+    height: 1,
+    backgroundColor: colors.neutral200,
+    margin: `${spacing["2xs"]} 0`,
   },
   // Right pane — white block holding the title bar, image canvas, actions bar.
   rightPane: {
