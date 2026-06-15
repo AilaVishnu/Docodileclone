@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { colors, fonts, radii, spacing } from "../../styles/theme";
+import { colors, fonts, radii, spacing, shadows } from "../../styles/theme";
 import { API_BASE_URL } from "../../apiConfig";
 import { IconButton } from "../../components/IconButton";
 
@@ -575,13 +575,6 @@ export function FileViewer({ file, onBack }: Props) {
         </aside>
       )}
       </div>
-
-      <footer style={styles.footer}>
-        <span style={styles.footerCount}>
-          {annotations.length} annotation{annotations.length === 1 ? "" : "s"} ·{" "}
-          {visible ? "visible" : "hidden"}
-        </span>
-      </footer>
     </div>
   );
 }
@@ -868,24 +861,25 @@ function labelForType(type: Annotation["type"]): string {
 const styles: Record<string, React.CSSProperties> = {
   container: {
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "row",
+    alignItems: "stretch",
     gap: spacing.s,
-    // Sized for the wrapping Modal — the modal caps width at 90vw and adds
-    // its own 32px padding, so we target a comfortable mid-size and let the
-    // image scale down via `maxHeight: 70vh` on the <img>.
-    width: "min(1100px, 86vw)",
-    maxHeight: "82vh",
-    overflow: "auto",
+    // Two panes side by side (options · image), sized for the wrapping Modal.
+    width: "min(1100px, 88vw)",
+    height: "min(760px, 80vh)",
   },
+  // Left options pane — title, tool rail, and output actions, stacked.
   toolbar: {
+    width: 240,
+    flexShrink: 0,
     display: "flex",
-    alignItems: "center",
-    gap: spacing.s,
-    padding: `${spacing.s} ${spacing.m}`,
+    flexDirection: "column",
+    gap: spacing.m,
+    padding: spacing.l,
     backgroundColor: colors.neutral100,
     borderRadius: radii.m,
-    border: `1px solid ${colors.neutral200}`,
-    flexWrap: "wrap",
+    boxShadow: shadows.modal,
+    overflowY: "auto",
   },
   backBtn: {
     display: "inline-flex",
@@ -901,25 +895,26 @@ const styles: Record<string, React.CSSProperties> = {
   },
   title: {
     fontFamily: fonts.family.primary,
-    fontSize: fonts.control.sm,
-    color: colors.neutral700,
-    flex: 1,
+    fontSize: fonts.control.md,
+    fontWeight: fonts.weight.medium,
+    color: colors.neutral900,
     minWidth: 0,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
   tools: {
-    display: "inline-flex",
-    gap: 4,
-    padding: 4,
-    backgroundColor: colors.primary100,
-    borderRadius: radii.m,
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing["2xs"],
+    backgroundColor: "transparent",
   },
   right: {
-    display: "inline-flex",
-    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "stretch",
     gap: spacing.xs,
+    marginTop: "auto",
   },
   iconBtn: {
     width: 32,
@@ -949,24 +944,26 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "8px 16px",
     cursor: "pointer",
   },
-  // Two-column row: image stage + (optional) right rail.
+  // Right side: image stage + (optional) annotation rail.
   stageRow: {
+    flex: 1,
+    minWidth: 0,
     display: "flex",
     gap: spacing.s,
     alignItems: "stretch",
-    minHeight: 400,
   },
-  // Image stage — flex:1 so it shrinks to fit when the rail is shown.
+  // Image stage — white canvas (Photoshop-style layout), image centred.
   stage: {
     flex: 1,
     minWidth: 0,
     display: "flex",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "center",
-    padding: spacing.m,
-    backgroundColor: colors.neutral150,
+    padding: spacing.l,
+    backgroundColor: colors.neutral100,
     borderRadius: radii.m,
-    minHeight: 400,
+    boxShadow: shadows.modal,
+    overflow: "auto",
   },
   // Annotation rail. Fixed-width column on the right, only shown when
   // annotations exist. Scrolls vertically when the list grows long.

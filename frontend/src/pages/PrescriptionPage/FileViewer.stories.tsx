@@ -27,7 +27,7 @@ const meta = {
       },
     },
   },
-  decorators: [(Story) => <div style={{ height: '92vh' }}><Story /></div>],
+  decorators: [(Story) => <div style={{ minHeight: '92vh', background: '#b9b9b3', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}><Story /></div>],
   argTypes: { onBack: { control: false }, file: { control: false } },
   args: { onBack: () => {} },
 } satisfies Meta<typeof FileViewer>;

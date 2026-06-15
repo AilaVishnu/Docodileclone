@@ -3119,7 +3119,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
           Shows the file with the annotation toolbar; close × dismisses.
           For server-only files (fileUrl null, fileId set) the viewer shows
           a download button; FileViewer fetches bytes lazily if needed. */}
-      <Modal isOpen={viewerOpen !== null} onClose={() => setViewerOpen(null)}>
+      <Modal isOpen={viewerOpen !== null} onClose={() => setViewerOpen(null)} surface="transparent" padding={0} shadow="none">
         {viewerOpen && (
           <FileViewer
             file={{
