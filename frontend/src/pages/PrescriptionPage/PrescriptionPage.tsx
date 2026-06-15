@@ -265,6 +265,17 @@ const blankRxRow = (position: number): RxRowDraft => ({
   thenRows: [],
 });
 
+// Services-style trailing row: keep every filled row (a medicine entered) in
+// order, followed by exactly one empty row to type the next medicine into.
+// Typing into the trailing empty fills it and a fresh empty re-appears. The
+// trailing empty carries no medicine, so the save path (which drops rows with
+// no medicine) already ignores it.
+const withTrailingRx = (rows: RxRowDraft[]): RxRowDraft[] => {
+  const filled = rows.filter((r) => r.medicine.trim() !== "");
+  const empty = rows.find((r) => r.medicine.trim() === "");
+  return [...filled, empty ?? blankRxRow(0)].map((r, i) => ({ ...r, position: i + 1 }));
+};
+
 const fromRxDTO = (dto: RxRowDTO): RxRowDraft => ({
   id: dto.id ?? null,
   position: dto.position,
@@ -867,10 +878,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     // Build the new rows first so we can also resolve genericNames against
     // the same list — if we called setRxRows and then read rxRows in a
     // separate effect the second effect would still see the old state.
-    const newRows =
+    const newRows = withTrailingRx(
       activeVisit?.prescriptions && activeVisit.prescriptions.length > 0
         ? activeVisit.prescriptions.map(fromRxDTO)
-        : Array.from({ length: 5 }, (_, i) => blankRxRow(i + 1));
+        : [],
+    );
     _setRxRows(newRows); // load — not a user edit, don't flag dirty
 
     // Resolve genericName for every row that has a medicine but no cached
@@ -1199,7 +1211,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       case "rx": {
         const rows = Array.isArray(c.rxRows) ? (c.rxRows as RxRowDraft[]) : [];
         // Reset ids/positions so loaded rows save as fresh Rx rows on this visit.
-        setRxRows(rows.map((r, i) => ({ ...r, id: null, position: i + 1, thenRows: r.thenRows ?? [] })));
+        setRxRows(withTrailingRx(rows.map((r, i) => ({ ...r, id: null, position: i + 1, thenRows: r.thenRows ?? [] }))));
         break;
       }
     }
@@ -1255,7 +1267,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     setReviewDate(null);
     setReviewDays("");
     setReviewNotesValue("");
-    setRxRows(Array.from({ length: 5 }, (_, i) => blankRxRow(i + 1)));
+    setRxRows([blankRxRow(1)]);
     setHistoryValues({
       family_history: "", allergies: "", personal_history: "", past_medical_history: "",
     });
@@ -1364,7 +1376,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     ]);
   };
   const removeRxRow = (rowIdx: number) =>
-    setRxRows((prev) => prev.filter((_, ri) => ri !== rowIdx));
+    setRxRows((prev) => withTrailingRx(prev.filter((_, ri) => ri !== rowIdx)));
   const addThenRow = (rowIdx: number) =>
     setRxRows((prev) => prev.map((r, ri) => ri !== rowIdx ? r : { ...r, thenRows: [...r.thenRows, blankThenRow()] }));
   const removeThenRow = (rowIdx: number, thenIdx: number) =>
@@ -2578,8 +2590,8 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                     inputStyle={styles.rxMedicineInput}
                                     placeholder="Medicine"
                                     value={row.medicine}
-                                    onChange={(v) => { setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: v, genericName: "" } : r)); autofillRxFromHistory(i, v); }}
-                                    onSelect={(name, genericName) => { setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: name, genericName } : r)); autofillRxFromHistory(i, name); }}
+                                    onChange={(v) => { setRxRows((prev) => withTrailingRx(prev.map((r, ix) => ix === i ? { ...r, medicine: v, genericName: "" } : r))); autofillRxFromHistory(i, v); }}
+                                    onSelect={(name, genericName) => { setRxRows((prev) => withTrailingRx(prev.map((r, ix) => ix === i ? { ...r, medicine: name, genericName } : r))); autofillRxFromHistory(i, name); }}
                                   />
                                 </div>
                                 {row.medicine.trim() && (
@@ -2621,9 +2633,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                 <div style={styles.rxDataCell}><FrequencyIntervalPicker value={row.frequencyInterval} onChange={(v) => updateField("frequencyInterval", v)} /></div>
                                 <div style={styles.rxDataCell}><DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} /></div>
                                 <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={row.notes} onChange={(e) => updateField("notes", e.target.value)} />
-                                <button type="button" style={styles.rxDeleteBtn} onClick={() => removeRxRow(i)} title="Remove medicine">
-                                  <Icon name="trash" size={16} tone="inherit" />
-                                </button>
+                                {row.medicine.trim() && (
+                                  <button type="button" style={styles.rxDeleteBtn} onClick={() => removeRxRow(i)} title="Remove medicine">
+                                    <Icon name="trash" size={16} tone="inherit" />
+                                  </button>
+                                )}
                               </div>
                               {row.thenRows.map((thenRow, ti) => (
                                 <div key={`then-${i}-${ti}`} style={styles.rxDataRow}>
@@ -2641,28 +2655,10 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                           </div>
                         );
                       })}
-                      {/* Figma node 2143:10552 — "Add Medicine" footer row (white, with
-                  dictate icons + drag handle). Clicking "+" or the label
-                  appends one more empty row to the Rx table. */}
+                      {/* Rx-level actions row — copy from previous visit, load /
+                          save template. (Adding a row is now the trailing empty
+                          row: type a medicine and the next empty appears.) */}
                       <div style={styles.addMedicineRow}>
-                        <button
-                          type="button"
-                          style={styles.addMedicinePlus}
-                          onClick={() => setRxRows((rows) => [...rows, blankRxRow(rows.length + 1)])}
-                          aria-label="Add medicine row"
-                        >
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                            <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          style={styles.addMedicineText}
-                          onClick={() => setRxRows((rows) => [...rows, blankRxRow(rows.length + 1)])}
-                        >
-                          Add Medicine
-                        </button>
                         <span style={styles.dictateIcons}>
                           <button
                             type="button"
@@ -2670,7 +2666,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                             disabled={!prevVisit?.prescriptions?.length || !canEditForm}
                             onClick={() => {
                               if (prevVisit?.prescriptions?.length) {
-                                setRxRows(prevVisit.prescriptions.map((dto, i) => ({ ...fromRxDTO(dto), id: null, position: i + 1 })));
+                                setRxRows(withTrailingRx(prevVisit.prescriptions.map((dto, i) => ({ ...fromRxDTO(dto), id: null, position: i + 1 }))));
                               }
                             }}
                             style={rewindBtnStyle(!prevVisit?.prescriptions?.length || !canEditForm)}
