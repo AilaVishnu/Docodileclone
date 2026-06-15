@@ -11,6 +11,11 @@ type ToastProps = {
   actionLabel?: string;
   onAction?: () => void;
   /**
+   * Registered icon name to show. Defaults to "buildings". As per-toast icons
+   * are designed, set this per message (see the Toast catalog story).
+   */
+  iconName?: string;
+  /**
    * Render in normal document flow instead of the default fixed bottom-right
    * overlay (no positioning / z-index / slide-in). For catalogs, docs and
    * stories that show several toasts at once.
@@ -18,7 +23,7 @@ type ToastProps = {
   inline?: boolean;
 };
 
-export function Toast({ message, isVisible, onClose, duration = 4000, actionLabel, onAction, inline = false }: ToastProps) {
+export function Toast({ message, isVisible, onClose, duration = 4000, actionLabel, onAction, inline = false, iconName = "buildings" }: ToastProps) {
   useEffect(() => {
     if (isVisible && duration > 0) {
       const timer = setTimeout(onClose, duration);
@@ -30,7 +35,7 @@ export function Toast({ message, isVisible, onClose, duration = 4000, actionLabe
 
   return (
     <div style={inline ? styles.containerInline : styles.container}>
-      <Icon name="buildings" tone="inherit" style={styles.icon} />
+      <Icon name={iconName} tone="inherit" style={styles.icon} />
       <p style={styles.message}>{message}</p>
       {actionLabel && onAction && (
         <button

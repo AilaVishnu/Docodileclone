@@ -45,6 +45,7 @@ import { ReactComponent as Ic_share } from "../../assets/icons/share.svg";
 import { ReactComponent as Ic_star } from "../../assets/icons/star.svg";
 import { ReactComponent as Ic_stop_circle } from "../../assets/icons/stop-circle.svg";
 import { ReactComponent as Ic_stopwatch } from "../../assets/icons/stopwatch.svg";
+import { ReactComponent as Ic_success_seal } from "../../assets/icons/success-seal.svg";
 import { ReactComponent as Ic_trash } from "../../assets/icons/trash.svg";
 import { ReactComponent as Ic_tuning } from "../../assets/icons/tuning.svg";
 import { ReactComponent as Ic_user_check } from "../../assets/icons/user-check.svg";
@@ -131,6 +132,7 @@ export const ICONS: Record<string, SvgComponent> = {
   "star": Ic_star,
   "stop-circle": Ic_stop_circle,
   "stopwatch": Ic_stopwatch,
+  "success-seal": Ic_success_seal,
   "trash": Ic_trash,
   "tuning": Ic_tuning,
   "user-check": Ic_user_check,
@@ -186,6 +188,7 @@ export const MULTICOLOR_ICONS = new Set<string>([
   "hourglass",
   "paid-stamp",
   "stopwatch",
+  "success-seal",
   "user-check",
   "user",
   "users-group",

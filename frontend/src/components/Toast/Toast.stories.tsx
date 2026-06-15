@@ -112,12 +112,12 @@ const CONCEPT_GROUP_META: Record<ConceptGroup, { label: string; color: string }>
 
 const CATALOG: {
   domain: string;
-  items: { msg: string; type: ToastType; concept: ConceptKey }[];
+  items: { msg: string; type: ToastType; concept: ConceptKey; icon?: string }[];
 }[] = [
   {
     domain: 'Auth & Login',
     items: [
-      { msg: 'Login successful', type: 'success', concept: 'status' },
+      { msg: 'Login successful', type: 'success', concept: 'status', icon: 'success-seal' },
       { msg: 'Password reset email sent to ramesh@clinic.com', type: 'success', concept: 'sent' },
       { msg: 'Please enter email and password.', type: 'warning', concept: 'fillField' },
       { msg: 'Please enter clinic domain.', type: 'warning', concept: 'fillField' },
@@ -190,7 +190,7 @@ const CATALOG: {
   {
     domain: 'Import Data',
     items: [
-      { msg: 'Migration completed successfully', type: 'success', concept: 'created' },
+      { msg: 'Migration completed successfully', type: 'success', concept: 'created', icon: 'success-seal' },
       { msg: 'Updated 12 · added 3 · skipped 1', type: 'success', concept: 'created' },
       { msg: 'Please choose a .zip file.', type: 'error', concept: 'fileProblem' },
       { msg: 'Please choose a file to import.', type: 'error', concept: 'fileProblem' },
@@ -203,7 +203,7 @@ const CATALOG: {
   {
     domain: 'Archived Patients',
     items: [
-      { msg: 'Ramesh Babu restored', type: 'success', concept: 'restored' },
+      { msg: 'Ramesh Babu restored', type: 'success', concept: 'restored', icon: 'success-seal' },
       { msg: "Couldn't restore: Network error", type: 'error', concept: 'failed' },
     ],
   },
@@ -233,7 +233,7 @@ const CATALOG: {
     items: [
       { msg: 'Dr. Mehta added to staff', type: 'success', concept: 'created' },
       { msg: 'Dr. Mehta updated', type: 'success', concept: 'saved' },
-      { msg: 'Dr. Mehta reactivated', type: 'success', concept: 'restored' },
+      { msg: 'Dr. Mehta reactivated', type: 'success', concept: 'restored', icon: 'success-seal' },
       { msg: 'Invite email resent', type: 'success', concept: 'sent' },
       { msg: 'Dr. Mehta removed — moved to Deactivated', type: 'info', concept: 'removed' },
       { msg: 'Maximum of 5 clinics reached', type: 'warning', concept: 'limit' },
@@ -256,13 +256,13 @@ const CATALOG: {
   {
     domain: 'Prescription Pad',
     items: [
-      { msg: 'Visit saved', type: 'success', concept: 'saved' },
-      { msg: 'Changes saved', type: 'success', concept: 'saved' },
+      { msg: 'Visit saved', type: 'success', concept: 'saved', icon: 'success-seal' },
+      { msg: 'Changes saved', type: 'success', concept: 'saved', icon: 'success-seal' },
       { msg: 'Visit marked complete', type: 'success', concept: 'status' },
       { msg: 'Visit moved to today', type: 'success', concept: 'status' },
-      { msg: 'Saved template "Common cold"', type: 'success', concept: 'saved' },
+      { msg: 'Saved template "Common cold"', type: 'success', concept: 'saved', icon: 'success-seal' },
       { msg: 'Loaded "Common cold"', type: 'success', concept: 'saved' },
-      { msg: 'Patient info saved', type: 'success', concept: 'saved' },
+      { msg: 'Patient info saved', type: 'success', concept: 'saved', icon: 'success-seal' },
       { msg: 'Patient archived', type: 'success', concept: 'archived' },
       { msg: 'Downloading 3 file(s)…', type: 'info', concept: 'download' },
       { msg: 'Enter a template name', type: 'warning', concept: 'fillField' },
@@ -312,11 +312,11 @@ function TypeTag({ type }: { type: ToastType }) {
   );
 }
 
-function ToastRow({ msg, type, trailing }: { msg: string; type: ToastType; trailing?: string }) {
+function ToastRow({ msg, type, icon, trailing }: { msg: string; type: ToastType; icon?: string; trailing?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
       <TypeTag type={type} />
-      <Toast inline message={msg} isVisible duration={0} onClose={() => {}} />
+      <Toast inline message={msg} iconName={icon} isVisible duration={0} onClose={() => {}} />
       {trailing && <span style={{ fontSize: fonts.size.xs, color: colors.neutral400 }}>{trailing}</span>}
     </div>
   );
@@ -350,7 +350,7 @@ export const Catalog: StoryObj = {
             {section.domain} <span style={{ color: colors.neutral400, fontWeight: 400 }}>· {section.items.length}</span>
           </h3>
           {section.items.map((t, i) => (
-            <ToastRow key={`${section.domain}-${i}`} msg={t.msg} type={t.type} />
+            <ToastRow key={`${section.domain}-${i}`} msg={t.msg} type={t.type} icon={t.icon} />
           ))}
         </section>
       ))}
@@ -437,7 +437,7 @@ export const ByConcept: StoryObj = {
                 </div>
                 <div style={{ paddingLeft: 56 }}>
                   {items.map((t, i) => (
-                    <ToastRow key={`${c.key}-${i}`} msg={t.msg} type={t.type} trailing={t.area} />
+                    <ToastRow key={`${c.key}-${i}`} msg={t.msg} type={t.type} icon={t.icon} trailing={t.area} />
                   ))}
                 </div>
               </section>
