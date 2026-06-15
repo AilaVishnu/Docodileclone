@@ -5,6 +5,7 @@ import com.example.docodile.domain.Patient
 import com.example.docodile.domain.RxRow
 import com.example.docodile.domain.Visit
 import com.example.docodile.repo.AppUserRepository
+import com.example.docodile.repo.AppointmentRepository
 import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.repo.RxRowRepository
@@ -36,6 +37,7 @@ class VisitServiceTest {
     @Mock private lateinit var patientRepository: PatientRepository
     @Mock private lateinit var clinicEntityRepository: ClinicEntityRepository
     @Mock private lateinit var appUserRepository: AppUserRepository
+    @Mock private lateinit var appointmentRepository: AppointmentRepository
     @Mock private lateinit var currentUser: CurrentUser
 
     @InjectMocks private lateinit var visitService: VisitService
