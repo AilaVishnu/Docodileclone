@@ -35,6 +35,11 @@ export const Default: Story = {
     isOpen: true,
     onClose: () => {},
     total: '₹ 1,200.00',
+    header: (
+      <span style={{ fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 }}>
+        T001 : Ramesh - M 12
+      </span>
+    ),
     left: (
       <>
         <h3 style={{ margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, fontWeight: fonts.weight.regular, color: colors.neutral900 }}>

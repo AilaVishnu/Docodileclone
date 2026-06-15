@@ -125,17 +125,19 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
     <BillLayout
       isOpen={isOpen}
       onClose={onClose}
+      header={<span style={{ fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 }}>{pt.code} : {pt.name} - {pt.meta}</span>}
+      headerActions={
+        <>
+          <IconButton ariaLabel="Print" onClick={() => {}} color={colors.neutral900}><Icon name="printer" size={24} tone="inherit" /></IconButton>
+          <IconButton ariaLabel="Share" onClick={() => {}} color={colors.neutral900}><Icon name="share" size={24} tone="inherit" /></IconButton>
+        </>
+      }
       billTitle="Bill"
       totalLabel="Balance"
       total={`₹ ${balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
       left={
         <>
           <datalist id="bm-svc-list">{SERVICE_CATALOG.map((s) => <option key={s.name} value={s.name} />)}</datalist>
-          {/* Patient */}
-          <div style={{ backgroundColor: colors.primary300, borderRadius: radii.m, padding: `10px ${spacing.m}`, fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 }}>
-            {pt.code} : {pt.name} - {pt.meta}
-          </div>
-
           {/* Bill date / deposit */}
           <div style={{ display: "flex", alignItems: "center", gap: spacing.m, flexWrap: "wrap" }}>
             <span style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>Bill date</span>
@@ -204,13 +206,9 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
         </>
       }
       action={
-        <>
-          <Button variant="dark" size="md" onClick={onClose} style={{ flex: 1 }} iconLeft={<Icon name="verified-badge" size={20} tone="inverse" />}>
-            {balance > 0 ? `Pay ${inr(balance)}` : "Mark paid"}
-          </Button>
-          <IconButton ariaLabel="Print" onClick={() => {}} color={colors.neutral900}><Icon name="printer" size={24} tone="inherit" /></IconButton>
-          <IconButton ariaLabel="Share" onClick={() => {}} color={colors.neutral900}><Icon name="share" size={24} tone="inherit" /></IconButton>
-        </>
+        <Button variant="dark" size="md" onClick={onClose} style={{ flex: 1 }} iconLeft={<Icon name="verified-badge" size={20} tone="inverse" />}>
+          {balance > 0 ? `Pay ${inr(balance)}` : "Mark paid"}
+        </Button>
       }
     />
   );

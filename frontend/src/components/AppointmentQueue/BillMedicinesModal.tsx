@@ -128,12 +128,12 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
     <BillLayout
       isOpen={isOpen}
       onClose={onClose}
+      header={<span style={{ fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 }}>{patientName}</span>}
       total={inr(total)}
       left={
         <>
           <div style={styles.leftHeader}>
             <h3 style={styles.title}>Medicines</h3>
-            <div style={styles.subtitle}>For {patientName}</div>
           </div>
 
           <div style={styles.tableContainer}>
