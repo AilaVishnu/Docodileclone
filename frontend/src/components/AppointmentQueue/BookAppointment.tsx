@@ -750,37 +750,33 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                         disabled={servicesLocked}
                       />
                     </div>
-                    {!servicesLocked ? (() => {
-                      // Block removing the last remaining service so every
-                      // appointment always carries at least one — the queue,
-                      // bill and dispense paths all assume a priced service.
-                      const isLast = form.services.length <= 1;
-                      return (
-                        <button
-                          onClick={() => {
-                            if (isLast) return;
-                            const removed = form.services[i];
-                            const updated = form.services.filter((_, idx) => idx !== i);
-                            setForm({ ...form, services: updated });
-                            setToastMessage(`${removed} removed`);
-                          }}
-                          disabled={isLast}
-                          title={isLast ? "At least one service is required" : "Remove service"}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            cursor: isLast ? "not-allowed" : "pointer",
-                            opacity: isLast ? 0.35 : 1,
-                            padding: "4px",
-                            display: "flex",
-                            alignItems: "center",
-                            flexShrink: 0,
-                          }}
-                        >
-                          <Icon name="trash" size={20} tone="inherit" />
-                        </button>
-                      );
-                    })() : (
+                    {!servicesLocked ? (
+                      // Any service — including the last one — can be removed;
+                      // the user can re-pick via "Add Service". Booking stays
+                      // gated on having at least one service (submit validation),
+                      // so clearing the only row just blocks Book until re-added.
+                      <button
+                        onClick={() => {
+                          const removed = form.services[i];
+                          const updated = form.services.filter((_, idx) => idx !== i);
+                          setForm({ ...form, services: updated });
+                          setToastMessage(`${removed} removed`);
+                        }}
+                        title="Remove service"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          opacity: 1,
+                          padding: "4px",
+                          display: "flex",
+                          alignItems: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Icon name="trash" size={20} tone="inherit" />
+                      </button>
+                    ) : (
                       <div style={{ width: "28px", flexShrink: 0 }} />
                     )}
                   </div>
