@@ -327,8 +327,8 @@ body {
   --header-pad-y: 8px;           /* vertical padding → ~72px tall */
   --header-back-inset: 8px;      /* back-arrow distance from the bar's left edge */
   --vital-cols: 6;            /* vitals grid columns — roomy tier (tight, fits more per row) */
-  --vital-col-gap: 12px;
-  --vital-row-gap: 28px;      /* room for the absolute error line under a row */
+  --vital-col-gap: 18px;
+  --vital-row-gap: 30px;      /* room for the absolute error line under a row */
 }
 /* ─── Interval 1 (1200–1439): compact tier ───────────────────────────
    Only the TYPE scale and the universal CONTROL primitives step down
@@ -377,7 +377,7 @@ body {
     /* Prescription vitals — one fewer column + tighter gap at compact.
        --rx-content-max holds (fixed cap, gutters absorb the difference). */
     --vital-cols: 5;
-    --vital-col-gap: 10px;
+    --vital-col-gap: 14px;
 
     /* Header chrome compacts at 1200–1439 */
     --topnav-h: 56px;            /* shorter header */

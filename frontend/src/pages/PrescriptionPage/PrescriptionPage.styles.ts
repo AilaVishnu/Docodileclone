@@ -794,9 +794,11 @@ export const styles: Record<string, CSSProperties> = {
     height: 19,
     flexShrink: 0,
     borderRadius: radii.full,
-    border: `1.5px solid ${colors.neutral300}`,
-    backgroundColor: "transparent",
-    color: colors.neutral500,
+    // Filled (not outlined) so the past-visit numbers read clearly on the
+    // cream page; the active tab keeps the stronger shade600 fill below.
+    border: "1.5px solid transparent",
+    backgroundColor: colors.neutral200,
+    color: colors.neutral700,
     fontSize: fonts.size.xs,
     lineHeight: 1,
     // Optical nudge: digits ride high (no descender ink), so shift down ~1px.
