@@ -37,6 +37,7 @@ import { Modal } from "../../components/Modal/Modal";
 import { Button } from "../../components/Button";
 import { Select } from "../../components/Input/Select/Select";
 import { ViewToggle } from "../../components/ViewToggle";
+import { PatientRecordHeader, RecordSection } from "../../components/PatientRecordHeader";
 import { Tabs } from "../../components/Tabs";
 import { DataGrid } from "../../components/DataGrid/DataGrid";
 
@@ -1979,78 +1980,35 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
 
   return (
     <div ref={pageRootRef} style={styles.page}>
-      {/* Sticky page header — single compact row, capped at the form width
-          (--rx-content-max) and centered so the patient identity LEFT-aligns
-          to the prescription form below. Layout: back · avatar+name · section
-          nav (inline) · flexible gap · contact kebab · AI. Roughly half the
-          height of the old two-row stack. */}
-      <header style={styles.rxHeader}>
-        {/* Back arrow lives in the left gutter (outside the form-aligned inner)
-            so the AVATAR — not the arrow — left-aligns to the form below. */}
-        <button
-          type="button"
-          style={styles.rxBackBtn}
-          onClick={() => {
-            setSelectedPatient(null);
-            setSelectedAppointmentId(null);
-          }}
-          aria-label="Back to patients"
-          title="Back to patients"
-        >
-          <Icon name="arrow-left" size={20} tone="inherit" />
-        </button>
-
-        <div style={styles.rxHeaderPad}>
-        <div style={styles.rxHeaderInner}>
-          <div style={styles.headerPatient}>
-            {/* Just the patient's name — avatar, T-number and (gender|age)
-                meta intentionally omitted to keep the sticky header minimal. */}
-            <span style={styles.headerName}>{selectedPatient?.name ?? ""}</span>
-          </div>
-
-          {/* Flexible gap pushes nav + actions to the right side. */}
-          <div style={styles.rxHeaderSpacer} />
-
-          {/* Section nav — Info / Visits / Files / Timeline / Bills (Info first
-              via NAV_ORDER). Full-height underline tabs (icon + label), active
-              marked by the peach underline at the header's bottom edge. */}
-          <nav style={styles.headerSectionNav} role="tablist" aria-label="Patient record sections">
-            {NAV_ORDER.map((i) => {
-              const a = ACTION_META[i];
-              const isActive = activeAction === i;
-              const count = countFor(i);
-              return (
-                <button
-                  key={a.label}
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  aria-label={a.label}
-                  title={a.label}
-                  style={{ ...styles.headerSectionTab, ...(isActive ? styles.headerSectionTabActive : {}) }}
-                  onClick={() => setActiveAction(i)}
-                >
-                  <span style={styles.headerSectionIcon}>{a.icon}</span>
-                  <span>{a.label}</span>
-                  {count > 0 && (
-                    <span style={styles.headerSectionBadge}>{count}</span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Stable patient-level actions: contact "⋯" kebab (call / email /
-              video / edit). Document actions live in the bottom bar; the AI
-              summary now lives in the Info tab. */}
+      {/* Sticky record header — back · patient name · section nav (Info first
+          via NAV_ORDER) · contact "⋯" kebab. Now the shared, reusable
+          <PatientRecordHeader> (Patterns) rather than hand-built markup. */}
+      <PatientRecordHeader
+        title={selectedPatient?.name ?? ""}
+        onBack={() => {
+          setSelectedPatient(null);
+          setSelectedAppointmentId(null);
+        }}
+        backLabel="Back to patients"
+        navLabel="Patient record sections"
+        sections={NAV_ORDER.map(
+          (i): RecordSection => ({
+            id: String(i),
+            label: ACTION_META[i].label,
+            icon: ACTION_META[i].icon,
+            badge: countFor(i),
+          })
+        )}
+        activeId={String(activeAction)}
+        onSelect={(id) => setActiveAction(Number(id))}
+        actions={
           <PopoverMenu
             trigger={<span style={styles.kebabTrigger} aria-hidden="true">⋯</span>}
             items={contactMenuItems}
             ariaLabel="Patient contact and actions"
           />
-        </div>
-        </div>
-      </header>
+        }
+      />
 
       <div style={styles.body}>
         {/* ─── Form area — content swapped via activeAction. Locked
