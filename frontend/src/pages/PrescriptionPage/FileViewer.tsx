@@ -291,11 +291,8 @@ export function FileViewer({ file, onBack }: Props) {
 
   return (
     <div style={styles.container}>
-      {/* Toolbar — no Back arrow now that this lives inside a Modal; the
-          parent's overlay click + an explicit × in the header handle dismiss. */}
-      <header style={styles.toolbar}>
-        <span style={styles.title}>{file.name}</span>
-
+      {/* Left rail — tool icons only. */}
+      <aside style={styles.toolbar}>
         <div style={styles.tools}>
           <ToolBtn label="Move" active={tool === "none"} onClick={() => setTool("none")}>
             <CursorIcon />
@@ -313,33 +310,17 @@ export function FileViewer({ file, onBack }: Props) {
             <RectIcon />
           </ToolBtn>
         </div>
+      </aside>
 
-        <div style={styles.right}>
-          <ToolBtn
-            label={visible ? "Hide annotations" : "Show annotations"}
-            active={!visible}
-            onClick={() => setVisible((v) => !v)}
-          >
-            {visible ? <EyeIcon /> : <EyeOffIcon />}
-          </ToolBtn>
-          <button type="button" onClick={downloadOriginal} style={styles.iconBtn} title="Download original">
-            <DownloadIcon />
-          </button>
-          {isImage && (
-            <button type="button" onClick={downloadFlattened} style={styles.flattenBtn} title="Download with annotations">
-              Download w/ markup
-            </button>
-          )}
-          {/* Close — dismisses the file viewer. */}
-          <IconButton ariaLabel="Close" onClick={onBack} style={{ marginLeft: 4 }} />
+      {/* Right pane — title bar · image · actions bar. */}
+      <div style={styles.rightPane}>
+        <div style={styles.topBar}>
+          <span style={styles.title}>{file.name}</span>
+          <IconButton ariaLabel="Close" onClick={onBack} />
         </div>
-      </header>
 
-      {/* Stage + annotations rail in a two-column flex row. Rail appears only
-          when there's at least one annotation, keeping the empty-viewer view
-          uncluttered. */}
-      <div style={styles.stageRow}>
-      <div style={styles.stage}>
+        <div style={styles.stageRow}>
+        <div style={styles.stage}>
         {!resolvedUrl ? (
           <p style={styles.empty}>File not available.</p>
         ) : !isImage ? (
@@ -574,6 +555,26 @@ export function FileViewer({ file, onBack }: Props) {
           </div>
         </aside>
       )}
+      </div>
+
+        {/* Bottom actions bar — visibility · downloads. */}
+        <div style={styles.bottomBar}>
+          <ToolBtn
+            label={visible ? "Hide annotations" : "Show annotations"}
+            active={!visible}
+            onClick={() => setVisible((v) => !v)}
+          >
+            {visible ? <EyeIcon /> : <EyeOffIcon />}
+          </ToolBtn>
+          <button type="button" onClick={downloadOriginal} style={styles.iconBtn} title="Download original">
+            <DownloadIcon />
+          </button>
+          {isImage && (
+            <button type="button" onClick={downloadFlattened} style={{ ...styles.flattenBtn, marginLeft: "auto" }} title="Download with annotations">
+              Download w/ markup
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -869,17 +870,42 @@ const styles: Record<string, React.CSSProperties> = {
     height: "min(760px, 80vh)",
   },
   // Left options pane — title, tool rail, and output actions, stacked.
+  // Left rail — a thin floating strip of just the tool icons.
   toolbar: {
-    width: 240,
     flexShrink: 0,
     display: "flex",
     flexDirection: "column",
-    gap: spacing.m,
-    padding: spacing.l,
+    alignItems: "center",
+    padding: `${spacing.s} ${spacing.xs}`,
     backgroundColor: colors.neutral100,
     borderRadius: radii.m,
     boxShadow: shadows.modal,
-    overflowY: "auto",
+  },
+  // Right pane — white block holding the title bar, image canvas, actions bar.
+  rightPane: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.m,
+    boxShadow: shadows.modal,
+    overflow: "hidden",
+  },
+  topBar: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.s,
+    padding: `${spacing.s} ${spacing.m}`,
+    borderBottom: `1px solid ${colors.neutral200}`,
+  },
+  bottomBar: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.s,
+    padding: `${spacing.s} ${spacing.m}`,
+    borderTop: `1px solid ${colors.neutral200}`,
   },
   backBtn: {
     display: "inline-flex",
@@ -944,25 +970,24 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "8px 16px",
     cursor: "pointer",
   },
-  // Right side: image stage + (optional) annotation rail.
+  // Middle of the right pane: image canvas + (optional) annotation rail.
   stageRow: {
     flex: 1,
     minWidth: 0,
+    minHeight: 0,
     display: "flex",
-    gap: spacing.s,
     alignItems: "stretch",
   },
-  // Image stage — white canvas (Photoshop-style layout), image centred.
+  // Image canvas — a soft grey field inside the white pane, image centred.
   stage: {
     flex: 1,
     minWidth: 0,
+    minHeight: 0,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     padding: spacing.l,
-    backgroundColor: colors.neutral100,
-    borderRadius: radii.m,
-    boxShadow: shadows.modal,
+    backgroundColor: colors.neutral150,
     overflow: "auto",
   },
   // Annotation rail. Fixed-width column on the right, only shown when
@@ -1094,7 +1119,10 @@ const styles: Record<string, React.CSSProperties> = {
   img: {
     display: "block",
     maxWidth: "100%",
-    maxHeight: "70vh",
+    // Cap to the canvas height (pane minus the top/bottom bars + padding) so
+    // the image fits; the wrapper tracks the scaled image so annotation
+    // coordinates stay aligned.
+    maxHeight: "calc(min(760px, 80vh) - 140px)",
     objectFit: "contain",
     userSelect: "none",
     pointerEvents: "none",
