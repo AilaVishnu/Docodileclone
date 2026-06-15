@@ -222,7 +222,7 @@ export function EditPatientModal({ isOpen, patient, onClose, onSave, onSaved, on
     : form.ageYears ? `${form.ageYears} yrs` : "";
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal isOpen={isOpen} onClose={onClose} surface={colors.neutral100}>
       <div style={styles.container}>
         {/* Header */}
         <ModalHeader title="Edit Patient Info" subtitle="Update personal details for this patient" onClose={onClose} />
@@ -579,15 +579,11 @@ const styles: Record<string, React.CSSProperties> = {
     color: colors.neutral500,
   },
 
-  // ── Form card — white interior ─────────────────────────────────────────────
+  // ── Form fields — sit directly on the white modal surface (no inner box) ────
   formCard: {
     display: "flex",
     flexDirection: "column" as const,
     gap: spacing.m,
-    backgroundColor: colors.neutral100,
-    borderRadius: radii.xl,
-    border: `1px solid ${colors.neutral200}`,
-    padding: spacing.l,
   },
   twoCol: {
     display: "grid",
@@ -730,8 +726,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     justifyContent: "flex-end",
     gap: spacing.s,
-    paddingTop: spacing.s,
-    borderTop: `1px solid ${colors.neutral200}`,
   },
 
   // ── Archive button + inline confirm — sits on the left of the footer,
