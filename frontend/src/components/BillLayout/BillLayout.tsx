@@ -115,7 +115,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: fonts.family.primary,
   },
   headerCard: {
-    backgroundColor: colors.primary100,
+    backgroundColor: colors.primary200,
     borderRadius: radii.m,
     boxShadow: shadows.modal,
     padding: `${spacing.m} ${spacing.xl}`,
