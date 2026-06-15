@@ -16,6 +16,20 @@ export const styles: Record<string, CSSProperties> = {
     width: "100%",
     padding: `${spacing.m} ${spacing.xl} var(--book-form-pad-bottom, 16px) ${spacing.xl}`,
   },
+  // Flat variant — no surface/border/padding/radius. For use inside a modal
+  // that already provides its own background + inset (e.g. EditPatientModal).
+  cardBare: {
+    backgroundColor: "transparent",
+    border: "none",
+    borderRadius: 0,
+    marginTop: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.m,
+    boxSizing: "border-box",
+    width: "100%",
+    padding: 0,
+  },
   row: { display: "flex", gap: spacing.m, alignItems: "center", width: "100%" },
   iconField: {
     display: "flex",

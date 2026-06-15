@@ -42,6 +42,11 @@ type PatientDetailsFormProps = {
   onClearLocked?: () => void;
   /** Extra style for the Card (e.g. grid positioning from the parent). */
   style?: React.CSSProperties;
+  /** Render flat — no card surface/border/padding — for use inside a modal
+      that already supplies its own background and inset. */
+  bare?: boolean;
+  /** Gender radio options. Defaults to Male / Female / Other. */
+  genderOptions?: string[];
 };
 
 const formatDob = (digits: string): string => {
@@ -65,6 +70,8 @@ export function PatientDetailsForm({
   showClearLink = false,
   onClearLocked,
   style,
+  bare = false,
+  genderOptions = ["Male", "Female", "Other"],
 }: PatientDetailsFormProps) {
   const [showNameSugg, setShowNameSugg] = useState(false);
   const [showPhoneSugg, setShowPhoneSugg] = useState(false);
@@ -107,7 +114,7 @@ export function PatientDetailsForm({
     on ? { borderBottomColor: colors.red200, backgroundColor: colors.redAlpha10 } : {};
 
   return (
-    <Card style={{ ...styles.card, ...style }}>
+    <Card style={{ ...(bare ? styles.cardBare : styles.card), ...style }}>
       {showClearLink && (
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--book-clearlink-mb, 6px)" }}>
           <button type="button" onClick={onClearLocked} style={styles.clearLink}>
@@ -308,7 +315,7 @@ export function PatientDetailsForm({
           value={value.gender}
           onChange={(g) => onChange({ gender: g })}
           disabled={locked}
-          options={["Male", "Female", "Other"]}
+          options={genderOptions}
         />
       </div>
     </Card>
