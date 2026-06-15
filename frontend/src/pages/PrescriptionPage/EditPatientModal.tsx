@@ -27,7 +27,7 @@ type Props = {
 // whereas the patient record stores an ISO dob + an age in months — so we map
 // between the two on open and on save.
 
-const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"];
+const GENDER_OPTIONS = ["Male", "Female", "Other"];
 
 const EMPTY_DRAFT: PatientDraft = { name: "", email: "", phone: "", dob: "", age: "", gender: "" };
 
@@ -226,7 +226,7 @@ export function EditPatientModal({ isOpen, patient, onClose, onSave, onSaved, on
     <Modal isOpen={isOpen} onClose={onClose} surface={colors.neutral100}>
       <div style={styles.container}>
         {/* Header */}
-        <ModalHeader title="Edit Patient Info" subtitle="Update personal details for this patient" onClose={onClose} />
+        <ModalHeader title="Edit Patient Info" onClose={onClose} />
 
         {/* Patient identity strip — cream bg mirrors the prescription patient card */}
         <div style={styles.identityStrip}>
@@ -260,7 +260,6 @@ export function EditPatientModal({ isOpen, patient, onClose, onSave, onSaved, on
           errors={errors}
           dobDigits={dobDigits}
           setDobDigits={setDobDigits}
-          genderOptions={GENDER_OPTIONS}
         />
 
         {/* Footer — Archive sits on the left as a tertiary destructive action

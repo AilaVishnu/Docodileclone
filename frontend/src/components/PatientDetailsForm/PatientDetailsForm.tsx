@@ -45,8 +45,6 @@ type PatientDetailsFormProps = {
   /** Render flat — no card surface/border/padding — for use inside a modal
       that already supplies its own background and inset. */
   bare?: boolean;
-  /** Gender radio options. Defaults to Male / Female / Other. */
-  genderOptions?: string[];
 };
 
 const formatDob = (digits: string): string => {
@@ -71,7 +69,6 @@ export function PatientDetailsForm({
   onClearLocked,
   style,
   bare = false,
-  genderOptions = ["Male", "Female", "Other"],
 }: PatientDetailsFormProps) {
   const [showNameSugg, setShowNameSugg] = useState(false);
   const [showPhoneSugg, setShowPhoneSugg] = useState(false);
@@ -315,7 +312,7 @@ export function PatientDetailsForm({
           value={value.gender}
           onChange={(g) => onChange({ gender: g })}
           disabled={locked}
-          options={genderOptions}
+          options={["Male", "Female", "Other"]}
         />
       </div>
     </Card>
