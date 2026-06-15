@@ -4,6 +4,7 @@ plugins {
 	id 'org.springframework.boot' version '4.0.1'
 	id 'io.spring.dependency-management' version '1.1.7'
 	id 'org.jetbrains.kotlin.plugin.jpa' version '2.2.21'
+	id 'jacoco'
 }
 
 group = 'com.example'
@@ -46,7 +47,17 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
+	// Null-safe Mockito matchers/stubbing for Kotlin (any()/whenever() that respect
+	// non-null parameter types). Avoids the NPEs plain Mockito any() causes in Kotlin.
+	testImplementation 'org.mockito.kotlin:mockito-kotlin:5.4.0'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	// In-process rate limiting for auth and data-export endpoints.
+	// Bucket4j core is framework-agnostic; no Spring Boot starter needed.
+	implementation 'com.bucket4j:bucket4j-core:8.10.1'
+	// Argon2id password hashing via Spring Security Crypto (requires BouncyCastle).
+	implementation 'org.bouncycastle:bcpkix-jdk18on:1.79'
+	// TOTP (RFC 6238) MFA — Google Authenticator compatible.
+	implementation 'dev.samstevens.totp:totp:1.7.1'
 	runtimeOnly("com.h2database:h2")
 	runtimeOnly("org.postgresql:postgresql")
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
@@ -67,4 +78,90 @@ allOpen {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	finalizedBy jacocoTestReport   // always emit the coverage report after tests run
+}
+
+// Local dev defaults — only applied when running via ./gradlew bootRun.
+// Production deployments use the real JAR and still require env vars to be set.
+tasks.named('bootRun') {
+	environment 'JWT_SECRET',            System.getenv('JWT_SECRET')            ?: 'local-dev-secret-do-not-use-in-production-x'
+	environment 'POSTGRES_PASSWORD',     System.getenv('POSTGRES_PASSWORD')     ?: 'docodile'
+	environment 'FILE_ENCRYPTION_KEY',   System.getenv('FILE_ENCRYPTION_KEY')   ?: ''
+	// Local dev runs the `local` profile (mail → localhost mailcatcher, encryption off).
+	// Production leaves the profile unset and runs the base config.
+	environment 'SPRING_PROFILES_ACTIVE', System.getenv('SPRING_PROFILES_ACTIVE') ?: 'local'
+}
+
+// ─── Test coverage (JaCoCo) ─────────────────────────────────────────────────
+jacoco {
+	toolVersion = '0.8.12'
+}
+
+// Classes excluded from coverage accounting: pure data holders and framework
+// glue that carry no branching logic worth testing.
+def coverageExclusions = [
+	'com/example/docodile/DocodileApplication*',
+	'com/example/docodile/domain/**',          // JPA entities / enums (data)
+	'com/example/docodile/config/**',          // Spring @Configuration wiring
+	'**/*DTO*', '**/*Request*', '**/*Response*', // request/response data classes
+	// External-integration points — require integration/contract tests, not unit
+	// tests (live HTTP to OpenAI/EkaCare, STOMP websocket, openhtmltopdf rendering).
+	// Tracked as follow-up; excluded from the unit-coverage gate.
+	'com/example/docodile/service/AIChatService*',
+	'com/example/docodile/service/AIService*',
+	'com/example/docodile/service/OpenAIClient*',
+	'com/example/docodile/service/EkaCareClient*',
+	'com/example/docodile/web/AIController*',
+	'com/example/docodile/web/ChatController*',
+	'com/example/docodile/web/PrintPdfController*',
+]
+
+jacocoTestReport {
+	dependsOn test
+	reports {
+		xml.required = true
+		html.required = true
+		csv.required = false
+	}
+	afterEvaluate {
+		classDirectories.setFrom(classDirectories.files.collect {
+			fileTree(dir: it, exclude: coverageExclusions)
+		})
+	}
+	// Print a one-line coverage summary to the console after the report is built.
+	doLast {
+		def report = file("${layout.buildDirectory.get()}/reports/jacoco/test/jacocoTestReport.xml")
+		if (report.exists()) {
+			def parser = new groovy.xml.XmlParser()
+			parser.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
+			parser.setFeature('http://apache.org/xml/features/disallow-doctype-decl', false)
+			def counters = parser.parse(report).counter
+			counters.findAll { it.@type in ['INSTRUCTION', 'LINE', 'BRANCH'] }.each { c ->
+				def covered = c.@covered as double
+				def missed = c.@missed as double
+				def pct = (covered + missed) > 0 ? (covered / (covered + missed) * 100) : 0
+				println String.format('JaCoCo %-12s coverage: %.1f%%', c.@type, pct)
+			}
+		}
+	}
+}
+
+jacocoTestCoverageVerification {
+	afterEvaluate {
+		classDirectories.setFrom(classDirectories.files.collect {
+			fileTree(dir: it, exclude: coverageExclusions)
+		})
+	}
+	violationRules {
+		rule {
+			limit {
+				counter = 'LINE'
+				minimum = 0.70   // overall line coverage gate
+			}
+		}
+	}
+}
+
+tasks.named('check') {
+	dependsOn jacocoTestCoverageVerification
 }

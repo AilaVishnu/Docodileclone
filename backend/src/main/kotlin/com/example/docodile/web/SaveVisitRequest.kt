@@ -1,5 +1,6 @@
 package com.example.docodile.web
 
+import jakarta.validation.constraints.Size
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -38,12 +39,12 @@ data class SaveVisitRequest(
     val personalHistory: String? = null,
     val pastMedicalHistory: String? = null,
 
-    // Free-text + Autocomplete fields
-    val complaints: String? = null,
-    val diagnosis: String? = null,
-    val notesForPatient: String? = null,
-    val privateNotes: String? = null,
-    val tests: String? = null,
+    // Free-text + Autocomplete fields — size-bounded to prevent oversized payloads
+    @field:Size(max = 5000) val complaints: String? = null,
+    @field:Size(max = 5000) val diagnosis: String? = null,
+    @field:Size(max = 5000) val notesForPatient: String? = null,
+    @field:Size(max = 5000) val privateNotes: String? = null,
+    @field:Size(max = 5000) val tests: String? = null,
 
     // Treating doctor (the one whose pad this visit belongs to). Carried
     // through from the appointment when the doctor opens View Pad, so the

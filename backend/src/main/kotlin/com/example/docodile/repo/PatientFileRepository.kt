@@ -16,4 +16,18 @@ interface PatientFileRepository : JpaRepository<PatientFile, UUID> {
     @Transactional
     @Query("DELETE FROM PatientFile f WHERE f.id = :id AND f.clinicId = :clinicId")
     fun deleteByIdAndClinicId(@Param("id") id: UUID, @Param("clinicId") clinicId: UUID): Int
+
+    // Backfill support: native query returns only the IDs of files in the given
+    // clinics, INCLUDING soft-deleted rows (bypasses the @SQLRestriction filter)
+    // so plaintext blobs in deleted files also get encrypted. Returns IDs only —
+    // not the blobs — so the caller can page and load one entity at a time.
+    @Query(
+        value = "SELECT id FROM patient_files WHERE clinic_id IN (:clinicIds) ORDER BY id",
+        nativeQuery = true,
+    )
+    fun findAllIdsByClinicIds(@Param("clinicIds") clinicIds: List<UUID>): List<UUID>
+
+    // Load a single row including soft-deleted, bypassing @SQLRestriction, by id.
+    @Query(value = "SELECT * FROM patient_files WHERE id = :id", nativeQuery = true)
+    fun findRawById(@Param("id") id: UUID): PatientFile?
 }

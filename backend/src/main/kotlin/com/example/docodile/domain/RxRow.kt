@@ -2,16 +2,23 @@ package com.example.docodile.domain
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EntityListeners
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import org.hibernate.annotations.SQLRestriction
+import org.springframework.data.annotation.LastModifiedBy
+import org.springframework.data.annotation.LastModifiedDate
+import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.Instant
 import java.util.UUID
 
+@EntityListeners(AuditingEntityListener::class)
 @Entity
 @Table(name = "rx_row")
+@SQLRestriction("deleted_at IS NULL")
 class RxRow(
     @Id
     var id: UUID = UUID.randomUUID(),
@@ -46,5 +53,16 @@ class RxRow(
     var notes: String? = null,
 
     @Column(name = "created_at")
-    var createdAt: Instant? = null
+    var createdAt: Instant? = null,
+
+    @Column(name = "deleted_at")
+    var deletedAt: Instant? = null,
+
+    @Column(name = "deleted_by")
+    var deletedBy: UUID? = null,
+
+    @LastModifiedDate
+    @Column(name = "updated_at") var updatedAt: Instant? = null,
+    @LastModifiedBy
+    @Column(name = "updated_by") var updatedBy: UUID? = null,
 )

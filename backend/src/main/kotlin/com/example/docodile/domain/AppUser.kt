@@ -65,5 +65,20 @@ class AppUser(
     var accountStatus: String = "ACTIVE",
 
     @Column(name = "created_at")
-    var createdAt: Instant? = null
+    var createdAt: Instant? = null,
+
+    @Column(name = "failed_login_attempts", nullable = false)
+    var failedLoginAttempts: Int = 0,
+
+    @Column(name = "locked_until")
+    var lockedUntil: Instant? = null,
+
+    @Column(name = "totp_secret")
+    var totpSecret: String? = null,
+
+    @Column(name = "mfa_enabled", nullable = false)
+    var mfaEnabled: Boolean = false,
+
+    @Column(name = "mfa_backup_codes", columnDefinition = "text")
+    var mfaBackupCodes: String? = null,
 )

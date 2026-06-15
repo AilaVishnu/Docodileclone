@@ -241,7 +241,7 @@ class HealthPlixMigrationService(
                 p.age = cell(row, header, "age").trim().toIntOrNull()?.let { it * 12 }
                 p.dob = parseHpDob(cell(row, header, "dob"))
                 if (p.createdAt == null) p.createdAt = parseApdDate(cell(row, header, "created_on")) ?: now
-                p.archived = false
+                p.deletedAt = null
                 if (existing == null) {
                     // New patient → INSERT. Existing rows are already managed
                     // (loaded into the persistence context above), so the

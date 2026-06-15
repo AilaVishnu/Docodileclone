@@ -34,6 +34,7 @@ export function ChatBubble({ clinicId, currentUserId, currentUserName }: Props) 
           currentUserName={currentUserName}
           onUnreadChange={handleUnreadChange}
           onClose={() => setOpen(false)}
+          isOpen={open}
         />
       </div>
       <button
