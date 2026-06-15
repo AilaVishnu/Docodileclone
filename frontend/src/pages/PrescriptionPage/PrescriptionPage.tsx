@@ -334,16 +334,6 @@ const moveStyles: Record<string, React.CSSProperties> = {
   actions: { display: "flex", justifyContent: "flex-end", gap: spacing.s, marginTop: spacing.s },
 };
 
-const rewindBtnStyle = (_disabled: boolean): React.CSSProperties => ({
-  background: "none",
-  border: "none",
-  padding: 0,
-  display: "flex",
-  alignItems: "center",
-  cursor: "pointer",
-  color: "inherit",
-});
-
 // Format a yyyy-MM-dd date as "DD MMM" (or "Today" if it's today's date).
 const formatVisitLabel = (iso: string): string => {
   const d = new Date(iso);
@@ -2439,18 +2429,17 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                         containerStyle={NOTE_CARD_TAGBOX_STYLE}
                       />
                       <span style={styles.noteCardDictate}>
-                        <button
-                          type="button"
-                          title="Copy complaints from previous visit"
+                        <IconButton
+                          ariaLabel="Copy complaints from previous visit"
+                          size={28}
                           disabled={!prevVisit?.complaints || !canEditForm}
                           onClick={() => prevVisit?.complaints && setComplaintsValue(prevVisit.complaints)}
-                          style={rewindBtnStyle(!prevVisit?.complaints || !canEditForm)}
                         >
                           <Icon name="rewind-back-circle" size={20} tone="inherit" />
-                        </button>
-                        <button type="button" title="Load template" onClick={() => openTemplates("load", "complaints")} style={rewindBtnStyle(false)}>
+                        </IconButton>
+                        <IconButton ariaLabel="Load template" size={28} onClick={() => openTemplates("load", "complaints")}>
                           <Icon name="microphone" size={20} tone="inherit" />
-                        </button>
+                        </IconButton>
                                               </span>
                     </div>
                   </div>
@@ -2476,18 +2465,17 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                         containerStyle={NOTE_CARD_TAGBOX_STYLE}
                       />
                       <span style={styles.noteCardDictate}>
-                        <button
-                          type="button"
-                          title="Copy diagnosis from previous visit"
+                        <IconButton
+                          ariaLabel="Copy diagnosis from previous visit"
+                          size={28}
                           disabled={!prevVisit?.diagnosis || !canEditForm}
                           onClick={() => prevVisit?.diagnosis && setDiagnosisValue(prevVisit.diagnosis)}
-                          style={rewindBtnStyle(!prevVisit?.diagnosis || !canEditForm)}
                         >
                           <Icon name="rewind-back-circle" size={20} tone="inherit" />
-                        </button>
-                        <button type="button" title="Load template" onClick={() => openTemplates("load", "diagnosis")} style={rewindBtnStyle(false)}>
+                        </IconButton>
+                        <IconButton ariaLabel="Load template" size={28} onClick={() => openTemplates("load", "diagnosis")}>
                           <Icon name="microphone" size={20} tone="inherit" />
-                        </button>
+                        </IconButton>
                                               </span>
                     </div>
                   </div>
@@ -2618,22 +2606,21 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                           row: type a medicine and the next empty appears.) */}
                       <div style={styles.addMedicineRow}>
                         <span style={styles.dictateIcons}>
-                          <button
-                            type="button"
-                            title="Copy Rx from previous visit"
+                          <IconButton
+                            ariaLabel="Copy Rx from previous visit"
+                            size={28}
                             disabled={!prevVisit?.prescriptions?.length || !canEditForm}
                             onClick={() => {
                               if (prevVisit?.prescriptions?.length) {
                                 setRxRows(withTrailingRx(prevVisit.prescriptions.map((dto, i) => ({ ...fromRxDTO(dto), id: null, position: i + 1 }))));
                               }
                             }}
-                            style={rewindBtnStyle(!prevVisit?.prescriptions?.length || !canEditForm)}
                           >
                             <Icon name="rewind-back-circle" size={20} tone="inherit" />
-                          </button>
-                          <button type="button" title="Load template" onClick={() => openTemplates("load", "rx")} style={rewindBtnStyle(false)}>
+                          </IconButton>
+                          <IconButton ariaLabel="Load template" size={28} onClick={() => openTemplates("load", "rx")}>
                             <Icon name="microphone" size={20} tone="inherit" />
-                          </button>
+                          </IconButton>
                                                   </span>
                         <PopoverMenu
                         trigger={<Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />}
@@ -2669,18 +2656,17 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                         onChange={(e) => setNotesForPatientValue(e.target.value)}
                       />
                       <span style={styles.noteCardDictate}>
-                        <button
-                          type="button"
-                          title="Copy notes from previous visit"
+                        <IconButton
+                          ariaLabel="Copy notes from previous visit"
+                          size={28}
                           disabled={!prevVisit?.notesForPatient || !canEditForm}
                           onClick={() => prevVisit?.notesForPatient && setNotesForPatientValue(prevVisit.notesForPatient)}
-                          style={rewindBtnStyle(!prevVisit?.notesForPatient || !canEditForm)}
                         >
                           <Icon name="rewind-back-circle" size={20} tone="inherit" />
-                        </button>
-                        <button type="button" title="Load template" onClick={() => openTemplates("load", "notes_for_patient")} style={rewindBtnStyle(false)}>
+                        </IconButton>
+                        <IconButton ariaLabel="Load template" size={28} onClick={() => openTemplates("load", "notes_for_patient")}>
                           <Icon name="microphone" size={20} tone="inherit" />
-                        </button>
+                        </IconButton>
                                               </span>
                     </div>
                   </div>
@@ -2725,18 +2711,17 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                         containerStyle={TESTS_TAGBOX_STYLE}
                       />
                       <span style={styles.dictateIcons}>
-                        <button
-                          type="button"
-                          title="Copy tests from previous visit"
+                        <IconButton
+                          ariaLabel="Copy tests from previous visit"
+                          size={28}
                           disabled={!prevVisit?.tests || !canEditForm}
                           onClick={() => prevVisit?.tests && setTestsValue(prevVisit.tests)}
-                          style={rewindBtnStyle(!prevVisit?.tests || !canEditForm)}
                         >
                           <Icon name="rewind-back-circle" size={20} tone="inherit" />
-                        </button>
-                        <button type="button" title="Load template" onClick={() => openTemplates("load", "tests")} style={rewindBtnStyle(false)}>
+                        </IconButton>
+                        <IconButton ariaLabel="Load template" size={28} onClick={() => openTemplates("load", "tests")}>
                           <Icon name="microphone" size={20} tone="inherit" />
-                        </button>
+                        </IconButton>
                                               </span>
                     </div>
                     <PopoverMenu
