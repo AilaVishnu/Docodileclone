@@ -3024,7 +3024,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                     // before the click lands (the "no toast" bug).
                     onMouseDown={(e) => { e.preventDefault(); void handleCompleteVisit(); }}
                   >
-                    <Icon name="bill-check" size={18} tone="inherit" />
+                    <Icon name="check" size={18} tone="inherit" />
                     <span>{completed ? "Save changes" : "Complete visit"}</span>
                   </button>
                 );

@@ -1961,6 +1961,7 @@ export const styles: Record<string, CSSProperties> = {
   addMedicineRow: {
     display: "flex",
     alignItems: "center",
+    justifyContent: "flex-end",
     gap: spacing.s,
     padding: `${spacing["2xs"]} 0`,
     borderRadius: radii.xs,

@@ -17,6 +17,7 @@ import { ReactComponent as Ic_calendar } from "../../assets/icons/calendar.svg";
 import { ReactComponent as Ic_catalog } from "../../assets/icons/catalog.svg";
 import { ReactComponent as Ic_chat_dots } from "../../assets/icons/chat-dots.svg";
 import { ReactComponent as Ic_chat_square_call } from "../../assets/icons/chat-square-call.svg";
+import { ReactComponent as Ic_check } from "../../assets/icons/check.svg";
 import { ReactComponent as Ic_check_circle } from "../../assets/icons/check-circle.svg";
 import { ReactComponent as Ic_chevron_up } from "../../assets/icons/chevron-up.svg";
 import { ReactComponent as Ic_danger_triangle } from "../../assets/icons/danger-triangle.svg";
@@ -99,6 +100,7 @@ export const ICONS: Record<string, SvgComponent> = {
   "calendar": Ic_calendar,
   "chat-dots": Ic_chat_dots,
   "chat-square-call": Ic_chat_square_call,
+  "check": Ic_check,
   "check-circle": Ic_check_circle,
   "chevron-up": Ic_chevron_up,
   "danger-triangle": Ic_danger_triangle,
