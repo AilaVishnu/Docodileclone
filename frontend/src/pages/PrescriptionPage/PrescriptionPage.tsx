@@ -25,7 +25,7 @@ import {
 } from "../../components/TopNav/SessionTrayButton";
 import { markStarted, unmarkStarted } from "../../utils/sessionStarted";
 import { useVisits } from "../../hooks/useVisits";
-import { createVisit, updateVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
+import { createVisit, updateVisit, deleteVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
 import { listRxTemplates, saveRxTemplate, deleteRxTemplate } from "../../api/rxTemplates";
 import { fetchLatestRxForMedicine, RxLatestDTO } from "../../api/rxHistory";
 import { API_BASE_URL } from "../../apiConfig";
@@ -34,6 +34,7 @@ import { FileViewer } from "./FileViewer";
 import { EditPatientModal } from "./EditPatientModal";
 import { buildPrintHtml, openPrintWindow, downloadAsPdf, getDefaultTemplate, loadTemplates, PrintVisitData } from "../Settings";
 import { Modal } from "../../components/Modal/Modal";
+import { Button } from "../../components/Button";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
@@ -308,6 +309,16 @@ const tplStyles: Record<string, React.CSSProperties> = {
   item: { display: "flex", alignItems: "center", gap: spacing.xs, backgroundColor: colors.neutral150, borderRadius: radii.m, paddingRight: spacing.xs },
   itemName: { flex: 1, textAlign: "left", background: "transparent", border: "none", cursor: "pointer", padding: `10px ${spacing.s}`, fontFamily: fonts.family.primary, fontSize: fonts.control.md, color: colors.neutral900, borderRadius: radii.m },
   itemDelete: { flexShrink: 0, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", color: colors.red100, cursor: "pointer", fontSize: 14, borderRadius: radii.s },
+};
+
+// Move-to-today confirmation dialog. Mirrors tplStyles' tokens so it reads as
+// part of the same modal family.
+const moveStyles: Record<string, React.CSSProperties> = {
+  container: { display: "flex", flexDirection: "column", gap: spacing.s, width: 420, maxWidth: "92vw" },
+  title: { margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.regular, color: colors.neutral900 },
+  body: { margin: 0, fontFamily: fonts.family.primary, fontSize: fonts.size.s, lineHeight: fonts.lineHeight.s, color: colors.neutral700 },
+  bodyMuted: { margin: `${spacing.xs} 0 0`, fontFamily: fonts.family.primary, fontSize: fonts.size.s, color: colors.neutral500 },
+  actions: { display: "flex", justifyContent: "flex-end", gap: spacing.s, marginTop: spacing.s },
 };
 
 const rewindBtnStyle = (_disabled: boolean): React.CSSProperties => ({
@@ -701,6 +712,14 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   const [privateNotesValue, setPrivateNotesValue] = React.useState<string>("");
   const [reviewNotesValue, setReviewNotesValue] = React.useState<string>("");
   const [saving, setSaving] = React.useState<boolean>(false);
+  // When completing an OLD, never-finished consultation, we don't complete it
+  // on its stale date — we move its data to a fresh visit dated today and drop
+  // the old one. This holds the original visit's date label while the
+  // confirmation dialog is open (null = closed).
+  const [moveToTodayDate, setMoveToTodayDate] = React.useState<string | null>(null);
+  // Bumped to force the visit form to reload its saved data (used to discard
+  // an edit when the move-to-today dialog is cancelled).
+  const [revertNonce, setRevertNonce] = React.useState(0);
   // The visit id whose data the form currently holds. Updated (in state, so
   // it flips atomically with the form fields) every time the form populates
   // from a visit. handleSave refuses to write unless this matches the active
@@ -715,54 +734,53 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // is locked permanently (read-only history). This intentionally covers
   // past visits the doctor left open — they stay editable until ended.
   const isLatestVisit = visits.length === 0 || activeTab === visits.length - 1;
-  // A visit stays editable for the full 24h Resume window. Once End is
-  // clicked the session is "ended" but the form remains writable so the
-  // doctor can hit Resume and continue updating fields for up to a day.
-  // After 24h elapses past the recorded sessionEndedAt (or, if that
-  // wasn't persisted, past the visitDate), the visit hard-locks into a
-  // historic record.
+  // Editability is keyed off the VISIT'S DATE, not when it was completed: a
+  // visit dated today (within 24h) is fully editable for the whole day; once
+  // its date passes 24h it hard-locks into a historic record. Completion does
+  // not extend this — a visit completed late still locks by its own (old)
+  // date. The one exception is an OPEN in-progress session (below), which
+  // stays editable regardless of age so the doctor can finish or relocate it.
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-  const endedAtMs = activeVisit?.sessionEndedAt ? new Date(activeVisit.sessionEndedAt).getTime() : null;
   const visitMs = activeVisit?.visitDate ? new Date(activeVisit.visitDate).getTime() : null;
-  // A session "happened" if it was ended or accumulated any recorded time.
-  // A visit with neither was never worked on — it should stay editable and
-  // show the idle "Start Session" state, never a bogus "Session Ended".
-  const hadSession =
-    activeVisit?.sessionEndedAt != null || (activeVisit?.sessionDurationSec ?? 0) > 0;
+  // Whether THIS visit is finished. For an appointment-linked visit that's the
+  // appointment's own status (read from the visit DTO, not the appointment the
+  // chart was opened through). A visit with NO appointment (e.g. a manually
+  // added "+ New Visit") has no status to flip, so we treat it as complete once
+  // its session has been ended — that's what "Complete visit" stamps.
+  const activeCompleted =
+    (activeVisit?.appointmentStatus ?? "").toUpperCase() === "COMPLETED" ||
+    (activeVisit != null && activeVisit.appointmentId == null && activeVisit.sessionEndedAt != null);
   // An OPEN consultation: the pad was opened (session started) but the visit
-  // was never completed (no end). It must stay editable no matter how old the
-  // visit is — otherwise once it crosses the 24h mark it hard-locks with NO
-  // way to click "Complete visit", leaving the appointment stuck IN_PROGRESS
-  // and a ghost entry in Active Sessions forever.
+  // was never completed (no end) AND its appointment isn't already Completed.
+  // It must stay editable no matter how old the visit is — otherwise once it
+  // crosses the 24h mark it hard-locks with NO way to finish it, leaving the
+  // appointment stuck IN_PROGRESS forever. The !activeCompleted guard stops a
+  // finished visit whose end-time was never stamped (legacy/inconsistent data)
+  // from masquerading as an open session.
   const hasOpenSession =
-    activeVisit?.sessionStartedAt != null && activeVisit?.sessionEndedAt == null;
-  const isWithinBuffer = (() => {
-    if (hasOpenSession) return true;
-    if (endedAtMs != null && !Number.isNaN(endedAtMs)) {
-      // Ended with a real timestamp → resumable for 24h from that moment.
-      return Date.now() - endedAtMs < ONE_DAY_MS;
-    }
-    if (!hadSession) {
-      // Never started/ended → startable only while the visit date is still
-      // within 24h (i.e. today's / a just-created visit). Older visits —
-      // including imported historic records — stay read-only and never offer
-      // a "Start Session"; a new consultation should create a new visit.
-      return visitMs != null && !Number.isNaN(visitMs) && Date.now() - visitMs < ONE_DAY_MS;
-    }
-    // Has a recorded duration but no end timestamp (legacy data) → fall
-    // back to the visit date for the 24h lock.
-    if (visitMs != null && !Number.isNaN(visitMs)) {
-      return Date.now() - visitMs < ONE_DAY_MS;
-    }
-    return true;
-  })();
+    activeVisit?.sessionStartedAt != null &&
+    activeVisit?.sessionEndedAt == null &&
+    !activeCompleted;
+  const visitWithin24h =
+    visitMs != null && !Number.isNaN(visitMs) && Date.now() - visitMs < ONE_DAY_MS;
+  const isWithinBuffer = hasOpenSession || visitWithin24h;
   const isEditable = isWithinBuffer;
 
   // Edit flag used by every gate below. The form is editable whenever the
-  // visit is within its edit window (today's / within 24h) — no longer gated
-  // behind starting a session. (Session timer is being retired; editing a
-  // current visit shouldn't require an explicit "Start Session" click.)
+  // visit is within its edit window (today's / within 24h, or an open
+  // in-progress session) — no longer gated behind starting a session.
   const canEditForm = isEditable;
+
+  // An editable visit that is OLDER than 24h and still in progress (never
+  // completed). Editing one of these shouldn't quietly amend a stale-dated
+  // record — instead we prompt to relocate it to today (see the move-to-today
+  // dialog). For such a visit to be editable at all it must be an open session
+  // (a never-started old visit is already locked), so this is precisely the
+  // "abandoned consultation the doctor is reopening days later" case.
+  const visitOlderThan24h =
+    visitMs != null && !Number.isNaN(visitMs) && Date.now() - visitMs > ONE_DAY_MS;
+  const isOldPending = canEditForm && !activeCompleted && visitOlderThan24h;
+
   // On initial open of a patient, jump to the latest (today's) visit
   // tab. Without this the tabs default to index 0, which is the OLDEST
   // visit — confusing when the doctor expects to land on today.
@@ -889,7 +907,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     setReferDoctorId(activeVisit?.referDoctorId ?? null);
     setReferOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, activeVisit?.id]);
+  }, [activeTab, activeVisit?.id, revertNonce]);
 
   // Debounced auto-save whenever rxRows changes while a session is active.
   // Pickers (WhenPicker, FrequencyPicker) are div/button elements — they
@@ -898,7 +916,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // The ref holds the latest save function so the closure is never stale.
   const latestSaveRef = React.useRef<() => void>(() => {});
   latestSaveRef.current = () => {
-    if (canEditForm && activeVisit) void handleSave({ silent: true });
+    // Suppressed while the move-to-today dialog is open so a debounced Rx edit
+    // can't slip onto the stale-dated visit before the doctor decides.
+    if (canEditForm && activeVisit && moveToTodayDate == null) void handleSave({ silent: true });
   };
   React.useEffect(() => {
     if (!canEditForm) return;
@@ -1510,6 +1530,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // from when the session started, dropping every edit made after that.
   const handleFormBlur = () => {
     if (!canEditForm || !activeVisit) return;
+    // Don't persist while the move-to-today dialog is deciding the fate of an
+    // edit — the change must not leak onto the stale-dated visit.
+    if (moveToTodayDate != null) return;
     // Auto-save on blur works for every visit, including completed ones — a
     // post-completion edit is persisted without reopening the appointment
     // (handleSave changes no status). handleSave also clears the dirty flag,
@@ -1517,10 +1540,31 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     void handleSave({ silent: true });
   };
 
+  // "Was this visit edited since the doctor opened its tab?" — survives the
+  // silent blur auto-save (which clears `dirty` the moment focus leaves a
+  // field). We need a flag that DOESN'T reset on save so that completing an
+  // old, pending visit can tell "you changed something → move it to today"
+  // from "untouched → just end the consultation in place".
+  const editedSinceLoadRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!dirty) return;
+    editedSinceLoadRef.current = true;
+    // Editing an OLD, still-in-progress visit → ask to move it to today
+    // BEFORE the change settles onto the stale date. The blur/debounce
+    // auto-saves are blocked while this dialog is open (see handleFormBlur /
+    // latestSaveRef), so nothing lands on the old visit until the doctor
+    // decides. Cancel discards the edit; Continue relocates to today.
+    if (isOldPending && moveToTodayDate == null && activeVisit) {
+      setMoveToTodayDate(activeVisit.visitDate);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty]);
+
   // A fresh visit (tab switch / patient change) starts clean — drop any
   // unsaved-edit flag left from the previous visit.
   React.useEffect(() => {
     setDirty(false);
+    editedSinceLoadRef.current = false;
   }, [activeVisit?.id]);
 
 
@@ -1551,34 +1595,106 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // linked appointment COMPLETED. This replaces "End Session" as the path to
   // COMPLETED now that the session timer is being retired — without it, an
   // appointment could never leave IN_PROGRESS and the queue/stats would stall.
+  // Footer "Complete visit" / "Save changes" → finish the active consultation
+  // in place. An old pending visit that the doctor edited has ALREADY been
+  // relocated to today at edit-time (see the move-to-today dialog), so by the
+  // time Complete is clicked there's never a stale date to worry about. An
+  // untouched old pending visit completes on its own date without fuss.
   const handleCompleteVisit = async () => {
-    const alreadyCompleted = (selectedAppointmentStatus ?? "").toUpperCase() === "COMPLETED";
+    if (!activeVisit) return;
+    await completeVisitInPlace();
+  };
+
+  // Finish the active consultation on its own visit row: stamp the end time,
+  // persist the form, and flip its OWN appointment to COMPLETED (first time
+  // only). A visit with no appointment of its own is finished purely by the
+  // end-stamp — we never touch the entry appointment, which belongs to a
+  // different visit.
+  const completeVisitInPlace = async () => {
+    if (!activeVisit) return;
+    const apptId = activeVisit.appointmentId;
+    const alreadyCompleted = activeCompleted;
     // Stop the consultation timer and persist the form. The backend computes
     // the duration from sessionStartedAt (set when the doctor opened the pad)
     // to sessionEndedAt. On the FIRST completion we stamp the end time now;
     // re-saving an already-completed visit preserves the original end time so
     // the recorded duration isn't inflated.
-    if (activeVisit) {
-      const endIso = activeVisit.sessionEndedAt ?? new Date().toISOString();
-      const req: SaveVisitRequest = {
-        ...buildSaveRequest(),
-        sessionEndedAt: endIso,
-      };
-      await updateVisit(activeVisit.id, req);
-      await refetchVisits();
-      setDirty(false);
-    }
-    if (selectedAppointmentId && !alreadyCompleted) {
+    const endIso = activeVisit.sessionEndedAt ?? new Date().toISOString();
+    const req: SaveVisitRequest = {
+      ...buildSaveRequest(),
+      sessionEndedAt: endIso,
+    };
+    await updateVisit(activeVisit.id, req);
+    if (apptId && !alreadyCompleted) {
       // Flip status only on the first completion. A later re-save keeps the
       // visit Completed — it never goes back to In Progress.
-      await patchAppointmentStatus(selectedAppointmentId, "COMPLETED");
+      await patchAppointmentStatus(apptId, "COMPLETED");
       // Clear the "Ongoing" flag so the completed card shows Completed.
       if (selectedPatient) unmarkStarted(selectedPatient.id);
     }
-    // Reflect completion locally so the open-pad effects don't re-mark this
-    // patient as Ongoing, and the button switches to its "save" mode.
-    setSelectedAppointmentStatus("COMPLETED");
+    // Refetch AFTER the status patch so the visit DTO carries the new
+    // appointmentStatus — the footer keys its label off the active visit.
+    await refetchVisits();
+    // Reflect completion locally too so the open-pad effect doesn't re-mark
+    // the patient Ongoing (it keys off selectedAppointmentStatus). Only when
+    // the visit we completed IS the entry appointment.
+    if (apptId && apptId === selectedAppointmentId) setSelectedAppointmentStatus("COMPLETED");
+    setDirty(false);
+    editedSinceLoadRef.current = false;
     showToast(alreadyCompleted ? "Changes saved" : "Visit marked complete");
+  };
+
+  // Confirm action for the "move to today" dialog (triggered the moment the
+  // doctor edits an OLD pending visit): clone the in-form data — including the
+  // edit that triggered this — into a fresh visit dated today, delete the
+  // stale pending visit, and land the doctor on the new today tab to keep
+  // working. The visit stays IN PROGRESS (no end stamp); the doctor completes
+  // it later like any other today visit.
+  const moveToToday = async () => {
+    if (!activeVisit || !selectedPatientId) { setMoveToTodayDate(null); return; }
+    setSaving(true);
+    const oldId = activeVisit.id;
+    const apptId = activeVisit.appointmentId;
+    const startedAt = activeVisit.sessionStartedAt;
+    const prevLen = visits.length; // net unchanged (one deleted, one created)
+    try {
+      const base = buildSaveRequest();
+      const draft: SaveVisitRequest = {
+        ...base,
+        visitDate: todayIso(),
+        // Carry the appointment link so the moved visit stays tied to the same
+        // booking; preserve the original start so the duration is honest.
+        appointmentId: apptId ?? undefined,
+        sessionStartedAt: startedAt ?? new Date().toISOString(),
+        sessionEndedAt: null,
+        sessionDurationSec: null,
+        prescriptions: base.prescriptions.map((p, i) => ({ ...p, id: null, position: i + 1 })),
+      };
+      await createVisit(selectedPatientId, draft);
+      await deleteVisit(oldId);
+      await refetchVisits();
+      setDirty(false);
+      editedSinceLoadRef.current = false;
+      // The new today visit sorts last; land the doctor on it to keep editing.
+      setActiveTab(Math.max(0, prevLen - 1));
+      showToast("Visit moved to today");
+    } catch (e) {
+      showToast(`Move failed: ${(e as Error).message}`);
+    } finally {
+      setSaving(false);
+      setMoveToTodayDate(null);
+    }
+  };
+
+  // Cancel the move: discard the edit that triggered the dialog and restore
+  // the old pending visit's saved data, leaving it untouched on its own date.
+  // Bumping the nonce remounts the visit subtree (uncontrolled inputs reset to
+  // their defaultValues) and re-runs the populate effect (controlled state).
+  const cancelMoveToToday = () => {
+    setMoveToTodayDate(null);
+    setDirty(false);
+    editedSinceLoadRef.current = false;
+    setRevertNonce((n) => n + 1);
   };
 
   // Opening the pad for an At Doc / In Progress patient flips the queue card
@@ -2234,7 +2350,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
               {/* Cream sheet wrapping all visit-content sections. Keyed by the
               active tab so React unmounts/remounts the subtree on switch,
               giving uncontrolled inputs fresh defaultValues for that visit. */}
-              <section key={`visit-${activeTab}`} style={styles.rightColumn}>
+              <section key={`visit-${activeTab}-${revertNonce}`} style={styles.rightColumn}>
 
                 {/* Vitals */}
                 <div style={styles.sectionCard}>
@@ -2898,6 +3014,32 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
         </div>
       </Modal>
 
+      {/* Move-to-today confirmation — fires when the doctor edits an OLD,
+          still-in-progress visit. Continuing relocates the visit's data to a
+          fresh visit dated today and removes the stale one; cancelling
+          discards the edit and leaves the old visit untouched. */}
+      <Modal isOpen={moveToTodayDate != null} onClose={cancelMoveToToday}>
+        <div style={moveStyles.container}>
+          <h2 style={moveStyles.title}>Move this visit to today?</h2>
+          <p style={moveStyles.body}>
+            Visit data of <strong>{moveToTodayDate ? formatVisitLabel(moveToTodayDate) : ""}</strong>{" "}
+            will be moved to today&rsquo;s date.
+          </p>
+          <p style={moveStyles.body}>
+            The {moveToTodayDate ? formatVisitLabel(moveToTodayDate) : ""} visit entry will be removed.
+          </p>
+          <p style={moveStyles.bodyMuted}>Do you want to continue?</p>
+          <div style={moveStyles.actions}>
+            <Button variant="light" size="sm" onClick={cancelMoveToToday} disabled={saving}>
+              Cancel
+            </Button>
+            <Button variant="secondary" size="sm" onClick={moveToToday} disabled={saving}>
+              {saving ? "Moving…" : "Continue"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* ─── Floating bottom bar — the ACTIVE SECTION'S actions. Section nav
           + contact actions moved up to the sticky header; this bar now adapts
           to which section is open. Output actions (Download / Print / Share)
@@ -2907,16 +3049,19 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
         <div style={styles.bottomBar}>
           {activeAction === 0 ? (
             <>
-              {/* Complete visit / Save changes — only on the current editable
-                  visit with an appointment (canEditForm is false for past
-                  historic visits). Before completion: "Complete visit" (stamps
-                  the end time + marks the appointment Completed). After
-                  completion: shown as "Save changes" ONLY while there are
-                  unsaved edits, and it persists them WITHOUT reopening the
-                  appointment (status stays Completed). Auto-save still runs on
-                  blur and clears the dirty flag, so the button hides again. */}
-              {canEditForm && selectedAppointmentId && (() => {
-                const completed = (selectedAppointmentStatus ?? "").toUpperCase() === "COMPLETED";
+              {/* Complete visit / Save changes — on any EDITABLE visit (today /
+                  within 24h, or an open in-progress session). canEditForm
+                  hard-locks visits past their 24h window, so a historic visit
+                  shows no button. The label is driven by the ACTIVE VISIT's own
+                  completion state (its appointment status, or — for a visit with
+                  no appointment — whether its session is ended), never the entry
+                  appointment, so a completed tab can't show a bogus "Complete
+                  visit". Before completion: "Complete visit". After: hidden
+                  until an edit, then "Save changes". Clear all stays throughout
+                  the 24h window. */}
+              {canEditForm
+                && (() => {
+                const completed = activeCompleted;
                 if (completed && !dirty) return null;
                 return (
                   <button
@@ -2945,8 +3090,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                 <Icon name="share" size={18} tone="inherit" />
                 <span>Share</span>
               </button>
-              {/* Clear all wipes the prescription — destructive, so only on the
-                  current editable visit. Past/historic visits are read-only. */}
+              {/* Clear all wipes the prescription — available the whole time a
+                  visit is editable (today / within its 24h window), whether or
+                  not it's been completed. It disappears only when the visit
+                  hard-locks (date past 24h). The green Complete/Save button is
+                  what toggles with completion; Clear all stays put. */}
               {canEditForm && (
                 <>
                   <div style={styles.barDivider} aria-hidden />
