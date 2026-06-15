@@ -35,6 +35,7 @@ import { EditPatientModal } from "./EditPatientModal";
 import { buildPrintHtml, openPrintWindow, downloadAsPdf, getDefaultTemplate, loadTemplates, PrintVisitData } from "../Settings";
 import { Modal } from "../../components/Modal/Modal";
 import { Button } from "../../components/Button";
+import { Select } from "../../components/Input/Select/Select";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
@@ -85,9 +86,6 @@ const VITAL_COLUMNS: VitalCell[][] = [
   ],
   [
     { label: "SPO2", unit: "%", unitWidth: 44 },
-  ],
-  [
-    { label: "Hip", unit: "cm", unitWidth: 44 },
   ],
 ];
 
@@ -438,7 +436,7 @@ const ACTION_META: ActionMeta[] = [
   { icon: <Icon name="bill-check" tone="inherit" style={styles.actionIcon} />, label: "Bills" },
   // Info appended at the END so the other action indices (Visits 0 … Bills 3)
   // are untouched; the nav just RENDERS it first (see NAV_ORDER).
-  { icon: <Icon name="user" tone="inherit" style={styles.actionIcon} />, label: "Info" },
+  { icon: <Icon name="user-hands" tone="inherit" style={styles.actionIcon} />, label: "Info" },
 ];
 
 // Display order for the section nav — Info (index 4) shows first, before Visits.
@@ -583,6 +581,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   const { visits, loading: visitsLoading, loadedFor: visitsLoadedFor, refetch: refetchVisits } = useVisits(selectedPatientId);
   const [activeTab, setActiveTab] = React.useState(0);
   const [activeAction, setActiveAction] = React.useState(initialNav?.initialAction ?? 0);
+  // Prescription output language (drives the printed/shared Rx language). UI
+  // selector lives on the floating bar; wiring the actual translation is TBD.
+  const [language, setLanguage] = React.useState("English");
   const activeVisit: VisitDTO | undefined = visits[activeTab];
   // Visit immediately before the currently-viewed tab — used by the rewind
   // buttons to pull the previous prescription's data into the current form.
@@ -2495,7 +2496,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   <div style={styles.noteCard}>
                     <div style={styles.noteCardHeader}>
                       <div style={styles.sectionTitleWrap}>
-                        <Icon name="chat-square-call" tone="inherit" style={styles.sectionIcon} />
+                        <Icon name="chat-dots" tone="inherit" style={styles.sectionIcon} />
                         <h3 style={styles.sectionTitle}>Complaints</h3>
                       </div>
                       <PopoverMenu
@@ -3049,6 +3050,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
         <div style={styles.bottomBar}>
           {activeAction === 0 ? (
             <>
+              {/* Language selector — picks the printed/shared prescription
+                  language. Compact Select sized to match the bar buttons. */}
+              <div style={{ width: 128, "--input-h": "36px" } as React.CSSProperties}>
+                <Select options={["English", "Hindi", "Telugu", "Tamil", "Kannada"]} value={language} onChange={setLanguage} />
+              </div>
               {/* Complete visit / Save changes — on any EDITABLE visit (today /
                   within 24h, or an open in-progress session). canEditForm
                   hard-locks visits past their 24h window, so a historic visit
@@ -3066,7 +3072,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                 return (
                   <button
                     type="button"
-                    style={{ ...styles.barBtn, backgroundColor: colors.secondary400, color: colors.neutral900 }}
+                    style={{ ...styles.barBtn, backgroundColor: colors.red100, color: colors.neutral100 }}
                     // onMouseDown + preventDefault so the handler runs BEFORE the
                     // focused field blurs — otherwise the blur fires a silent
                     // auto-save that clears the dirty flag and hides this button
