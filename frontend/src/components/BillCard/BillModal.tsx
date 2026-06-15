@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Modal } from "../Modal/Modal";
+import { BillLayout } from "../BillLayout";
 import { Select } from "../Input/Select/Select";
 import { Button } from "../Button";
 import { IconButton } from "../IconButton";
@@ -7,8 +7,7 @@ import { DataGrid, GridColumn } from "../DataGrid/DataGrid";
 import { DatePicker } from "../DatePicker/DatePicker";
 import { Field } from "../Field";
 import { MeasureField } from "../MeasureField";
-import { colors, fonts, spacing, radii, strokes, shadows } from "../../styles/theme";
-import { styles as bill } from "./BillCard.styles";
+import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 import { Icon } from "../Icon";
 
 // BillModal — the full-invoice editor that opens from the bill card's expand
@@ -123,14 +122,15 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} surface="transparent" width={1040} padding={0} radius={16} shadow="none">
-      <datalist id="bm-svc-list">{SERVICE_CATALOG.map((s) => <option key={s.name} value={s.name} />)}</datalist>
-      {/* Three independent cards (left · right-bill · right-payment) floating on a
-          transparent tray, separated by 6px gaps. Each carries its own shadow —
-          no enclosing modal frame around the group. */}
-      <div style={{ display: "flex", gap: 6, minHeight: 460, fontFamily: fonts.family.primary }}>
-        {/* ── Left: patient + line items ───────────────────────────── */}
-        <div style={{ flex: "2.1 1 0", minWidth: 0, backgroundColor: colors.neutral100, borderRadius: radii.m, boxShadow: shadows.modal, padding: spacing.xl, display: "flex", flexDirection: "column", gap: spacing.m }}>
+    <BillLayout
+      isOpen={isOpen}
+      onClose={onClose}
+      billTitle="Bill"
+      totalLabel="Balance"
+      total={`₹ ${balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+      left={
+        <>
+          <datalist id="bm-svc-list">{SERVICE_CATALOG.map((s) => <option key={s.name} value={s.name} />)}</datalist>
           {/* Patient */}
           <div style={{ backgroundColor: colors.primary300, borderRadius: radii.m, padding: `10px ${spacing.m}`, fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 }}>
             {pt.code} : {pt.name} - {pt.meta}
@@ -157,81 +157,61 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
           <div style={{ "--input-h": "32px" } as React.CSSProperties}>
             <DataGrid columns={columns} rows={lines} rowKey={(l) => l.id} size="m" tdPadding="8px 6px" thPadding="8px 6px" />
           </div>
-        </div>
-
-        {/* ── Right: two stacked cards (bill summary + payment) ─────── */}
-        <div style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-
-          {/* Right-bill card */}
-          <div style={{ backgroundColor: colors.neutral100, borderRadius: radii.m, boxShadow: shadows.modal, padding: spacing.xl, display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <h3 style={{ ...bill.title, fontSize: fonts.size.h5 }}>Bill</h3>
-              <div style={{ position: "absolute", right: 0 }}><IconButton ariaLabel="Close" onClick={onClose} /></div>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.active.shade50, color: colors.active.shade700, borderRadius: radii.m, padding: "6px 12px", fontSize: fonts.size.s }}>
-              <span>Past due: {inr(PAST_DUE)}</span>
-              <button onClick={() => setAddDue((v) => !v)} style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.active.shade700, fontSize: fonts.size.s, textDecoration: "underline" }}>{addDue ? "Added" : "Add to bill"}</button>
-            </div>
-
-            {sumRow("Total billed", inr(billed))}
-            {sumRow("Discount", `− ${inr(discount)}`)}
-            {sumRow("Tax", inr(tax))}
-            {sumRow("Final amount", inr(finalAmt), true)}
-            {sumRow("Received", inr(recv))}
-            {sumRow("Refund", `− ${inr(refund)}`)}
-
-            {/* Balance — same treatment as the BillCard "Total" band */}
-            <div style={{ ...bill.totalRow, borderRadius: radii.m }}>
-              <span style={bill.totalLabel}>Balance</span>
-              <span style={bill.totalValue}>₹ {balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
+        </>
+      }
+      summary={
+        <>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.active.shade50, color: colors.active.shade700, borderRadius: radii.m, padding: "6px 12px", fontSize: fonts.size.s }}>
+            <span>Past due: {inr(PAST_DUE)}</span>
+            <button onClick={() => setAddDue((v) => !v)} style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.active.shade700, fontSize: fonts.size.s, textDecoration: "underline" }}>{addDue ? "Added" : "Add to bill"}</button>
           </div>
 
-          {/* Right-payment card */}
-          <div style={{ backgroundColor: colors.neutral100, borderRadius: radii.m, boxShadow: shadows.modal, padding: spacing.xl, flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <h3 style={{ ...bill.title, fontSize: fonts.size.h5 }}>Payment</h3>
-            </div>
-
-            {payments.map((p, i) => {
-              const last = i === payments.length - 1;
-              return (
-                <div key={i} style={{ display: "flex", gap: spacing.s, alignItems: "center", "--input-h": "32px" } as React.CSSProperties}>
-                  {/* Mode is the stretchable field; the ₹ amount keeps a fixed
-                      width so money never truncates. */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <Select options={["Cash", "Card", "UPI", "Waive"]} value={p.mode} onChange={(m) => setPayment(i, { mode: m })} />
-                  </div>
-                  <div style={{ width: 110, flexShrink: 0 }}>
-                    <MeasureField box prefix="₹" placeholder={i === 0 ? String(balance) : "0"} inputMode="decimal" ariaLabel="Amount"
-                      value={p.amount === "" ? "" : String(p.amount)} onChange={(v) => setPayment(i, { amount: v === "" ? "" : Number(v) })} />
-                  </div>
-                  {last ? (
-                    <IconButton ariaLabel="Add payment mode (split)" onClick={addPayment} color={colors.neutral900}>
-                      <Icon name="plus" size={20} tone="inherit" />
-                    </IconButton>
-                  ) : (
-                    <IconButton ariaLabel="Remove payment mode" onClick={() => removePayment(i)} color={colors.neutral900}>
-                      <Icon name="trash" size={20} tone="inherit" />
-                    </IconButton>
-                  )}
+          {sumRow("Total billed", inr(billed))}
+          {sumRow("Discount", `− ${inr(discount)}`)}
+          {sumRow("Tax", inr(tax))}
+          {sumRow("Final amount", inr(finalAmt), true)}
+          {sumRow("Received", inr(recv))}
+          {sumRow("Refund", `− ${inr(refund)}`)}
+        </>
+      }
+      payment={
+        <>
+          {payments.map((p, i) => {
+            const last = i === payments.length - 1;
+            return (
+              <div key={i} style={{ display: "flex", gap: spacing.s, alignItems: "center", "--input-h": "32px" } as React.CSSProperties}>
+                {/* Mode is the stretchable field; the ₹ amount keeps a fixed
+                    width so money never truncates. */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Select options={["Cash", "Card", "UPI", "Waive"]} value={p.mode} onChange={(m) => setPayment(i, { mode: m })} />
                 </div>
-              );
-            })}
-
-            {/* Pay + print/share icons (saves vertical space) */}
-            <div style={{ marginTop: "auto", display: "flex", gap: spacing.s, alignItems: "center" }}>
-              <Button variant="dark" size="md" onClick={onClose} style={{ flex: 1 }} iconLeft={<Icon name="verified-badge" size={20} tone="inverse" />}>
-                {balance > 0 ? `Pay ${inr(balance)}` : "Mark paid"}
-              </Button>
-              <IconButton ariaLabel="Print" onClick={() => {}} color={colors.neutral900}><Icon name="printer" size={24} tone="inherit" /></IconButton>
-              <IconButton ariaLabel="Share" onClick={() => {}} color={colors.neutral900}><Icon name="share" size={24} tone="inherit" /></IconButton>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </Modal>
+                <div style={{ width: 110, flexShrink: 0 }}>
+                  <MeasureField box prefix="₹" placeholder={i === 0 ? String(balance) : "0"} inputMode="decimal" ariaLabel="Amount"
+                    value={p.amount === "" ? "" : String(p.amount)} onChange={(v) => setPayment(i, { amount: v === "" ? "" : Number(v) })} />
+                </div>
+                {last ? (
+                  <IconButton ariaLabel="Add payment mode (split)" onClick={addPayment} color={colors.neutral900}>
+                    <Icon name="plus" size={20} tone="inherit" />
+                  </IconButton>
+                ) : (
+                  <IconButton ariaLabel="Remove payment mode" onClick={() => removePayment(i)} color={colors.neutral900}>
+                    <Icon name="trash" size={20} tone="inherit" />
+                  </IconButton>
+                )}
+              </div>
+            );
+          })}
+        </>
+      }
+      action={
+        <>
+          <Button variant="dark" size="md" onClick={onClose} style={{ flex: 1 }} iconLeft={<Icon name="verified-badge" size={20} tone="inverse" />}>
+            {balance > 0 ? `Pay ${inr(balance)}` : "Mark paid"}
+          </Button>
+          <IconButton ariaLabel="Print" onClick={() => {}} color={colors.neutral900}><Icon name="printer" size={24} tone="inherit" /></IconButton>
+          <IconButton ariaLabel="Share" onClick={() => {}} color={colors.neutral900}><Icon name="share" size={24} tone="inherit" /></IconButton>
+        </>
+      }
+    />
   );
 }
