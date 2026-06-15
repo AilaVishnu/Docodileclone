@@ -37,6 +37,7 @@ import { Modal } from "../../components/Modal/Modal";
 import { Button } from "../../components/Button";
 import { Select } from "../../components/Input/Select/Select";
 import { ViewToggle } from "../../components/ViewToggle";
+import { Tabs } from "../../components/Tabs";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
@@ -2158,15 +2159,14 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                 filter pills (View all / At Doc / …) with tier-responsive
                 horizontal padding. */}
               <div style={styles.tabsBar}>
-                {listViewConfig.tabs.map((label, i) => (
-                  <div
-                    key={label}
-                    style={{ ...styles.listTab, ...(activeListTab === i ? styles.listTabActive : null) }}
-                    onClick={() => setActiveListTab(i)}
-                  >
-                    {label}
-                  </div>
-                ))}
+                <Tabs
+                  variant="block"
+                  size="sm"
+                  inline
+                  items={listViewConfig.tabs.map((label, i) => ({ id: String(i), label }))}
+                  activeId={String(activeListTab)}
+                  onSelect={(id) => setActiveListTab(Number(id))}
+                />
                 <ViewToggle value={viewMode} onChange={setViewMode} style={{ marginLeft: "auto" }} />
               </div>
 
