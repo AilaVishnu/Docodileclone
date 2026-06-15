@@ -107,7 +107,7 @@ export function BillCard({
             <label style={styles.label}>Discount</label>
             <div style={styles.fieldValue}>
               <input
-                style={{ ...styles.input, width: "40px", flex: "none" }}
+                style={{ ...styles.input, minWidth: 0 }}
                 type="number"
                 placeholder="0"
                 value={discount || ""}
