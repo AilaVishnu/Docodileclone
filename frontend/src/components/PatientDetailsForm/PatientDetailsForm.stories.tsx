@@ -87,3 +87,26 @@ export const WithErrors: Story = {
     );
   },
 };
+
+/**
+ * `bare` — renders flat (no card surface / border / padding) for use inside a
+ * modal that already provides its own background + inset (e.g. EditPatientModal).
+ * Also shows `genderOptions` extended with a 4th "Prefer not to say" radio.
+ */
+export const Bare: Story = {
+  decorators: [(Story) => <div style={{ width: 520, background: colors.neutral100, padding: 24 }}><Story /></div>],
+  render: () => {
+    const [value, setValue] = useState<PatientDraft>({ name: 'Ramesh Babu', email: 'ramesh@example.com', phone: '+91 88856 72664', dob: '12 03 1986', age: '40 / 3', gender: 'Male' });
+    const [dobDigits, setDobDigits] = useState('12031986');
+    return (
+      <PatientDetailsForm
+        bare
+        genderOptions={['Male', 'Female', 'Other', 'Prefer not to say']}
+        value={value}
+        onChange={(patch) => setValue((v) => ({ ...v, ...patch }))}
+        dobDigits={dobDigits}
+        setDobDigits={setDobDigits}
+      />
+    );
+  },
+};
