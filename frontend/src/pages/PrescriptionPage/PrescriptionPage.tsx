@@ -3050,11 +3050,6 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
         <div style={styles.bottomBar}>
           {activeAction === 0 ? (
             <>
-              {/* Language selector — picks the printed/shared prescription
-                  language. Compact Select sized to match the bar buttons. */}
-              <div style={{ width: 128, "--input-h": "36px" } as React.CSSProperties}>
-                <Select options={["English", "Hindi", "Telugu", "Tamil", "Kannada"]} value={language} onChange={setLanguage} />
-              </div>
               {/* Complete visit / Save changes — on any EDITABLE visit (today /
                   within 24h, or an open in-progress session). canEditForm
                   hard-locks visits past their 24h window, so a historic visit
@@ -3084,6 +3079,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   </button>
                 );
               })()}
+              {/* Language selector — picks the printed/shared prescription
+                  language. Compact Select sized to match the bar buttons. */}
+              <div style={{ width: 128, "--input-h": "36px" } as React.CSSProperties}>
+                <Select options={["English", "Hindi", "Telugu", "Tamil", "Kannada"]} value={language} onChange={setLanguage} />
+              </div>
               <button type="button" style={styles.barBtn} onClick={() => handlePrintPrescription("download")}>
                 <Icon name="download" size={18} tone="inherit" />
                 <span>Download</span>

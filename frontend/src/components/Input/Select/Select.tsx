@@ -41,7 +41,10 @@ export function Select({
   const menuRef = useRef<HTMLDivElement>(null);
   // Trigger position drives the portaled menu's screen coordinates. Recomputed
   // on open + on scroll/resize so the menu stays anchored as the page moves.
-  const [menuRect, setMenuRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  // `top` (open down) or `bottom` (open up) anchors the menu vertically; the
+  // other is left undefined. Open-up flips in when there isn't room below
+  // (e.g. a Select sitting on a bottom-pinned bar).
+  const [menuRect, setMenuRect] = useState<{ left: number; width: number; top?: number; bottom?: number } | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -63,7 +66,17 @@ export function Select({
       const el = containerRef.current;
       if (!el) return;
       const r = el.getBoundingClientRect();
-      setMenuRect({ top: r.bottom + 4, left: r.left, width: r.width });
+      // Flip the menu above the trigger when there isn't room below it (and
+      // there's more room above) — anchor by `bottom` so the menu's own height
+      // doesn't matter. Estimate height, capped at the menu's max-height (220).
+      const estHeight = Math.min(220, options.length * 30 + 8);
+      const spaceBelow = window.innerHeight - r.bottom;
+      const openUp = spaceBelow < estHeight + 8 && r.top > spaceBelow;
+      setMenuRect(
+        openUp
+          ? { bottom: window.innerHeight - r.top + 4, left: r.left, width: r.width }
+          : { top: r.bottom + 4, left: r.left, width: r.width },
+      );
     };
     updateRect();
     window.addEventListener("scroll", updateRect, true);
@@ -134,7 +147,7 @@ export function Select({
             // the menu escape any clipping ancestor (modal body, scroll
             // container, table cell, etc.).
             position: "fixed",
-            top: menuRect.top,
+            ...(menuRect.bottom != null ? { bottom: menuRect.bottom, top: "auto" } : { top: menuRect.top }),
             left: menuRect.left,
             width: menuRect.width,
             right: "auto",
