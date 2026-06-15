@@ -1,17 +1,14 @@
 import { CSSProperties } from "react";
 import { colors, radii, spacing } from "../../styles/theme";
 
-// Segmented list/grid switch. A subtle grey track holds two icon buttons; the
-// active one gets a white pill so the pair reads as a segmented control on any
-// surface (white sheet or cream page).
+// List/grid switch — two icon buttons, no background. The selected view reads
+// in full neutral900; the other is muted, so the pair shows state by weight
+// alone (no grey track / pill).
 export const styles: Record<string, CSSProperties> = {
   track: {
     display: "inline-flex",
     alignItems: "center",
-    gap: 2,
-    padding: 2,
-    backgroundColor: colors.neutral150,
-    borderRadius: radii.m,
+    gap: spacing["2xs"],
     flexShrink: 0,
   },
   button: {
@@ -23,10 +20,10 @@ export const styles: Record<string, CSSProperties> = {
     background: "transparent",
     borderRadius: radii.s,
     cursor: "pointer",
-    color: colors.neutral900,
+    color: colors.neutral400,
     lineHeight: 0,
   },
   buttonActive: {
-    backgroundColor: colors.neutral100,
+    color: colors.neutral900,
   },
 };
