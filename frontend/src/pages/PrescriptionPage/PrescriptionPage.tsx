@@ -36,6 +36,7 @@ import { buildPrintHtml, openPrintWindow, downloadAsPdf, getDefaultTemplate, loa
 import { Modal } from "../../components/Modal/Modal";
 import { Button } from "../../components/Button";
 import { Select } from "../../components/Input/Select/Select";
+import { ViewToggle } from "../../components/ViewToggle";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
@@ -2166,36 +2167,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                     {label}
                   </div>
                 ))}
-                <div style={styles.reportViewToggle}>
-                  <button
-                    type="button"
-                    style={{
-                      ...styles.reportViewToggleButton,
-                      // Both states are neutral900 to match the sidebar's
-                      // icon tone; the active state adds a white pill bg.
-                      color: colors.neutral900,
-                      ...(viewMode === "list" ? { backgroundColor: colors.neutral100 } : {}),
-                    }}
-                    onClick={() => setViewMode("list")}
-                    aria-label="List view"
-                    aria-pressed={viewMode === "list"}
-                  >
-                    <Icon name="list-sort" size={24} tone="inherit" />
-                  </button>
-                  <button
-                    type="button"
-                    style={{
-                      ...styles.reportViewToggleButton,
-                      color: colors.neutral900,
-                      ...(viewMode === "grid" ? { backgroundColor: colors.neutral100 } : {}),
-                    }}
-                    onClick={() => setViewMode("grid")}
-                    aria-label="Grid view"
-                    aria-pressed={viewMode === "grid"}
-                  >
-                    <Icon name="grid" size={24} tone="inherit" />
-                  </button>
-                </div>
+                <ViewToggle value={viewMode} onChange={setViewMode} style={{ marginLeft: "auto" }} />
               </div>
 
               {viewMode === "list" ? (

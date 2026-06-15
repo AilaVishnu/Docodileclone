@@ -10,6 +10,7 @@ import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { ChevronDown } from "../../components/icons/ChevronDown";
 import { StatusBadge } from "../../components/AppointmentQueue/StatusBadge";
 import { Tabs } from "../../components/Tabs";
+import { ViewToggle } from "../../components/ViewToggle";
 import { colors, radii } from "../../styles/theme";
 import { styles } from "./PrescriptionQueue.styles";
 import { Toast } from "../../components/Toast";
@@ -269,26 +270,7 @@ export function PrescriptionQueue({ onSelect, refreshKey }: PrescriptionQueuePro
           onSelect={(id) => setStatusFilter(id as StatusFilter)}
         />
 
-        <div style={styles.viewToggle} aria-label="View mode">
-          <button
-            type="button"
-            style={{ ...styles.viewBtn, ...(viewMode === "list" ? styles.viewBtnActive : null) }}
-            onClick={() => setViewMode("list")}
-            aria-label="List view"
-            aria-pressed={viewMode === "list"}
-          >
-            <Icon name="list-sort" size={20} tone="inherit" />
-          </button>
-          <button
-            type="button"
-            style={{ ...styles.viewBtn, ...(viewMode === "grid" ? styles.viewBtnActive : null) }}
-            onClick={() => setViewMode("grid")}
-            aria-label="Grid view"
-            aria-pressed={viewMode === "grid"}
-          >
-            <Icon name="grid" size={20} tone="inherit" />
-          </button>
-        </div>
+        <ViewToggle value={viewMode} onChange={setViewMode} />
       </div>
 
       {renderCards()}

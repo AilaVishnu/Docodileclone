@@ -878,9 +878,10 @@ export const styles: Record<string, CSSProperties> = {
     columnGap: "var(--vital-col-gap)",
     rowGap: "var(--vital-row-gap)",
     alignItems: "start",
-    // Reserve space below the bottom row so absolutely-positioned error
-    // helper text ("Enter valid details …") doesn't overlap the card edge.
-    paddingBottom: spacing.l,
+    // Small reserve below the bottom row for the absolutely-positioned error
+    // helper text; the section card's own bottom padding carries the rest, so
+    // the block stays vertically balanced between its dividers (not bottom-heavy).
+    paddingBottom: spacing.s,
   },
   vitalCell: {
     position: "relative" as const,
