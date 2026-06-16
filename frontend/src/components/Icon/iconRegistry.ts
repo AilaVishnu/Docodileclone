@@ -194,6 +194,7 @@ export const ICON_NAMES: string[] = Object.keys(ICONS).sort();
  */
 export const MULTICOLOR_ICONS = new Set<string>([
   "archive-box",
+  "calendar",
   "calendar-check",
   "check-circle",
   "danger-triangle",
