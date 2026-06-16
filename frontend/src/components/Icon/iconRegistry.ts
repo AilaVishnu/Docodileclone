@@ -48,6 +48,7 @@ import { ReactComponent as Ic_restart_24 } from "../../assets/icons/restart-24.s
 import { ReactComponent as Ic_rewind_back_circle } from "../../assets/icons/rewind-back-circle.svg";
 import { ReactComponent as Ic_scale } from "../../assets/icons/scale.svg";
 import { ReactComponent as Ic_share } from "../../assets/icons/share.svg";
+import { ReactComponent as Ic_staff } from "../../assets/icons/staff.svg";
 import { ReactComponent as Ic_star } from "../../assets/icons/star.svg";
 import { ReactComponent as Ic_stop_circle } from "../../assets/icons/stop-circle.svg";
 import { ReactComponent as Ic_stopwatch } from "../../assets/icons/stopwatch.svg";
@@ -143,6 +144,7 @@ export const ICONS: Record<string, SvgComponent> = {
   "rewind-back-circle": Ic_rewind_back_circle,
   "scale": Ic_scale,
   "share": Ic_share,
+  "staff": Ic_staff,
   "star": Ic_star,
   "stop-circle": Ic_stop_circle,
   "stopwatch": Ic_stopwatch,
@@ -210,6 +212,7 @@ export const MULTICOLOR_ICONS = new Set<string>([
   "paid-stamp",
   "receipt",
   "stopwatch",
+  "staff",
   "success-seal",
   "trash-bin",
   "warning-triangle",

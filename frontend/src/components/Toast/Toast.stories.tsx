@@ -231,8 +231,8 @@ const CATALOG: {
   {
     domain: 'Build Your Clinic',
     items: [
-      { msg: 'Dr. Mehta added to staff', type: 'success', concept: 'created' },
-      { msg: 'Dr. Mehta updated', type: 'success', concept: 'saved' },
+      { msg: 'Dr. Mehta added to staff', type: 'success', concept: 'created', icon: 'staff' },
+      { msg: 'Dr. Mehta updated', type: 'success', concept: 'saved', icon: 'staff' },
       { msg: 'Dr. Mehta reactivated', type: 'success', concept: 'restored', icon: 'success-seal' },
       { msg: 'Invite email resent', type: 'success', concept: 'sent' },
       { msg: 'Dr. Mehta removed — moved to Deactivated', type: 'info', concept: 'removed' },
