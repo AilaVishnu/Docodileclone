@@ -126,7 +126,7 @@ const CATALOG: {
       { msg: 'Invalid email or password', type: 'error', concept: 'authFailed', icon: 'error-circle' },
       { msg: 'Email ID does not exist', type: 'error', concept: 'authFailed' },
       { msg: 'Login failed (HTTP 500)', type: 'error', concept: 'authFailed', icon: 'error-circle' },
-      { msg: 'Login failed. Please check your credentials.', type: 'error', concept: 'authFailed' },
+      { msg: 'Login failed. Please check your credentials.', type: 'error', concept: 'authFailed', icon: 'warning-triangle' },
       { msg: 'Something went wrong. Please try again.', type: 'error', concept: 'failed' },
       { msg: 'Network error. Please check your connection.', type: 'error', concept: 'network' },
       { msg: 'Network error. Please try again.', type: 'error', concept: 'network' },
@@ -191,7 +191,7 @@ const CATALOG: {
     domain: 'Import Data',
     items: [
       { msg: 'Migration completed successfully', type: 'success', concept: 'created', icon: 'success-seal' },
-      { msg: 'Updated 12 · added 3 · skipped 1', type: 'success', concept: 'created' },
+      { msg: 'Updated 12 · added 3 · skipped 1', type: 'success', concept: 'created', icon: 'warning-triangle' },
       { msg: 'Please choose a .zip file.', type: 'error', concept: 'fileProblem' },
       { msg: 'Please choose a file to import.', type: 'error', concept: 'fileProblem' },
       { msg: 'Your login session has expired. Log out, log back in, then retry the import.', type: 'error', concept: 'sessionExpired' },
@@ -297,6 +297,12 @@ const CONCEPT_ICON: Partial<Record<ConceptKey, string>> = {
   failed: 'error-circle',
   network: 'error-circle',
   fileProblem: 'error-circle',
+  fillField: 'warning-triangle',
+  doFirst: 'warning-triangle',
+  limit: 'warning-triangle',
+  notSetUp: 'warning-triangle',
+  duplicate: 'warning-triangle',
+  sessionExpired: 'warning-triangle',
 };
 
 const iconFor = (t: { concept: ConceptKey; icon?: string }): string | undefined =>

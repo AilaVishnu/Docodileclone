@@ -56,6 +56,7 @@ import { ReactComponent as Ic_users_group } from "../../assets/icons/users-group
 import { ReactComponent as Ic_verified_badge } from "../../assets/icons/verified-badge.svg";
 import { ReactComponent as Ic_videocamera } from "../../assets/icons/videocamera.svg";
 import { ReactComponent as Ic_visits } from "../../assets/icons/visits.svg";
+import { ReactComponent as Ic_warning_triangle } from "../../assets/icons/warning-triangle.svg";
 import { ReactComponent as Ic_widget } from "../../assets/icons/widget.svg";
 import { ReactComponent as Ic_zero_queue } from "../../assets/icons/zero-queue.svg";
 
@@ -144,6 +145,7 @@ export const ICONS: Record<string, SvgComponent> = {
   "verified-badge": Ic_verified_badge,
   "videocamera": Ic_videocamera,
   "visits": Ic_visits,
+  "warning-triangle": Ic_warning_triangle,
   "grid": Ic_widget,
   "zero-queue": Ic_zero_queue,
   "home": Nav_home,
@@ -192,6 +194,7 @@ export const MULTICOLOR_ICONS = new Set<string>([
   "paid-stamp",
   "stopwatch",
   "success-seal",
+  "warning-triangle",
   "user-check",
   "user",
   "users-group",
