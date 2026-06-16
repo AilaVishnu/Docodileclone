@@ -159,7 +159,7 @@ const CATALOG: {
       { msg: 'Marked as Completed', type: 'success', concept: 'status' },
       { msg: 'Marked as No-Show', type: 'success', concept: 'status' },
       { msg: 'Appointment cancelled', type: 'success', concept: 'status' },
-      { msg: 'Status updated', type: 'success', concept: 'status' },
+      { msg: 'Status updated', type: 'success', concept: 'status', icon: 'calendar-check' },
       { msg: 'Bill waived for Ramesh Babu', type: 'success', concept: 'payment' },
       { msg: '₹500 billed via Cash for Ramesh Babu', type: 'success', concept: 'payment' },
       { msg: '₹500 billed via Cash for Ramesh Babu · Inventory updated', type: 'success', concept: 'inventory' },
@@ -191,7 +191,7 @@ const CATALOG: {
     domain: 'Import Data',
     items: [
       { msg: 'Migration completed successfully', type: 'success', concept: 'created', icon: 'success-seal' },
-      { msg: 'Updated 12 · added 3 · skipped 1', type: 'success', concept: 'created', icon: 'warning-triangle' },
+      { msg: 'Updated 12 · added 3 · skipped 1', type: 'success', concept: 'created', icon: 'calendar-check' },
       { msg: 'Please choose a .zip file.', type: 'error', concept: 'fileProblem' },
       { msg: 'Please choose a file to import.', type: 'error', concept: 'fileProblem' },
       { msg: 'Your login session has expired. Log out, log back in, then retry the import.', type: 'error', concept: 'sessionExpired' },
