@@ -41,6 +41,7 @@ import { ReactComponent as Ic_pen } from "../../assets/icons/pen.svg";
 import { ReactComponent as Ic_pills } from "../../assets/icons/pills.svg";
 import { ReactComponent as Ic_play_circle } from "../../assets/icons/play-circle.svg";
 import { ReactComponent as Ic_printer } from "../../assets/icons/printer.svg";
+import { ReactComponent as Ic_receipt } from "../../assets/icons/receipt.svg";
 import { ReactComponent as Ic_reorder } from "../../assets/icons/reorder.svg";
 import { ReactComponent as Ic_restart_24 } from "../../assets/icons/restart-24.svg";
 import { ReactComponent as Ic_rewind_back_circle } from "../../assets/icons/rewind-back-circle.svg";
@@ -132,6 +133,7 @@ export const ICONS: Record<string, SvgComponent> = {
   "play-circle": Ic_play_circle,
   "plus": Root_plus,
   "printer": Ic_printer,
+  "receipt": Ic_receipt,
   "pulse": Root_pulse,
   "menu": Ic_reorder,
   "restart": Ic_restart_24,
@@ -201,6 +203,7 @@ export const MULTICOLOR_ICONS = new Set<string>([
   "error-circle",
   "hourglass",
   "paid-stamp",
+  "receipt",
   "stopwatch",
   "success-seal",
   "warning-triangle",

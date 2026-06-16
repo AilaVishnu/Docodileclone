@@ -161,7 +161,7 @@ const CATALOG: {
       { msg: 'Appointment cancelled', type: 'success', concept: 'status' },
       { msg: 'Status updated', type: 'success', concept: 'status', icon: 'calendar-check' },
       { msg: 'Bill waived for Ramesh Babu', type: 'success', concept: 'payment' },
-      { msg: '₹500 billed via Cash for Ramesh Babu', type: 'success', concept: 'payment' },
+      { msg: '₹500 billed via Cash for Ramesh Babu', type: 'success', concept: 'payment', icon: 'receipt' },
       { msg: '₹500 billed via Cash for Ramesh Babu · Inventory updated', type: 'success', concept: 'inventory' },
       { msg: '₹500 billed via Cash for Ramesh Babu · Short stock on: Paracetamol (2/5)', type: 'warning', concept: 'lowStock' },
       { msg: 'Ramesh Babu is archived — restore the patient to continue.', type: 'warning', concept: 'archived' },
@@ -296,6 +296,8 @@ const TOTAL = FLAT.length;
 const CONCEPT_ICON: Partial<Record<ConceptKey, string>> = {
   sent: 'envelope',
   archived: 'archive-box',
+  inventory: 'receipt',
+  lowStock: 'receipt',
   failed: 'error-circle',
   network: 'error-circle',
   fileProblem: 'error-circle',
