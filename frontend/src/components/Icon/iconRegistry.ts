@@ -52,6 +52,7 @@ import { ReactComponent as Ic_scale } from "../../assets/icons/scale.svg";
 import { ReactComponent as Ic_share } from "../../assets/icons/share.svg";
 import { ReactComponent as Ic_staff } from "../../assets/icons/staff.svg";
 import { ReactComponent as Ic_star } from "../../assets/icons/star.svg";
+import { ReactComponent as Ic_status_dot } from "../../assets/icons/status-dot.svg";
 import { ReactComponent as Ic_stop_circle } from "../../assets/icons/stop-circle.svg";
 import { ReactComponent as Ic_stopwatch } from "../../assets/icons/stopwatch.svg";
 import { ReactComponent as Ic_success_seal } from "../../assets/icons/success-seal.svg";
@@ -150,6 +151,7 @@ export const ICONS: Record<string, SvgComponent> = {
   "share": Ic_share,
   "staff": Ic_staff,
   "star": Ic_star,
+  "status-dot": Ic_status_dot,
   "stop-circle": Ic_stop_circle,
   "stopwatch": Ic_stopwatch,
   "success-seal": Ic_success_seal,

@@ -16,6 +16,11 @@ type ToastProps = {
    */
   iconName?: string;
   /**
+   * Optional colour for a monochrome icon (e.g. the status dot, tinted to
+   * match the queue status badge). Ignored by multicolor icons.
+   */
+  iconColor?: string;
+  /**
    * Render in normal document flow instead of the default fixed bottom-right
    * overlay (no positioning / z-index / slide-in). For catalogs, docs and
    * stories that show several toasts at once.
@@ -23,7 +28,7 @@ type ToastProps = {
   inline?: boolean;
 };
 
-export function Toast({ message, isVisible, onClose, duration = 4000, actionLabel, onAction, inline = false, iconName = "buildings" }: ToastProps) {
+export function Toast({ message, isVisible, onClose, duration = 4000, actionLabel, onAction, inline = false, iconName = "buildings", iconColor }: ToastProps) {
   useEffect(() => {
     if (isVisible && duration > 0) {
       const timer = setTimeout(onClose, duration);
@@ -35,7 +40,7 @@ export function Toast({ message, isVisible, onClose, duration = 4000, actionLabe
 
   return (
     <div style={inline ? styles.containerInline : styles.container}>
-      <Icon name={iconName} tone="inherit" style={styles.icon} />
+      <Icon name={iconName} color={iconColor} tone="inherit" style={styles.icon} />
       <p style={styles.message}>{message}</p>
       {actionLabel && onAction && (
         <button
