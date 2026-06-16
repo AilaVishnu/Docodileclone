@@ -44,6 +44,7 @@ import { ReactComponent as Ic_pills } from "../../assets/icons/pills.svg";
 import { ReactComponent as Ic_play_circle } from "../../assets/icons/play-circle.svg";
 import { ReactComponent as Ic_printer } from "../../assets/icons/printer.svg";
 import { ReactComponent as Ic_receipt } from "../../assets/icons/receipt.svg";
+import { ReactComponent as Ic_receipt_slash } from "../../assets/icons/receipt-slash.svg";
 import { ReactComponent as Ic_reorder } from "../../assets/icons/reorder.svg";
 import { ReactComponent as Ic_restart_24 } from "../../assets/icons/restart-24.svg";
 import { ReactComponent as Ic_rewind_back_circle } from "../../assets/icons/rewind-back-circle.svg";
@@ -140,6 +141,7 @@ export const ICONS: Record<string, SvgComponent> = {
   "plus": Root_plus,
   "printer": Ic_printer,
   "receipt": Ic_receipt,
+  "receipt-slash": Ic_receipt_slash,
   "pulse": Root_pulse,
   "menu": Ic_reorder,
   "restart": Ic_restart_24,
@@ -214,6 +216,7 @@ export const MULTICOLOR_ICONS = new Set<string>([
   "hourglass",
   "paid-stamp",
   "receipt",
+  "receipt-slash",
   "stopwatch",
   "staff",
   "success-seal",

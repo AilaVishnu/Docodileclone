@@ -160,7 +160,7 @@ const CATALOG: {
       { msg: 'Marked as No-Show', type: 'success', concept: 'status' },
       { msg: 'Appointment cancelled', type: 'success', concept: 'status' },
       { msg: 'Status updated', type: 'success', concept: 'status', icon: 'calendar-check' },
-      { msg: 'Bill waived for Ramesh Babu', type: 'success', concept: 'payment' },
+      { msg: 'Bill waived for Ramesh Babu', type: 'success', concept: 'payment', icon: 'receipt-slash' },
       { msg: '₹500 billed via Cash for Ramesh Babu', type: 'success', concept: 'payment', icon: 'receipt' },
       { msg: '₹500 billed via Cash for Ramesh Babu · Inventory updated', type: 'success', concept: 'inventory' },
       { msg: '₹500 billed via Cash for Ramesh Babu · Short stock on: Paracetamol (2/5)', type: 'warning', concept: 'lowStock' },
