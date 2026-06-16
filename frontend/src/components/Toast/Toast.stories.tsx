@@ -294,6 +294,7 @@ const TOTAL = FLAT.length;
 // Whole-concept icon assignments: every toast in the concept uses this icon
 // unless the item sets its own `icon` (a per-message `icon` always wins).
 const CONCEPT_ICON: Partial<Record<ConceptKey, string>> = {
+  sent: 'envelope',
   failed: 'error-circle',
   network: 'error-circle',
   fileProblem: 'error-circle',
