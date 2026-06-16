@@ -110,6 +110,10 @@ const CONCEPT_GROUP_META: Record<ConceptGroup, { label: string; color: string }>
   error: { label: 'Errors / failures', color: colors.red200 },
 };
 
+// No blue/info token exists in theme.ts yet, so this is a local hex for the
+// "blue check" toasts. Swap for a token if one gets added.
+const BLUE = '#3B82F6';
+
 const CATALOG: {
   domain: string;
   items: { msg: string; type: ToastType; concept: ConceptKey; icon?: string; iconColor?: string }[];
@@ -159,7 +163,7 @@ const CATALOG: {
       { msg: 'Marked as Completed', type: 'success', concept: 'status', icon: 'status-dot', iconColor: colors.green200 },
       { msg: 'Marked as No-Show', type: 'success', concept: 'status', icon: 'status-dot', iconColor: colors.neutral400 },
       { msg: 'Appointment cancelled', type: 'success', concept: 'status', icon: 'status-dot', iconColor: colors.red100 },
-      { msg: 'Status updated', type: 'success', concept: 'status', icon: 'calendar-check' },
+      { msg: 'Status updated', type: 'success', concept: 'status', icon: 'check', iconColor: BLUE },
       { msg: 'Bill waived for Ramesh Babu', type: 'success', concept: 'payment', icon: 'receipt-slash' },
       { msg: '₹500 billed via Cash for Ramesh Babu', type: 'success', concept: 'payment', icon: 'receipt' },
       { msg: '₹500 billed via Cash for Ramesh Babu · Inventory updated', type: 'success', concept: 'inventory' },
@@ -261,7 +265,7 @@ const CATALOG: {
       { msg: 'Visit marked complete', type: 'success', concept: 'status', icon: 'status-dot', iconColor: colors.green200 },
       { msg: 'Visit moved to today', type: 'success', concept: 'status', icon: 'calendar-check' },
       { msg: 'Saved template "Common cold"', type: 'success', concept: 'saved', icon: 'success-seal' },
-      { msg: 'Loaded "Common cold"', type: 'success', concept: 'saved' },
+      { msg: 'Loaded "Common cold"', type: 'success', concept: 'saved', icon: 'check', iconColor: BLUE },
       { msg: 'Patient info saved', type: 'success', concept: 'saved', icon: 'success-seal' },
       { msg: 'Patient archived', type: 'success', concept: 'archived' },
       { msg: 'Downloading 3 file(s)…', type: 'info', concept: 'download' },
