@@ -12,6 +12,7 @@ import { BillCard } from "../BillCard/BillCard";
 import { DoctorStatusCard } from "./DoctorStatusCard";
 import { HeatmapCard } from "./HeatmapCard";
 import { Toast } from "../Toast";
+import { resolveToastIcon } from "../Toast/toastIcon";
 import { Button } from "../Button";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { Modal } from "../Modal";
@@ -599,6 +600,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
 
       <Toast
         message={toastMessage}
+        {...resolveToastIcon(toastMessage)}
         isVisible={!!toastMessage}
         onClose={() => setToastMessage("")}
       />

@@ -9,6 +9,7 @@ import { BillCard } from "../BillCard/BillCard";
 import { UnderlineSelect } from "../Input/UnderlineSelect/UnderlineSelect";
 import { Select } from "../Input/Select/Select";
 import { Toast } from "../Toast";
+import { resolveToastIcon } from "../Toast/toastIcon";
 import { Button } from "../Button";
 import { MeasureField } from "../MeasureField";
 import { ConfirmDialog } from "../ConfirmDialog";
@@ -845,6 +846,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
       <Toast
         message={toastMessage}
+        {...resolveToastIcon(toastMessage)}
         isVisible={!!toastMessage}
         onClose={() => setToastMessage("")}
       />

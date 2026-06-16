@@ -8,6 +8,7 @@ import { MeasureField } from "../../components/MeasureField";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 import { Toast } from "../../components/Toast";
+import { resolveToastIcon } from "../../components/Toast/toastIcon";
 import { Autocomplete } from "../../components/Autocomplete/Autocomplete";
 import { MedicineAutocomplete } from "../../components/MedicineAutocomplete/MedicineAutocomplete";
 import { FrequencyPicker } from "../../components/FrequencyPicker/FrequencyPicker";
@@ -2853,7 +2854,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
           )}
         </div>
       </div>
-      <Toast message={toast.message} isVisible={toast.visible} onClose={closeToast} />
+      <Toast message={toast.message} {...resolveToastIcon(toast.message)} isVisible={toast.visible} onClose={closeToast} />
 
       {/* Prescription templates — save the current Rx + clinical fields under a
           name, or load a saved one to auto-fill. Clinic-shared (backend). */}
