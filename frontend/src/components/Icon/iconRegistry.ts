@@ -35,6 +35,7 @@ import { ReactComponent as Ic_heart_pulse } from "../../assets/icons/heart-pulse
 import { ReactComponent as Ic_history } from "../../assets/icons/history.svg";
 import { ReactComponent as Ic_hourglass_line } from "../../assets/icons/hourglass-line.svg";
 import { ReactComponent as Ic_hourglass } from "../../assets/icons/hourglass.svg";
+import { ReactComponent as Ic_info_seal } from "../../assets/icons/info-seal.svg";
 import { ReactComponent as Ic_list_sort } from "../../assets/icons/list-sort.svg";
 import { ReactComponent as Ic_magnifer_bug } from "../../assets/icons/magnifer-bug.svg";
 import { ReactComponent as Ic_microphone } from "../../assets/icons/microphone.svg";
@@ -131,6 +132,7 @@ export const ICONS: Record<string, SvgComponent> = {
   "history": Ic_history,
   "hourglass-line": Ic_hourglass_line,
   "hourglass": Ic_hourglass,
+  "info-seal": Ic_info_seal,
   "list-sort": Ic_list_sort,
   "magnifer-bug": Ic_magnifer_bug,
   "microphone": Ic_microphone,
@@ -216,6 +218,7 @@ export const MULTICOLOR_ICONS = new Set<string>([
   "envelope",
   "error-circle",
   "hourglass",
+  "info-seal",
   "paid-stamp",
   "receipt",
   "receipt-slash",
