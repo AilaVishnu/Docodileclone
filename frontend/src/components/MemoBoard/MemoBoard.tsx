@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { Toast } from "../Toast";
+import { resolveToastIcon } from "../Toast/toastIcon";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MemoBoard — free-floating sticky notes on a dotted board.
@@ -385,6 +386,7 @@ export function MemoBoard() {
 
       <Toast
         message="Memo deleted"
+        {...resolveToastIcon("Memo deleted")}
         isVisible={!!recentlyDeleted}
         onClose={() => setRecentlyDeleted(null)}
         actionLabel="Undo"

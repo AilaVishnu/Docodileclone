@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { colors, fonts, radii, spacing } from "../../../styles/theme";
 import { API_BASE_URL } from "../../../apiConfig";
 import { Toast } from "../../../components/Toast";
+import { resolveToastIcon } from "../../../components/Toast/toastIcon";
 import { Modal } from "../../../components/Modal";
 import { Button } from "../../../components/Button";
 
@@ -195,7 +196,7 @@ function HealthPlixZipImport({
         <div style={{ ...S.actions, justifyContent: "center" }}>
           <button type="button" onClick={onDone} style={S.importBtn}>Done</button>
         </div>
-        <Toast message={toastMsg} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
+        <Toast message={toastMsg} {...resolveToastIcon(toastMsg)} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
       </div>
     );
   }
@@ -569,7 +570,7 @@ function HealthPlixImport({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      <Toast message={toastMsg} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
+      <Toast message={toastMsg} {...resolveToastIcon(toastMsg)} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
     </div>
   );
 }

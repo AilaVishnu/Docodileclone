@@ -14,6 +14,7 @@ import { ViewToggle } from "../../components/ViewToggle";
 import { colors, radii } from "../../styles/theme";
 import { styles } from "./PrescriptionQueue.styles";
 import { Toast } from "../../components/Toast";
+import { resolveToastIcon } from "../../components/Toast/toastIcon";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal landing of the Prescription page — Figma 2282:17378.
@@ -274,7 +275,7 @@ export function PrescriptionQueue({ onSelect, refreshKey }: PrescriptionQueuePro
       </div>
 
       {renderCards()}
-      <Toast message={toastMsg} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
+      <Toast message={toastMsg} {...resolveToastIcon(toastMsg)} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
     </div>
   );
 }

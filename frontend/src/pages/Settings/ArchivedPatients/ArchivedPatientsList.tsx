@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { colors, fonts, radii, spacing } from "../../../styles/theme";
 import { API_BASE_URL } from "../../../apiConfig";
 import { Toast } from "../../../components/Toast";
+import { resolveToastIcon } from "../../../components/Toast/toastIcon";
 import { DataGrid, type GridColumn } from "../../../components/DataGrid/DataGrid";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -105,7 +106,7 @@ export function ArchivedPatientsList() {
   return (
     <div style={S.card}>
       <DataGrid columns={columns} rows={rows} rowKey={(p) => p.id} />
-      <Toast message={toastMsg} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
+      <Toast message={toastMsg} {...resolveToastIcon(toastMsg)} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
     </div>
   );
 }

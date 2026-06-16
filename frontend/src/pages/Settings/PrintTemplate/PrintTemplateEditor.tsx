@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { colors, fonts, radii, spacing, strokes } from "../../../styles/theme";
 import { Button } from "../../../components/Button";
 import { Toast } from "../../../components/Toast";
+import { resolveToastIcon } from "../../../components/Toast/toastIcon";
 import { Field as TextField } from "../../../components/Field";
 import { Select } from "../../../components/Input/Select/Select";
 import { Switch } from "../../../components/Switch";
@@ -256,7 +257,7 @@ export function PrintTemplateEditor() {
         );
       })()}
 
-      <Toast message={toast.message} isVisible={toast.visible} onClose={() => setToast({ visible: false, message: "" })} />
+      <Toast message={toast.message} {...resolveToastIcon(toast.message)} isVisible={toast.visible} onClose={() => setToast({ visible: false, message: "" })} />
     </div>
   );
 }

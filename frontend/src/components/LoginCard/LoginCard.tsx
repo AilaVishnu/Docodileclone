@@ -8,6 +8,7 @@ import { Icon } from "../Icon";
 import { colors, fonts } from "../../styles/theme";
 import { API_BASE_URL } from "../../apiConfig";
 import { Toast } from "../Toast";
+import { resolveToastIcon } from "../Toast/toastIcon";
 
 
 type LoginMode = "admin" | "staff";
@@ -221,6 +222,7 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
 
         <Toast
           message={toastMessage}
+          {...resolveToastIcon(toastMessage)}
           isVisible={!!toastMessage}
           onClose={() => setToastMessage("")}
         />
@@ -315,6 +317,7 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
 
       <Toast
         message={toastMessage}
+        {...resolveToastIcon(toastMessage)}
         isVisible={!!toastMessage}
         onClose={() => setToastMessage("")}
       />

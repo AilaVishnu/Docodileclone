@@ -11,6 +11,7 @@ import { Icon } from "../../components/Icon";
 import { ReactComponent as ClinicRoof } from "../../assets/clinic roof.svg";
 import { ReactComponent as Bush } from "../../assets/bush.svg";
 import { Toast } from "../../components/Toast";
+import { resolveToastIcon } from "../../components/Toast/toastIcon";
 import { StaffWindow } from "../../components/StaffWindow";
 
 export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
@@ -546,6 +547,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
 
       <Toast
         message={toastMessage}
+        {...resolveToastIcon(toastMessage)}
         isVisible={!!toastMessage}
         onClose={() => setToastMessage("")}
       />

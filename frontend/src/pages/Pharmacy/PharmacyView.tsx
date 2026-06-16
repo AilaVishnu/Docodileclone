@@ -18,6 +18,7 @@ import { colors, fonts, spacing, radii } from "../../styles/theme";
 import { Icon } from "../../components/Icon";
 import { listPharmacyStock, bulkCreatePharmacyStock, parseInventoryCsv, createPharmacyStock, updatePharmacyStock, deletePharmacyStock, medToRequest } from "../../api/pharmacy";
 import { Toast } from "../../components/Toast";
+import { resolveToastIcon } from "../../components/Toast/toastIcon";
 
 type ViewMode = "list" | "shelf";
 
@@ -249,7 +250,7 @@ export function PharmacyView() {
         )}
       </Modal>
 
-      <Toast message={toastMsg} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
+      <Toast message={toastMsg} {...resolveToastIcon(toastMsg)} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
       {loading && inventory.length === 0 && (
         <div style={{ padding: 24, textAlign: "center", color: colors.neutral600 }}>Loading inventory…</div>
       )}
