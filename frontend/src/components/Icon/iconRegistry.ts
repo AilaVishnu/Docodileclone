@@ -16,6 +16,7 @@ import { ReactComponent as Ic_arrow_left } from "../../assets/icons/arrow-left.s
 import { ReactComponent as Ic_bill_check } from "../../assets/icons/bill-check.svg";
 import { ReactComponent as Ic_calendar } from "../../assets/icons/calendar.svg";
 import { ReactComponent as Ic_calendar_check } from "../../assets/icons/calendar-check.svg";
+import { ReactComponent as Ic_capsule } from "../../assets/icons/capsule.svg";
 import { ReactComponent as Ic_catalog } from "../../assets/icons/catalog.svg";
 import { ReactComponent as Ic_chat_dots } from "../../assets/icons/chat-dots.svg";
 import { ReactComponent as Ic_chat_square_call } from "../../assets/icons/chat-square-call.svg";
@@ -107,6 +108,7 @@ export const ICONS: Record<string, SvgComponent> = {
   "bill-check": Ic_bill_check,
   "calendar": Ic_calendar,
   "calendar-check": Ic_calendar_check,
+  "capsule": Ic_capsule,
   "chat-dots": Ic_chat_dots,
   "chat-square-call": Ic_chat_square_call,
   "check": Ic_check,
@@ -197,6 +199,7 @@ export const ICON_NAMES: string[] = Object.keys(ICONS).sort();
 export const MULTICOLOR_ICONS = new Set<string>([
   "archive-box",
   "calendar-check",
+  "capsule",
   "check-circle",
   "danger-triangle",
   "envelope",

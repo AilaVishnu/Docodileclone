@@ -210,10 +210,10 @@ const CATALOG: {
   {
     domain: 'Pharmacy',
     items: [
-      { msg: 'Added Amoxicillin 250mg', type: 'success', concept: 'created' },
-      { msg: 'Saved Paracetamol 500mg', type: 'success', concept: 'saved' },
+      { msg: 'Added Amoxicillin 250mg', type: 'success', concept: 'created', icon: 'capsule' },
+      { msg: 'Saved Paracetamol 500mg', type: 'success', concept: 'saved', icon: 'capsule' },
       { msg: 'Removed Paracetamol 500mg', type: 'success', concept: 'removed' },
-      { msg: 'Paracetamol 500mg: stock set to 120', type: 'success', concept: 'saved' },
+      { msg: 'Paracetamol 500mg: stock set to 120', type: 'success', concept: 'saved', icon: 'capsule' },
       { msg: 'Please pick a .csv file.', type: 'error', concept: 'fileProblem' },
       { msg: "Couldn't load inventory: Network error", type: 'error', concept: 'failed' },
       { msg: "Couldn't save: Network error", type: 'error', concept: 'failed' },
