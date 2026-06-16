@@ -5,6 +5,7 @@ import { formatExpiry } from "./expiry";
 import { groupItems } from "./grouping";
 import { DataGrid, type GridColumn } from "../../components/DataGrid/DataGrid";
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
+import { fonts } from "../../styles/theme";
 
 type Props = {
   items: Med[];
@@ -29,23 +30,25 @@ export function PharmacyListView({ items, groupBy, onPick, onEdit, onAdjustQty, 
     );
   }
 
+  // Data columns carry no fixed width: table-layout:fixed splits the row evenly
+  // between them (equal + stretchable). The kebab/actions column stays narrow.
   const columns: GridColumn<Med>[] = [
-    { key: "name", header: "Med Name", width: 150, align: "left", render: (m) => m.name },
+    { key: "name", header: "Med Name", align: "left", render: (m) => m.name },
     {
-      key: "invoice", header: "Invoice No.", width: 110, align: "left",
+      key: "invoice", header: "Invoice No.", align: "left",
       render: (m) => (
         <a style={styles.invoiceLink} href="#" onClick={(e) => { e.preventDefault(); onPick?.(m); }}>{m.invoiceNo}</a>
       ),
     },
-    { key: "batch", header: "Batch", width: 90, align: "left", render: (m) => <span style={styles.secondaryCell}>{m.batch}</span> },
-    { key: "packPrice", header: "Pack Price", width: 90, align: "right", render: (m) => m.packPrice.toFixed(2) },
-    { key: "mrp", header: "MRP", width: 80, align: "right", render: (m) => m.packMrp.toFixed(2) },
-    { key: "perPack", header: "Per Pack", width: 80, align: "right", render: (m) => m.unitsPerPack },
-    { key: "unitPrice", header: "Unit Price", width: 90, align: "right", render: (m) => m.unitPrice.toFixed(2) },
-    { key: "inStock", header: "In Stock", width: 80, align: "right", render: (m) => m.unitsInStock },
-    { key: "expiry", header: "Expiry", width: 96, align: "left", render: (m) => formatExpiry(m.expiry) },
-    { key: "discount", header: "Discount", width: 90, align: "right", render: (m) => m.discountPct.toFixed(2) },
-    { key: "gst", header: "GST", width: 72, align: "right", render: (m) => m.gstPct.toFixed(2) },
+    { key: "batch", header: "Batch", align: "left", render: (m) => <span style={styles.secondaryCell}>{m.batch}</span> },
+    { key: "packPrice", header: "Pack Price", align: "right", render: (m) => m.packPrice.toFixed(2) },
+    { key: "mrp", header: "MRP", align: "right", render: (m) => m.packMrp.toFixed(2) },
+    { key: "perPack", header: "Per Pack", align: "right", render: (m) => m.unitsPerPack },
+    { key: "unitPrice", header: "Unit Price", align: "right", render: (m) => m.unitPrice.toFixed(2) },
+    { key: "inStock", header: "In Stock", align: "right", render: (m) => m.unitsInStock },
+    { key: "expiry", header: "Expiry", align: "right", render: (m) => formatExpiry(m.expiry) },
+    { key: "discount", header: "Discount", align: "right", render: (m) => m.discountPct.toFixed(2) },
+    { key: "gst", header: "GST", align: "right", render: (m) => m.gstPct.toFixed(2) },
     {
       key: "actions", header: "", width: 48, align: "center",
       render: (m) => (
@@ -62,5 +65,5 @@ export function PharmacyListView({ items, groupBy, onPick, onEdit, onAdjustQty, 
     },
   ];
 
-  return <DataGrid columns={columns} rows={ordered} rowKey={(m) => m.id} minWidth={1130} />;
+  return <DataGrid columns={columns} rows={ordered} rowKey={(m) => m.id} minWidth={1130} cellFontSize={fonts.control.md} />;
 }

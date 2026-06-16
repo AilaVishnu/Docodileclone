@@ -18,7 +18,7 @@ export type GridColumn<T> = {
   render: (row: T, index: number) => React.ReactNode;
 };
 
-export function DataGrid<T>({ columns, rows, rowKey, size = "m", tdPadding, thPadding, minWidth, onRowClick }: {
+export function DataGrid<T>({ columns, rows, rowKey, size = "m", tdPadding, thPadding, minWidth, onRowClick, cellFontSize }: {
   columns: GridColumn<T>[];
   rows: T[];
   rowKey: (row: T, index: number) => React.Key;
@@ -32,10 +32,14 @@ export function DataGrid<T>({ columns, rows, rowKey, size = "m", tdPadding, thPa
   /** Make rows clickable (pointer cursor + keyboard activation). A cell that
       needs its own click (e.g. an action button) should stopPropagation. */
   onRowClick?: (row: T, index: number) => void;
+  /** Override the font size for BOTH header and body cells (e.g.
+      `var(--ctrl-fs-md)` to put header + rows on the same 14→16 ramp). When
+      unset, header uses control.sm and body uses the `size` token. */
+  cellFontSize?: string;
 }) {
   const fs = size === "s" ? fonts.size.s : fonts.size.m;
-  const th = (c: GridColumn<T>): CSSProperties => ({ ...tableHeadCell, fontSize: fonts.control.sm, fontWeight: fonts.weight.regular, padding: c.headerPadding ?? thPadding ?? "12px 10px", whiteSpace: "nowrap", textAlign: c.align ?? "center" });
-  const td = (c: GridColumn<T>): CSSProperties => ({ fontSize: fs, color: colors.neutral900, padding: c.cellPadding ?? tdPadding ?? "12px 10px", borderBottom: tableDivider, verticalAlign: "middle", textAlign: c.align ?? "center" });
+  const th = (c: GridColumn<T>): CSSProperties => ({ ...tableHeadCell, fontSize: cellFontSize ?? fonts.control.sm, fontWeight: fonts.weight.regular, padding: c.headerPadding ?? thPadding ?? "12px 10px", whiteSpace: "nowrap", textAlign: c.align ?? "center" });
+  const td = (c: GridColumn<T>): CSSProperties => ({ fontSize: cellFontSize ?? fs, color: colors.neutral900, padding: c.cellPadding ?? tdPadding ?? "12px 10px", borderBottom: tableDivider, verticalAlign: "middle", textAlign: c.align ?? "center" });
   const table = (
     <table style={{ width: "100%", minWidth, borderCollapse: "collapse", tableLayout: "fixed" }}>
       <colgroup>
