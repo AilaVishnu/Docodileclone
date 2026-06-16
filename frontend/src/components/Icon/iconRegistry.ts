@@ -11,9 +11,11 @@ import React from "react";
 //
 // MULTICOLOR_ICONS flags brand/illustrative icons that keep their baked palette.
 // ─────────────────────────────────────────────────────────────────────────────
+import { ReactComponent as Ic_archive_box } from "../../assets/icons/archive-box.svg";
 import { ReactComponent as Ic_arrow_left } from "../../assets/icons/arrow-left.svg";
 import { ReactComponent as Ic_bill_check } from "../../assets/icons/bill-check.svg";
 import { ReactComponent as Ic_calendar } from "../../assets/icons/calendar.svg";
+import { ReactComponent as Ic_calendar_check } from "../../assets/icons/calendar-check.svg";
 import { ReactComponent as Ic_catalog } from "../../assets/icons/catalog.svg";
 import { ReactComponent as Ic_chat_dots } from "../../assets/icons/chat-dots.svg";
 import { ReactComponent as Ic_chat_square_call } from "../../assets/icons/chat-square-call.svg";
@@ -99,9 +101,11 @@ import { ReactComponent as Root_help } from "../../assets/Help.svg";
 type SvgComponent = React.FC<React.SVGProps<SVGSVGElement>>;
 
 export const ICONS: Record<string, SvgComponent> = {
+  "archive-box": Ic_archive_box,
   "arrow-left": Ic_arrow_left,
   "bill-check": Ic_bill_check,
   "calendar": Ic_calendar,
+  "calendar-check": Ic_calendar_check,
   "chat-dots": Ic_chat_dots,
   "chat-square-call": Ic_chat_square_call,
   "check": Ic_check,
@@ -189,6 +193,8 @@ export const ICON_NAMES: string[] = Object.keys(ICONS).sort();
  * these alone (no currentColor tone) so they keep their multi-colour design.
  */
 export const MULTICOLOR_ICONS = new Set<string>([
+  "archive-box",
+  "calendar-check",
   "check-circle",
   "danger-triangle",
   "envelope",

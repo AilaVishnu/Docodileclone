@@ -124,7 +124,7 @@ const CATALOG: {
       { msg: 'Enter a valid email address', type: 'warning', concept: 'fillField' },
       { msg: 'Enter clinic domain', type: 'warning', concept: 'fillField' },
       { msg: 'Invalid email or password', type: 'error', concept: 'authFailed', icon: 'error-circle' },
-      { msg: 'Email ID does not exist', type: 'error', concept: 'authFailed' },
+      { msg: 'Email ID does not exist', type: 'error', concept: 'authFailed', icon: 'error-circle' },
       { msg: 'Login failed (HTTP 500)', type: 'error', concept: 'authFailed', icon: 'error-circle' },
       { msg: 'Login failed. Please check your credentials.', type: 'error', concept: 'authFailed', icon: 'warning-triangle' },
       { msg: 'Something went wrong. Please try again.', type: 'error', concept: 'failed' },
@@ -135,8 +135,8 @@ const CATALOG: {
   {
     domain: 'Book Appointment',
     items: [
-      { msg: 'Appointment booked successfully', type: 'success', concept: 'created' },
-      { msg: 'Appointment updated successfully', type: 'success', concept: 'saved' },
+      { msg: 'Appointment booked successfully', type: 'success', concept: 'created', icon: 'calendar-check' },
+      { msg: 'Appointment updated successfully', type: 'success', concept: 'saved', icon: 'calendar-check' },
       { msg: 'Consultation removed', type: 'info', concept: 'removed' },
       { msg: 'Please enter patient name', type: 'warning', concept: 'fillField' },
       { msg: 'Please enter a valid email address', type: 'warning', concept: 'fillField' },
@@ -295,6 +295,7 @@ const TOTAL = FLAT.length;
 // unless the item sets its own `icon` (a per-message `icon` always wins).
 const CONCEPT_ICON: Partial<Record<ConceptKey, string>> = {
   sent: 'envelope',
+  archived: 'archive-box',
   failed: 'error-circle',
   network: 'error-circle',
   fileProblem: 'error-circle',
