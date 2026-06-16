@@ -299,6 +299,7 @@ const CONCEPT_ICON: Partial<Record<ConceptKey, string>> = {
   inventory: 'receipt',
   lowStock: 'receipt',
   removed: 'trash-bin',
+  download: 'download-tray',
   failed: 'error-circle',
   network: 'error-circle',
   fileProblem: 'error-circle',

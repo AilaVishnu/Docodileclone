@@ -26,6 +26,7 @@ import { ReactComponent as Ic_chevron_up } from "../../assets/icons/chevron-up.s
 import { ReactComponent as Ic_danger_triangle } from "../../assets/icons/danger-triangle.svg";
 import { ReactComponent as Ic_document_school } from "../../assets/icons/document-school.svg";
 import { ReactComponent as Ic_download } from "../../assets/icons/download.svg";
+import { ReactComponent as Ic_download_tray } from "../../assets/icons/download-tray.svg";
 import { ReactComponent as Ic_edit_pencil } from "../../assets/icons/edit-pencil.svg";
 import { ReactComponent as Ic_envelope } from "../../assets/icons/envelope.svg";
 import { ReactComponent as Ic_error_circle } from "../../assets/icons/error-circle.svg";
@@ -119,6 +120,7 @@ export const ICONS: Record<string, SvgComponent> = {
   "danger-triangle": Ic_danger_triangle,
   "document-school": Ic_document_school,
   "download": Ic_download,
+  "download-tray": Ic_download_tray,
   "edit-pencil": Ic_edit_pencil,
   "envelope": Ic_envelope,
   "error-circle": Ic_error_circle,
@@ -204,6 +206,7 @@ export const MULTICOLOR_ICONS = new Set<string>([
   "archive-box",
   "calendar-check",
   "capsule",
+  "download-tray",
   "check-circle",
   "danger-triangle",
   "envelope",
