@@ -21,6 +21,11 @@ type ToastProps = {
    */
   iconColor?: string;
   /**
+   * Optional background tint for the toast surface (e.g. a pale shade of the
+   * status colour). Defaults to the standard neutral surface.
+   */
+  surfaceColor?: string;
+  /**
    * Render in normal document flow instead of the default fixed bottom-right
    * overlay (no positioning / z-index / slide-in). For catalogs, docs and
    * stories that show several toasts at once.
@@ -28,7 +33,7 @@ type ToastProps = {
   inline?: boolean;
 };
 
-export function Toast({ message, isVisible, onClose, duration = 4000, actionLabel, onAction, inline = false, iconName = "buildings", iconColor }: ToastProps) {
+export function Toast({ message, isVisible, onClose, duration = 4000, actionLabel, onAction, inline = false, iconName = "buildings", iconColor, surfaceColor }: ToastProps) {
   useEffect(() => {
     if (isVisible && duration > 0) {
       const timer = setTimeout(onClose, duration);
@@ -38,8 +43,11 @@ export function Toast({ message, isVisible, onClose, duration = 4000, actionLabe
 
   if (!isVisible) return null;
 
+  const base = inline ? styles.containerInline : styles.container;
+  const containerStyle = surfaceColor ? { ...base, backgroundColor: surfaceColor } : base;
+
   return (
-    <div style={inline ? styles.containerInline : styles.container}>
+    <div style={containerStyle}>
       <Icon name={iconName} color={iconColor} tone="inherit" style={styles.icon} />
       <p style={styles.message}>{message}</p>
       {actionLabel && onAction && (

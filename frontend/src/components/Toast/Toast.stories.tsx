@@ -112,7 +112,7 @@ const CONCEPT_GROUP_META: Record<ConceptGroup, { label: string; color: string }>
 
 const CATALOG: {
   domain: string;
-  items: { msg: string; type: ToastType; concept: ConceptKey; icon?: string; iconColor?: string }[];
+  items: { msg: string; type: ToastType; concept: ConceptKey; icon?: string; iconColor?: string; bgColor?: string }[];
 }[] = [
   {
     domain: 'Auth & Login',
@@ -154,11 +154,11 @@ const CATALOG: {
   {
     domain: 'Appointment Queue',
     items: [
-      { msg: 'Marked as Arrived', type: 'success', concept: 'status', icon: 'status-dot', iconColor: colors.yellow200 },
-      { msg: 'Sent to doctor', type: 'success', concept: 'status', icon: 'status-dot', iconColor: colors.neutral700 },
-      { msg: 'Marked as Completed', type: 'success', concept: 'status', icon: 'status-dot', iconColor: colors.green200 },
-      { msg: 'Marked as No-Show', type: 'success', concept: 'status', icon: 'status-dot', iconColor: colors.neutral400 },
-      { msg: 'Appointment cancelled', type: 'success', concept: 'status', icon: 'status-dot', iconColor: colors.red100 },
+      { msg: 'Marked as Arrived', type: 'success', concept: 'status', icon: 'status-dot', iconColor: colors.yellow200, bgColor: colors.yellowAlpha10 },
+      { msg: 'Sent to doctor', type: 'success', concept: 'status', icon: 'status-dot', iconColor: colors.neutral700, bgColor: colors.alphaBlack0 },
+      { msg: 'Marked as Completed', type: 'success', concept: 'status', icon: 'status-dot', iconColor: colors.green200, bgColor: colors.greenAlpha10 },
+      { msg: 'Marked as No-Show', type: 'success', concept: 'status', icon: 'status-dot', iconColor: colors.neutral400, bgColor: colors.alphaBlack0 },
+      { msg: 'Appointment cancelled', type: 'success', concept: 'status', icon: 'status-dot', iconColor: colors.red100, bgColor: colors.redAlpha10 },
       { msg: 'Status updated', type: 'success', concept: 'status', icon: 'info-seal' },
       { msg: 'Bill waived for Ramesh Babu', type: 'success', concept: 'payment', icon: 'receipt-slash' },
       { msg: '₹500 billed via Cash for Ramesh Babu', type: 'success', concept: 'payment', icon: 'receipt' },
@@ -258,7 +258,7 @@ const CATALOG: {
     items: [
       { msg: 'Visit saved', type: 'success', concept: 'saved', icon: 'success-seal' },
       { msg: 'Changes saved', type: 'success', concept: 'saved', icon: 'success-seal' },
-      { msg: 'Visit marked complete', type: 'success', concept: 'status', icon: 'status-dot', iconColor: colors.green200 },
+      { msg: 'Visit marked complete', type: 'success', concept: 'status', icon: 'status-dot', iconColor: colors.green200, bgColor: colors.greenAlpha10 },
       { msg: 'Visit moved to today', type: 'success', concept: 'status', icon: 'calendar-check' },
       { msg: 'Saved template "Common cold"', type: 'success', concept: 'saved', icon: 'success-seal' },
       { msg: 'Loaded "Common cold"', type: 'success', concept: 'saved', icon: 'info-seal' },
@@ -335,11 +335,11 @@ function TypeTag({ type }: { type: ToastType }) {
   );
 }
 
-function ToastRow({ msg, type, icon, iconColor, trailing }: { msg: string; type: ToastType; icon?: string; iconColor?: string; trailing?: string }) {
+function ToastRow({ msg, type, icon, iconColor, bgColor, trailing }: { msg: string; type: ToastType; icon?: string; iconColor?: string; bgColor?: string; trailing?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
       <TypeTag type={type} />
-      <Toast inline message={msg} iconName={icon} iconColor={iconColor} isVisible duration={0} onClose={() => {}} />
+      <Toast inline message={msg} iconName={icon} iconColor={iconColor} surfaceColor={bgColor} isVisible duration={0} onClose={() => {}} />
       {trailing && <span style={{ fontSize: fonts.size.xs, color: colors.neutral400 }}>{trailing}</span>}
     </div>
   );
@@ -373,7 +373,7 @@ export const Catalog: StoryObj = {
             {section.domain} <span style={{ color: colors.neutral400, fontWeight: 400 }}>· {section.items.length}</span>
           </h3>
           {section.items.map((t, i) => (
-            <ToastRow key={`${section.domain}-${i}`} msg={t.msg} type={t.type} icon={iconFor(t)} iconColor={t.iconColor} />
+            <ToastRow key={`${section.domain}-${i}`} msg={t.msg} type={t.type} icon={iconFor(t)} iconColor={t.iconColor} bgColor={t.bgColor} />
           ))}
         </section>
       ))}
@@ -460,7 +460,7 @@ export const ByConcept: StoryObj = {
                 </div>
                 <div style={{ paddingLeft: 56 }}>
                   {items.map((t, i) => (
-                    <ToastRow key={`${c.key}-${i}`} msg={t.msg} type={t.type} icon={iconFor(t)} iconColor={t.iconColor} trailing={t.area} />
+                    <ToastRow key={`${c.key}-${i}`} msg={t.msg} type={t.type} icon={iconFor(t)} iconColor={t.iconColor} bgColor={t.bgColor} trailing={t.area} />
                   ))}
                 </div>
               </section>
