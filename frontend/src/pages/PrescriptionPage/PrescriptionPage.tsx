@@ -18,6 +18,13 @@ import { DurationPicker } from "../../components/DurationPicker/DurationPicker";
 import { AutocompleteTags } from "../../components/Autocomplete/AutocompleteTags";
 import { useDoctors } from "../../hooks/useDoctors";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
+import {
+  fetchPatientSummary,
+  generatePatientSummary,
+  parsePatientSummary,
+  getAIHealth,
+  type PatientSummary,
+} from "../../api/ai";
 import { PrescriptionQueue } from "./PrescriptionQueue";
 import { Patient } from "../../hooks/usePatients";
 import {
@@ -449,10 +456,6 @@ const ACTION_META: ActionMeta[] = [
 const NAV_ORDER = [4, 0, 1, 2, 3];
 const INFO_ACTION = 4;
 
-// Figma node 2143:10730 — Reports view, swapped in when "Reports" is active.
-// AI Summary copy comes from the backend per-patient — left blank until wired.
-// TODO(backend): replace with `useAiSummary(patientId).text`.
-const AI_SUMMARY_TEXT = "";
 
 // List-view config — single "Files" entry at action 1. Tabs are semantic
 // categories (not file formats) — the chip the user picks at upload time
@@ -1366,6 +1369,51 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   const [showEditPatient, setShowEditPatient] = React.useState(false);
   // AI Summary popover (opened from the ✨ button in the slim icon rail).
   const [showAiSummary, setShowAiSummary] = React.useState(false);
+  // AI patient summary — fetched (cached, free) on patient change and shown in
+  // the ✨ card + popover; the popover's Generate button calls the paid POST.
+  const [aiSummary, setAiSummary] = React.useState<PatientSummary | null>(null);
+  const [aiStale, setAiStale] = React.useState(false);       // backend says new visits invalidated the cache
+  const [aiConfigured, setAiConfigured] = React.useState<boolean | null>(null);
+  const [aiGenerating, setAiGenerating] = React.useState(false);
+  const [aiError, setAiError] = React.useState<string | null>(null);
+
+  // Load the CACHED summary whenever the patient changes (never calls OpenAI).
+  React.useEffect(() => {
+    if (!selectedPatientId) { setAiSummary(null); setAiStale(false); setAiError(null); return; }
+    let cancelled = false;
+    setAiError(null);
+    (async () => {
+      try {
+        const health = await getAIHealth();
+        if (cancelled) return;
+        setAiConfigured(health.configured);
+        if (!health.configured) { setAiSummary(null); return; }
+        const resp = await fetchPatientSummary(selectedPatientId);
+        if (cancelled) return;
+        setAiStale(!resp.generated);
+        setAiSummary(resp.content ? parsePatientSummary(resp.content) : null);
+      } catch (e) {
+        if (!cancelled) setAiError((e as Error).message || "Couldn't load summary");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedPatientId]);
+
+  // Explicit (paid) generation — wired to the popover's Generate/Regenerate.
+  const handleGenerateSummary = async () => {
+    if (!selectedPatientId || aiGenerating) return;
+    setAiGenerating(true);
+    setAiError(null);
+    try {
+      const resp = await generatePatientSummary(selectedPatientId);
+      setAiStale(!resp.generated);
+      setAiSummary(resp.content ? parsePatientSummary(resp.content) : null);
+    } catch (e) {
+      setAiError((e as Error).message || "Couldn't generate summary");
+    } finally {
+      setAiGenerating(false);
+    }
+  };
   // The currently-open file row. null = list view.
   const [viewerOpen, setViewerOpen] = React.useState<ListRow | null>(null);
   const handleAddRows = (rows: AddReportRow[]) => {
@@ -2127,7 +2175,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   <span style={styles.infoAiTitle}>AI summary</span>
                 </div>
                 <p style={styles.infoAiBody}>
-                  {AI_SUMMARY_TEXT || "No summary yet — an AI overview of this patient's history will appear here."}
+                  {aiConfigured === false
+                    ? "AI is not configured for this clinic."
+                    : aiSummary?.summary
+                      ? aiSummary.summary
+                      : "No summary yet — open AI Summary to generate one."}
                 </p>
               </Card>
             </div>
@@ -3085,7 +3137,37 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
           <div style={styles.aiPopoverBackdrop} onClick={() => setShowAiSummary(false)} />
           <div style={styles.aiPopover} role="dialog" aria-label="AI Summary">
             <h4 style={styles.aiSummaryTitle}>AI Summary</h4>
-            <p style={styles.aiSummaryBody}>{AI_SUMMARY_TEXT}</p>
+            {aiConfigured === false ? (
+              <p style={styles.aiSummaryBody}>AI is not configured for this clinic.</p>
+            ) : aiError ? (
+              <p style={styles.aiSummaryBody}>{aiError}</p>
+            ) : aiGenerating && !aiSummary ? (
+              <p style={styles.aiSummaryBody}>Generating…</p>
+            ) : aiSummary?.summary ? (
+              <>
+                <p style={styles.aiSummaryBody}>{aiSummary.summary}</p>
+                {aiSummary.activeConditions.length > 0 && (
+                  <p style={styles.aiSummaryBody}><strong>Active conditions:</strong> {aiSummary.activeConditions.join(", ")}</p>
+                )}
+                {aiSummary.allergies.length > 0 && (
+                  <p style={styles.aiSummaryBody}><strong>Allergies:</strong> {aiSummary.allergies.join(", ")}</p>
+                )}
+                {aiSummary.riskFlags.length > 0 && (
+                  <p style={styles.aiSummaryBody}><strong>Risk flags:</strong> {aiSummary.riskFlags.join(", ")}</p>
+                )}
+                {aiSummary.lastVisitGist && (
+                  <p style={styles.aiSummaryBody}><strong>Last visit:</strong> {aiSummary.lastVisitGist}</p>
+                )}
+                {aiStale && <p style={styles.aiSummaryStale}>New visits since this summary — regenerate for the latest.</p>}
+              </>
+            ) : (
+              <p style={styles.aiSummaryBody}>No summary yet for this patient.</p>
+            )}
+            {aiConfigured !== false && (
+              <button type="button" style={styles.aiGenerateBtn} onClick={handleGenerateSummary} disabled={aiGenerating}>
+                {aiGenerating ? "Generating…" : aiSummary?.summary ? "Regenerate" : "Generate"}
+              </button>
+            )}
           </div>
         </>
       )}

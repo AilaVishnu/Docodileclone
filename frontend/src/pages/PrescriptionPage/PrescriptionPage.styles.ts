@@ -1496,6 +1496,25 @@ export const styles: Record<string, CSSProperties> = {
     lineHeight: fonts.lineHeight.s,
     color: colors.neutral900,
   },
+  aiSummaryStale: {
+    margin: 0,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.xs,
+    color: colors.neutral500,
+  },
+  aiGenerateBtn: {
+    marginTop: spacing.xs,
+    alignSelf: "flex-start" as const,
+    padding: `${spacing["2xs"]} ${spacing.s}`,
+    border: `1px solid ${colors.neutral200}`,
+    borderRadius: radii.m,
+    backgroundColor: colors.neutral100,
+    color: colors.neutral900,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    fontWeight: fonts.weight.medium,
+    cursor: "pointer",
+  },
 
   // Figma node 2143:10938 — Reports table. Header row of column captions
   // (paragraph-xs, neutral500) followed by cream-filled data pills.
