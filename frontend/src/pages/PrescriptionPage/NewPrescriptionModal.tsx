@@ -24,7 +24,7 @@ export type NewPatientDraft = {
   name: string;
   phone: string;
   gender: string;
-  age: string;       // years, free-text — matches BookAppointment's "yrs" column
+  age: string;       // "years / months" (e.g. "4 / 5") — walk-in combine does years*12 + months
   dob: string;       // dd mm yyyy as typed; converted to yyyy-MM-dd on submit
   email: string;
   service: string;
@@ -370,10 +370,16 @@ function AddView({
   const phoneDigits = draft.phone.replace(/\D/g, "").replace(/^91/, "");
   const phoneValid = phoneDigits.length === 10;
 
-  // Age: digits only, max 3 chars.
-  const onAgeChange = (val: string) => {
-    const digits = val.replace(/\D/g, "").substring(0, 3);
-    setDraft((d) => ({ ...d, age: digits, ...(digits ? { dob: "" } : {}) }));
+  // Age: "years / months" — two digit-only inputs (yrs max 3, months max 2)
+  // stored as one "y / m" string so months aren't lost (the walk-in combine
+  // does years*12 + months, matching how booking persists age).
+  const ageY = draft.age.split("/")[0]?.trim() ?? "";
+  const ageM = draft.age.split("/")[1]?.trim() ?? "";
+  const setAgeParts = (y: string, m: string) => {
+    const yy = y.replace(/\D/g, "").substring(0, 3);
+    const mm = m.replace(/\D/g, "").substring(0, 2);
+    const combined = (yy || mm) ? `${yy} / ${mm}` : "";
+    setDraft((d) => ({ ...d, age: combined, ...(combined ? { dob: "" } : {}) }));
   };
 
   // DOB: calendar popover.
@@ -438,8 +444,12 @@ function AddView({
             </div>
           </Field>
           <span style={styles.dobAgeSeparator}>or</span>
-          <Field label="Age (years)" required>
-            <input type="text" value={draft.age} onChange={(e) => onAgeChange(e.target.value)} placeholder="Age" style={styles.textInput} />
+          <Field label="Age (yrs / mo)" required>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input type="text" value={ageY} onChange={(e) => setAgeParts(e.target.value, ageM)} placeholder="yy" style={styles.textInput} />
+              <span style={{ color: colors.neutral500 }}>/</span>
+              <input type="text" value={ageM} onChange={(e) => setAgeParts(ageY, e.target.value)} placeholder="mm" style={styles.textInput} />
+            </div>
           </Field>
         </div>
         <Field label="Gender" required>
