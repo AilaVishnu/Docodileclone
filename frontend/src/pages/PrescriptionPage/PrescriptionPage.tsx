@@ -2959,12 +2959,19 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   no appointment — whether its session is ended), never the entry
                   appointment, so a completed tab can't show a bogus "Complete
                   visit". Before completion: "Complete visit". After: hidden
-                  until an edit, then "Save changes". Clear all stays throughout
-                  the 24h window. */}
+                  until an edit, then "Save changes" — which STAYS visible once
+                  the visit has been touched (even after the silent blur
+                  auto-save clears `dirty`), so it doesn't vanish when the doctor
+                  clicks outside a field. Clear all stays throughout the 24h
+                  window. */}
               {canEditForm
                 && (() => {
                 const completed = activeCompleted;
-                if (completed && !dirty) return null;
+                // Hide only on a completed visit that's untouched since the tab
+                // opened. editedSinceLoadRef survives the auto-save (unlike
+                // `dirty`) and resets on tab switch / completion, so once the
+                // doctor edits, "Save changes" persists until they leave.
+                if (completed && !dirty && !editedSinceLoadRef.current) return null;
                 return (
                   <button
                     type="button"
