@@ -1504,6 +1504,20 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     };
   };
 
+  // Vitals that fall outside their valid clinical range (mirrors the per-field
+  // validation rendered in the vitals grid). We never persist or complete a
+  // visit with clinically-impossible measurements — saving/completing is
+  // blocked and the offending fields are highlighted with a toast.
+  const invalidVitalLabels = VITAL_CELLS.filter(({ cell: v, cellKey }) => {
+    const cell = vitalState[cellKey];
+    if (v.label === "BP") {
+      const [sys = "", dia = ""] = cell.value.split("/");
+      return !(isVitalValid("BP_sys", sys, cell.unit) && isVitalValid("BP_dia", dia, cell.unit));
+    }
+    return !isVitalValid(v.label, cell.value, cell.unit);
+  }).map(({ cell: v }) => v.label);
+  const hasInvalidVitals = invalidVitalLabels.length > 0;
+
   const handleSave = async (opts?: { silent?: boolean }) => {
     if (!activeVisit || !selectedPatientId) return;
     // Never write the form to a visit it wasn't loaded from. During a visit
@@ -1511,6 +1525,12 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     // saving in that gap would copy the old visit's data onto the new one (and
     // blank the old). Skip until the form has caught up to the active visit.
     if (loadedVisitId !== activeVisit.id) return;
+    // Block saving invalid vitals. The fields are already highlighted inline;
+    // an explicit Save click also gets a toast (auto-saves stay silent).
+    if (hasInvalidVitals) {
+      if (!opts?.silent) showToast("Enter valid vitals before saving");
+      return;
+    }
     setSaving(true);
     try {
       await updateVisit(activeVisit.id, buildSaveRequest());
@@ -1615,6 +1635,12 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // untouched old pending visit completes on its own date without fuss.
   const handleCompleteVisit = async () => {
     if (!activeVisit) return;
+    // Don't let a visit be completed/saved with out-of-range vitals — toast and
+    // highlight the offending fields instead of persisting bad data.
+    if (hasInvalidVitals) {
+      showToast("Enter valid vitals before completing");
+      return;
+    }
     await completeVisitInPlace();
   };
 
@@ -1665,6 +1691,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // it later like any other today visit.
   const moveToToday = async () => {
     if (!activeVisit || !selectedPatientId) { setMoveToTodayDate(null); return; }
+    // Same guard as save/complete — never relocate a visit carrying invalid
+    // vitals; keep the dialog open so the doctor can fix the highlighted fields.
+    if (hasInvalidVitals) { showToast("Enter valid vitals first"); return; }
     setSaving(true);
     const oldId = activeVisit.id;
     const apptId = activeVisit.appointmentId;
