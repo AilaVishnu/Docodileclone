@@ -746,14 +746,16 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // is locked permanently (read-only history). This intentionally covers
   // past visits the doctor left open — they stay editable until ended.
   const isLatestVisit = visits.length === 0 || activeTab === visits.length - 1;
-  // Editability is keyed off the VISIT'S DATE, not when it was completed: a
-  // visit dated today (within 24h) is fully editable for the whole day; once
-  // its date passes 24h it hard-locks into a historic record. Completion does
-  // not extend this — a visit completed late still locks by its own (old)
-  // date. The one exception is an OPEN in-progress session (below), which
-  // stays editable regardless of age so the doctor can finish or relocate it.
+  // Editability runs on a 24h timer that STARTS when the View Pad is opened
+  // (sessionStartedAt) — NOT the visit date, and NOT the end of the
+  // consultation. While the session is open (un-ended) the pad stays editable
+  // regardless of age so the doctor can finish it; once ended/completed it
+  // stays editable for 24h FROM THE OPEN, then hard-locks. A visit that was
+  // never opened (no session start) falls back to its visit date so today's
+  // fresh visits are still editable.
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
   const visitMs = activeVisit?.visitDate ? new Date(activeVisit.visitDate).getTime() : null;
+  const sessionStartMs = activeVisit?.sessionStartedAt ? new Date(activeVisit.sessionStartedAt).getTime() : null;
   // Whether THIS visit is finished. For an appointment-linked visit that's the
   // appointment's own status (read from the visit DTO, not the appointment the
   // chart was opened through). A visit with NO appointment (e.g. a manually
@@ -773,9 +775,18 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     activeVisit?.sessionStartedAt != null &&
     activeVisit?.sessionEndedAt == null &&
     !activeCompleted;
-  const visitWithin24h =
-    visitMs != null && !Number.isNaN(visitMs) && Date.now() - visitMs < ONE_DAY_MS;
-  const isWithinBuffer = hasOpenSession || visitWithin24h;
+  const isWithinBuffer = (() => {
+    // Open consultation (pad opened, not yet ended) — always editable so it can
+    // be finished, regardless of age.
+    if (hasOpenSession) return true;
+    // Ended/completed → editable for 24h counted FROM when the pad was opened.
+    if (sessionStartMs != null && !Number.isNaN(sessionStartMs)) {
+      return Date.now() - sessionStartMs < ONE_DAY_MS;
+    }
+    // Never opened (no session start) → fall back to the visit date so a fresh
+    // today visit is editable until its date passes 24h.
+    return visitMs != null && !Number.isNaN(visitMs) && Date.now() - visitMs < ONE_DAY_MS;
+  })();
   const isEditable = isWithinBuffer;
 
   // Edit flag used by every gate below. The form is editable whenever the
