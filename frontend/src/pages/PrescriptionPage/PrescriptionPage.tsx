@@ -719,6 +719,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   const [privateNotesValue, setPrivateNotesValue] = React.useState<string>("");
   const [reviewNotesValue, setReviewNotesValue] = React.useState<string>("");
   const [saving, setSaving] = React.useState<boolean>(false);
+  // Dedicated flag for the "+ New Visit" action ONLY. The shared `saving` flag
+  // flips on every silent blur/debounce auto-save, which made the New Visit
+  // button flicker between "New Visit"/"Creating…" (and enabled/disabled) while
+  // the doctor typed. This tracks just the add-visit op so the button is stable.
+  const [addingVisit, setAddingVisit] = React.useState<boolean>(false);
   // When completing an OLD, never-finished consultation, we don't complete it
   // on its stale date — we move its data to a fresh visit dated today and drop
   // the old one. This holds the original visit's date label while the
@@ -1742,6 +1747,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   const handleAddVisit = async () => {
     if (!selectedPatientId) return;
     setSaving(true);
+    setAddingVisit(true);
     try {
       // Persist any unsaved edits on the CURRENT visit before switching to the
       // new one, so adding a visit can never appear to drop the previous one's
@@ -1784,6 +1790,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       showToast(`Add visit failed: ${(e as Error).message}`);
     } finally {
       setSaving(false);
+      setAddingVisit(false);
     }
   };
 
@@ -2255,11 +2262,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   type="button"
                   style={styles.newVisitBtn}
                   onClick={handleAddVisit}
-                  disabled={saving}
+                  disabled={addingVisit}
                   title="Add a new visit"
                 >
                   <span style={styles.newVisitPlus} aria-hidden="true">+</span>
-                  <span>{saving ? "Creating…" : "New Visit"}</span>
+                  <span>{addingVisit ? "Creating…" : "New Visit"}</span>
                 </button>
               </div>
 
