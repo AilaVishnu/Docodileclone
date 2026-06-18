@@ -456,8 +456,9 @@ const AI_SUMMARY_TEXT = "";
 
 // List-view config — single "Files" entry at action 1. Tabs are semantic
 // categories (not file formats) — the chip the user picks at upload time
-// drives both the table and these filter chips.
-// TODO(backend): replace empty `rows` with `useFiles(patientId).data`.
+// drives both the table and these filter chips. NOTE: the Files tab's rows
+// come from `serverFiles` (fetched from the backend); `rows` here is only the
+// static config scaffold, not the live data.
 type ListViewConfig = {
   title: string;
   subtitle: string;
