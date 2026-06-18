@@ -34,6 +34,17 @@
     "extends": [
       "react-app",
       "react-app/jest"
+    ],
+    "overrides": [
+      {
+        "files": [
+          "**/*.stories.tsx",
+          "src/sb/**"
+        ],
+        "rules": {
+          "react-hooks/rules-of-hooks": "off"
+        }
+      }
     ]
   },
   "browserslist": {
