@@ -14,10 +14,13 @@ import com.example.docodile.web.PatientContentMatch
 import com.example.docodile.web.RxRowDTO
 import com.example.docodile.web.SaveVisitRequest
 import com.example.docodile.web.VisitDTO
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.server.ResponseStatusException
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 
 @Service
@@ -89,6 +92,30 @@ class VisitService(
     // Single-visit appointment status lookup (used on create/update/get).
     private fun statusFor(appointmentId: UUID?): String? =
         appointmentId?.let { appointmentRepository.findById(it).orElse(null)?.status }
+
+    // Server-side 24h edit-window guard — mirrors the prescription pad's
+    // `canEditForm`. Defence in depth: the UI already locks the form, but a
+    // direct API call must not amend a visit past its window. The window runs
+    // from when the View Pad was opened (sessionStartedAt); an OPEN (un-ended,
+    // not-completed) consultation stays editable so it can be finished, and a
+    // never-opened visit falls back to its visit date.
+    private fun requireWithinEditWindow(visit: Visit) {
+        val now = Instant.now().toEpochMilli()
+        val dayMs = 24L * 60 * 60 * 1000
+        val completed = statusFor(visit.appointmentId)?.uppercase() == "COMPLETED" ||
+            (visit.appointmentId == null && visit.sessionEndedAt != null)
+        // Open consultation — always editable (so it can be completed).
+        if (visit.sessionStartedAt != null && visit.sessionEndedAt == null && !completed) return
+        val started = visit.sessionStartedAt
+        val refMs = if (started != null) {
+            started.toEpochMilli()                              // 24h from pad-open
+        } else {
+            visit.visitDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() // never opened → visit date
+        }
+        if (now - refMs >= dayMs) {
+            throw ResponseStatusException(HttpStatus.CONFLICT, "This visit's 24-hour edit window has closed")
+        }
+    }
 
     // Patient Files "notes / prescriptions" search: match the keyword across
     // visit free-text and prescription text, returning one hit per
@@ -168,6 +195,7 @@ class VisitService(
         val clinicId = currentUser.clinicId()
         val visit = visitRepository.findByIdAndClinicId(visitId, clinicId)
             ?: throw IllegalArgumentException("Visit not found")
+        requireWithinEditWindow(visit)
         if (request.visitDate != null) visit.visitDate = request.visitDate
         applyRequest(visit, request, clinicId)
         visit.updatedAt = Instant.now()

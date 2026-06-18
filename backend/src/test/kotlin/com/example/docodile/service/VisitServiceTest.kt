@@ -25,6 +25,8 @@ import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.verify
 import org.mockito.junit.jupiter.MockitoExtension
+import org.springframework.web.server.ResponseStatusException
+import java.time.Instant
 import java.time.LocalDate
 import java.util.Optional
 import java.util.UUID
@@ -107,6 +109,26 @@ class VisitServiceTest {
             visitService.create(patient.id, SaveVisitRequest())
         }
         assertNotNull(ex.message)
+    }
+
+    @Test
+    fun `update rejects edits past the 24h edit window`() {
+        val clinicId = UUID.randomUUID()
+        val visitId = UUID.randomUUID()
+        val clinic = ClinicEntity(id = clinicId, name = "C")
+        val patient = Patient(id = UUID.randomUUID(), clinic = clinic)
+        // Pad opened 3 days ago and ended; no appointment → finished. Well past
+        // the 24h window measured from pad-open, so an update must be rejected.
+        val stale = Visit(id = visitId, clinic = clinic, patient = patient, visitDate = LocalDate.now().minusDays(3))
+        stale.sessionStartedAt = Instant.now().minusSeconds(3 * 24 * 3600)
+        stale.sessionEndedAt = Instant.now().minusSeconds(3 * 24 * 3600 - 600)
+
+        `when`(currentUser.clinicId()).thenReturn(clinicId)
+        `when`(visitRepository.findByIdAndClinicId(visitId, clinicId)).thenReturn(stale)
+
+        assertThrows(ResponseStatusException::class.java) {
+            visitService.update(visitId, SaveVisitRequest())
+        }
     }
 
     private fun <T> anyList(): List<T> = org.mockito.ArgumentMatchers.anyList()
