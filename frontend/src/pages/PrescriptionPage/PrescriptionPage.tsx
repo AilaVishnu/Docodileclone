@@ -1415,18 +1415,23 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   };
   // Action indices after the Reports/Files merge:
   //   0 = Visits   1 = Files   2 = Timeline   3 = Bills
-  const comingSoonLabel = activeAction === 2 ? "Timeline" : activeAction === 3 ? "Bills" : null;
+  // Header label per section. Timeline (2) is implemented (a visit feed);
+  // only Bills (3) is still a "coming soon" placeholder.
+  const sectionLabel = activeAction === 2 ? "Timeline" : activeAction === 3 ? "Bills" : null;
+  const comingSoonLabel = activeAction === 3 ? "Bills" : null;
   const headerTitle =
-    listViewConfig?.title ?? comingSoonLabel ?? "Visits";
-  // Subtitle is derived from the displayed row count for list views (backend
-  // data + client uploads), defaults to a placeholder for Coming Soon, and
-  // stays static for the default Visits view.
+    listViewConfig?.title ?? sectionLabel ?? "Visits";
+  // Subtitle: row count for list views (backend data + client uploads),
+  // visit count for the Timeline feed, the placeholder for Bills, and a static
+  // line for the default Visits view.
   const fileCount = activeAction === 1 ? serverFiles.length : (listViewConfig?.rows.length ?? 0);
   const headerSubtitle = listViewConfig
     ? `${fileCount} ${listViewConfig.title.toLowerCase()} on file`
-    : comingSoonLabel
-      ? "Coming soon"
-      : "Patient visit history and prescription";
+    : activeAction === 2
+      ? `${visits.length} ${visits.length === 1 ? "visit" : "visits"}`
+      : comingSoonLabel
+        ? "Coming soon"
+        : "Patient visit history and prescription";
 
   // Each collapsible section starts expanded; clicking the header chevron toggles.
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({
