@@ -151,8 +151,6 @@ export function SessionTrayButton({ onNavigate }: SessionTrayButtonProps) {
     return () => document.removeEventListener("mousedown", onMouseDown);
   }, [open]);
 
-  if (sessions.length === 0) return null;
-
   const handleSessionClick = (s: ActiveSession) => {
     setPendingSessionNav({ patient: toPatient(s), appointmentId: s.appointmentId });
     setOpen(false);
@@ -170,12 +168,17 @@ export function SessionTrayButton({ onNavigate }: SessionTrayButtonProps) {
         onMouseLeave={() => setHovered(false)}
       >
         <Icon name="prescription" tone="inherit" />
-        <span style={styles.badge}>{sessions.length}</span>
+        {/* Count badge only when there's at least one session — the icon itself
+            is permanent, but a "0" pill would read as a bug. */}
+        {sessions.length > 0 && <span style={styles.badge}>{sessions.length}</span>}
       </button>
 
       {open && (
         <div style={styles.dropdown}>
           <p style={styles.dropdownTitle}>Active sessions</p>
+          {sessions.length === 0 && (
+            <p style={styles.emptyState}>No active sessions</p>
+          )}
           {sessions.map((s) => {
             const startMs = new Date(s.sessionStartedAt).getTime();
             const elapsedMs = now - startMs;
@@ -267,6 +270,12 @@ const styles: Record<string, React.CSSProperties> = {
     textTransform: "uppercase",
     letterSpacing: 0.5,
     margin: `${spacing["2xs"]} ${spacing.s}`,
+  },
+  emptyState: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    color: colors.neutral500,
+    margin: `${spacing.xs} ${spacing.s} ${spacing.s}`,
   },
   sessionRow: {
     display: "flex",
