@@ -32,6 +32,7 @@ import {
   type PendingSessionNav,
 } from "../../components/TopNav/SessionTrayButton";
 import { markStarted, unmarkStarted } from "../../utils/sessionStarted";
+import { markVisitCompleted, wasVisitCompleted } from "../../utils/visitCompleted";
 import { useVisits } from "../../hooks/useVisits";
 import { createVisit, updateVisit, deleteVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
 import { listRxTemplates, saveRxTemplate, deleteRxTemplate } from "../../api/rxTemplates";
@@ -605,14 +606,31 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // doctor actually edits. Set on form input + rx mutations, cleared on save
   // and on visit change.
   const [dirty, setDirty] = React.useState<boolean>(false);
+  // On an ALREADY-COMPLETED visit, "Save changes" shows only while there's a
+  // pending edit: set on edit, KEPT through the silent blur auto-save (so it
+  // stays available for a manual save), cleared only when the visit is saved /
+  // completed (explicit) or on tab switch. State so clearing re-renders it away.
+  const [pendingSave, setPendingSave] = React.useState<boolean>(false);
+  // Load-settling guard. When a visit's saved data is poured into the controlled
+  // form, a stray change event can bubble to the form-wrapper onChange (or a
+  // controlled child can re-emit) and look like a doctor edit — which would wrongly
+  // surface "Save changes" the instant the pad opens. We mark a short settling
+  // window on every (re)populate and ignore dirty-flagging during it; a real edit
+  // can't happen in the few ms before the first paint. flagDirty() is the single
+  // choke point every "this was a user edit" path goes through.
+  const loadSettlingRef = React.useRef<boolean>(true);
+  const flagDirty = React.useCallback(() => {
+    if (loadSettlingRef.current) return;
+    setDirty(true);
+  }, []);
   const [rxRows, _setRxRows] = React.useState<RxRowDraft[]>([]);
   // Every USER rx mutation (add / delete row, picker change, etc.) flags
   // dirty. The visit-load populate and the async generic-name enrichment use
   // the raw `_setRxRows` so loading a visit never looks like an edit.
   const setRxRows = React.useCallback((value: React.SetStateAction<RxRowDraft[]>) => {
     _setRxRows(value);
-    setDirty(true);
-  }, []);
+    flagDirty();
+  }, [flagDirty]);
   const [rxInteractions, setRxInteractions] = React.useState<Array<{ drug: string; interactsWith: string; comment: string }>>([]);
 
   // Per-medicine autofill: index this patient's PAST prescriptions by medicine
@@ -703,20 +721,20 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // `_set*` versions so loading a visit is never treated as an edit.
   const setHistoryValues = React.useCallback((value: React.SetStateAction<Record<string, string>>) => {
     _setHistoryValues(value);
-    setDirty(true);
-  }, []);
+    flagDirty();
+  }, [flagDirty]);
   const setDiagnosisValue = React.useCallback((value: React.SetStateAction<string>) => {
     _setDiagnosisValue(value);
-    setDirty(true);
-  }, []);
+    flagDirty();
+  }, [flagDirty]);
   const setComplaintsValue = React.useCallback((value: React.SetStateAction<string>) => {
     _setComplaintsValue(value);
-    setDirty(true);
-  }, []);
+    flagDirty();
+  }, [flagDirty]);
   const setTestsValue = React.useCallback((value: React.SetStateAction<string>) => {
     _setTestsValue(value);
-    setDirty(true);
-  }, []);
+    flagDirty();
+  }, [flagDirty]);
   // Notes-for-Patient + Private Notes + Review-Notes are now controlled too
   // so we can serialize them on Save.
   const [notesForPatientValue, setNotesForPatientValue] = React.useState<string>("");
@@ -868,7 +886,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     setReviewDate(d);
     setReviewDays(String(Math.max(0, daysFromToday(d))));
     setShowReviewDatePicker(false);
-    setDirty(true);
+    flagDirty();
   };
   const changeReviewDays = (raw: string) => {
     const cleaned = raw.replace(/\D/g, "");
@@ -880,6 +898,12 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // Uncontrolled inputs are remounted via the `key` on the visits wrapper
   // below so they pick up new defaultValues automatically.
   React.useEffect(() => {
+    // Open the load-settling window: any change events that fire while we pour
+    // this visit's data into the controlled form below must NOT be treated as
+    // doctor edits. Cleared after the first paint (rAF) — by then a real edit is
+    // the only thing that can flag dirty.
+    loadSettlingRef.current = true;
+    const raf = requestAnimationFrame(() => { loadSettlingRef.current = false; });
     // Mark that the form now holds THIS visit's data (set in the same state
     // batch as the fields below, so handleSave's guard sees them in sync).
     setLoadedVisitId(activeVisit?.id ?? null);
@@ -934,6 +958,13 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     setPrivateNotesValue(activeVisit?.privateNotes ?? "");
     setReferDoctorId(activeVisit?.referDoctorId ?? null);
     setReferOpen(false);
+    // Loading a visit is not an edit — clear any pending-edit state in the same
+    // effect that pours the data in, so the footer button reads "Complete visit"
+    // (not "Save changes") the instant a pre-filled pad opens. (editedSinceLoadRef
+    // is cleared by the visit-change reset effect / cancelMoveToToday.)
+    setDirty(false);
+    setPendingSave(false);
+    return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, activeVisit?.id, revertNonce]);
 
@@ -1148,7 +1179,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
 
   const setVitalValue = (key: string, value: string) => {
     setVitalState((prev) => ({ ...prev, [key]: { ...prev[key], value } }));
-    setDirty(true);
+    flagDirty();
   };
   const validateVitalOnEnter = (
     e: React.KeyboardEvent<HTMLInputElement>,
@@ -1176,7 +1207,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       if (!toggle) return prev;
       return { ...prev, [key]: { value: toggle.convert(cell.value), unit: toggle.altUnit } };
     });
-    setDirty(true);
+    flagDirty();
   };
 
   // List-view tab state — shared across Reports / Files. Defaults to the
@@ -1546,9 +1577,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       // so an in-progress timer survives auto-save round-trips. The
       // bar-driven handlers below also overwrite these explicitly on
       // Start / End.
-      sessionStartedAt: activeVisit?.sessionStartedAt ?? null,
-      sessionEndedAt: activeVisit?.sessionEndedAt ?? null,
-      sessionDurationSec: activeVisit?.sessionDurationSec ?? null,
+      // Re-opening a completed visit (reopenStartRef set) restarts the session:
+      // fresh start, cleared end/duration — so the queue timer runs again.
+      sessionStartedAt: reopenStartRef.current ?? activeVisit?.sessionStartedAt ?? null,
+      sessionEndedAt: reopenStartRef.current ? null : (activeVisit?.sessionEndedAt ?? null),
+      sessionDurationSec: reopenStartRef.current ? null : (activeVisit?.sessionDurationSec ?? null),
       prescriptions: rxRows
         .filter((r) =>
           r.medicine || r.medicineNote || r.dosage || r.whenToTake ||
@@ -1606,6 +1639,8 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       // re-fetches and reflects those edits.
       clinicWideRxCacheRef.current.clear();
       // Auto-saves stay silent; only explicit actions toast.
+      // Explicit (non-silent) save dismisses the "Save changes" button; the
+      // silent blur auto-save leaves it up so a manual save stays available.
       if (!opts?.silent) showToast("Visit saved");
     } catch (e) {
       // Auto-saves stay quiet on success but should still surface
@@ -1647,18 +1682,32 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // Flip-to-IN_PROGRESS guard — fires at most once per appointment so we don't
   // re-patch the status on every dirty toggle.
   const startedInProgressRef = React.useRef<string | null>(null);
+  // When the doctor edits an already-COMPLETED ("Done") visit we re-open it;
+  // this holds the fresh session start so buildSaveRequest restarts the timer.
+  const reopenStartRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (!dirty) return;
     editedSinceLoadRef.current = true;
-    // Editing a patient who's been sent to the doctor (AT_DOC) flips the
-    // appointment to IN_PROGRESS so the queue reflects the live consultation.
-    // Once per appointment; "Complete visit" later moves it to COMPLETED.
+    setPendingSave(true);
+    // Editing flips the appointment back to IN_PROGRESS (Ongoing) so the queue
+    // and the prescription card show a live consultation again — from AT_DOC
+    // (just sent to the doctor) and from COMPLETED (re-opening a "Done" visit).
+    // Re-opening a completed visit also RESTARTS its session timer (stamped into
+    // buildSaveRequest, persisted by the next auto-save). Once per appointment.
     const apptId = activeVisit?.appointmentId;
+    const apptStatus = (activeVisit?.appointmentStatus ?? "").toUpperCase();
     if (apptId &&
-        (activeVisit?.appointmentStatus ?? "").toUpperCase() === "AT_DOC" &&
+        (apptStatus === "AT_DOC" || apptStatus === "COMPLETED") &&
         startedInProgressRef.current !== apptId) {
       startedInProgressRef.current = apptId;
       if (apptId === selectedAppointmentId) setSelectedAppointmentStatus("IN_PROGRESS");
+      if (apptStatus === "COMPLETED") {
+        reopenStartRef.current = new Date().toISOString();
+        if (selectedPatient) markStarted(selectedPatient.id);
+        // Persist the restarted session NOW (not only on the next blur) so the
+        // queue's live timer appears promptly instead of after a delay.
+        void updateVisit(activeVisit.id, buildSaveRequest());
+      }
       void patchAppointmentStatus(apptId, "IN_PROGRESS").then(() => refetchVisits());
     }
     // Editing an OLD, still-in-progress visit → ask to move it to today
@@ -1676,7 +1725,10 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // unsaved-edit flag left from the previous visit.
   React.useEffect(() => {
     setDirty(false);
+    setPendingSave(false);
     editedSinceLoadRef.current = false;
+    startedInProgressRef.current = null;
+    reopenStartRef.current = null;
   }, [activeVisit?.id]);
 
 
@@ -1731,21 +1783,33 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   const completeVisitInPlace = async () => {
     if (!activeVisit) return;
     const apptId = activeVisit.appointmentId;
-    const alreadyCompleted = activeCompleted;
+    // currentlyCompleted gates the status patch (only flip → COMPLETED when the
+    // live status isn't already there). everCompleted is for the toast/label —
+    // true even on an amend re-open (live status back to IN_PROGRESS).
+    const currentlyCompleted = activeCompleted;
+    // Re-completing after an amend re-open (reopenStartRef set) → "Changes
+    // saved" rather than "Visit marked complete".
+    const everCompleted = currentlyCompleted || reopenStartRef.current != null;
     // Stop the consultation timer and persist the form. The backend computes
     // the duration from sessionStartedAt (set when the doctor opened the pad)
     // to sessionEndedAt. On the FIRST completion we stamp the end time now;
     // re-saving an already-completed visit preserves the original end time so
     // the recorded duration isn't inflated.
-    const endIso = activeVisit.sessionEndedAt ?? new Date().toISOString();
+    // Fresh end time when re-completing a re-opened visit (reopenStartRef set);
+    // otherwise preserve the original end so re-saving doesn't inflate duration.
+    const endIso = (reopenStartRef.current ? null : activeVisit.sessionEndedAt) ?? new Date().toISOString();
     const req: SaveVisitRequest = {
       ...buildSaveRequest(),
       sessionEndedAt: endIso,
     };
     await updateVisit(activeVisit.id, req);
-    if (apptId && !alreadyCompleted) {
-      // Flip status only on the first completion. A later re-save keeps the
-      // visit Completed — it never goes back to In Progress.
+    // Mark this visit completed-at-least-once so the footer button switches to
+    // "Save changes" from now on (the live status flips back to IN_PROGRESS on
+    // a later amend re-open, so the button can't rely on status alone).
+    markVisitCompleted(activeVisit.id);
+    if (apptId && !currentlyCompleted) {
+      // Flip status to COMPLETED whenever it isn't already (first completion OR
+      // re-completing after an amend re-opened it to IN_PROGRESS).
       await patchAppointmentStatus(apptId, "COMPLETED");
       // Clear the "Ongoing" flag so the completed card shows Completed.
       if (selectedPatient) unmarkStarted(selectedPatient.id);
@@ -1758,8 +1822,15 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     // the visit we completed IS the entry appointment.
     if (apptId && apptId === selectedAppointmentId) setSelectedAppointmentStatus("COMPLETED");
     setDirty(false);
+    setPendingSave(false);
     editedSinceLoadRef.current = false;
-    showToast(alreadyCompleted ? "Changes saved" : "Visit marked complete");
+    // Clear the re-open guards so a later edit re-opens it (timer + Ongoing)
+    // again. The footer label now keys off the completed-marker set above, so it
+    // stays "Save changes" even after the re-open flips status back to
+    // IN_PROGRESS.
+    startedInProgressRef.current = null;
+    reopenStartRef.current = null;
+    showToast(everCompleted ? "Changes saved" : "Visit marked complete");
   };
 
   // Confirm action for the "move to today" dialog (triggered the moment the
@@ -1814,6 +1885,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   const cancelMoveToToday = () => {
     setMoveToTodayDate(null);
     setDirty(false);
+    setPendingSave(false);
     editedSinceLoadRef.current = false;
     setRevertNonce((n) => n + 1);
   };
@@ -1830,11 +1902,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     }
   }, [selectedPatient, selectedAppointmentId, selectedAppointmentStatus]);
 
-  // Start the consultation timer the moment the doctor opens the pad for an
-  // appointment that's with them (At Doc / In Progress): stamp
-  // sessionStartedAt once. Server-persisted; the backend computes the elapsed
-  // duration up to "Complete visit". Guarded so it fires once per visit and
-  // never overwrites a start time that's already set.
+  // Opening the pad STARTS the consultation: the moment the doctor opens an
+  // appointment that's with them (At Doc), flip it to IN_PROGRESS (Ongoing) and
+  // stamp sessionStartedAt — no edit required. So the queue + card show Ongoing
+  // and the live timer runs from pad-open. Guarded to fire once per visit and
+  // never overwrite an existing start time.
   const timerStartedForVisitRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (!activeVisit || !selectedAppointmentId) return;
@@ -1844,6 +1916,12 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     const apptStatus = (selectedAppointmentStatus ?? "").toUpperCase();
     if (apptStatus !== "AT_DOC" && apptStatus !== "IN_PROGRESS") return;
     timerStartedForVisitRef.current = activeVisit.id;
+    // Flip AT_DOC → IN_PROGRESS right on open (not just on edit) so the queue
+    // reflects the live consultation immediately.
+    if (apptStatus === "AT_DOC") {
+      setSelectedAppointmentStatus("IN_PROGRESS");
+      void patchAppointmentStatus(selectedAppointmentId, "IN_PROGRESS");
+    }
     const req: SaveVisitRequest = {
       ...buildSaveRequest(),
       sessionStartedAt: new Date().toISOString(),
@@ -2142,7 +2220,10 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
           // Any descendant input/textarea/select change bubbles here — flag
           // unsaved edits so the "Save changes" button surfaces on an
           // already-completed visit only after the doctor actually edits.
-          onChange={() => { if (canEditForm) setDirty(true); }}
+          // flagDirty() ignores the stray change events that fire while a
+          // visit's data is loading into the controlled form (load-settling
+          // guard), so opening a pre-filled pad never looks pre-edited.
+          onChange={() => { if (canEditForm) flagDirty(); }}
           // Save-on-blur: any descendant input / textarea / select that
           // loses focus triggers a silent save. React.onBlur surfaces the
           // bubbled focusout, so a single handler at the form root covers
@@ -2902,7 +2983,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                     e.preventDefault();
                                     setReferDoctorId(d.id);
                                     setReferOpen(false);
-                                    setDirty(true);
+                                    flagDirty();
                                   }}
                                 >
                                   <span style={styles.referMenuItemName}>{d.name}</span>
@@ -3066,36 +3147,39 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
               {/* Complete visit / Save changes — on any EDITABLE visit (today /
                   within 24h, or an open in-progress session). canEditForm
                   hard-locks visits past their 24h window, so a historic visit
-                  shows no button. The label is driven by the ACTIVE VISIT's own
-                  completion state (its appointment status, or — for a visit with
-                  no appointment — whether its session is ended), never the entry
-                  appointment, so a completed tab can't show a bogus "Complete
-                  visit". Before completion: "Complete visit". After: hidden
-                  until an edit, then "Save changes" — which STAYS visible once
-                  the visit has been touched (even after the silent blur
-                  auto-save clears `dirty`), so it doesn't vanish when the doctor
-                  clicks outside a field. Clear all stays throughout the 24h
-                  window. */}
+                  shows no button. The label + visibility key off whether THIS VISIT
+                  has ever been completed (persisted: COMPLETED status, or the
+                  localStorage marker set on first completion — both survive
+                  navigation), NOT the live IN_PROGRESS status:
+                    • NEVER completed (fresh At-Doc, OR a session left running in
+                      progress) → "Complete visit", ALWAYS visible — even while
+                      editing, and even when re-opened later — so the doctor can
+                      always end the consultation. It never flips to "Save" before
+                      the first completion.
+                    • Completed at least once → amend mode: "Save changes" only
+                      while there's a pending edit (appears on edit, stays through
+                      the silent blur auto-save, clears on save), hidden at rest.
+                  Both labels run the SAME action — save the form + end/(re)complete
+                  the visit. Clear all stays throughout the 24h window. */}
               {canEditForm
                 && (() => {
-                const completed = activeCompleted;
-                // Hide only on a completed visit that's untouched since the tab
-                // opened. editedSinceLoadRef survives the auto-save (unlike
-                // `dirty`) and resets on tab switch / completion, so once the
-                // doctor edits, "Save changes" persists until they leave.
-                if (completed && !dirty && !editedSinceLoadRef.current) return null;
+                const everCompleted =
+                  activeCompleted || (activeVisit ? wasVisitCompleted(activeVisit.id) : false);
+                // Completed → amend mode: hidden until there's a pending edit. The
+                // load-settling guard keeps a freshly-opened completed pad from
+                // phantom-dirtying itself into "Save changes".
+                if (everCompleted && !dirty && !pendingSave) return null;
                 return (
                   <button
                     type="button"
                     style={{ ...styles.barBtn, backgroundColor: colors.red100, color: colors.neutral100 }}
-                    // onMouseDown + preventDefault so the handler runs BEFORE the
-                    // focused field blurs — otherwise the blur fires a silent
-                    // auto-save that clears the dirty flag and hides this button
-                    // before the click lands (the "no toast" bug).
+                    // onMouseDown + preventDefault so it runs before the focused
+                    // field blurs (the blur's silent auto-save would otherwise
+                    // race the click).
                     onMouseDown={(e) => { e.preventDefault(); void handleCompleteVisit(); }}
                   >
                     <Icon name="check" size={18} tone="inherit" />
-                    <span>{completed ? "Save changes" : "Complete visit"}</span>
+                    <span>{everCompleted ? "Save changes" : "Complete visit"}</span>
                   </button>
                 );
               })()}
