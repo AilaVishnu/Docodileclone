@@ -3156,19 +3156,28 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                       editing, and even when re-opened later — so the doctor can
                       always end the consultation. It never flips to "Save" before
                       the first completion.
-                    • Completed at least once → amend mode: "Save changes" only
-                      while there's a pending edit (appears on edit, stays through
-                      the silent blur auto-save, clears on save), hidden at rest.
+                    • Completed at least once → amend mode: "Save changes" shown
+                      while there's a pending edit OR while a re-opened session is
+                      still RUNNING (so the doctor can always end a live timer),
+                      hidden only once the session is ended AND nothing is pending.
                   Both labels run the SAME action — save the form + end/(re)complete
                   the visit. Clear all stays throughout the 24h window. */}
               {canEditForm
                 && (() => {
                 const everCompleted =
                   activeCompleted || (activeVisit ? wasVisitCompleted(activeVisit.id) : false);
-                // Completed → amend mode: hidden until there's a pending edit. The
+                // A live (running) session — the timer is going (started, not yet
+                // ended). The doctor may have stepped out mid-treatment leaving it
+                // running on purpose, so the button must stay available to END it
+                // even with no pending edit.
+                const liveSession =
+                  activeVisit?.sessionStartedAt != null && activeVisit?.sessionEndedAt == null;
+                // Completed → amend mode: hidden only when the session is already
+                // ended AND there's nothing pending. A re-opened completed visit
+                // whose timer is still running keeps the button (to end it). The
                 // load-settling guard keeps a freshly-opened completed pad from
                 // phantom-dirtying itself into "Save changes".
-                if (everCompleted && !dirty && !pendingSave) return null;
+                if (everCompleted && !liveSession && !dirty && !pendingSave) return null;
                 return (
                   <button
                     type="button"
