@@ -1644,9 +1644,23 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // old, pending visit can tell "you changed something → move it to today"
   // from "untouched → just end the consultation in place".
   const editedSinceLoadRef = React.useRef(false);
+  // Flip-to-IN_PROGRESS guard — fires at most once per appointment so we don't
+  // re-patch the status on every dirty toggle.
+  const startedInProgressRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (!dirty) return;
     editedSinceLoadRef.current = true;
+    // Editing a patient who's been sent to the doctor (AT_DOC) flips the
+    // appointment to IN_PROGRESS so the queue reflects the live consultation.
+    // Once per appointment; "Complete visit" later moves it to COMPLETED.
+    const apptId = activeVisit?.appointmentId;
+    if (apptId &&
+        (activeVisit?.appointmentStatus ?? "").toUpperCase() === "AT_DOC" &&
+        startedInProgressRef.current !== apptId) {
+      startedInProgressRef.current = apptId;
+      if (apptId === selectedAppointmentId) setSelectedAppointmentStatus("IN_PROGRESS");
+      void patchAppointmentStatus(apptId, "IN_PROGRESS").then(() => refetchVisits());
+    }
     // Editing an OLD, still-in-progress visit → ask to move it to today
     // BEFORE the change settles onto the stale date. The blur/debounce
     // auto-saves are blocked while this dialog is open (see handleFormBlur /
