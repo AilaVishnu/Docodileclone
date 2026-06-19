@@ -81,7 +81,9 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
         })
         .catch(() => { /* keep last good map on transient errors */ });
     load();
-    const id = window.setInterval(load, 10000);
+    // Poll fairly often so a freshly started/re-opened consultation's live
+    // timer shows up promptly (was 10s — felt laggy).
+    const id = window.setInterval(load, 3000);
     return () => { cancelled = true; window.clearInterval(id); };
   }, [refreshKey]);
   const [billingMedicines, setBillingMedicines] = useState<BillingMedicine[]>([]);
