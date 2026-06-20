@@ -6,6 +6,7 @@ import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.ClinicStaffRepository
 import com.example.docodile.repo.TenantRepository
 import com.example.docodile.security.CurrentUser
+import com.example.docodile.service.AuditService
 import com.example.docodile.service.EmailService
 import com.example.docodile.service.PasswordTokenService
 import com.example.docodile.web.ClinicDetailsRequest
@@ -42,6 +43,9 @@ class ClinicStatusServiceTest {
 
     @Mock
     private lateinit var emailService: EmailService
+
+    @Mock
+    private lateinit var auditService: AuditService
 
     @InjectMocks
     private lateinit var clinicStatusService: ClinicStatusService

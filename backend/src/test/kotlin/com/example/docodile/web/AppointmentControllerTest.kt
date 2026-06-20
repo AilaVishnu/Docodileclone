@@ -25,6 +25,8 @@ class AppointmentControllerTest @Autowired constructor(
     @org.springframework.test.context.bean.override.mockito.MockitoBean
     private lateinit var tokenService: com.example.docodile.security.TokenService
 
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private lateinit var revokedTokenRepository: com.example.docodile.repo.RevokedTokenRepository
 
     @MockitoBean
     private lateinit var appointmentService: AppointmentService

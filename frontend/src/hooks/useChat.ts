@@ -69,11 +69,34 @@ export function useChat(clinicId: string, currentUserId: string) {
       onConnect: () => {
         setConnected(true);
 
+        // Re-fetch group history to fill any gap from a disconnect
+        const reconnectToken = localStorage.getItem("docodile_token") ?? "";
+        fetch(`${API_BASE_URL}/api/chat/messages/group`, {
+          headers: { Authorization: `Bearer ${reconnectToken}` },
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then((groupMsgs: ChatMessage[] | null) => {
+            if (!groupMsgs) return;
+            setMessages(prev => {
+              const restIds = new Set(groupMsgs.map(m => m.id));
+              const wsOnly = prev.group.filter(m => !restIds.has(m.id));
+              return {
+                ...prev,
+                group: [...groupMsgs, ...wsOnly].sort(
+                  (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                ),
+              };
+            });
+          })
+          .catch(() => {});
+
         // Subscribe to clinic group channel
         client.subscribe(`/topic/clinic/${clinicId}`, (msg: IMessage) => {
           const data: ChatMessage = JSON.parse(msg.body);
           setMessages(prev => ({ ...prev, group: [...prev.group, data] }));
-          setUnread(prev => ({ ...prev, group: (prev["group"] ?? 0) + 1 }));
+          if (data.senderId !== currentUserId) {
+            setUnread(prev => ({ ...prev, group: (prev["group"] ?? 0) + 1 }));
+          }
         });
 
         // Subscribe to personal DM queue
@@ -119,7 +142,15 @@ export function useChat(clinicId: string, currentUserId: string) {
     });
     if (!res.ok) return;
     const msgs: ChatMessage[] = await res.json();
-    setMessages(prev => ({ ...prev, dms: { ...prev.dms, [partnerId]: msgs } }));
+    setMessages(prev => {
+      const existing = prev.dms[partnerId] ?? [];
+      const restIds = new Set(msgs.map(m => m.id));
+      const wsOnly = existing.filter(m => !restIds.has(m.id));
+      const merged = [...msgs, ...wsOnly].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      return { ...prev, dms: { ...prev.dms, [partnerId]: merged } };
+    });
   }, []);
 
   const markSeen = useCallback((conversationKey: string) => {

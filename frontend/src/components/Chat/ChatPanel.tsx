@@ -10,11 +10,12 @@ type Props = {
   currentUserName: string;
   onUnreadChange: (total: number) => void;
   onClose: () => void;
+  isOpen: boolean;
 };
 
 type Conversation = { type: "group" } | { type: "dm"; partnerId: string; partnerName: string } | { type: "ai" };
 
-export function ChatPanel({ clinicId, currentUserId, currentUserName, onUnreadChange, onClose }: Props) {
+export function ChatPanel({ clinicId, currentUserId, currentUserName, onUnreadChange, onClose, isOpen }: Props) {
   const { messages, staff: realStaff, unread, connected, sendGroup, sendDirect, loadDmHistory, markSeen, dmKey } =
     useChat(clinicId, currentUserId);
   // DEMO: fall back to mock staff when the API returns none, so the DM
@@ -123,6 +124,29 @@ export function ChatPanel({ clinicId, currentUserId, currentUserName, onUnreadCh
     inputRef.current?.focus();
   }, [active]);
 
+  // Scroll to the latest message whenever the panel is opened.
+  useEffect(() => {
+    if (!isOpen) return;
+    const id = window.setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: "auto" });
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [isOpen]);
+
+  // Auto-mark active conversation as seen while panel is open so the bubble
+  // badge never shows a count for messages the user is actively reading.
+  const activeKey = useMemo(() => {
+    if (active.type === "ai") return null;
+    if (active.type === "group") return "group";
+    return dmKey(currentUserId, active.partnerId);
+  }, [active, currentUserId, dmKey]);
+  const activeUnread = activeKey ? (unread[activeKey] ?? 0) : 0;
+
+  useEffect(() => {
+    if (!isOpen || !activeKey || activeUnread === 0) return;
+    markSeen(activeKey);
+  }, [isOpen, activeKey, activeUnread, markSeen]);
+
   const realMessages: ChatMessage[] =
     active.type === "group"
       ? messages.group
@@ -197,7 +221,16 @@ export function ChatPanel({ clinicId, currentUserId, currentUserName, onUnreadCh
         {staff.length === 0 && (
           <div style={styles.sidebarEmpty}>No teammates yet</div>
         )}
-        {staff.map(s => {
+        {[...staff].sort((a, b) => {
+          const aList = messages.dms[a.id] ?? [];
+          const bList = messages.dms[b.id] ?? [];
+          const aLast = aList[aList.length - 1];
+          const bLast = bList[bList.length - 1];
+          if (!aLast && !bLast) return 0;
+          if (!aLast) return 1;
+          if (!bLast) return -1;
+          return new Date(bLast.createdAt).getTime() - new Date(aLast.createdAt).getTime();
+        }).map(s => {
           const key = dmKey(currentUserId, s.id);
           const dmList = messages.dms[s.id] ?? [];
           const dmLast = dmList[dmList.length - 1];

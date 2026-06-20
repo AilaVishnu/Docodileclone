@@ -1,6 +1,10 @@
 package com.example.docodile.web
 
+import com.example.docodile.domain.AuditAction
+import com.example.docodile.service.AuditService
+import com.example.docodile.service.ConsentService
 import com.example.docodile.service.VisitService
+import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -15,12 +19,19 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api")
-class VisitController(private val visitService: VisitService) {
+class VisitController(
+    private val visitService: VisitService,
+    private val auditService: AuditService,
+    private val consentService: ConsentService,
+) {
 
     @GetMapping("/patients/{patientId}/visits")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
-    fun listForPatient(@PathVariable patientId: UUID): List<VisitDTO> =
-        visitService.listForPatient(patientId)
+    fun listForPatient(@PathVariable patientId: UUID): List<VisitDTO> {
+        consentService.checkConsent(patientId)
+        auditService.log(AuditAction.PATIENT_ACCESS, entityType = "Patient", entityId = patientId)
+        return visitService.listForPatient(patientId)
+    }
 
     @GetMapping("/active-sessions")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
@@ -29,7 +40,11 @@ class VisitController(private val visitService: VisitService) {
     @GetMapping("/visits/{visitId}")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun get(@PathVariable visitId: UUID): ResponseEntity<Any> = try {
-        ResponseEntity.ok(visitService.get(visitId))
+        val dto = visitService.get(visitId)
+        // Gate after fetch — the visit carries the patientId needed for the check.
+        consentService.checkConsent(dto.patientId)
+        auditService.log(AuditAction.PATIENT_ACCESS, entityType = "Visit", entityId = visitId)
+        ResponseEntity.ok(dto)
     } catch (e: IllegalArgumentException) {
         ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
     }
@@ -38,9 +53,12 @@ class VisitController(private val visitService: VisitService) {
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun create(
         @PathVariable patientId: UUID,
-        @RequestBody request: SaveVisitRequest
+        @Valid @RequestBody request: SaveVisitRequest
     ): ResponseEntity<Any> = try {
-        ResponseEntity.ok(visitService.create(patientId, request))
+        consentService.checkConsent(patientId)
+        val dto = visitService.create(patientId, request)
+        auditService.log(AuditAction.PRESCRIPTION_CREATED, entityType = "Visit", entityId = patientId)
+        ResponseEntity.ok(dto)
     } catch (e: IllegalArgumentException) {
         ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
     }
@@ -49,9 +67,13 @@ class VisitController(private val visitService: VisitService) {
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun update(
         @PathVariable visitId: UUID,
-        @RequestBody request: SaveVisitRequest
+        @Valid @RequestBody request: SaveVisitRequest
     ): ResponseEntity<Any> = try {
-        ResponseEntity.ok(visitService.update(visitId, request))
+        // Gate on the existing visit's patient before mutating.
+        consentService.checkConsent(visitService.get(visitId).patientId)
+        val dto = visitService.update(visitId, request)
+        auditService.log(AuditAction.PRESCRIPTION_UPDATED, entityType = "Visit", entityId = visitId)
+        ResponseEntity.ok(dto)
     } catch (e: IllegalArgumentException) {
         ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
     }
@@ -59,7 +81,9 @@ class VisitController(private val visitService: VisitService) {
     @DeleteMapping("/visits/{visitId}")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR')")
     fun delete(@PathVariable visitId: UUID): ResponseEntity<Any> = try {
+        consentService.checkConsent(visitService.get(visitId).patientId)
         visitService.delete(visitId)
+        auditService.log(AuditAction.PRESCRIPTION_DELETED, entityType = "Visit", entityId = visitId)
         ResponseEntity.noContent().build()
     } catch (e: IllegalArgumentException) {
         ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))

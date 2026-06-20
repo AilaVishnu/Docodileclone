@@ -1,5 +1,6 @@
 package com.example.docodile.security
 
+import com.example.docodile.repo.RevokedTokenRepository
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -12,7 +13,8 @@ import java.util.UUID
 
 @Component
 class JwtAuthenticationFilter(
-    private val tokenService: TokenService
+    private val tokenService: TokenService,
+    private val revokedTokenRepository: RevokedTokenRepository,
 ) : OncePerRequestFilter() {
     override fun doFilterInternal(
         request: HttpServletRequest,
@@ -27,6 +29,19 @@ class JwtAuthenticationFilter(
 
         val token = authHeader.removePrefix("Bearer ").trim()
         if (!tokenService.validateToken(token)) {
+            filterChain.doFilter(request, response)
+            return
+        }
+
+        // Reject tokens that have been explicitly revoked (logout / logout-all)
+        val jti = tokenService.extractJti(token)
+        if (jti != null && revokedTokenRepository.existsByJti(jti)) {
+            filterChain.doFilter(request, response)
+            return
+        }
+
+        // mfa_pending tokens are only valid for /auth/mfa/complete — reject them everywhere else
+        if (tokenService.isMfaPendingToken(token) && !request.requestURI.startsWith("/auth/mfa/complete")) {
             filterChain.doFilter(request, response)
             return
         }

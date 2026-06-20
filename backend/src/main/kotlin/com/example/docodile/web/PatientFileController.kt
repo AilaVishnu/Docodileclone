@@ -3,6 +3,7 @@ package com.example.docodile.web
 import com.example.docodile.domain.PatientFile
 import com.example.docodile.repo.PatientFileRepository
 import com.example.docodile.security.CurrentUser
+import com.example.docodile.service.EncryptionService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -28,7 +29,8 @@ data class PatientFileDTO(
 @RequestMapping("/api/patients/{patientId}/files")
 class PatientFileController(
     private val repo: PatientFileRepository,
-    private val currentUser: CurrentUser
+    private val currentUser: CurrentUser,
+    private val encryptionService: EncryptionService
 ) {
     private val allRoles = "hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','LAB','OTHER')"
 
@@ -50,6 +52,9 @@ class PatientFileController(
         @RequestParam("notes", required = false) notes: String?
     ): ResponseEntity<PatientFileDTO> {
         val clinicId = currentUser.clinicId()
+        // Build the entity first so pf.id (generated on construction) is stable
+        // before encrypting — the same ID is used as AAD, so encrypt and decrypt
+        // must see the same fileId.
         val pf = PatientFile(
             patientId = patientId,
             clinicId = clinicId,
@@ -59,9 +64,10 @@ class PatientFileController(
             investigationDate = investigationDate?.takeIf { it.isNotBlank() }?.let { LocalDate.parse(it) },
             mimeType = file.contentType,
             notes = notes?.takeIf { it.isNotBlank() },
-            fileData = file.bytes,
+            fileData = ByteArray(0), // placeholder; overwritten below
             fileSize = file.size
         )
+        pf.fileData = encryptionService.encrypt(file.bytes, pf.id, clinicId)
         repo.save(pf)
         return ResponseEntity.status(HttpStatus.CREATED).body(pf.toDTO())
     }
@@ -75,7 +81,7 @@ class PatientFileController(
         val headers = HttpHeaders()
         headers.contentType = MediaType.parseMediaType(pf.mimeType ?: MediaType.APPLICATION_OCTET_STREAM_VALUE)
         headers.setContentDispositionFormData("inline", pf.name)
-        return ResponseEntity.ok().headers(headers).body(pf.fileData)
+        return ResponseEntity.ok().headers(headers).body(encryptionService.decrypt(pf.fileData, pf.id, pf.clinicId))
     }
 
     @DeleteMapping("/{fileId}")

@@ -1,9 +1,11 @@
 package com.example.docodile.web
 
+import com.example.docodile.domain.AuditAction
 import com.example.docodile.domain.PharmacyStock
 import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.PharmacyStockRepository
 import com.example.docodile.security.CurrentUser
+import com.example.docodile.service.AuditService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -19,6 +21,7 @@ class PharmacyStockController(
     private val repo: PharmacyStockRepository,
     private val clinicEntityRepository: ClinicEntityRepository,
     private val currentUser: CurrentUser,
+    private val auditService: AuditService,
 ) {
 
     private fun toDto(s: PharmacyStock) = PharmacyStockDTO(
@@ -69,7 +72,10 @@ class PharmacyStockController(
         val clinic = clinicEntityRepository.findById(clinicId)
             .orElseThrow { IllegalArgumentException("Clinic not found") }
         val row = PharmacyStock(clinic = clinic).also { applyRequest(it, request) }
-        return ResponseEntity.status(HttpStatus.CREATED).body(toDto(repo.save(row)))
+        val saved = repo.save(row)
+        auditService.log(AuditAction.INVENTORY_CREATED, entityType = "PharmacyStock", entityId = saved.id,
+            metadata = mapOf("name" to saved.name))
+        return ResponseEntity.status(HttpStatus.CREATED).body(toDto(saved))
     }
 
     /**
@@ -125,7 +131,10 @@ class PharmacyStockController(
         val clinicId = currentUser.clinicId()
         val existing = repo.findByIdAndClinicId(id, clinicId) ?: return ResponseEntity.notFound().build()
         applyRequest(existing, request)
-        return ResponseEntity.ok(toDto(repo.save(existing)))
+        val saved = repo.save(existing)
+        auditService.log(AuditAction.INVENTORY_UPDATED, entityType = "PharmacyStock", entityId = id,
+            metadata = mapOf("name" to saved.name))
+        return ResponseEntity.ok(toDto(saved))
     }
 
     @DeleteMapping("/{id}")
@@ -134,6 +143,8 @@ class PharmacyStockController(
     fun delete(@PathVariable id: UUID): ResponseEntity<Void> {
         val clinicId = currentUser.clinicId()
         val existing = repo.findByIdAndClinicId(id, clinicId) ?: return ResponseEntity.notFound().build()
+        auditService.log(AuditAction.INVENTORY_DELETED, entityType = "PharmacyStock", entityId = id,
+            metadata = mapOf("name" to existing.name))
         repo.delete(existing)
         return ResponseEntity.noContent().build()
     }
@@ -177,6 +188,8 @@ class PharmacyStockController(
             }
             applied += DeductedItem(name = it.name, requested = it.qty, deducted = deducted)
         }
+        auditService.log(AuditAction.INVENTORY_DEDUCTED,
+            metadata = mapOf("items" to items.size, "missing" to missing))
         return DeductResult(applied = applied, missing = missing)
     }
 
