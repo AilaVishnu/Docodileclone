@@ -155,6 +155,41 @@ length-bounded, uniqueness enforced by `public.clinic.schema_name`.
    schema on provisioning.
 4. **Tenant identifier in JWT:** the **`schema_name`** (`tskin`) — directly usable to set `search_path`.
 
+## Post-main-merge consolidation decisions (2026-06-20)
+
+A `main` merge (commits up to `11381a0`) landed AFTER Plan 1, adding 8 migrations (V54–V61) and
+6 entities — TOTP MFA, Argon2, account lockout, token revocation, audit logging, patient consent,
+and DSAR data-workflows. Plan 1's `db/tenant/V1__baseline.sql` is therefore **stale** and must be
+regenerated from the current 59 migrations. While regenerating, we consolidate the
+security/compliance surface (trim redundancy without losing any compliance capability):
+
+1. **Merge `revoked_token` → `user_session`.** `user_session` already has one row per issued token
+   (`jti UNIQUE`) with a `revoked_at` column; a token is revoked iff `revoked_at IS NOT NULL`. Drop
+   the redundant `revoked_token` table; the JWT filter checks `user_session` by `jti`. `AuthService`
+   already drives revocation through `user_session`.
+2. **Merge `deletion_request` + `correction_request` → one `data_subject_request`** with a `type`
+   discriminator (`DELETION` / `CORRECTION`, room for `ACCESS`/`EXPORT`). Type-specific fields become
+   nullable (deletion: `verified_by/at`, `reason`; correction: `field_name`, `old_value`,
+   `new_value`). Collapses two near-identical DSAR workflow tables + services into one.
+3. **`audit_log`-only provenance — drop on-row `created_by`/`updated_by`/`deleted_by`** columns
+   (added by V55/V56 across ~10 tables). Keep `created_at`/`updated_at`/`deleted_at` timestamps.
+   Rationale: `audit_log` is the append-only, full-history system-of-record for "who changed what"
+   (57 write sites); the on-row `*_by` columns are a lossy, mutable duplicate (last editor only).
+   Remove the 3 `deletedBy =` write sites during the cutover.
+4. **Drop legacy `patient.archived` / `archived_at`** — superseded by `deleted_at`/`deleted_by`
+   (V55 left them only for backward-compat; greenfield needs one soft-delete mechanism). Note: with
+   #3, `deleted_by` is also dropped, so soft-delete = `deleted_at` only (actor in `audit_log`).
+5. **Audit scope (app-behavior, lands in the cutover):** keep audit for patient records
+   (incl. `PATIENT_ACCESS` reads — privacy/break-the-glass trail), Rx Pad (`PRESCRIPTION_*`),
+   auth/security (`LOGIN_*`, `LOGOUT`, `ACCOUNT_*`, `TOKEN_REVOKED`, `SESSION_REVOKED`, `MFA_*`),
+   account admin (`USER_*`), legal/compliance (`CONSENT_*`, all `DELETION_*`/`CORRECTION_*`,
+   `DATA_EXPORT`, `CONFIG_CHANGED`). **Drop all `INVENTORY_*` auditing** and trim those unused
+   `AuditAction` enum values. (Appointments were never audited.)
+
+All consolidated tables remain **per-tenant** (in each clinic schema), discriminator columns
+(`clinic_id`/`tenant_id`) stripped — consistent with "only routing in `platform`, everything else
+in the clinic schema."
+
 ## Success criteria
 
 - Two clinics can be provisioned (each its own schema, seeded admin + catalogs).
