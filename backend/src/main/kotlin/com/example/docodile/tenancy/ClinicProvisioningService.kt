@@ -80,6 +80,8 @@ class ClinicProvisioningService(
         dataSource.connection.use { c -> c.createStatement().use { it.execute(sql) } }
 
     companion object {
-        private val RESERVED = setOf("platform", "public", "pg_catalog", "information_schema")
+        // "tenant" is reserved because a legacy public.tenant table exists; a tenant schema
+        // could shadow it once Plan 2 introduces search_path-based routing.
+        private val RESERVED = setOf("platform", "public", "pg_catalog", "information_schema", "tenant")
     }
 }
