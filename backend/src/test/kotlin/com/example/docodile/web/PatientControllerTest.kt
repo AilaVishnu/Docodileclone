@@ -45,6 +45,9 @@ class PatientControllerTest @Autowired constructor(
     @MockitoBean
     private lateinit var auditService: AuditService
 
+    @MockitoBean
+    private lateinit var visitService: com.example.docodile.service.VisitService
+
     private val clinicId: UUID = UUID.randomUUID()
 
     private fun patient(id: UUID, deletedAt: Instant? = null) = Patient(

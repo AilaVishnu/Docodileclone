@@ -198,9 +198,10 @@ class StatsControllerTest @Autowired constructor(
         stubClinic()
         whenever(patientRepository.findAllByClinicId(clinicId)).thenReturn(
             listOf(
-                patient(name = "kid", age = 8, gender = "male"),
-                patient(name = "adult", age = 35, gender = "female"),
-                patient(name = "senior", age = 70, gender = "M"),
+                // age is persisted in MONTHS (years × 12): 8y, 35y, 70y.
+                patient(name = "kid", age = 8 * 12, gender = "male"),
+                patient(name = "adult", age = 35 * 12, gender = "female"),
+                patient(name = "senior", age = 70 * 12, gender = "M"),
             )
         )
 

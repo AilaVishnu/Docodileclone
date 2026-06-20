@@ -63,6 +63,7 @@ class VisitControllerTest @Autowired constructor(
         reviewDate = null, reviewDays = null, reviewNotes = null,
         sessionStartedAt = null, sessionEndedAt = null, sessionDurationSec = null,
         appointmentId = null,
+        appointmentStatus = null,
         prescriptions = emptyList()
     )
 
