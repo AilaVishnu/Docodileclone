@@ -50,6 +50,8 @@ docker-data/
 # Database
 *.sql
 !**/db/migration/*.sql
+!**/db/control/*.sql
+!**/db/tenant/*.sql
 
 
 # Coverage
