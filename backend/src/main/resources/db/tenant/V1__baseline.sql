@@ -2,37 +2,54 @@
 -- Applies inside whatever schema Flyway points at (one schema per clinic).
 -- NO clinic_id / tenant_id columns — the schema IS the tenant boundary.
 -- NO cross-schema references; no references to public. or platform.
--- Squashed from V1..V53 of the monolithic migration history.
+-- Squashed from V1..V61 of the monolithic migration history.
+--
+-- Deliberate consolidations (deviations from raw migration output):
+--   • tenant / clinic / clinic_staff excluded (control-plane only)
+--   • revoked_token dropped — revocation = user_session.revoked_at IS NOT NULL
+--   • deletion_request + correction_request merged into data_subject_request
+--   • created_by / updated_by / deleted_by dropped from all tables
+--   • patient.archived / patient.archived_at dropped (superseded by deleted_at)
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ============================================================
 -- app_user
--- (tenant_id dropped; email is unique per schema = per clinic)
+-- (tenant_id dropped; email unique per schema = per clinic)
+-- Security columns from V57 (lockout) + V61 (TOTP MFA) included.
+-- Provenance columns created_by/updated_by excluded (rule 6).
 -- ============================================================
 CREATE TABLE app_user (
-    id                  UUID PRIMARY KEY,
-    name                VARCHAR(255),
-    email               VARCHAR(255) NOT NULL UNIQUE,
-    phone               VARCHAR(50),
-    password_hash       VARCHAR(255),
-    role                VARCHAR(50) NOT NULL,
-    active              BOOLEAN DEFAULT TRUE,
-    created_at          TIMESTAMP DEFAULT now(),
-    gender              VARCHAR(20),
-    registration_no     VARCHAR(100),
-    custom_role         VARCHAR(100),
-    department          TEXT,
-    specialty           TEXT,
-    qualification       TEXT,
-    medical_council     TEXT,
-    experience_years    INTEGER,
-    account_status      VARCHAR(30) NOT NULL DEFAULT 'ACTIVE'
+    id                      UUID PRIMARY KEY,
+    name                    VARCHAR(255),
+    email                   VARCHAR(255) NOT NULL UNIQUE,
+    phone                   VARCHAR(50),
+    password_hash           VARCHAR(255),
+    role                    VARCHAR(50) NOT NULL,
+    active                  BOOLEAN DEFAULT TRUE,
+    created_at              TIMESTAMP DEFAULT now(),
+    gender                  VARCHAR(20),
+    registration_no         VARCHAR(100),
+    custom_role             VARCHAR(100),
+    department              TEXT,
+    specialty               TEXT,
+    qualification           TEXT,
+    medical_council         TEXT,
+    experience_years        INTEGER,
+    account_status          VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    updated_at              TIMESTAMPTZ,
+    failed_login_attempts   INT NOT NULL DEFAULT 0,
+    locked_until            TIMESTAMPTZ,
+    totp_secret             VARCHAR(100),
+    mfa_enabled             BOOLEAN NOT NULL DEFAULT FALSE,
+    mfa_backup_codes        TEXT
 );
 
 -- ============================================================
 -- patient
 -- (clinic_id dropped; phone lookup index re-scoped to schema)
+-- archived/archived_at dropped (rule 7) — deleted_at is canonical.
+-- Provenance columns created_by/updated_by/deleted_by excluded (rule 6).
 -- ============================================================
 CREATE TABLE patient (
     id           UUID PRIMARY KEY,
@@ -44,10 +61,10 @@ CREATE TABLE patient (
     created_at   TIMESTAMP DEFAULT now(),
     email        VARCHAR(255),
     age          INTEGER,
-    archived     BOOLEAN NOT NULL DEFAULT FALSE,
-    archived_at  TIMESTAMP,
     external_ref VARCHAR(128),
-    display_no   INTEGER
+    display_no   INTEGER,
+    deleted_at   TIMESTAMPTZ,
+    updated_at   TIMESTAMPTZ
 );
 
 -- Fast phone lookup (non-unique — same phone allowed for family members)
@@ -66,11 +83,12 @@ CREATE UNIQUE INDEX uq_patient_external_ref
     ON patient (external_ref)
     WHERE external_ref IS NOT NULL;
 
-CREATE INDEX idx_patient_archived ON patient (archived);
+CREATE INDEX idx_patient_deleted_at ON patient (deleted_at) WHERE deleted_at IS NOT NULL;
 
 -- ============================================================
 -- appointment
 -- (clinic_id dropped; patient-day index re-scoped to schema)
+-- Provenance columns created_by/updated_by/deleted_by excluded (rule 6).
 -- ============================================================
 CREATE TABLE appointment (
     id               UUID PRIMARY KEY,
@@ -87,7 +105,9 @@ CREATE TABLE appointment (
     service          VARCHAR(255),
     payment_method   VARCHAR(50),
     pharmacy_amount  NUMERIC(12, 2),
-    discount_amount  NUMERIC(12, 2)
+    discount_amount  NUMERIC(12, 2),
+    deleted_at       TIMESTAMPTZ,
+    updated_at       TIMESTAMPTZ
 );
 
 CREATE INDEX idx_appointment_patient_id ON appointment (patient_id);
@@ -98,9 +118,12 @@ CREATE INDEX ix_appointment_patient_day
     ON appointment (patient_id, (scheduled_time::date))
     WHERE scheduled_time IS NOT NULL;
 
+CREATE INDEX idx_appointment_deleted_at ON appointment (deleted_at) WHERE deleted_at IS NOT NULL;
+
 -- ============================================================
 -- visit
 -- (clinic_id dropped; indexes re-scoped)
+-- Provenance columns created_by/updated_by/deleted_by excluded (rule 6).
 -- ============================================================
 CREATE TABLE visit (
     id                       UUID PRIMARY KEY,
@@ -152,15 +175,17 @@ CREATE TABLE visit (
     updated_at               TIMESTAMP DEFAULT now(),
 
     -- Session timing
-    session_started_at       TIMESTAMP WITH TIME ZONE,
-    session_ended_at         TIMESTAMP WITH TIME ZONE,
+    session_started_at       TIMESTAMPTZ,
+    session_ended_at         TIMESTAMPTZ,
     session_duration_sec     INTEGER,
 
     -- Import idempotency key
     external_ref             VARCHAR(160),
 
     -- Link to the appointment that opened this visit
-    appointment_id           UUID REFERENCES appointment(id) ON DELETE SET NULL
+    appointment_id           UUID REFERENCES appointment(id) ON DELETE SET NULL,
+
+    deleted_at               TIMESTAMPTZ
 );
 
 CREATE INDEX idx_visit_patient_date
@@ -174,8 +199,12 @@ CREATE INDEX ix_visit_appointment
     ON visit (appointment_id)
     WHERE appointment_id IS NOT NULL;
 
+CREATE INDEX idx_visit_deleted_at ON visit (deleted_at) WHERE deleted_at IS NOT NULL;
+
 -- ============================================================
 -- rx_row  (no clinic dimension; child of visit)
+-- clinic_id added in V56 is stripped (rule 2).
+-- Provenance columns created_by/updated_by/deleted_by excluded (rule 6).
 -- ============================================================
 CREATE TABLE rx_row (
     id                  UUID PRIMARY KEY,
@@ -189,7 +218,9 @@ CREATE TABLE rx_row (
     duration            TEXT,
     notes               TEXT,
     created_at          TIMESTAMP DEFAULT now(),
-    frequency_interval  TEXT
+    frequency_interval  TEXT,
+    deleted_at          TIMESTAMPTZ,
+    updated_at          TIMESTAMPTZ
 );
 
 CREATE INDEX idx_rx_row_visit_id ON rx_row (visit_id);
@@ -224,6 +255,7 @@ CREATE TABLE service (
 
 -- ============================================================
 -- print_template  (clinic_id dropped; one default per tenant schema)
+-- Provenance columns created_by/updated_by excluded (rule 6).
 -- ============================================================
 CREATE TABLE print_template (
     id         UUID PRIMARY KEY,
@@ -286,6 +318,7 @@ CREATE TABLE chat_last_seen (
 -- patient_id intentionally has NO FK to patient(id), matching source migration
 -- V27 (the data-import path may insert files in a batch ordering-independent of
 -- patient rows; do not tighten this without revisiting that flow).
+-- Provenance columns created_by/updated_by/deleted_by excluded (rule 6).
 -- ============================================================
 CREATE TABLE patient_files (
     id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -298,7 +331,9 @@ CREATE TABLE patient_files (
     notes              TEXT,
     file_data          BYTEA NOT NULL,
     file_size          BIGINT,
-    created_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at         TIMESTAMPTZ,
+    updated_at         TIMESTAMPTZ
 );
 
 CREATE INDEX idx_patient_files_patient ON patient_files (patient_id, created_at DESC);
@@ -315,6 +350,7 @@ CREATE TABLE patient_ai_summary (
 
 -- ============================================================
 -- pharmacy_stock  (clinic_id dropped)
+-- Provenance columns created_by/updated_by excluded (rule 6).
 -- ============================================================
 CREATE TABLE pharmacy_stock (
     id             UUID PRIMARY KEY,
@@ -369,6 +405,92 @@ CREATE TABLE password_reset_token (
 
 CREATE INDEX idx_prt_token_hash ON password_reset_token (token_hash);
 CREATE INDEX idx_prt_user_id    ON password_reset_token (user_id);
+
+-- ============================================================
+-- audit_log  (tenant_id + clinic_id dropped; actor_id kept)
+-- Append-only audit trail. No DELETE or UPDATE at the application layer.
+-- ============================================================
+CREATE TABLE audit_log (
+    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    actor_id    UUID,
+    action      VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(100),
+    entity_id   UUID,
+    ip_address  VARCHAR(45),
+    user_agent  TEXT,
+    outcome     VARCHAR(50)  NOT NULL DEFAULT 'SUCCESS',
+    metadata    TEXT,
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_audit_log_actor_id   ON audit_log (actor_id);
+CREATE INDEX idx_audit_log_action     ON audit_log (action);
+CREATE INDEX idx_audit_log_created_at ON audit_log (created_at);
+
+-- ============================================================
+-- user_session  (revoked_token dropped; revocation = revoked_at IS NOT NULL)
+-- ============================================================
+CREATE TABLE user_session (
+    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id      UUID        NOT NULL,
+    jti          UUID        NOT NULL UNIQUE,
+    ip_address   VARCHAR(45),
+    user_agent   TEXT,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at   TIMESTAMPTZ NOT NULL,
+    revoked_at   TIMESTAMPTZ
+);
+
+CREATE INDEX idx_user_session_user_id ON user_session (user_id);
+CREATE INDEX idx_user_session_jti     ON user_session (jti);
+
+-- ============================================================
+-- patient_consent  (clinic_id dropped; patient FK kept)
+-- ============================================================
+CREATE TABLE patient_consent (
+    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id   UUID        NOT NULL REFERENCES patient(id) ON DELETE CASCADE,
+    purpose      VARCHAR(200) NOT NULL,
+    version      VARCHAR(50)  NOT NULL,
+    granted_at   TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    granted_by   UUID,
+    ip_address   VARCHAR(45),
+    withdrawn_at TIMESTAMPTZ,
+    withdrawn_by UUID
+);
+
+CREATE INDEX idx_patient_consent_patient ON patient_consent (patient_id);
+
+-- ============================================================
+-- data_subject_request  (merges deletion_request + correction_request)
+-- clinic_id + tenant_id dropped (rule 2). type discriminator: DELETION | CORRECTION.
+-- ============================================================
+CREATE TABLE data_subject_request (
+    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id      UUID        NOT NULL REFERENCES patient(id),
+    type            VARCHAR(20) NOT NULL,            -- DELETION | CORRECTION
+    status          VARCHAR(30) NOT NULL DEFAULT 'SUBMITTED',
+    requested_by    UUID        NOT NULL,
+    requested_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    reviewed_by     UUID,
+    reviewed_at     TIMESTAMPTZ,
+    rejection_note  TEXT,
+    completed_at    TIMESTAMPTZ,                     -- executed_at (deletion) / applied_at (correction)
+    completed_by    UUID,                            -- executed_by / applied_by
+    -- deletion-specific (nullable):
+    verified_by     UUID,
+    verified_at     TIMESTAMPTZ,
+    reason          TEXT,
+    -- correction-specific (nullable):
+    field_name      VARCHAR(100),
+    old_value       TEXT,
+    new_value       TEXT
+);
+
+CREATE INDEX idx_dsr_patient ON data_subject_request (patient_id);
+CREATE INDEX idx_dsr_status  ON data_subject_request (status);
+CREATE INDEX idx_dsr_type    ON data_subject_request (type);
 
 -- ============================================================
 -- suggestion  (catalog; no clinic/tenant columns — shared by speciality)
@@ -1017,4 +1139,3 @@ INSERT INTO suggestion (id, speciality, field, value, use_count, created_at) VAL
   (gen_random_uuid(), 'dermatology', 'tests', 'Liver Fitness Test', 0, now()),
   (gen_random_uuid(), 'dermatology', 'tests', 'Retinal Examination', 0, now())
 ON CONFLICT ON CONSTRAINT uq_suggestion_speciality_field_value DO NOTHING;
-
