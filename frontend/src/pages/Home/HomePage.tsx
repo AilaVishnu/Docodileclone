@@ -279,10 +279,26 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   } as const;
 
 
+  // Route the Home pinboard's quick-action tiles to the matching section.
+  const handleQuickAction = (key: string) => {
+    switch (key) {
+      case "book":
+        handleNewAppointment();
+        break;
+      case "script":
+        setActiveTab("Prescription");
+        break;
+      case "patient":
+      case "records":
+        setActiveTab("Patient Files");
+        break;
+    }
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case "Home":
-        return <HomeView />;
+        return <HomeView onQuickAction={handleQuickAction} />;
       case "Appointments":
         return <AppointmentsView isBooking={isBooking} bookingKey={bookingKey} onBack={() => { setIsBooking(false); setIsEditing(false); }} onEditStart={() => setIsEditing(true)} onViewPatientFile={(patient, appointmentId) => {
           // Open the patient's prescription/visit directly — same path
