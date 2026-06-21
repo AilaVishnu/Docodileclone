@@ -26,7 +26,7 @@ export type NewPatientDraft = {
   name: string;
   phone: string;
   gender: string;
-  age: string;       // years, free-text — matches BookAppointment's "yrs" column
+  age: string;       // "years / months" (e.g. "4 / 5") — walk-in combine does years*12 + months
   dob: string;       // dd mm yyyy as typed; converted to yyyy-MM-dd on submit
   email: string;
   service: string;

@@ -2130,4 +2130,5 @@ export const styles: Record<string, CSSProperties> = {
     padding: "10px 28px",
     cursor: "pointer",
   },
+
 };

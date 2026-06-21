@@ -5,6 +5,7 @@ import com.example.docodile.repo.PatientRepository
 import com.example.docodile.security.CurrentUser
 import com.example.docodile.service.AuditService
 import com.example.docodile.service.PatientService
+import com.example.docodile.service.VisitService
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
@@ -40,13 +41,13 @@ class PatientControllerTest @Autowired constructor(
     private lateinit var patientRepository: PatientRepository
 
     @MockitoBean
+    private lateinit var visitService: VisitService
+
+    @MockitoBean
     private lateinit var currentUser: CurrentUser
 
     @MockitoBean
     private lateinit var auditService: AuditService
-
-    @MockitoBean
-    private lateinit var visitService: com.example.docodile.service.VisitService
 
     private val clinicId: UUID = UUID.randomUUID()
 
