@@ -42,6 +42,13 @@ export type EditAppointmentData = {
   patientGender?: string;
   patientDob?: string;
   patientAge?: number;
+  // Backend-issued per-clinic patient number (the real "T###" code). Pass
+  // it through here so the Edit Appointment header can render the same
+  // T### the queue shows, instead of falling back to "T---".
+  patientDisplayNo?: number | null;
+  // Sticky walk-in flag — when reopening a walk-in appointment the time
+  // pill should still read "Walk-in" instead of the wall-clock time.
+  isWalkin?: boolean;
   service?: string;
   type: string;
   scheduledTime: string;
@@ -113,10 +120,16 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     localStorage.getItem("docodile_patient_map") || "{}"
   );
   const editingPatientNumber = editingAppointment ? patientMap[editingAppointment.id] : undefined;
+  // Prefer the backend's per-clinic display_no (V46), which is the same T###
+  // the queue / Patient Files / Prescription pad all show. Fall back to the
+  // legacy localStorage map for old rows that pre-date the backfill, and
+  // finally "T---" if we truly have nothing.
   const patientId = editingAppointment
-    ? editingPatientNumber
-      ? "T" + String(editingPatientNumber).padStart(3, "0")
-      : "T---"
+    ? editingAppointment.patientDisplayNo != null
+      ? "T" + String(editingAppointment.patientDisplayNo).padStart(3, "0")
+      : editingPatientNumber
+        ? "T" + String(editingPatientNumber).padStart(3, "0")
+        : "T---"
     : overridePatientNumber
       ? "T" + String(overridePatientNumber).padStart(3, "0")
       : "T" + String(currentCounter + 1).padStart(3, "0");
@@ -133,6 +146,10 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       : [],
     date: initTime?.date || new Date(),
     time: initTime?.timeStr || "",
+    // Walk-in flag — when true the time pill renders "Walk-in" instead of
+    // the wall-clock time, and isWalkin=true is sent to the backend so the
+    // queue card / billing flow treats it the same as a queue-side walk-in.
+    isWalkin: !!editingAppointment?.isWalkin,
     paymentMethod: editingAppointment?.paymentMethod || "",
     note: editingAppointment?.notes || "",
     subtotal: editingAppointment?.fee || 0,
@@ -430,7 +447,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
           String(scheduledTime.getMinutes()).padStart(2, "0") + ":00",
         type: form.type,
         service: form.services.join(" + "),
-        isWalkin: false,
+        isWalkin: form.isWalkin,
         // "Book Now Pay Later" leaves the payment channel undecided —
         // even if the receptionist accidentally clicked a Cash/Card/UPI
         // radio in the UI, we discard it here so the appointment row
@@ -917,37 +934,54 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             </div>
           </Card>
 
-          <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative" }}>
-            <div
-              style={{ ...styles.iconField, borderBottom: "none", cursor: "pointer", padding: 0 }}
-              onClick={() => setShowDatePicker(true)}
-            >
-              <CalendarIcon style={styles.iconFieldIcon} />
-              <span style={{ fontSize: fonts.size.m, color: form.date ? colors.neutral900 : colors.neutral400 }}>
-                {formatDate(form.date) || "Select Date"}
-              </span>
-            </div>
-            {showDatePicker && (
-              <DatePicker
-                selectedDate={form.date}
-                onSelect={(date: Date) => {
-                  setForm({ ...form, date });
-                  setShowDatePicker(false);
-                }}
-                onClose={() => setShowDatePicker(false)}
-                disablePast
-              />
-            )}
-          </Card>
+          {(() => {
+            // Walk-in date is the day the patient arrived — a historical
+            // fact, locked on edit alongside the time. New booking flow
+            // stays interactive.
+            const dateLocked = !!editingAppointment && form.isWalkin;
+            return (
+            <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative" }}>
+              <div
+                style={{ ...styles.iconField, borderBottom: "none", cursor: dateLocked ? "not-allowed" : "pointer", padding: 0, opacity: dateLocked ? 0.65 : 1 }}
+                onClick={() => { if (!dateLocked) setShowDatePicker(true); }}
+                title={dateLocked ? "Walk-in date can't be edited" : undefined}
+              >
+                <CalendarIcon style={styles.iconFieldIcon} />
+                <span style={{ fontSize: fonts.size.m, color: form.date ? colors.neutral900 : colors.neutral400 }}>
+                  {formatDate(form.date) || "Select Date"}
+                </span>
+              </div>
+              {showDatePicker && (
+                <DatePicker
+                  selectedDate={form.date}
+                  onSelect={(date: Date) => {
+                    setForm({ ...form, date });
+                    setShowDatePicker(false);
+                  }}
+                  onClose={() => setShowDatePicker(false)}
+                  disablePast
+                />
+              )}
+            </Card>
+            );
+          })()}
 
-          <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative", ...(errors.time ? { borderColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
+          {(() => {
+            // A walk-in time is the moment the patient arrived — a historical
+            // fact, not a schedulable slot. Lock the time field on edit so
+            // the receptionist can't rewrite it (the rest of the appointment
+            // stays editable). New-booking flow is unaffected.
+            const timeLocked = !!editingAppointment && form.isWalkin;
+            return (
+            <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative", ...(errors.time ? { borderColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
             <div
-              style={{ ...styles.iconField, borderBottom: "none", cursor: "pointer", padding: 0 }}
-              onClick={() => setShowTimePicker(true)}
+              style={{ ...styles.iconField, borderBottom: "none", cursor: timeLocked ? "not-allowed" : "pointer", padding: 0, opacity: timeLocked ? 0.65 : 1 }}
+              onClick={() => { if (!timeLocked) setShowTimePicker(true); }}
+              title={timeLocked ? "Walk-in time can't be edited" : undefined}
             >
               <ClockIcon style={styles.iconFieldIcon} />
-              <span style={{ fontSize: fonts.size.m, color: form.time ? colors.neutral900 : colors.neutral400 }}>
-                {form.time || "Select Time"}
+              <span style={{ fontSize: fonts.size.m, color: form.time || form.isWalkin ? colors.neutral900 : colors.neutral400 }}>
+                {form.isWalkin ? "Walk-in" : (form.time || "Select Time")}
               </span>
             </div>
             {showTimePicker && (
@@ -955,13 +989,23 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 initialTime={form.time}
                 selectedDate={form.date}
                 onSelect={(time: string) => {
-                  setForm({ ...form, time });
+                  // Manually picking a time clears the walk-in flag — the
+                  // intent is now a specific scheduled appointment.
+                  setForm({ ...form, time, isWalkin: false });
+                  setShowTimePicker(false);
+                }}
+                onWalkin={(time: string) => {
+                  // Same scheduled time as Now, but flag the appointment so
+                  // the queue / bill flow treat it as a walk-in.
+                  setForm({ ...form, time, isWalkin: true });
                   setShowTimePicker(false);
                 }}
                 onClose={() => setShowTimePicker(false)}
               />
             )}
           </Card>
+            );
+          })()}
           {errors.time && (
             <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginLeft: 4 }}>
               Please select a time
@@ -972,20 +1016,30 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         {/* Appointment Details Card */}
         <Card style={{ ...styles.card, ...styles.appointmentDetailsCard }}>
           {(() => {
-            const doctorLocked = editingAppointment?.payStatus?.toUpperCase() === "PAID";
+            // Also lock on readOnly — the row's own `pointerEvents: "auto"`
+            // overrides the parent grid's readOnly pointer-events block, so
+            // we have to re-assert it here. Same on the Service row below.
+            const paidLocked = editingAppointment?.payStatus?.toUpperCase() === "PAID";
+            const doctorLocked = paidLocked || !!editingAppointment?.readOnly;
+            // Only dim at the row level when *paid* is the lock reason —
+            // when it's just readOnly the parent grid is already at 0.85
+            // opacity, and multiplying with 0.6 here makes the text barely
+            // legible.
+            const rowOpacity = paidLocked && !editingAppointment?.readOnly ? 0.6 : 1;
             return (
               <div style={styles.appointmentRow}>
                 <div style={styles.appointmentLabelGroup}>
                   <StethoscopeIcon style={styles.appointmentIcon} />
                   <label style={styles.fieldLabel}>Doctor</label>
                 </div>
-                <div style={{ flex: 1, pointerEvents: doctorLocked ? "none" : "auto", opacity: doctorLocked ? 0.6 : 1 }}>
+                <div style={{ flex: 1, pointerEvents: doctorLocked ? "none" : "auto", opacity: rowOpacity }}>
                   <Select
                     options={doctors.map(d => ({ label: d.name, value: d.id }))}
                     value={selectedDoctorId}
                     onChange={(val: string) => setSelectedDoctorId(val)}
                     placeholder="Select Doctor"
                     error={errors.doctor}
+                    disabled={doctorLocked}
                   />
                 </div>
               </div>
@@ -993,7 +1047,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
           })()}
 
           {(() => {
-            const servicesLocked = editingAppointment?.payStatus?.toUpperCase() === "PAID";
+            const paidLocked = editingAppointment?.payStatus?.toUpperCase() === "PAID";
+            const servicesLocked = paidLocked || !!editingAppointment?.readOnly;
+            // See doctor row above — don't multiply with parent grid's 0.85
+            // when readOnly already dims the whole thing.
+            const rowOpacity = paidLocked && !editingAppointment?.readOnly ? 0.6 : 1;
             return <>
               {form.services.map((svc, i) => (
                 <div key={i} style={styles.appointmentRow}>
@@ -1001,7 +1059,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                     <PulseIcon style={styles.appointmentIcon} />
                     <label style={styles.fieldLabel}>Service</label>
                   </div>
-                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", pointerEvents: servicesLocked ? "none" : "auto", opacity: servicesLocked ? 0.6 : 1 }}>
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", pointerEvents: servicesLocked ? "none" : "auto", opacity: rowOpacity }}>
                     <div style={{ flex: 1 }}>
                       <Select
                         options={SERVICE_OPTIONS}
@@ -1012,21 +1070,40 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                           setForm({ ...form, services: updated });
                         }}
                         placeholder="Select Service"
+                        disabled={servicesLocked}
                       />
                     </div>
-                    {!servicesLocked ? (
-                      <button
-                        onClick={() => {
-                          const removed = form.services[i];
-                          const updated = form.services.filter((_, idx) => idx !== i);
-                          setForm({ ...form, services: updated });
-                          setToastMessage(`${removed} removed`);
-                        }}
-                        style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center", flexShrink: 0 }}
-                      >
-                        <TrashIcon width={20} height={20} />
-                      </button>
-                    ) : (
+                    {!servicesLocked ? (() => {
+                      // Block removing the last remaining service so every
+                      // appointment always carries at least one — the queue,
+                      // bill and dispense paths all assume a priced service.
+                      const isLast = form.services.length <= 1;
+                      return (
+                        <button
+                          onClick={() => {
+                            if (isLast) return;
+                            const removed = form.services[i];
+                            const updated = form.services.filter((_, idx) => idx !== i);
+                            setForm({ ...form, services: updated });
+                            setToastMessage(`${removed} removed`);
+                          }}
+                          disabled={isLast}
+                          title={isLast ? "At least one service is required" : "Remove service"}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: isLast ? "not-allowed" : "pointer",
+                            opacity: isLast ? 0.35 : 1,
+                            padding: "4px",
+                            display: "flex",
+                            alignItems: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <TrashIcon width={20} height={20} />
+                        </button>
+                      );
+                    })() : (
                       <div style={{ width: "28px", flexShrink: 0 }} />
                     )}
                   </div>
@@ -1066,12 +1143,10 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                   {submitting ? "Saving..." : "Save Edits"}
                 </button>
               )}
-              {!editingAppointment.readOnly && editingAppointment.payStatus?.toUpperCase() !== "PAID" && (
-                <button style={styles.pillButtonPayDue} onClick={() => handleBook("Paid", "Payment is done")} disabled={submitting}>
-                  <BillCheckIcon width={20} height={20} style={{ color: colors.neutral100 }} />
-                  {submitting ? "Saving..." : "Pay Due"}
-                </button>
-              )}
+              {/* "Pay Due" button removed per product feedback — payment is
+                  handled exclusively via the queue's Mark-as-Paid kebab
+                  action / Bill Medicines flow, so an extra CTA on the Edit
+                  Appointment view was redundant. */}
             </>
           ) : (
             <>

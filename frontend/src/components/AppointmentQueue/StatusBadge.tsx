@@ -2,10 +2,21 @@ import React, { useState, useEffect } from "react";
 import { fonts, colors } from "../../styles/theme";
 import { ReactComponent as DangerTriangleIcon } from "../../assets/icons/danger-triangle.svg";
 import { ReactComponent as CheckCircleIcon } from "../../assets/icons/check-circle.svg";
-import { loadStartedSet, getSessionSecondsForPatient } from "../../utils/sessionStarted";
 
-const formatTimer = (s: number) =>
-  `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+// H:MM:SS once past an hour, MM:SS below.
+const formatTimer = (s: number) => {
+  const h = Math.floor(s / 3600);
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+};
+
+// A consultation counts live for this long; past it we stop ticking and show
+// a static "Since <start time>" instead — so a visit left open for hours
+// doesn't run a forever-counter, but is still clearly visible as in-progress.
+const SESSION_LIVE_SEC = 6 * 60 * 60;
+const formatSince = (iso: string) =>
+  `Since ${new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -79,31 +90,50 @@ type StatusBadgeProps = {
   patientId?: string;
   /** If true, badge is clickable and calls onClick */
   onClick?: () => void;
+  /**
+   * Prescription-queue use: when true and status is IN_PROGRESS, the badge
+   * reads "Ongoing" on sage (no live timer). The appointment queue instead
+   * passes `sessionStartedAt` to get the running live timer. One badge, both.
+   */
+  started?: boolean;
+  /**
+   * Backend session start (ISO). When set and status is IN_PROGRESS, the badge
+   * shows a live timer counting up from this instant — server-owned, so it's
+   * the real elapsed consultation time and stays correct across devices/reloads.
+   */
+  sessionStartedAt?: string;
 };
 
-export function StatusBadge({ status, patientId, onClick }: StatusBadgeProps) {
+export function StatusBadge({ status, started, sessionStartedAt, onClick }: StatusBadgeProps) {
   const key = status?.toUpperCase();
   const baseCfg = STATUS_CONFIG[key] ?? { bg: colors.neutral200, color: colors.neutral700, label: status };
 
-  const [liveStarted, setLiveStarted] = useState(false);
   const [liveSeconds, setLiveSeconds] = useState<number | null>(null);
 
   useEffect(() => {
-    if (key !== "IN_PROGRESS" || !patientId) return;
-    const tick = () => {
-      const started = loadStartedSet().has(patientId);
-      setLiveStarted(started);
-      setLiveSeconds(started ? getSessionSecondsForPatient(patientId) : null);
-    };
-    tick();
-    const id = window.setInterval(tick, 1000);
+    if (key !== "IN_PROGRESS" || !sessionStartedAt) { setLiveSeconds(null); return; }
+    const startMs = new Date(sessionStartedAt).getTime();
+    if (Number.isNaN(startMs)) { setLiveSeconds(null); return; }
+    const compute = () => Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+    setLiveSeconds(compute());
+    // Already past the live window → static "Since …", never start an interval.
+    if (compute() >= SESSION_LIVE_SEC) return;
+    const id = window.setInterval(() => {
+      const e = compute();
+      setLiveSeconds(e);
+      // Crossed the 6h mark while watching → stop ticking, switch to static.
+      if (e >= SESSION_LIVE_SEC) window.clearInterval(id);
+    }, 1000);
     return () => window.clearInterval(id);
-  }, [key, patientId]);
+  }, [key, sessionStartedAt]);
 
-  const cfg = liveStarted
+  const cfg = key === "IN_PROGRESS" && liveSeconds != null
     ? {
         ...baseCfg,
-        label: `In Progress${liveSeconds != null ? ` (${formatTimer(liveSeconds)})` : ""}`,
+        // Live elapsed for the first 6h, then the static start time.
+        label: liveSeconds >= SESSION_LIVE_SEC && sessionStartedAt
+          ? formatSince(sessionStartedAt)
+          : formatTimer(liveSeconds),
       }
     : baseCfg;
 
@@ -126,7 +156,7 @@ export function StatusBadge({ status, patientId, onClick }: StatusBadgeProps) {
         cursor: onClick ? "pointer" : "default",
         userSelect: "none",
         whiteSpace: "nowrap",
-        minWidth: liveStarted ? "auto" : "90px",
+        minWidth: key === "IN_PROGRESS" && liveSeconds != null ? "auto" : "90px",
         textAlign: "center" as const,
       }}
     >

@@ -59,3 +59,11 @@ coverage/
 # Misc
 .tmp/
 .cache/
+
+
+# Local research artefacts — design study screenshots, scratch plans,
+# anything we keep on disk for reference but don't want shared.
+plans/
+*.png
+!frontend/**/*.png
+!backend/**/*.png

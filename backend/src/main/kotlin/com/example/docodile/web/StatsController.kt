@@ -299,13 +299,18 @@ class StatsController(
 
         val ageGroups = mutableMapOf("0–12" to 0, "13–25" to 0, "26–40" to 0, "41–60" to 0, "61+" to 0)
         allPatients.forEach { p ->
-            val age = p.age ?: p.dob?.let { today.year - it.year } ?: return@forEach
+            // p.age is persisted as MONTHS (years × 12 + months) by the
+            // booking + walk-in flows; convert to whole years before
+            // bucketing or every adult lands in 61+ (e.g. 30y = 360 months).
+            val ageYears = p.age?.let { it / 12 }
+                ?: p.dob?.let { today.year - it.year }
+                ?: return@forEach
             when {
-                age <= 12 -> ageGroups["0–12"] = ageGroups["0–12"]!! + 1
-                age <= 25 -> ageGroups["13–25"] = ageGroups["13–25"]!! + 1
-                age <= 40 -> ageGroups["26–40"] = ageGroups["26–40"]!! + 1
-                age <= 60 -> ageGroups["41–60"] = ageGroups["41–60"]!! + 1
-                else      -> ageGroups["61+"]   = ageGroups["61+"]!! + 1
+                ageYears <= 12 -> ageGroups["0–12"] = ageGroups["0–12"]!! + 1
+                ageYears <= 25 -> ageGroups["13–25"] = ageGroups["13–25"]!! + 1
+                ageYears <= 40 -> ageGroups["26–40"] = ageGroups["26–40"]!! + 1
+                ageYears <= 60 -> ageGroups["41–60"] = ageGroups["41–60"]!! + 1
+                else           -> ageGroups["61+"]   = ageGroups["61+"]!! + 1
             }
         }
 

@@ -7,6 +7,8 @@ import { ReactComponent as PulseIcon } from "../../assets/icons/pulse.svg";
 import { ReactComponent as FileIcon } from "../../assets/icons/file.svg";
 import { ReactComponent as HistoryIcon } from "../../assets/icons/history.svg";
 import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check-small.svg";
+import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
+import { ReactComponent as ShareIcon } from "../../assets/icons/share.svg";
 // Contact-card icons exported from Figma node 2073:3264 (currentColor-normalized)
 import { ReactComponent as LetterIcon } from "../../assets/icons/letter.svg";
 import { ReactComponent as VideocameraIcon } from "../../assets/icons/videocamera.svg";
@@ -45,19 +47,15 @@ import { useDoctors } from "../../hooks/useDoctors";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { PrescriptionQueue } from "./PrescriptionQueue";
 import { Patient } from "../../hooks/usePatients";
-import { SessionBar } from "../../components/SessionBar/SessionBar";
 import {
-  recordActiveSession,
-  clearActiveSession,
-  clearOtherSessionsForPatient,
   consumePendingSessionNav,
   type PendingSessionNav,
 } from "../../components/TopNav/SessionTrayButton";
+import { markStarted, unmarkStarted } from "../../utils/sessionStarted";
 import { useVisits } from "../../hooks/useVisits";
 import { createVisit, updateVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
 import { listRxTemplates, saveRxTemplate, deleteRxTemplate } from "../../api/rxTemplates";
 import { fetchLatestRxForMedicine, RxLatestDTO } from "../../api/rxHistory";
-import { markStarted, unmarkStarted } from "../../utils/sessionStarted";
 import { API_BASE_URL } from "../../apiConfig";
 import { AddReportModal, AddReportRow } from "./AddReportModal";
 import { FileViewer } from "./FileViewer";
@@ -362,6 +360,43 @@ const todayIso = (): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+// Build a new visit's save payload by carrying a source visit forward —
+// review patients usually get the same Rx with minor tweaks, so the doctor
+// edits from a copy instead of retyping. Carried over: history, diagnosis,
+// Rx, tests, all notes (patient / private / review), refer-to. Reset because
+// they're specific to each visit: vitals (measured fresh), the complaint
+// (reason for THIS visit), the review/follow-up date. `source` undefined
+// (no prior visit) yields a fully blank draft.
+const copyForwardDraft = (
+  source: VisitDTO | undefined,
+  opts: { visitDate: string; createdByDoctorId?: string | null; appointmentId?: string | null },
+): SaveVisitRequest => ({
+  visitDate: opts.visitDate,
+  // Per-visit — not carried forward.
+  bpSystolic: null, bpDiastolic: null, bpUnit: null,
+  bmi: null, bmiUnit: null, height: null, heightUnit: null,
+  weight: null, weightUnit: null, temperature: null, temperatureUnit: null,
+  pulse: null, pulseUnit: null, waist: null, waistUnit: null,
+  hip: null, hipUnit: null, spo2: null, spo2Unit: null,
+  complaints: null,
+  reviewDate: null, reviewDays: null,
+  // Carried forward from the source visit.
+  familyHistory: source?.familyHistory ?? null,
+  allergies: source?.allergies ?? null,
+  personalHistory: source?.personalHistory ?? null,
+  pastMedicalHistory: source?.pastMedicalHistory ?? null,
+  diagnosis: source?.diagnosis ?? null,
+  notesForPatient: source?.notesForPatient ?? null,
+  privateNotes: source?.privateNotes ?? null,
+  tests: source?.tests ?? null,
+  reviewNotes: source?.reviewNotes ?? null,
+  referDoctorId: source?.referDoctorId ?? null,
+  createdByDoctorId: opts.createdByDoctorId ?? null,
+  appointmentId: opts.appointmentId,
+  sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
+  prescriptions: (source?.prescriptions ?? []).map((p, i) => ({ ...p, id: null, position: i + 1 })),
+});
+
 // Total units to dispense for one Rx row:
 //   qty = ceil( units/dose × doses/day × days )
 // Returns null when any input is missing or unparseable (SOS, "As
@@ -561,9 +596,12 @@ function AuthThumb({ fileUrl, mimeType, style }: { fileUrl: string | null | unde
 
 type PrescriptionPageProps = {
   onNavigate?: (tab: import("../../components/SideNav").NavTab) => void;
+  // Bumped by HomePage after a walk-in is created so the queue refetches
+  // and the new "At Doc" card appears without a manual reload.
+  queueRefreshKey?: number;
 };
 
-export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
+export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPageProps = {}) {
   // Drain any pending nav synchronously during the very first render so
   // the form mounts with the right patient already selected — no brief
   // flash of the patient picker before the chart opens.
@@ -642,7 +680,19 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   const prevVisit: VisitDTO | undefined = activeTab > 0 ? visits[activeTab - 1] : undefined;
   const [reviewDate, setReviewDate] = React.useState<Date | null>(null);
   const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
-  const [rxRows, setRxRows] = React.useState<RxRowDraft[]>([]);
+  // Tracks unsaved edits since the visit loaded / was last saved. Surfaces
+  // the "Save changes" button on an already-completed visit only after the
+  // doctor actually edits. Set on form input + rx mutations, cleared on save
+  // and on visit change.
+  const [dirty, setDirty] = React.useState<boolean>(false);
+  const [rxRows, _setRxRows] = React.useState<RxRowDraft[]>([]);
+  // Every USER rx mutation (add / delete row, picker change, etc.) flags
+  // dirty. The visit-load populate and the async generic-name enrichment use
+  // the raw `_setRxRows` so loading a visit never looks like an edit.
+  const setRxRows = React.useCallback((value: React.SetStateAction<RxRowDraft[]>) => {
+    _setRxRows(value);
+    setDirty(true);
+  }, []);
   const [rxInteractions, setRxInteractions] = React.useState<Array<{ drug: string; interactsWith: string; comment: string }>>([]);
 
   // Per-medicine autofill: index this patient's PAST prescriptions by medicine
@@ -718,33 +768,47 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
     React.useState<Record<string, VitalCellState>>(() => buildVitalState(undefined));
   // History field values (Family History, Allergies, …). Controlled so the
   // <Autocomplete> dropdown can drive them. Reset on visit-tab change.
-  const [historyValues, setHistoryValues] =
+  const [historyValues, _setHistoryValues] =
     React.useState<Record<string, string>>(() =>
       Object.fromEntries(HISTORY_FIELDS.map((f) => [f.field, ""]))
     );
   // Diagnosis + Complaints + Tests are also suggestion-driven
   // (specialty-scoped via the same API).
-  const [diagnosisValue, setDiagnosisValue] = React.useState<string>("");
-  const [complaintsValue, setComplaintsValue] = React.useState<string>("");
-  const [testsValue, setTestsValue] = React.useState<string>("");
+  const [diagnosisValue, _setDiagnosisValue] = React.useState<string>("");
+  const [complaintsValue, _setComplaintsValue] = React.useState<string>("");
+  const [testsValue, _setTestsValue] = React.useState<string>("");
+  // Chip/tag + suggestion fields are click-driven (× to remove a chip, pick a
+  // suggestion) so they don't all bubble a form `onChange`. Wrap their setters
+  // to flag dirty on any user change; the visit-load populate uses the raw
+  // `_set*` versions so loading a visit is never treated as an edit.
+  const setHistoryValues = React.useCallback((value: React.SetStateAction<Record<string, string>>) => {
+    _setHistoryValues(value);
+    setDirty(true);
+  }, []);
+  const setDiagnosisValue = React.useCallback((value: React.SetStateAction<string>) => {
+    _setDiagnosisValue(value);
+    setDirty(true);
+  }, []);
+  const setComplaintsValue = React.useCallback((value: React.SetStateAction<string>) => {
+    _setComplaintsValue(value);
+    setDirty(true);
+  }, []);
+  const setTestsValue = React.useCallback((value: React.SetStateAction<string>) => {
+    _setTestsValue(value);
+    setDirty(true);
+  }, []);
   // Notes-for-Patient + Private Notes + Review-Notes are now controlled too
   // so we can serialize them on Save.
   const [notesForPatientValue, setNotesForPatientValue] = React.useState<string>("");
   const [privateNotesValue, setPrivateNotesValue] = React.useState<string>("");
   const [reviewNotesValue, setReviewNotesValue] = React.useState<string>("");
   const [saving, setSaving] = React.useState<boolean>(false);
-  // AI SOAP draft modal — opens on the ✨ AI draft button next to the
-  // Complaints/Diagnosis row. Fetched on open; applies per-field on demand.
-  const [aiSoapOpen, setAiSoapOpen] = React.useState<boolean>(false);
-  // Forces SessionBar to remount after Restart. The visit id doesn't change
-  // on restart so React would otherwise keep the bar's old in-memory state
-  // (which still thinks the session is ended); bumping this counter is the
-  // cheap way to make the bar re-read its localStorage entry.
-  const [sessionBarEpoch, setSessionBarEpoch] = React.useState(0);
-  // Form is non-interactive until the user clicks Start Session on the
-  // floating SessionBar. Pausing / ending re-locks. Visually unchanged
-  // while locked — only pointer-events are blocked.
-  const [formActive, setFormActive] = React.useState<boolean>(false);
+  // The visit id whose data the form currently holds. Updated (in state, so
+  // it flips atomically with the form fields) every time the form populates
+  // from a visit. handleSave refuses to write unless this matches the active
+  // visit — so during a visit switch the previous visit's form data can never
+  // be saved onto the newly-selected visit (the data-bleed-between-visits bug).
+  const [loadedVisitId, setLoadedVisitId] = React.useState<string | null>(null);
   // Visits are loaded ASC by visit_date, so the latest one sits at the
   // tail of the array — that's "today's visit", the one whose SessionBar
   // Editability is purely a function of the visit's session lifecycle, not
@@ -767,7 +831,15 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   // show the idle "Start Session" state, never a bogus "Session Ended".
   const hadSession =
     activeVisit?.sessionEndedAt != null || (activeVisit?.sessionDurationSec ?? 0) > 0;
+  // An OPEN consultation: the pad was opened (session started) but the visit
+  // was never completed (no end). It must stay editable no matter how old the
+  // visit is — otherwise once it crosses the 24h mark it hard-locks with NO
+  // way to click "Complete visit", leaving the appointment stuck IN_PROGRESS
+  // and a ghost entry in Active Sessions forever.
+  const hasOpenSession =
+    activeVisit?.sessionStartedAt != null && activeVisit?.sessionEndedAt == null;
   const isWithinBuffer = (() => {
+    if (hasOpenSession) return true;
     if (endedAtMs != null && !Number.isNaN(endedAtMs)) {
       // Ended with a real timestamp → resumable for 24h from that moment.
       return Date.now() - endedAtMs < ONE_DAY_MS;
@@ -788,36 +860,11 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   })();
   const isEditable = isWithinBuffer;
 
-  // Keep the header session tray in sync with whatever's running for the
-  // visit currently on screen. recordActiveSession fires once at handle-
-  // SessionStart, but if the doctor reloads the page mid-session (or the
-  // session was started before this tray existed) the meta map can lose
-  // its entry — then the tray skips a still-running session. This effect
-  // backfills the meta by reading the SessionBar's own localStorage
-  // state, which is the source of truth for whether the timer is ticking
-  // (the DB column `sessionStartedAt` can lag behind it).
-  React.useEffect(() => {
-    if (!activeVisit || !selectedPatient) return;
-    try {
-      const raw = localStorage.getItem("docodile_session_state");
-      const map = raw ? (JSON.parse(raw) as Record<string, { runStartedAtMs: number | null; baseSeconds: number; paused: boolean; ended: boolean }>) : {};
-      const state = map[activeVisit.id];
-      // A session counts as "live" if it has timer activity and hasn't
-      // been ended yet — covers both currently-running and paused.
-      const isLive = state != null && !state.ended && (state.runStartedAtMs != null || state.baseSeconds > 0);
-      if (isLive) {
-        recordActiveSession({
-          visitId: activeVisit.id,
-          patient: selectedPatient,
-          appointmentId: selectedAppointmentId ?? null,
-        });
-      }
-    } catch {
-      /* localStorage unavailable — tray will simply miss this entry */
-    }
-  }, [activeVisit, selectedPatient, selectedAppointmentId]);
-  // Edit flag used by every gate below.
-  const canEditForm = formActive && isEditable;
+  // Edit flag used by every gate below. The form is editable whenever the
+  // visit is within its edit window (today's / within 24h) — no longer gated
+  // behind starting a session. (Session timer is being retired; editing a
+  // current visit shouldn't require an explicit "Start Session" click.)
+  const canEditForm = isEditable;
   // On initial open of a patient, jump to the latest (today's) visit
   // tab. Without this the tabs default to index 0, which is the OLDEST
   // visit — confusing when the doctor expects to land on today.
@@ -878,6 +925,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
     setReviewDate(d);
     setReviewDays(String(Math.max(0, daysFromToday(d))));
     setShowReviewDatePicker(false);
+    setDirty(true);
   };
   const changeReviewDays = (raw: string) => {
     const cleaned = raw.replace(/\D/g, "");
@@ -889,6 +937,9 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   // Uncontrolled inputs are remounted via the `key` on the visits wrapper
   // below so they pick up new defaultValues automatically.
   React.useEffect(() => {
+    // Mark that the form now holds THIS visit's data (set in the same state
+    // batch as the fields below, so handleSave's guard sees them in sync).
+    setLoadedVisitId(activeVisit?.id ?? null);
     setReviewDate(activeVisit?.reviewDate ? new Date(activeVisit.reviewDate) : null);
     setReviewDays(activeVisit?.reviewDays != null ? String(activeVisit.reviewDays) : "");
     setReviewNotesValue(activeVisit?.reviewNotes ?? "");
@@ -900,7 +951,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
       activeVisit?.prescriptions && activeVisit.prescriptions.length > 0
         ? activeVisit.prescriptions.map(fromRxDTO)
         : Array.from({ length: 5 }, (_, i) => blankRxRow(i + 1));
-    setRxRows(newRows);
+    _setRxRows(newRows); // load — not a user edit, don't flag dirty
 
     // Resolve genericName for every row that has a medicine but no cached
     // generic name (all rows on first load since fromRxDTO sets it to "").
@@ -916,7 +967,8 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
           .then((r) => r.ok ? r.json() : [])
           .then((data: Array<{ genericName?: string; generic_name?: string }>) => {
             const gn = data[0]?.genericName ?? data[0]?.generic_name ?? "Unknown";
-            setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, genericName: gn } : r));
+            // Background enrichment, not a user edit — raw setter, no dirty.
+            _setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, genericName: gn } : r));
           })
           .catch(() => {});
       });
@@ -924,15 +976,16 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
 
     setShowReviewDatePicker(false);
     setVitalState(buildVitalState(activeVisit));
-    setHistoryValues({
+    // Load — raw setters so populating the form is not treated as an edit.
+    _setHistoryValues({
       family_history: activeVisit?.familyHistory ?? "",
       allergies: activeVisit?.allergies ?? "",
       personal_history: activeVisit?.personalHistory ?? "",
       past_medical_history: activeVisit?.pastMedicalHistory ?? "",
     });
-    setDiagnosisValue(activeVisit?.diagnosis ?? "");
-    setComplaintsValue(activeVisit?.complaints ?? "");
-    setTestsValue(activeVisit?.tests ?? "");
+    _setDiagnosisValue(activeVisit?.diagnosis ?? "");
+    _setComplaintsValue(activeVisit?.complaints ?? "");
+    _setTestsValue(activeVisit?.tests ?? "");
     setNotesForPatientValue(activeVisit?.notesForPatient ?? "");
     setPrivateNotesValue(activeVisit?.privateNotes ?? "");
     setReferDoctorId(activeVisit?.referDoctorId ?? null);
@@ -1022,22 +1075,16 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
       }
       if (autoCreatedForApptRef.current !== selectedAppointmentId) {
         autoCreatedForApptRef.current = selectedAppointmentId;
-        const draft: SaveVisitRequest = {
+        // Carry the patient's most recent past visit forward (visits are
+        // sorted oldest→newest, so the last one is the latest). Review
+        // patients open pre-filled with their history / diagnosis / Rx /
+        // notes — vitals, complaint and review date start fresh.
+        const lastVisit = visits.length > 0 ? visits[visits.length - 1] : undefined;
+        const draft = copyForwardDraft(lastVisit, {
           visitDate: queueDate,
-          bpSystolic: null, bpDiastolic: null, bpUnit: null,
-          bmi: null, bmiUnit: null, height: null, heightUnit: null,
-          weight: null, weightUnit: null, temperature: null, temperatureUnit: null,
-          pulse: null, pulseUnit: null, waist: null, waistUnit: null,
-          hip: null, hipUnit: null, spo2: null, spo2Unit: null,
-          familyHistory: null, allergies: null, personalHistory: null, pastMedicalHistory: null,
-          complaints: null, diagnosis: null, notesForPatient: null, privateNotes: null, tests: null,
           createdByDoctorId: appointmentDoctorId,
           appointmentId: selectedAppointmentId,
-          referDoctorId: null,
-          reviewDate: null, reviewDays: null, reviewNotes: null,
-          sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
-          prescriptions: [],
-        };
+        });
         void createVisit(selectedPatientId, draft)
           .then(() => refetchVisits())
           .catch((err: Error) => showToast(err.message || "Failed to create visit"));
@@ -1153,8 +1200,10 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   const showToast = (message: string) => setToast({ visible: true, message });
   const closeToast = () => setToast({ visible: false, message: "" });
 
-  const setVitalValue = (key: string, value: string) =>
+  const setVitalValue = (key: string, value: string) => {
     setVitalState((prev) => ({ ...prev, [key]: { ...prev[key], value } }));
+    setDirty(true);
+  };
   const validateVitalOnEnter = (
     e: React.KeyboardEvent<HTMLInputElement>,
     label: string,
@@ -1174,13 +1223,15 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
       }
     }
   };
-  const toggleVitalUnit = (key: string) =>
+  const toggleVitalUnit = (key: string) => {
     setVitalState((prev) => {
       const cell = prev[key];
       const toggle = UNIT_TOGGLES[cell.unit];
       if (!toggle) return prev;
       return { ...prev, [key]: { value: toggle.convert(cell.value), unit: toggle.altUnit } };
     });
+    setDirty(true);
+  };
 
   // List-view tab state — shared across Reports / Files. Defaults to the
   // first tab ("All Reports" / "All Files").
@@ -1496,14 +1547,21 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
 
   const handleSave = async (opts?: { silent?: boolean }) => {
     if (!activeVisit || !selectedPatientId) return;
+    // Never write the form to a visit it wasn't loaded from. During a visit
+    // switch the active visit changes one render before the form repopulates;
+    // saving in that gap would copy the old visit's data onto the new one (and
+    // blank the old). Skip until the form has caught up to the active visit.
+    if (loadedVisitId !== activeVisit.id) return;
     setSaving(true);
     try {
       await updateVisit(activeVisit.id, buildSaveRequest());
       await refetchVisits();
+      setDirty(false);
       // The doctor's just-saved schedule is now the clinic's latest for any
       // medicines in this visit — clear the autofill cache so the next entry
       // re-fetches and reflects those edits.
       clinicWideRxCacheRef.current.clear();
+      // Auto-saves stay silent; only explicit actions toast.
       if (!opts?.silent) showToast("Visit saved");
     } catch (e) {
       // Auto-saves stay quiet on success but should still surface
@@ -1526,25 +1584,19 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
   // from when the session started, dropping every edit made after that.
   const handleFormBlur = () => {
     if (!canEditForm || !activeVisit) return;
+    // Auto-save on blur works for every visit, including completed ones — a
+    // post-completion edit is persisted without reopening the appointment
+    // (handleSave changes no status). handleSave also clears the dirty flag,
+    // so the "Save changes" button hides again once the edit is saved.
     void handleSave({ silent: true });
   };
 
-  // Save on every Pause / Resume — the doctor's edits up to that moment
-  // get persisted even if they walk away with the session paused.
-  // formActive transitions cover Start (no-op effectively), Pause,
-  // Resume; End is handled in handleSessionEnd. We skip the very first
-  // render so we don't fire a save before the visit data has loaded.
-  const prevFormActiveRef = React.useRef<boolean | null>(null);
+  // A fresh visit (tab switch / patient change) starts clean — drop any
+  // unsaved-edit flag left from the previous visit.
   React.useEffect(() => {
-    if (prevFormActiveRef.current === null) {
-      prevFormActiveRef.current = formActive;
-      return;
-    }
-    if (prevFormActiveRef.current === formActive) return;
-    prevFormActiveRef.current = formActive;
-    if (activeVisit) void handleSave({ silent: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formActive, activeVisit?.id]);
+    setDirty(false);
+  }, [activeVisit?.id]);
+
 
   // Best-effort PATCH against the appointment status. Tries the
   // public /api/appointments endpoint first (broad role allowlist) and
@@ -1569,148 +1621,149 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
     }
   };
 
-  const handleSessionStart = () => {
-    // Mirror the auto-create gate: don't let the doctor start a session on
-    // an appointment that's still BOOKED/WAITING — the receptionist must
-    // mark the patient At Doc first.
-    if (selectedAppointmentId) {
-      const apptStatus = (selectedAppointmentStatus ?? "").toUpperCase();
-      if (apptStatus && apptStatus !== "AT_DOC" && apptStatus !== "IN_PROGRESS") {
-        showToast("Mark the patient as 'At Doc' before starting the session.");
-        return;
-      }
-    }
-    if (selectedPatient) markStarted(selectedPatient.id);
-    // Surface this session in the header tray so the doctor can navigate
-    // back to it from any other screen until the session ends.
-    if (activeVisit && selectedPatient) {
-      // One live session per patient: clear any orphaned session for this
-      // patient on a different visit tab before starting a new one. Stops
-      // a stale visit's timer from counting forever in the tray.
-      clearOtherSessionsForPatient(selectedPatient.id, activeVisit.id);
-      recordActiveSession({
-        visitId: activeVisit.id,
-        patient: selectedPatient,
-        appointmentId: selectedAppointmentId ?? null,
-      });
-    }
-    // Persist the session-start time on the visit row so other devices
-    // see when this prescription session began.
-    if (activeVisit) {
-      const req: SaveVisitRequest = {
-        ...buildSaveRequest(),
-        sessionStartedAt: new Date().toISOString(),
-      };
-      void updateVisit(activeVisit.id, req).then(() => refetchVisits());
-    }
+  // AI summary popover toggle (bottom-bar summary). Currently has no trigger.
+  const [showAiSummary, setShowAiSummary] = React.useState(false);
+
+  // Clear all — wipe the editable prescription form back to blanks.
+  const handleClearAll = () => {
+    setVitalState(buildVitalState(undefined));
+    setReviewDate(null);
+    setReviewDays("");
+    setReviewNotesValue("");
+    setRxRows(Array.from({ length: 5 }, (_, i) => blankRxRow(i + 1)));
+    setHistoryValues({
+      family_history: "", allergies: "", personal_history: "", past_medical_history: "",
+    });
+    setDiagnosisValue("");
+    setComplaintsValue("");
+    setTestsValue("");
+    setNotesForPatientValue("");
+    setPrivateNotesValue("");
   };
 
-  const handleSessionEnd = (totalSeconds: number) => {
-    if (selectedPatient) unmarkStarted(selectedPatient.id);
-    // Drop this session from the header tray. Also clear any other
-    // orphaned session for the same patient (e.g. a session left running
-    // on a different visit tab) so the tray can't show a runaway timer.
-    if (activeVisit) clearActiveSession(activeVisit.id);
-    if (selectedPatient) clearOtherSessionsForPatient(selectedPatient.id, null);
-    // Persist the locked-in duration on the visit so reopening the
-    // prescription on any device shows the same final time.
-    if (activeVisit) {
-      const req: SaveVisitRequest = {
-        ...buildSaveRequest(),
-        sessionEndedAt: new Date().toISOString(),
-        sessionDurationSec: totalSeconds,
-      };
-      void updateVisit(activeVisit.id, req).then(() => refetchVisits());
-    } else {
-      void handleSave();
+  // Download every file in the patient's Files tab (best-effort: triggers a
+  // browser download per file that has a URL).
+  const handleDownloadAllFiles = () => {
+    const downloadable = serverFiles.filter((f) => f.fileUrl);
+    if (!downloadable.length) {
+      showToast("No files to download");
+      return;
     }
-    // Move the appointment to COMPLETED so the queues show the right
-    // status next time they're viewed.
-    if (selectedAppointmentId) {
-      void patchAppointmentStatus(selectedAppointmentId, "COMPLETED");
-    }
+    downloadable.forEach((f) => {
+      const a = document.createElement("a");
+      a.href = f.fileUrl as string;
+      a.download = f.name || "";
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+    showToast(`Downloading ${downloadable.length} file${downloadable.length === 1 ? "" : "s"}…`);
   };
 
-  // "Restart" really means "resume from where I ended". Visit data is
-  // untouched. The previously-recorded duration becomes the timer's new
-  // baseline, sessionEndedAt is cleared (so isEditable flips back to true),
-  // and we seed the per-visit localStorage state so the bar mounts as
-  // running with the saved seconds already on the clock — ticking forward
-  // from there instead of restarting at 00:00.
-  const handleSessionRestart = async () => {
-    if (!activeVisit) return;
-    if (selectedPatient) markStarted(selectedPatient.id);
-    // SessionBar writes to localStorage synchronously on End, but the
-    // post-End refetch of activeVisit hasn't necessarily completed yet,
-    // so localStorage is the more current source of truth for the
-    // recorded duration. Visit row is a fallback if storage was cleared.
-    let baseSeconds = activeVisit.sessionDurationSec ?? 0;
-    try {
-      const stateKey = "docodile_session_state";
-      const raw = localStorage.getItem(stateKey);
-      const all = raw ? JSON.parse(raw) as Record<string, any> : {};
-      const prior = all[activeVisit.id];
-      if (prior && typeof prior.baseSeconds === "number") {
-        baseSeconds = prior.baseSeconds;
-      }
-      all[activeVisit.id] = {
-        baseSeconds,
-        runStartedAtMs: Date.now(),
-        paused: false,
-        ended: false,
+  // Explicitly finish a consultation: save the current form and mark the
+  // linked appointment COMPLETED. This replaces "End Session" as the path to
+  // COMPLETED now that the session timer is being retired — without it, an
+  // appointment could never leave IN_PROGRESS and the queue/stats would stall.
+  const handleCompleteVisit = async () => {
+    const alreadyCompleted = (selectedAppointmentStatus ?? "").toUpperCase() === "COMPLETED";
+    // Stop the consultation timer and persist the form. The backend computes
+    // the duration from sessionStartedAt (set when the doctor opened the pad)
+    // to sessionEndedAt. On the FIRST completion we stamp the end time now;
+    // re-saving an already-completed visit preserves the original end time so
+    // the recorded duration isn't inflated.
+    if (activeVisit) {
+      const endIso = activeVisit.sessionEndedAt ?? new Date().toISOString();
+      const req: SaveVisitRequest = {
+        ...buildSaveRequest(),
+        sessionEndedAt: endIso,
       };
-      localStorage.setItem(stateKey, JSON.stringify(all));
-    } catch { /* localStorage full / private mode — bar will fall back to visit field */ }
+      await updateVisit(activeVisit.id, req);
+      await refetchVisits();
+      setDirty(false);
+    }
+    if (selectedAppointmentId && !alreadyCompleted) {
+      // Flip status only on the first completion. A later re-save keeps the
+      // visit Completed — it never goes back to In Progress.
+      await patchAppointmentStatus(selectedAppointmentId, "COMPLETED");
+      // Clear the "Ongoing" flag so the completed card shows Completed.
+      if (selectedPatient) unmarkStarted(selectedPatient.id);
+    }
+    // Reflect completion locally so the open-pad effects don't re-mark this
+    // patient as Ongoing, and the button switches to its "save" mode.
+    setSelectedAppointmentStatus("COMPLETED");
+    showToast(alreadyCompleted ? "Changes saved" : "Visit marked complete");
+  };
+
+  // Opening the pad for an At Doc / In Progress patient flips the queue card
+  // from "At Doc" to "Ongoing" — the queue reads this per-patient "started"
+  // flag. This replaces the old "Start Session" trigger. Idempotent, so it's
+  // safe to run on every open (including a re-open).
+  React.useEffect(() => {
+    if (!selectedPatient || !selectedAppointmentId) return;
+    const apptStatus = (selectedAppointmentStatus ?? "").toUpperCase();
+    if (apptStatus === "AT_DOC" || apptStatus === "IN_PROGRESS") {
+      markStarted(selectedPatient.id);
+    }
+  }, [selectedPatient, selectedAppointmentId, selectedAppointmentStatus]);
+
+  // Start the consultation timer the moment the doctor opens the pad for an
+  // appointment that's with them (At Doc / In Progress): stamp
+  // sessionStartedAt once. Server-persisted; the backend computes the elapsed
+  // duration up to "Complete visit". Guarded so it fires once per visit and
+  // never overwrites a start time that's already set.
+  const timerStartedForVisitRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!activeVisit || !selectedAppointmentId) return;
+    if (activeVisit.appointmentId !== selectedAppointmentId) return;
+    if (activeVisit.sessionStartedAt) return;
+    if (timerStartedForVisitRef.current === activeVisit.id) return;
+    const apptStatus = (selectedAppointmentStatus ?? "").toUpperCase();
+    if (apptStatus !== "AT_DOC" && apptStatus !== "IN_PROGRESS") return;
+    timerStartedForVisitRef.current = activeVisit.id;
     const req: SaveVisitRequest = {
       ...buildSaveRequest(),
-      sessionEndedAt: null,
-      // Keep the accumulated time on the visit so reopening on another
-      // device sees the same baseline. The bar will keep adding to it.
-      sessionDurationSec: baseSeconds,
+      sessionStartedAt: new Date().toISOString(),
     };
-    try {
-      await updateVisit(activeVisit.id, req);
-      // Flip the linked appointment's status back to IN_PROGRESS so the
-      // queue card stops showing "Completed" — the doctor reopened the
-      // visit, the patient is effectively in-session again. Best-effort:
-      // don't fail the resume flow if the appointment update fails.
-      if (selectedAppointmentId) {
-        try {
-          const token = localStorage.getItem("docodile_token");
-          await fetch(`${API_BASE_URL}/api/tenant/appointments/${selectedAppointmentId}/status`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ status: "IN_PROGRESS" }),
-          });
-        } catch { /* swallow — visit reopened either way */ }
-      }
-      await refetchVisits();
-      // Force the SessionBar to remount so it re-reads the freshly seeded
-      // localStorage state and shows the running timer immediately —
-      // otherwise its in-memory `ended: true` lingers until a tab switch.
-      setSessionBarEpoch((n) => n + 1);
-    } catch (e) {
-      showToast(`Couldn't resume: ${(e as Error).message}`);
-    }
-  };
+    void updateVisit(activeVisit.id, req).then(() => refetchVisits());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeVisit, selectedAppointmentId, selectedAppointmentStatus]);
 
   const handleAddVisit = async () => {
     if (!selectedPatientId) return;
     setSaving(true);
     try {
+      // Persist any unsaved edits on the CURRENT visit before switching to the
+      // new one, so adding a visit can never appear to drop the previous one's
+      // data.
+      if (canEditForm && activeVisit && dirty) {
+        await handleSave({ silent: true });
+      }
+      // Carry the current visit's data into the new visit. Review patients
+      // usually get the same prescription with minor tweaks, so the doctor
+      // edits from a copy instead of retyping. Carried over: history,
+      // diagnosis, Rx, tests, all notes (patient / private / review). Reset
+      // because they're specific to each visit: vitals (measured fresh), the
+      // complaint (reason for THIS visit), the review/follow-up date, plus the
+      // technical fields (today's date, fresh session, no appointment link,
+      // and new Rx-row ids so they save as this visit's own rows).
+      const base = buildSaveRequest();
       const draft: SaveVisitRequest = {
+        ...base,
         visitDate: todayIso(),
+        appointmentId: undefined,
+        sessionStartedAt: null,
+        sessionEndedAt: null,
+        sessionDurationSec: null,
+        // Per-visit — do NOT carry forward.
         bpSystolic: null, bpDiastolic: null, bpUnit: null,
         bmi: null, bmiUnit: null, height: null, heightUnit: null,
         weight: null, weightUnit: null, temperature: null, temperatureUnit: null,
         pulse: null, pulseUnit: null, waist: null, waistUnit: null,
         hip: null, hipUnit: null, spo2: null, spo2Unit: null,
-        familyHistory: null, allergies: null, personalHistory: null, pastMedicalHistory: null,
-        complaints: null, diagnosis: null, notesForPatient: null, privateNotes: null, tests: null,
-        referDoctorId: null,
-        reviewDate: null, reviewDays: null, reviewNotes: null,
-        sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
-        prescriptions: [],
+        complaints: null,
+        reviewDate: null, reviewDays: null,
+        prescriptions: base.prescriptions.map((p, i) => ({ ...p, id: null, position: i + 1 })),
       };
       await createVisit(selectedPatientId, draft);
       await refetchVisits();
@@ -1863,6 +1916,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
     return (
       <div ref={pageRootRef}>
         <PrescriptionQueue
+          refreshKey={queueRefreshKey}
           onSelect={(patient, appointmentId, date, doctorId) => {
             setQueueDate(date);
             setSelectedPatient(patient);
@@ -1893,6 +1947,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
     return (
       <div ref={pageRootRef}>
         <PrescriptionQueue
+          refreshKey={queueRefreshKey}
           onSelect={(patient, appointmentId, date, doctorId) => {
             setQueueDate(date);
             setSelectedPatient(patient);
@@ -2042,16 +2097,25 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
         <div
           style={{
             ...styles.rightArea,
-            ...(canEditForm
+            // The lock applies ONLY to the prescription form (action 0). The
+            // other chart sections — Files (1), Timeline (2), Bills (3),
+            // Info (4) — stay fully usable (Add file etc.) regardless of the
+            // visit's editability; locking a past/unstarted visit must not
+            // freeze the whole chart.
+            ...(canEditForm || activeAction !== 0
               ? null
               // Mostly readable while locked — labels stay legible so the
-              // doctor can scan the form before starting a session. Clicks
-              // are still blocked via pointer-events:none. Past visits hit
-              // this branch unconditionally so they read as historic only.
+              // doctor can scan the form. Clicks are blocked via
+              // pointer-events:none. Past visits hit this unconditionally so
+              // they read as historic only.
               : { pointerEvents: "none", opacity: 0.75, userSelect: "none" }),
             transition: "opacity 0.15s ease",
           }}
-          aria-disabled={!canEditForm}
+          aria-disabled={!canEditForm && activeAction === 0}
+          // Any descendant input/textarea/select change bubbles here — flag
+          // unsaved edits so the "Save changes" button surfaces on an
+          // already-completed visit only after the doctor actually edits.
+          onChange={() => { if (canEditForm) setDirty(true); }}
           // Save-on-blur: any descendant input / textarea / select that
           // loses focus triggers a silent save. React.onBlur surfaces the
           // bubbled focusout, so a single handler at the form root covers
@@ -2410,30 +2474,6 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                     </div>
                   )}
                 </div>
-
-                {/* AI Draft trigger — pulls a structured SOAP from whatever
-              the doctor's already typed (complaints/diagnosis/private notes
-              + vitals) and offers it back as suggestions to apply per-field.
-              Hidden when there's no active visit or the form is read-only. */}
-                {canEditForm && activeVisit && (
-                  <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
-                    <button
-                      type="button"
-                      onClick={() => setAiSoapOpen(true)}
-                      style={{
-                        background: colors.secondary700,
-                        color: colors.neutral100,
-                        border: "none",
-                        padding: "6px 14px",
-                        borderRadius: 999,
-                        cursor: "pointer",
-                        fontSize: 12,
-                      }}
-                    >
-                      ✨ AI draft
-                    </button>
-                  </div>
-                )}
 
                 {/* Figma node 2057:6283 — Complaints + Diagnosis cards laid out
               side-by-side. Each card is a multi-line cream textarea with the
@@ -2833,6 +2873,7 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                                     e.preventDefault();
                                     setReferDoctorId(d.id);
                                     setReferOpen(false);
+                                    setDirty(true);
                                   }}
                                 >
                                   <span style={styles.referMenuItemName}>{d.name}</span>
@@ -2874,12 +2915,6 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
                             selectedDate={reviewDate ?? new Date()}
                             onSelect={pickReviewDate}
                             onClose={() => setShowReviewDatePicker(false)}
-                            style={{
-                              top: "auto",
-                              bottom: "calc(100% + 8px)",
-                              left: 0,
-                              transform: "none",
-                            }}
                             disablePast
                           />
                         )}
@@ -2910,42 +2945,6 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
         </div>
       </div>
       <Toast message={toast.message} isVisible={toast.visible} onClose={closeToast} />
-      {/* Floating session toolbar (Figma node 2255:10871) — fixed at the
-          bottom of the viewport so the prescription form scrolls behind it. */}
-      {/* Only mount once the visit fetch has resolved for this patient.
-          Otherwise the bar mounts first with no storageKey, briefly renders
-          its idle Start Session state, then remounts with the real visit
-          id and flips to Running/Paused — visible as a one-frame jerk.
-          For past visits we still render the bar but pass readOnly so it
-          shows that visit's recorded duration in a frozen Session Ended
-          view — no interactive controls, can't accidentally start a new
-          session for a historic record. */}
-      {visitsLoadedFor === selectedPatientId && visits.length > 0 && (
-        <SessionBar
-          // Remount per-visit so the bar reads the persisted state for the
-          // active visit rather than carrying state across visit switches.
-          key={`${activeVisit?.id ?? "no-visit"}-${sessionBarEpoch}`}
-          storageKey={activeVisit?.id}
-          readOnly={!isEditable}
-          recordedDurationSec={activeVisit?.sessionDurationSec ?? null}
-          // Drives the SessionBar's 24h "Resume" buffer in readOnly mode.
-          // After 24h since the visit's sessionEndedAt the Resume pill hides.
-          recordedEndedAtMs={activeVisit?.sessionEndedAt ? new Date(activeVisit.sessionEndedAt).getTime() : null}
-          onPrint={() => handlePrintPrescription("print")}
-          // Direct server-side PDF download — no preview modal, no browser
-          // dialog. Same template + data as Print.
-          onDownload={() => handlePrintPrescription("download")}
-          onShare={handleShareWhatsApp}
-          onActiveChange={setFormActive}
-          onStart={handleSessionStart}
-          onEnd={handleSessionEnd}
-          // Always pass onRestart and let the SessionBar's 24h-buffer
-          // logic decide whether to show the Resume pill. Restricting to
-          // today's date alone was hiding Resume for yesterday's visit
-          // even while the buffer was still active.
-          onRestart={handleSessionRestart}
-        />
-      )}
 
       {/* Prescription templates — save the current Rx + clinical fields under a
           name, or load a saved one to auto-fill. Clinic-shared (backend). */}
@@ -3000,6 +2999,90 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
         </div>
       </Modal>
 
+      {/* ─── Floating bottom bar — the ACTIVE SECTION'S actions. Section nav
+          + contact actions moved up to the sticky header; this bar now adapts
+          to which section is open. Output actions (Download / Print / Share)
+          group on the left; the destructive Clear all is set apart behind a
+          divider. Coming-soon sections (Timeline / Bills) render no bar. */}
+      {activeAction <= 1 && (
+        <div style={styles.bottomBar}>
+          {activeAction === 0 ? (
+            <>
+              {/* Complete visit / Save changes — only on the current editable
+                  visit with an appointment (canEditForm is false for past
+                  historic visits). Before completion: "Complete visit" (stamps
+                  the end time + marks the appointment Completed). After
+                  completion: shown as "Save changes" ONLY while there are
+                  unsaved edits, and it persists them WITHOUT reopening the
+                  appointment (status stays Completed). Auto-save still runs on
+                  blur and clears the dirty flag, so the button hides again. */}
+              {canEditForm && selectedAppointmentId && (() => {
+                const completed = (selectedAppointmentStatus ?? "").toUpperCase() === "COMPLETED";
+                if (completed && !dirty) return null;
+                return (
+                  <button
+                    type="button"
+                    style={{ ...styles.barBtn, backgroundColor: colors.secondary400, color: colors.neutral900 }}
+                    // onMouseDown + preventDefault so the handler runs BEFORE the
+                    // focused field blurs — otherwise the blur fires a silent
+                    // auto-save that clears the dirty flag and hides this button
+                    // before the click lands (the "no toast" bug).
+                    onMouseDown={(e) => { e.preventDefault(); void handleCompleteVisit(); }}
+                  >
+                    <BillCheckIcon width={18} height={18} />
+                    <span>{completed ? "Save changes" : "Complete visit"}</span>
+                  </button>
+                );
+              })()}
+              <button type="button" style={styles.barBtn} onClick={() => handlePrintPrescription("download")}>
+                <DownloadIcon width={18} height={18} />
+                <span>Download</span>
+              </button>
+              <button type="button" style={styles.barBtn} onClick={() => handlePrintPrescription("print")}>
+                <PrinterIcon width={18} height={18} />
+                <span>Print</span>
+              </button>
+              <button type="button" style={styles.barBtn} onClick={handleShareWhatsApp}>
+                <ShareIcon width={18} height={18} />
+                <span>Share</span>
+              </button>
+              {/* Clear all wipes the prescription — destructive, so only on the
+                  current editable visit. Past/historic visits are read-only. */}
+              {canEditForm && (
+                <>
+                  <div style={styles.barDivider} aria-hidden />
+                  <button type="button" style={{ ...styles.barBtn, ...styles.barBtnDanger }} onClick={handleClearAll}>
+                    <TrashIcon width={18} height={18} />
+                    <span>Clear all</span>
+                  </button>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <button type="button" style={styles.barBtn} onClick={() => setShowAddModal(true)}>
+                <FileIcon style={{ width: 18, height: 18 }} />
+                <span>Add file</span>
+              </button>
+              <button type="button" style={styles.barBtn} onClick={handleDownloadAllFiles}>
+                <DownloadIcon width={18} height={18} />
+                <span>Download all</span>
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {showAiSummary && (
+        <>
+          <div style={styles.aiPopoverBackdrop} onClick={() => setShowAiSummary(false)} />
+          <div style={styles.aiPopover} role="dialog" aria-label="AI Summary">
+            <h4 style={styles.aiSummaryTitle}>AI Summary</h4>
+            <p style={styles.aiSummaryBody}>{AI_SUMMARY_TEXT}</p>
+          </div>
+        </>
+      )}
+
       {/* Add File modal. Drag-drop or click-to-choose, multi-file, per-file
           metadata (name, category, investigation date, tie-to-visit, notes).
           One unified flow now that Reports + Files are a single tab. */}
@@ -3050,17 +3133,6 @@ export function PrescriptionPage({ onNavigate }: PrescriptionPageProps = {}) {
           />
         )}
       </Modal>
-
-      {aiSoapOpen && activeVisit && (
-        <AISoapDraftModal
-          visitId={activeVisit.id}
-          onClose={() => setAiSoapOpen(false)}
-          onApplyComplaints={(v) => setComplaintsValue((prev) => prev ? `${prev}\n${v}` : v)}
-          onApplyDiagnosis={(v) => setDiagnosisValue((prev) => prev ? `${prev}\n${v}` : v)}
-          onApplyPlan={(v) => setNotesForPatientValue((prev) => prev ? `${prev}\n${v}` : v)}
-          onApplyObjective={(v) => setPrivateNotesValue((prev) => prev ? `${prev}\n${v}` : v)}
-        />
-      )}
 
       {/* Slot picker — patient has 2+ appointments today and was opened
           without a specific one. Asks which slot this consultation is for. */}
@@ -3156,96 +3228,3 @@ const slotPickerStyles: Record<string, React.CSSProperties> = {
     whiteSpace: "nowrap",
   },
 };
-
-// AI SOAP draft modal — fetches a structured Subjective/Objective/Assessment/
-// Plan from the current visit's free-text notes + vitals via the AI service.
-// Each block has an "Apply" button that appends into the matching form
-// field; the doctor stays in control of what lands on the chart.
-function AISoapDraftModal({
-  visitId,
-  onClose,
-  onApplyComplaints,
-  onApplyDiagnosis,
-  onApplyPlan,
-  onApplyObjective,
-}: {
-  visitId: string;
-  onClose: () => void;
-  onApplyComplaints: (v: string) => void;
-  onApplyDiagnosis: (v: string) => void;
-  onApplyPlan: (v: string) => void;
-  onApplyObjective: (v: string) => void;
-}) {
-  const [data, setData] = React.useState<import("../../api/ai").SoapDraft | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    import("../../api/ai").then(({ fetchVisitSoapDraft }) =>
-      fetchVisitSoapDraft(visitId)
-        .then((d) => {
-          setData(d);
-          if (d.error) setError(d.error);
-        })
-        .catch((e) => setError((e as Error).message))
-        .finally(() => setLoading(false))
-    );
-  }, [visitId]);
-
-  const Section = ({ label, value, onApply, target }: { label: string; value: string; onApply: (v: string) => void; target: string }) => (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <strong style={{ fontSize: 13 }}>{label}</strong>
-        <button
-          type="button"
-          disabled={!value}
-          onClick={() => { onApply(value); }}
-          style={{
-            background: "none",
-            border: "none",
-            color: value ? "#2c6e49" : "#aaa",
-            cursor: value ? "pointer" : "default",
-            textDecoration: "underline",
-            fontSize: 12,
-            padding: 0,
-          }}
-        >
-          Apply to {target}
-        </button>
-      </div>
-      <div style={{ minHeight: 32, padding: "8px 10px", background: "#fafafa", borderRadius: 6, fontSize: 13, color: value ? "#222" : "#888", whiteSpace: "pre-wrap" }}>
-        {value || "—"}
-      </div>
-    </div>
-  );
-
-  return (
-    <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000 }}
-      onClick={onClose}
-    >
-      <div
-        style={{ background: "#fff", borderRadius: 12, padding: 20, width: "min(560px, 92vw)", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
-          <h3 style={{ margin: 0, fontSize: 18 }}>AI SOAP draft</h3>
-          <button type="button" onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, lineHeight: 1, cursor: "pointer", color: "#666" }}>×</button>
-        </div>
-        {loading && <p style={{ color: "#666", fontStyle: "italic" }}>Drafting…</p>}
-        {!loading && error && !data?.subjective && (
-          <p style={{ color: "#b54040", fontSize: 13 }}>AI unavailable: {error}</p>
-        )}
-        {data && !loading && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <Section label="Subjective" value={data.subjective} onApply={onApplyComplaints} target="Complaints" />
-            <Section label="Objective" value={data.objective} onApply={onApplyObjective} target="Private notes" />
-            <Section label="Assessment" value={data.assessment} onApply={onApplyDiagnosis} target="Diagnosis" />
-            <Section label="Plan" value={data.plan} onApply={onApplyPlan} target="Notes for patient" />
-            <p style={{ fontSize: 11, color: "#888", margin: 0 }}>AI-generated — review before applying.</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}

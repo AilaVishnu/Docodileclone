@@ -66,8 +66,13 @@ type QueueTableProps = {
   doctorName?: string;
   menuItems?: MenuItem[];
   onStatusChange?: (appointmentId: string, newStatus: string) => void;
+  /** appointmentId → backend session start (ISO) for in-progress visits.
+   *  Drives the live consultation timer on the IN_PROGRESS status badge. */
+  sessionStarts?: Record<string, string>;
 };
 
+// Front-desk status actions. Completion is intentionally NOT here — only the
+// doctor marks a visit complete (via "Complete visit" on the prescription pad).
 const STATUS_OPTIONS = [
   { label: "No-Show", value: "NO_SHOW" },
   { label: "Arrived", value: "WAITING" },
@@ -75,10 +80,11 @@ const STATUS_OPTIONS = [
   { label: "Cancel", value: "CANCELLED" },
 ];
 
-function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
+function StatusDropdown({ appointment, currentStatus, onStatusChange, sessionStartedAt }: {
   appointment: Appointment;
   currentStatus: string;
   onStatusChange: (appointmentId: string, newStatus: string) => void;
+  sessionStartedAt?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [timerStarted, setTimerStarted] = useState(() =>
@@ -114,7 +120,7 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
     <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
       <StatusBadge
         status={currentStatus}
-        patientId={appointment.patientId}
+        sessionStartedAt={sessionStartedAt}
         onClick={isLocked ? undefined : () => setIsOpen(!isOpen)}
       />
       {isOpen && (
@@ -251,6 +257,7 @@ export function QueueTable({
   doctorName,
   menuItems,
   onStatusChange,
+  sessionStarts,
 }: QueueTableProps) {
   if (appointments.length === 0) {
     return <ZeroQueue />;
@@ -399,12 +406,15 @@ export function QueueTable({
                       <TypeBadge type={apt.type} />
                     </td>
 
-                    {/* Time */}
+                    {/* Time + Walk-in tag — stacked so the pill doesn't collide
+                        with the Status column when the row is narrow. */}
                     <td style={{ ...styles.td, textAlign: "center" }}>
-                      <span style={styles.time}>{apt.scheduledTime}</span>
-                      {apt.isWalkin && (
-                        <span style={styles.walkinBadge}>Walk-in</span>
-                      )}
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                        <span style={styles.time}>{apt.scheduledTime}</span>
+                        {apt.isWalkin && (
+                          <span style={styles.walkinBadge}>Walk-in</span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Status badge */}
@@ -414,9 +424,10 @@ export function QueueTable({
                           appointment={apt}
                           currentStatus={apt.status}
                           onStatusChange={onStatusChange}
+                          sessionStartedAt={sessionStarts?.[apt.id]}
                         />
                       ) : (
-                        <StatusBadge status={apt.status} patientId={apt.patientId} />
+                        <StatusBadge status={apt.status} sessionStartedAt={sessionStarts?.[apt.id]} />
                       )}
                     </td>
 

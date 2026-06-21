@@ -14,6 +14,7 @@ import { Button } from "../Button";
 import { confirmStyles } from "../AddStaffModal/AddStaffModal.styles";
 import { API_BASE_URL } from "../../apiConfig";
 import { listPharmacyStock, deductPharmacyStock } from "../../api/pharmacy";
+import { getActiveSessions } from "../../api/visits";
 
 type Doctor = {
   id: string;
@@ -57,6 +58,28 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
   const [payDueSubmitting, setPayDueSubmitting] = useState(false);
   const [payDueDiscount, setPayDueDiscount] = useState<number>(0);
   const [payDueDiscountMode, setPayDueDiscountMode] = useState<"%" | "₹">("₹");
+  // appointmentId → backend session start (ISO) for in-progress consultations.
+  // Polled from the active-sessions endpoint; drives the live status-badge
+  // timer (the badge itself ticks each second from this start instant).
+  const [sessionStarts, setSessionStarts] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () =>
+      getActiveSessions()
+        .then((sessions) => {
+          if (cancelled) return;
+          const map: Record<string, string> = {};
+          for (const s of sessions) {
+            if (s.appointmentId) map[s.appointmentId] = s.sessionStartedAt;
+          }
+          setSessionStarts(map);
+        })
+        .catch(() => { /* keep last good map on transient errors */ });
+    load();
+    const id = window.setInterval(load, 10000);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [refreshKey]);
   const [billingMedicines, setBillingMedicines] = useState<BillingMedicine[]>([]);
   const [billingLoading, setBillingLoading] = useState(false);
   // Clinic pharmacy inventory — drives both the unit prices used when
@@ -185,9 +208,20 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((visits: any[]) => {
-        // visits are sorted ASC; last entry is the most recent
-        const latest = visits[visits.length - 1];
-        const rows: BillingMedicine[] = (latest?.prescriptions ?? [])
+        // Bill the visit tied to *this* appointment, not "the patient's
+        // most recent visit". Otherwise a fresh walk-in (no Rx added yet)
+        // would leak medicines from the patient's previous visit into the
+        // bill. V45 links visits → appointments via appointment_id; rows
+        // that pre-date the migration fall back to a same-day match.
+        const apt = medsBillingApt;
+        const sameDay = (iso?: string | null): boolean => {
+          if (!iso || !apt?.rawScheduledTime) return false;
+          return iso.slice(0, 10) === apt.rawScheduledTime.slice(0, 10);
+        };
+        const matching =
+          visits.find((v: any) => v.appointmentId && apt?.id && v.appointmentId === apt.id) ??
+          visits.find((v: any) => sameDay(v.visitDate));
+        const rows: BillingMedicine[] = (matching?.prescriptions ?? [])
           .filter((p: any) => p.medicine)
           .map((p: any, i: number) => {
             const name = p.medicine as string;
@@ -273,7 +307,12 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           startOfToday.setHours(0, 0, 0, 0);
           const PENDING_STATUSES = new Set(["BOOKED", "SCHEDULED", "WAITING"]);
           const deriveStatus = (rawStatus: string | undefined, rawSched: string | undefined): string => {
-            const status = rawStatus || "WAITING";
+            // Legacy walk-in rows can carry "AT_DOC" — normalise to IN_PROGRESS
+            // so the existing StatusBadge / sort priority / filter logic apply
+            // without a new branch (At Doc is the IN_PROGRESS display label
+            // before Start Session is clicked).
+            const incoming = rawStatus?.toUpperCase() === "AT_DOC" ? "IN_PROGRESS" : rawStatus;
+            const status = incoming || "WAITING";
             if (!PENDING_STATUSES.has(status.toUpperCase())) return status;
             if (!rawSched) return status;
             const sched = new Date(rawSched);
@@ -444,6 +483,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           <div style={{ flex: 1, minWidth: 0 }}>
           <QueueTable
             appointments={activeQueue}
+            sessionStarts={sessionStarts}
             doctorName={doctors.find(d => d.id === activeDoctorId)?.name}
             menuItems={[
               { label: "Edit Appointment", onClick: (apt) => {
@@ -467,6 +507,8 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                   patientGender: apt.patientGender,
                   patientDob: apt.patientDob,
                   patientAge: apt.patientAge,
+                  patientDisplayNo: apt.patientDisplayNo ?? null,
+                  isWalkin: !!apt.isWalkin,
                   service: apt.service,
                   type: apt.type,
                   scheduledTime: apt.rawScheduledTime || "",
@@ -693,7 +735,25 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
             {/* Receipt card — patient header + bill body + actions, all
                 under one white sheet so the action buttons read as part
                 of the bill instead of hanging detached below the zigzag. */}
-            <div style={{ backgroundColor: colors.neutral100, padding: spacing.xl, borderRadius: "16px 16px 0 0", display: "flex", flexDirection: "column", gap: spacing.s }}>
+            <div style={{ position: "relative", backgroundColor: colors.neutral100, padding: spacing.xl, borderRadius: "16px 16px 0 0", display: "flex", flexDirection: "column", gap: spacing.s }}>
+              {/* Close (X) — top-right; same as Cancel. Disabled mid-submit. */}
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setPayDueApt(null)}
+                disabled={payDueSubmitting}
+                style={{
+                  position: "absolute", top: spacing.s, right: spacing.s,
+                  width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
+                  border: "none", borderRadius: "50%", background: "transparent",
+                  cursor: payDueSubmitting ? "default" : "pointer",
+                  color: colors.neutral500, fontSize: 18, lineHeight: 1,
+                }}
+                onMouseEnter={(e) => { if (!payDueSubmitting) e.currentTarget.style.backgroundColor = colors.primary100; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+              >
+                ✕
+              </button>
               {/* Patient name header — serif, centered */}
               <h3 style={{ margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.regular, color: colors.neutral900, textAlign: "center" as const }}>
                 {payDueApt.patientName}

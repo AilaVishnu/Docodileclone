@@ -320,17 +320,32 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
 
       {/* Footer */}
       <div style={styles.footer}>
-        <p style={styles.footerText}>
-          New to docodile?{" "}
-          <strong
-            style={{ cursor: "pointer" }}
-            onClick={() => window.open("https://calendar.app.google/uQskDY6DM4F8q8Kd9", "_blank")}
-          >
-            Book Demo
-          </strong>
-        </p>
+        {/* "New to docodile? Book Demo" is for the public admin sign-up
+            funnel, not staff — clinic staff are seeded by their admin, so
+            hide the CTA on the staff login. */}
+        {!isStaff && (
+          <p style={styles.footerText}>
+            New to docodile?{" "}
+            <strong
+              style={{ cursor: "pointer" }}
+              onClick={() => window.open("https://calendar.app.google/uQskDY6DM4F8q8Kd9", "_blank")}
+            >
+              Book Demo
+            </strong>
+          </p>
+        )}
 
-        <p style={{ ...styles.footerText, cursor: "pointer" }} onClick={() => setView("forgot")}>
+        {/* On the staff login, Book Demo above is hidden — the flex
+            space-between would otherwise pull this to the left, so push
+            it back to the right. Admin login keeps the natural layout. */}
+        <p
+          style={{
+            ...styles.footerText,
+            cursor: "pointer",
+            ...(isStaff ? { marginLeft: "auto" } : null),
+          }}
+          onClick={() => setView("forgot")}
+        >
           <strong>Forgot Password</strong>
         </p>
       </div>

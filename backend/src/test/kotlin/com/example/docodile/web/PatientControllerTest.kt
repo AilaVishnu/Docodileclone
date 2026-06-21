@@ -5,6 +5,7 @@ import com.example.docodile.repo.PatientRepository
 import com.example.docodile.security.CurrentUser
 import com.example.docodile.service.AuditService
 import com.example.docodile.service.PatientService
+import com.example.docodile.service.VisitService
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
@@ -38,6 +39,9 @@ class PatientControllerTest @Autowired constructor(
 
     @MockitoBean
     private lateinit var patientRepository: PatientRepository
+
+    @MockitoBean
+    private lateinit var visitService: VisitService
 
     @MockitoBean
     private lateinit var currentUser: CurrentUser

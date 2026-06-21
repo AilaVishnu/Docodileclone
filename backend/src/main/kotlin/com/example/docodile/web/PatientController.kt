@@ -5,6 +5,7 @@ import com.example.docodile.repo.PatientRepository
 import com.example.docodile.security.CurrentUser
 import com.example.docodile.service.AuditService
 import com.example.docodile.service.PatientService
+import com.example.docodile.service.VisitService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.transaction.annotation.Transactional
@@ -27,6 +28,7 @@ data class UpdatePatientRequest(
 class PatientController(
     private val patientService: PatientService,
     private val patientRepository: PatientRepository,
+    private val visitService: VisitService,
     private val currentUser: CurrentUser,
     private val auditService: AuditService,
 ) {
@@ -34,6 +36,13 @@ class PatientController(
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun list(): List<PatientWithLastVisitDTO> = patientService.listPatientsWithLastVisit()
+
+    // Patient Files "notes / prescriptions" keyword search — matches visit
+    // free-text + prescriptions, returns "Rx"/"Visit" snippets to highlight.
+    @GetMapping("/content-search")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
+    fun contentSearch(@RequestParam q: String): List<PatientContentMatch> =
+        visitService.contentSearch(q)
 
     // Archived patients — preserved in DB but hidden from the main list.
     // No last-visit join here; archived list is a simple roster for a
