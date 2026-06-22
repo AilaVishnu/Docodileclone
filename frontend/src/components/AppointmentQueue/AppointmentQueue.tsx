@@ -382,6 +382,9 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
     "COMPLETED": 3,
     "NO_SHOW": 4,
     "CANCELLED": 5,
+    // A never-opened At-Doc consultation swept stale by NoShowSweepJob — group
+    // it with the other terminal/missed states at the bottom of the queue.
+    "UNSEEN": 6,
   };
 
   const activeQueue = (activeDoctorId ? appointments[activeDoctorId] || [] : [])
