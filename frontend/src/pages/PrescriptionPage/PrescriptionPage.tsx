@@ -111,6 +111,36 @@ const VITAL_CELLS: { cell: VitalCell; cellKey: string }[] = VITAL_COLUMNS.flatMa
   (col, ci) => col.map((cell, ri) => ({ cell, cellKey: `${ci}-${ri}` })),
 );
 
+// `${ci}-${ri}` cell key for each (uniquely-labelled) vital — used to wire the
+// BMI auto-calc to its Height + Weight inputs.
+const VITAL_KEY_BY_LABEL: Record<string, string> = {};
+VITAL_COLUMNS.forEach((col, ci) =>
+  col.forEach((v, ri) => { VITAL_KEY_BY_LABEL[v.label] = `${ci}-${ri}`; }),
+);
+const BMI_KEY = VITAL_KEY_BY_LABEL["BMI"];
+const HEIGHT_KEY = VITAL_KEY_BY_LABEL["Height"];
+const WEIGHT_KEY = VITAL_KEY_BY_LABEL["Weight"];
+
+// BMI = weight(kg) / height(m)². Height/Weight may be entered in imperial
+// units, so normalise to metric first (cm/in → m, kg/lb → kg). Returns "" when
+// either input is missing or non-positive, so the locked BMI field simply
+// blanks until both are present. BMI is always reported in kg/m².
+const computeBmi = (
+  height: VitalCellState | undefined,
+  weight: VitalCellState | undefined,
+): string => {
+  if (!height || !weight) return "";
+  const h = parseFloat(height.value);
+  const w = parseFloat(weight.value);
+  if (!Number.isFinite(h) || !Number.isFinite(w) || h <= 0 || w <= 0) return "";
+  const heightM = height.unit === "in" ? h * 0.0254 : h / 100; // cm is the default
+  const weightKg = weight.unit === "lb" ? w * 0.453592 : w;    // kg is the default
+  if (heightM <= 0) return "";
+  const bmi = weightKg / (heightM * heightM);
+  if (!Number.isFinite(bmi) || bmi <= 0) return "";
+  return bmi.toFixed(1);
+};
+
 // Figma node 2073:3030 — History section. 2×2 grid of cream-filled fields.
 // Each row carries the `field` key for the suggestion API
 // (GET /api/suggestions?field=&q=) so each input can autocomplete from a
@@ -1210,6 +1240,43 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     flagDirty();
   };
 
+  // BMI auto-calc, one half of the Height/Weight ⇄ BMI mutual exclusion. When
+  // Height or Weight is present, BMI is DERIVED from them (and locked). We only
+  // overwrite BMI while at least one of Height/Weight is filled — so a BMI typed
+  // DIRECTLY (with Height/Weight empty) is never wiped by this effect. A derived
+  // BMI is non-empty only when BOTH inputs are filled, so clearing either one
+  // blanks it via computeBmi → there's no stale value left to mislead the lock.
+  // Uses the raw setVitalState — recomputing BMI is never itself a doctor edit,
+  // so it must not flag dirty (the Height/Weight change that triggered it
+  // already did). buildSaveRequest reads BMI straight from vitalState, so the
+  // persisted value follows automatically.
+  const heightCellValue = vitalState[HEIGHT_KEY]?.value;
+  const heightCellUnit = vitalState[HEIGHT_KEY]?.unit;
+  const weightCellValue = vitalState[WEIGHT_KEY]?.value;
+  const weightCellUnit = vitalState[WEIGHT_KEY]?.unit;
+  React.useEffect(() => {
+    const hwFilled =
+      (heightCellValue ?? "").trim() !== "" || (weightCellValue ?? "").trim() !== "";
+    if (!hwFilled) return; // BMI is free for manual entry — don't overwrite it
+    const next = computeBmi(vitalState[HEIGHT_KEY], vitalState[WEIGHT_KEY]);
+    setVitalState((prev) =>
+      prev[BMI_KEY]?.value === next
+        ? prev
+        : { ...prev, [BMI_KEY]: { value: next, unit: prev[BMI_KEY]?.unit ?? "kg/m²" } },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heightCellValue, heightCellUnit, weightCellValue, weightCellUnit]);
+
+  // The mutual-exclusion lock state, derived from current values:
+  //  • Height/Weight present → BMI is locked (shows the auto-calculated value).
+  //  • BMI present with NO Height/Weight → Height + Weight are locked.
+  //  • everything empty → nothing locked (pick either method).
+  const vitalsHaveHeightWeight =
+    (heightCellValue ?? "").trim() !== "" || (weightCellValue ?? "").trim() !== "";
+  const vitalsHaveBmi = (vitalState[BMI_KEY]?.value ?? "").trim() !== "";
+  const lockBmiField = vitalsHaveHeightWeight;
+  const lockHeightWeightFields = vitalsHaveBmi && !vitalsHaveHeightWeight;
+
   // List-view tab state — shared across Reports / Files. Defaults to the
   // first tab ("All Reports" / "All Files").
   const [activeListTab, setActiveListTab] = React.useState<number>(0);
@@ -1608,6 +1675,12 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // blocked and the offending fields are highlighted with a toast.
   const invalidVitalLabels = VITAL_CELLS.filter(({ cell: v, cellKey }) => {
     const cell = vitalState[cellKey];
+    // BMI: when DERIVED (Height/Weight present) it's locked, not typed — never
+    // block save on it; its inputs carry their own validation. When entered
+    // MANUALLY (no Height/Weight) it's a normal editable field, so range-check it.
+    if (v.label === "BMI") {
+      return !lockBmiField && !isVitalValid("BMI", cell.value, cell.unit);
+    }
     if (v.label === "BP") {
       const [sys = "", dia = ""] = cell.value.split("/");
       return !(isVitalValid("BP_sys", sys, cell.unit) && isVitalValid("BP_dia", dia, cell.unit));
@@ -2501,14 +2574,26 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                             // The combined "sys/dia" string still lives in vitalState
                             // so unit conversion (mmHg↔kPa) keeps working.
                             const isBp = v.label === "BP";
+                            // Height/Weight ⇄ BMI mutual exclusion: BMI is locked
+                            // while Height/Weight carry a value (it auto-calculates);
+                            // Height + Weight are locked while a BMI was typed
+                            // directly. A locked cell is read-only, can't toggle its
+                            // unit, and its edit handler is a no-op.
+                            const isBmi = v.label === "BMI";
+                            const isHeightOrWeight = v.label === "Height" || v.label === "Weight";
+                            const cellLocked =
+                              (isBmi && lockBmiField) || (isHeightOrWeight && lockHeightWeightFields);
                             const [bpSys = "", bpDia = ""] = isBp ? cell.value.split("/") : [];
                             const setBpPart = (sys: string, dia: string) =>
                               setVitalValue(cellKey, `${sys}/${dia}`);
                             // Range validation per (label, unit). Out-of-range values
-                            // get a soft red tint; empty values stay neutral.
+                            // get a soft red tint; empty values stay neutral. A
+                            // locked (derived) BMI never shows an error — its inputs do.
                             const sysValid = isBp ? isVitalValid("BP_sys", bpSys, cell.unit) : true;
                             const diaValid = isBp ? isVitalValid("BP_dia", bpDia, cell.unit) : true;
-                            const valueValid = isBp ? sysValid && diaValid : isVitalValid(v.label, cell.value, cell.unit);
+                            const valueValid = isBmi && lockBmiField
+                              ? true
+                              : isBp ? sysValid && diaValid : isVitalValid(v.label, cell.value, cell.unit);
                             const rangeForLabel = isBp ? VITAL_RANGES.BP_sys?.[cell.unit] : VITAL_RANGES[v.label]?.[cell.unit];
                             const rangeHint = rangeForLabel
                               ? `Valid: ${rangeForLabel.min}–${rangeForLabel.max} ${cell.unit}`
@@ -2520,12 +2605,13 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                   <MeasureField
                                     bp={isBp}
                                     value={isBp ? bpSys : cell.value}
-                                    onChange={isBp ? (val) => setBpPart(val, bpDia) : (val) => setVitalValue(cellKey, val)}
+                                    readOnly={cellLocked}
+                                    onChange={isBp ? (val) => setBpPart(val, bpDia) : cellLocked ? () => {} : (val) => setVitalValue(cellKey, val)}
                                     value2={isBp ? bpDia : undefined}
                                     onChange2={isBp ? (val) => setBpPart(bpSys, val) : undefined}
                                     unit={cell.unit}
                                     unitWidth={v.unitWidth}
-                                    onToggleUnit={canToggle ? () => toggleVitalUnit(cellKey) : undefined}
+                                    onToggleUnit={canToggle && !cellLocked ? () => toggleVitalUnit(cellKey) : undefined}
                                     invalid={!valueValid}
                                     dense
                                     placeholder={v.placeholder ?? ""}
