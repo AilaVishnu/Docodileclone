@@ -71,6 +71,9 @@ type QueueTableProps = {
 
 // Front-desk status actions. Completion is intentionally NOT here — only the
 // doctor marks a visit complete (via "Complete visit" on the prescription pad).
+// UNSEEN is also intentionally absent: it's an AUTO-only state set by the
+// NoShowSweepJob when an At-Doc pad is never opened within 24h, never by hand
+// (the backend rejects a manual UNSEEN too).
 const STATUS_OPTIONS = [
   { label: "No-Show", value: "NO_SHOW" },
   { label: "Arrived", value: "WAITING" },

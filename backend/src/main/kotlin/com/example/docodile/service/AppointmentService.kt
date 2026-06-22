@@ -205,6 +205,13 @@ class AppointmentService(
 
     @Transactional
     fun updateStatus(appointmentId: UUID, status: String): AppointmentDTO {
+        // UNSEEN is an AUTO-ONLY state — set solely by NoShowSweepJob when an
+        // At-Doc consultation's pad is never opened within 24h. It must never be
+        // assigned by hand from the queue (the queue UI also omits it from its
+        // status options); reject any manual attempt.
+        if (status.uppercase() == "UNSEEN") {
+            throw IllegalArgumentException("UNSEEN is set automatically and cannot be assigned manually")
+        }
         val appointment = appointmentRepository.findByIdAndClinicId(appointmentId, currentUser.clinicId())
             ?: throw IllegalArgumentException("Appointment not found")
         appointment.status = status
