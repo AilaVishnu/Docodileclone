@@ -70,4 +70,28 @@ interface AppointmentRepository : JpaRepository<Appointment, UUID> {
         """
     )
     fun markBookedBeforeAsNoShow(@Param("cutoff") cutoff: LocalDateTime): Int
+
+    // Bulk-flip every "At Doc" appointment the doctor never opened — the
+    // patient reached the doctor (status IN_PROGRESS, or the legacy AT_DOC
+    // alias) but NO visit was ever started for it — whose scheduled time is
+    // before `cutoff`, to UNSEEN. The next stage after the BOOKED → NO_SHOW
+    // sweep: this catches patients sent in but whose pad was never opened.
+    // The NOT EXISTS guard excludes an appointment whose visit HAS a started
+    // session — an opened (even un-finished) consultation was seen, so it must
+    // not be marked unseen. Run nightly by NoShowSweepJob; returns rows touched.
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        UPDATE Appointment a
+           SET a.status = 'UNSEEN'
+         WHERE UPPER(a.status) IN ('IN_PROGRESS', 'AT_DOC')
+           AND a.scheduledTime < :cutoff
+           AND NOT EXISTS (
+               SELECT v.id FROM Visit v
+                WHERE v.appointmentId = a.id
+                  AND v.sessionStartedAt IS NOT NULL
+           )
+        """
+    )
+    fun markStaleAtDocAsUnseen(@Param("cutoff") cutoff: LocalDateTime): Int
 }
