@@ -4,8 +4,8 @@ import { Icon } from "../Icon";
 import { FloatingBar, FloatingBarButton, FloatingBarDivider } from "../FloatingBar";
 import { BoardItem } from "../BoardItem";
 import { StickyNote } from "../StickyNote";
-import { MyHoursCalendar } from "../DoctorSchedule";
 import {
+  HoursWidget,
   QueueWidget,
   StatsWidget,
   QuickActionsWidget,
@@ -77,12 +77,11 @@ export type PinboardProps = {
   style?: React.CSSProperties;
 };
 
-const NOTE_COLORS = ["#EAE5FA", "#E3EEEF", "#CFEED5", "#FFE1F3"];
-const PIN_COLORS = [colors.red100, colors.yellow200, colors.green200, colors.primary600];
+const NOTE_COLORS = ["#EAE5FA", "#E3EEEF", "#CFEED5", "#FFE1F3", colors.neutral100];
 
 const DEFAULT_SIZES: Record<PinboardItemType, [number, number]> = {
   sticky: [156, 152],
-  calendar: [344, 392],
+  calendar: [224, 192],
   queue: [200, 150],
   stats: [200, 150],
   quickActions: [196, 130],
@@ -242,7 +241,7 @@ export function Pinboard({
         title: "",
         text: "",
         color: NOTE_COLORS[idx % NOTE_COLORS.length],
-        pinColor: PIN_COLORS[idx % PIN_COLORS.length],
+        pinColor: colors.primary400,
         torn: Math.random() < 0.4,
         createdAt: new Date().toISOString(),
       };
@@ -274,11 +273,11 @@ export function Pinboard({
         );
       }
       case "calendar":
-        return <MyHoursCalendar />;
+        return <HoursWidget variant="agenda" />;
       case "queue":
         return <QueueWidget entries={queue?.entries} moreWaiting={queue?.moreWaiting} />;
       case "stats":
-        return <StatsWidget stats={stats ?? EMPTY_STATS} />;
+        return <StatsWidget stats={stats ?? EMPTY_STATS} variant="spotlight" />;
       case "quickActions":
         return <QuickActionsWidget onAction={onAction} />;
       case "sticker": {
@@ -311,6 +310,7 @@ export function Pinboard({
             z={item.z}
             width={item.w}
             height={item.h}
+            autoHeight={item.type === "sticky"}
             rotation={item.rotation}
             bounds={bounds}
             removable={editing}

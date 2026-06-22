@@ -1,3 +1,5 @@
+export { HoursWidget } from "./HoursWidget";
+export type { HoursWidgetProps } from "./HoursWidget";
 export { StatsWidget } from "./StatsWidget";
 export type { StatsWidgetProps, TodayStats } from "./StatsWidget";
 export { QuickActionsWidget, DEFAULT_QUICK_ACTIONS } from "./QuickActionsWidget";

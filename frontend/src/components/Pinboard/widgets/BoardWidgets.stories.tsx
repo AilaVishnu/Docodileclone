@@ -1,9 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-webpack5";
+import { HoursWidget } from "./HoursWidget";
 import { StatsWidget } from "./StatsWidget";
 import { QuickActionsWidget } from "./QuickActionsWidget";
 import { QueueWidget } from "./QueueWidget";
 import { Sticker } from "./Sticker";
 import { colors } from "../../../styles/theme";
+import { withSchedule } from "../../../sb/decorators";
 
 // The functional widgets and decals that live on the pinboard alongside sticky
 // notes. Each is shown at roughly the size it takes inside a BoardItem.
@@ -12,6 +14,7 @@ const meta = {
   title: "Patterns/Board widgets",
   tags: ["autodocs"],
   decorators: [
+    withSchedule,
     (Story) => (
       <div
         style={{
@@ -41,10 +44,48 @@ type Story = StoryObj<typeof meta>;
 
 const SAMPLE_STATS = { totalAppointments: 9, newPatients: 3, reviews: 4, procedures: 2 };
 
+// Agenda treatments (text / mini-bars / chips) plus the timeline for reference.
+const HOURS_OPTIONS = [
+  ["agenda", "Agenda · text"],
+  ["agendaBars", "Agenda · bars"],
+  ["agendaChips", "Agenda · chips"],
+  ["timeline", "Timeline"],
+] as const;
+
+export const Hours: Story = {
+  render: () => (
+    <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+      {HOURS_OPTIONS.map(([v, label]) => (
+        <div key={v} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <span style={{ fontSize: 12, color: colors.neutral600, fontFamily: "Inter, sans-serif" }}>{label}</span>
+          <div style={{ width: 224, height: 190 }}>
+            <HoursWidget variant={v} />
+          </div>
+        </div>
+      ))}
+    </div>
+  ),
+};
+
+// Four treatments of the "Today" stats widget to choose from.
+const STATS_OPTIONS = [
+  ["bar", "Composition bar"],
+  ["icons", "Icon rows"],
+  ["spotlight", "Spotlight"],
+  ["list", "List (ref)"],
+] as const;
+
 export const Stats: Story = {
   render: () => (
-    <div style={{ width: 200, height: 150 }}>
-      <StatsWidget stats={SAMPLE_STATS} />
+    <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+      {STATS_OPTIONS.map(([v, label]) => (
+        <div key={v} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <span style={{ fontSize: 12, color: colors.neutral600, fontFamily: "Inter, sans-serif" }}>{label}</span>
+          <div style={{ width: 208, height: 190 }}>
+            <StatsWidget stats={SAMPLE_STATS} variant={v} />
+          </div>
+        </div>
+      ))}
     </div>
   ),
 };
@@ -91,6 +132,9 @@ export const Stickers: Story = {
 export const Gallery: Story = {
   render: () => (
     <div style={{ display: "flex", alignItems: "flex-start", gap: 24, flexWrap: "wrap", maxWidth: 720 }}>
+      <div style={{ width: 224, height: 168 }}>
+        <HoursWidget />
+      </div>
       <div style={{ width: 200, height: 150 }}>
         <StatsWidget stats={SAMPLE_STATS} />
       </div>

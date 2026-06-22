@@ -1,12 +1,13 @@
-import React from "react";
+import React, { useLayoutEffect, useRef } from "react";
+import { colors } from "../../styles/theme";
 import { styles } from "./StickyNote.styles";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // StickyNote — the paper note visual (fold/tear + pushpin + editable text).
 //
-// Presentational only: it fills its positioned parent. Positioning, rotation,
-// drag and z-order are the board's responsibility (see BoardItem / Pinboard).
-// Extracted from MemoBoard so the note can be reused and catalogued on its own.
+// Presentational: it fills its parent's width and grows in height with its copy
+// (capped by maxLength). Positioning, rotation, drag and z-order belong to the
+// board (see BoardItem / Pinboard).
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type StickyNoteProps = {
@@ -16,14 +17,16 @@ export type StickyNoteProps = {
   title?: string;
   /** Paper colour (hex). */
   color: string;
-  /** Pushpin accent colour (hex). */
+  /** Pushpin accent colour. Defaults to the brand pin (primary400). */
   pinColor?: string;
   /** Render an irregular torn bottom edge instead of a folded corner. */
   torn?: boolean;
-  /** Short date stamp shown top-left (already formatted). */
+  /** Short date stamp shown at the bottom of the note (already formatted). */
   dateStamp?: string;
   /** When set, text/title are read-only and the delete control is hidden. */
   readOnly?: boolean;
+  /** Max characters for the body — keeps a note from growing too tall. */
+  maxLength?: number;
   onTitleChange?: (value: string) => void;
   onTextChange?: (value: string) => void;
   onDelete?: () => void;
@@ -34,8 +37,8 @@ export type StickyNoteProps = {
 
 const FOLD_CUT = 14; // size of the folded-corner cut, in px
 
-/** Darken a hex colour by `factor` (0..1). 0.78 ≈ 22% darker. */
-function darken(hex: string, factor = 0.78): string {
+/** Darken a hex colour by `factor` (0..1). 0.9 ≈ 10% darker (gentle on white). */
+function darken(hex: string, factor = 0.88): string {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
   if (!m) return hex;
   const num = parseInt(m[1], 16);
@@ -48,8 +51,8 @@ function darken(hex: string, factor = 0.78): string {
 /**
  * Clip path for the note face.
  * - Non-torn: cuts the bottom-right corner (folded-corner look).
- * - Torn:     irregular ripped bottom edge; no folded corner. Shape derived
- *             from a designer SVG, points as percentages so it scales freely.
+ * - Torn:     irregular ripped bottom edge; no folded corner. Percent-based so
+ *             it scales as the note grows.
  */
 function noteClipPath(torn: boolean): string {
   if (!torn) {
@@ -70,17 +73,28 @@ export function StickyNote({
   text,
   title = "",
   color,
-  pinColor,
+  pinColor = colors.primary400,
   torn = false,
   dateStamp,
   readOnly = false,
+  maxLength = 160,
   onTitleChange,
   onTextChange,
   onDelete,
   textId,
   style,
 }: StickyNoteProps) {
+  const taRef = useRef<HTMLTextAreaElement>(null);
   const fold = darken(color);
+
+  // Grow the textarea to fit its copy (so the whole note expands vertically).
+  useLayoutEffect(() => {
+    const ta = taRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = `${ta.scrollHeight}px`;
+  }, [text]);
+
   return (
     <div style={{ ...styles.root, ...style }}>
       {/* Backsheet — visible only through the folded-corner cut. Torn notes
@@ -94,25 +108,23 @@ export function StickyNote({
           clipPath: noteClipPath(torn),
         }}
       >
-        <div style={styles.header}>
-          <span style={styles.dateStamp}>{dateStamp}</span>
-          {!readOnly && onDelete && (
-            <button
-              data-no-drag
-              onClick={onDelete}
-              style={styles.iconBtn}
-              title="Delete"
-              aria-label="Delete note"
-            >
-              ✕
-            </button>
-          )}
-        </div>
+        {!readOnly && onDelete && (
+          <button
+            data-no-drag
+            onClick={onDelete}
+            style={styles.deleteBtn}
+            title="Delete"
+            aria-label="Delete note"
+          >
+            ✕
+          </button>
+        )}
 
         <input
           data-no-drag
           value={title}
           readOnly={readOnly}
+          maxLength={48}
           onChange={(e) => onTitleChange?.(e.target.value)}
           placeholder="Title…"
           style={styles.titleInput}
@@ -120,15 +132,20 @@ export function StickyNote({
         />
 
         <textarea
+          ref={taRef}
           id={textId}
           data-no-drag
+          rows={1}
           value={text}
           readOnly={readOnly}
+          maxLength={maxLength}
           onChange={(e) => onTextChange?.(e.target.value)}
           placeholder="Type your thoughts…"
           style={styles.textArea}
           aria-label="Note text"
         />
+
+        <span style={styles.dateStamp}>{dateStamp}</span>
       </div>
 
       {/* Pushpin — sits on top of the note, anchored to the cork. */}

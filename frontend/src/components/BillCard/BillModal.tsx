@@ -92,7 +92,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
 
   const columns: GridColumn<Line>[] = [
     { key: "n", header: "#", width: 24, align: "center", render: (l, i) => <span style={{ color: colors.neutral500 }}>{i + 1}</span> },
-    { key: "svc", header: "Service", align: "left", render: (l) => (
+    { key: "svc", header: "Item", align: "left", render: (l) => (
       <Field variant="box" fill="filled" list="bm-svc-list" placeholder="Type here" ariaLabel="Service"
         style={{ padding: "0 8px" }}
         value={l.name} onChange={(v) => setName(l.id, v)} />
@@ -128,6 +128,7 @@ export function BillModal({ isOpen, onClose, patient, initialServices }: {
       header={<span style={{ fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 }}>{pt.code} : {pt.name} - {pt.meta}</span>}
       headerActions={
         <>
+          <button onClick={() => {}} style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, fontSize: fonts.size.s, textDecoration: "underline", whiteSpace: "nowrap" }}>View bills</button>
           <IconButton ariaLabel="Print" onClick={() => {}} color={colors.neutral900}><Icon name="printer" size={24} tone="inherit" /></IconButton>
           <IconButton ariaLabel="Share" onClick={() => {}} color={colors.neutral900}><Icon name="share" size={24} tone="inherit" /></IconButton>
         </>

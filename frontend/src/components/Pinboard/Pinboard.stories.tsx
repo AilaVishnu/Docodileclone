@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-webpack5";
 import { Pinboard, type PinboardItem } from "./Pinboard";
 import { colors } from "../../styles/theme";
+import { withSchedule } from "../../sb/decorators";
 
 // A free-drag canvas hosting sticky notes + functional widgets + stickers.
 // Stories run with persist=false (in-memory) so they're deterministic; toggle
@@ -16,7 +17,7 @@ const SAMPLE_QUEUE = {
 };
 
 const SEED: PinboardItem[] = [
-  { id: "cal", type: "calendar", x: 16, y: 16, z: 1, w: 204, h: 210 },
+  { id: "cal", type: "calendar", x: 16, y: 16, z: 1, w: 224, h: 192 },
   { id: "queue", type: "queue", x: 240, y: 16, z: 2, w: 200, h: 150 },
   { id: "stats", type: "stats", x: 462, y: 16, z: 3, w: 200, h: 150 },
   { id: "actions", type: "quickActions", x: 462, y: 182, z: 4, w: 196, h: 130 },
@@ -33,7 +34,7 @@ const SEED: PinboardItem[] = [
       title: "Follow up",
       text: "Call Mrs Patel re: Bella's bloodwork.",
       color: "#EAE5FA",
-      pinColor: colors.red100,
+      pinColor: colors.primary400,
       torn: false,
       createdAt: "2026-06-20T09:00:00.000Z",
     },
@@ -51,7 +52,7 @@ const SEED: PinboardItem[] = [
       title: "Restock",
       text: "Vaccines — reorder before Friday.",
       color: "#CFEED5",
-      pinColor: colors.yellow200,
+      pinColor: colors.primary400,
       torn: true,
       createdAt: "2026-06-21T08:30:00.000Z",
     },
@@ -85,6 +86,7 @@ const meta = {
   component: Pinboard,
   tags: ["autodocs"],
   decorators: [
+    withSchedule,
     (Story) => (
       <div style={{ width: 820, height: 500 }}>
         <Story />

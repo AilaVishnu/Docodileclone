@@ -19,6 +19,8 @@ export type BoardItemProps = {
   /** Item box size in unscaled board px (used for drag clamping). */
   width: number;
   height: number;
+  /** Let the item's content drive its height (e.g. a note that grows). */
+  autoHeight?: boolean;
   rotation?: number;
   /** Board layout scale, if the board is rendered under transform: scale(). */
   scale?: number;
@@ -48,6 +50,7 @@ export function BoardItem({
   z = 1,
   width,
   height,
+  autoHeight = false,
   rotation = 0,
   scale = 1,
   bounds,
@@ -59,6 +62,7 @@ export function BoardItem({
   children,
   style,
 }: BoardItemProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const start = useRef<{ px: number; py: number; ox: number; oy: number } | null>(null);
   const moved = useRef(false);
   const [dragging, setDragging] = useState(false);
@@ -91,8 +95,9 @@ export function BoardItem({
     let nx = start.current.ox + dx;
     let ny = start.current.oy + dy;
     if (bounds) {
+      const h = autoHeight ? rootRef.current?.offsetHeight ?? height : height;
       nx = clamp(nx, 0, Math.max(0, bounds.width - width));
-      ny = clamp(ny, 0, Math.max(0, bounds.height - height));
+      ny = clamp(ny, 0, Math.max(0, bounds.height - h));
     }
     onChange?.({ x: Math.round(nx), y: Math.round(ny) });
   };
@@ -111,6 +116,7 @@ export function BoardItem({
 
   return (
     <div
+      ref={rootRef}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
@@ -120,7 +126,7 @@ export function BoardItem({
         left: x,
         top: y,
         width,
-        height,
+        height: autoHeight ? undefined : height,
         zIndex: z,
         transform: rotation ? `rotate(${rotation}deg)` : undefined,
         cursor: locked ? "default" : dragging ? "grabbing" : "grab",
