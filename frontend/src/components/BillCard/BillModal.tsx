@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { BillLayout } from "../BillLayout";
 import { Select } from "../Input/Select/Select";
 import { Button } from "../Button";
@@ -7,14 +7,26 @@ import { DataGrid, GridColumn } from "../DataGrid/DataGrid";
 import { DatePicker } from "../DatePicker/DatePicker";
 import { Field } from "../Field";
 import { MeasureField } from "../MeasureField";
+import { MedicineAutocomplete } from "../MedicineAutocomplete/MedicineAutocomplete";
+import { DepositPanel } from "./DepositPanel";
+import { listServices } from "../../api/services";
+import { getBillFooter, type BillFooter } from "../../api/patientSearch";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 import { Icon } from "../Icon";
 
-// BillModal — the full-invoice editor that opens from the bill card's expand
-// icon. Reuses Modal, Select, Button, IconButton, DataGrid, DatePicker, the
-// BillCard styles and shared icons. Mock state for now.
-type Line = { id: number; name: string; qty: number; unit: number; gst: number; disc: number; discUnit: "%" | "₹" };
+// BillModal — the one full-invoice editor. Two modes share the same frame:
+//   • services / mock — opened with `patient` / `initialServices` (the story +
+//     the legacy services invoice).
+//   • wired bill — opened with `onBilled` (+ `medicines`, `catalog`,
+//     `pendingDue`, `loading`). Seeds the prescribed medicines as line items
+//     (carrying each row's in-stock flag), rolls the pending consultation due
+//     into the total, supports split payments + Waive, and on "Charge & Bill"
+//     calls `onBilled(method, total, items)` so the host records the payment and
+//     deducts pharmacy inventory.
+type Line = { id: number; name: string; qty: number; unit: number; gst: number; disc: number; discUnit: "%" | "₹"; inStock?: boolean; kind?: "service" | "medicine" };
 type Patient = { code: string; name: string; meta: string };
+type BillMedicine = { id?: string; name: string; dosage?: string; unitPrice: number; qty: number; inStock?: boolean };
+type BillCatalogItem = { id: string; name: string; unitPrice: number };
 
 const SERVICE_CATALOG: { name: string; price: number }[] = [
   { name: "Ear lobe repair", price: 6000 },
@@ -22,44 +34,213 @@ const SERVICE_CATALOG: { name: string; price: number }[] = [
   { name: "Dressing", price: 400 },
   { name: "Suture removal", price: 300 },
 ];
-const PRICE_OF = (name: string) => SERVICE_CATALOG.find((s) => s.name.toLowerCase() === name.trim().toLowerCase())?.price;
 
 const inr = (n: number) => `₹ ${Math.round(n).toLocaleString("en-IN")}`;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const fmtDate = (d: Date) => `${String(d.getDate()).padStart(2, "0")} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 
-export function BillModal({ isOpen, onClose, patient, initialServices }: {
+// Footer date helpers: "6 days ago" for the last payment, "13 Dec 25 at 1:02 PM"
+// for the registration.
+const daysAgo = (iso: string): string => {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const days = Math.floor((Date.now() - then) / 86_400_000);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  return `${days} days ago`;
+};
+const fmtRegistered = (iso: string): string => {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return `${String(d.getDate()).padStart(2, "0")} ${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(-2)} at ${time}`;
+};
+
+const trailing = (id: number): Line => ({ id, name: "", qty: 1, unit: 0, gst: 0, disc: 0, discUnit: "₹" });
+
+// Cream-box style for the medicine picker's input so it matches the grid's
+// other Field cells (Qty / Unit). Mirrors the Rx pad's rxMedicineInput.
+const BILL_ITEM_INPUT_STYLE: React.CSSProperties = {
+  border: "none",
+  outline: "none",
+  padding: "0 8px",
+  height: 32,
+  width: "100%",
+  boxSizing: "border-box",
+  fontSize: fonts.size.s,
+  fontFamily: fonts.family.primary,
+  color: colors.neutral900,
+  backgroundColor: colors.primary100,
+  borderRadius: radii.m,
+  minWidth: 0,
+};
+
+export function BillModal({
+  isOpen, onClose, patient, initialServices,
+  patientName, medicines, onBilled,
+  serviceName, serviceFee = 0, catalog, loading = false, patientId,
+  initialDeposit = 0, onDeposit,
+}: {
   isOpen: boolean;
   onClose: () => void;
   patient?: Patient;
   initialServices?: { name: string; price: number }[];
+  /** Wired-bill mode: patient label shown in the header. */
+  patientName?: string;
+  /** Wired-bill mode: prescribed medicines seeded as line items. */
+  medicines?: BillMedicine[];
+  /** Wired-bill mode: called on Charge & Bill / Mark Waived. Buckets stay
+   *  separate — serviceAmount → the appointment fee (consultation), pharmacyAmount
+   *  → pharmacy; `items` carries the in-stock flag for inventory deduction. */
+  onBilled?: (payment: {
+    method: string;
+    pharmacyAmount: number;
+    serviceAmount: number;
+    items: { name: string; qty: number; inStock: boolean }[];
+    // Snapshot for the Recent Bills record (additive history).
+    billed: number;
+    paid: number;
+    due: number;
+    refund: number;
+    depositApplied: number;
+    payStatus: string;
+    lineItems: { name: string; qty: number; unit: number; gst: number; disc: number; discUnit: string; kind: string }[];
+  }) => void;
+  /** Pending consultation/service for this appointment — seeded as the first
+   *  line item (its total bills the consultation fee, kept out of pharmacy). */
+  serviceName?: string;
+  serviceFee?: number;
+  /** Catalog the Item field autocompletes from + prices against. */
+  catalog?: BillCatalogItem[];
+  loading?: boolean;
+  /** Patient id — used to load the bottom footer (last payment / registered on). */
+  patientId?: string;
+  /** The patient's current deposit/advance — seeds the read-only Deposit field
+   *  and is auto-drawn against the bill on Charge & Bill. */
+  initialDeposit?: number;
+  /** Persist a deposit/refund on the patient. Given the (non-negative) amount +
+   *  type (+ payment mode + note), returns the new running net deposit. When
+   *  omitted, the drawer adjusts the value locally only (e.g. the unwired mock). */
+  onDeposit?: (amount: number, type: "DEPOSIT" | "REFUND", mode?: string, details?: string) => Promise<number>;
 }) {
+  const wired = onBilled != null || medicines != null || serviceFee > 0;
   const pt: Patient = patient ?? { code: "T001", name: "Ramesh", meta: "M 12" };
-  const seedFilled: Line[] = (initialServices && initialServices.length
-    ? initialServices.map((s, i) => ({ id: i, name: s.name, qty: 1, unit: s.price, gst: 0, disc: 0, discUnit: "₹" as const }))
-    : [{ id: 0, name: "Ear lobe repair", qty: 1, unit: 6000, gst: 0, disc: 0, discUnit: "₹" as const }]);
+
+  // The Item field autocompletes + auto-prices from this catalog: the medicines
+  // catalog in wired mode, the services catalog otherwise.
+  const activeCatalog: { name: string; price: number }[] = catalog
+    ? catalog.map((c) => ({ name: c.name, price: c.unitPrice }))
+    : SERVICE_CATALOG;
+  const priceOf = (name: string) =>
+    activeCatalog.find((s) => s.name.toLowerCase() === name.trim().toLowerCase())?.price;
+
+  // Seed the filled rows from medicines (wired), initialServices, or — for the
+  // pure mock — a single sample service. A wired bill with no medicines seeds
+  // nothing (just the trailing empty row).
+  const buildSeed = React.useCallback((): Line[] => {
+    const seed: Line[] = [];
+    // The pending consultation/service bills first — its own line, kind
+    // "service" so it feeds the consultation bucket (fee), never pharmacy /
+    // inventory. Re-id'd at the end so ids stay unique + sequential.
+    if (serviceFee > 0) {
+      seed.push({ id: 0, name: serviceName?.trim() || "Consultation", qty: 1, unit: serviceFee, gst: 0, disc: 0, discUnit: "₹", kind: "service" });
+    }
+    if (medicines != null) {
+      medicines.forEach((m) => seed.push({ id: 0, name: m.name, qty: m.qty, unit: m.unitPrice, gst: 0, disc: 0, discUnit: "₹", inStock: m.inStock, kind: "medicine" }));
+    } else if (initialServices && initialServices.length) {
+      initialServices.forEach((s) => seed.push({ id: 0, name: s.name, qty: 1, unit: s.price, gst: 0, disc: 0, discUnit: "₹" }));
+    } else if (!wired) {
+      seed.push({ id: 0, name: "Ear lobe repair", qty: 1, unit: 6000, gst: 0, disc: 0, discUnit: "₹" });
+    }
+    return seed.map((l, i) => ({ ...l, id: i }));
+  }, [medicines, initialServices, wired, serviceFee, serviceName]);
+
+  const seedFilled = buildSeed();
   const nextId = React.useRef(seedFilled.length + 1);
-  const emptyLine = (): Line => ({ id: nextId.current++, name: "", qty: 1, unit: 0, gst: 0, disc: 0, discUnit: "₹" });
+  const emptyLine = (): Line => trailing(nextId.current++);
 
   // Always one trailing empty row — typing into it fills the row and a fresh
   // empty appears below (same pattern as the New Appointment services list).
-  const [lines, setLines] = useState<Line[]>([...seedFilled, { id: seedFilled.length, name: "", qty: 1, unit: 0, gst: 0, disc: 0, discUnit: "₹" }]);
+  const [lines, setLines] = useState<Line[]>([...seedFilled, trailing(seedFilled.length)]);
   const [billDate, setBillDate] = useState(new Date(2026, 0, 30));
   const [showCal, setShowCal] = useState(false);
-  const [addDue, setAddDue] = useState(false);
   // One payment line by default; "+" splits the bill across modes (Cash + UPI…).
   const [payments, setPayments] = useState<{ mode: string; amount: number | "" }[]>([{ mode: "Cash", amount: "" }]);
   const [deposit, setDeposit] = useState<number | "">("");
-  const setPayment = (i: number, patch: Partial<{ mode: string; amount: number | "" }>) =>
+  // Once the desk types in / clears the amount themselves, stop auto-filling it.
+  const [amountTouched, setAmountTouched] = useState(false);
+  const [depositOpen, setDepositOpen] = useState(false);
+  // Free-text note for this bill's payment (mirrors the Deposit drawer's
+  // "Add Details"). UI-only for now — not persisted.
+  const [billNote, setBillNote] = useState("");
+  // Monotonic id for deposit PATCHes — only the latest response writes the
+  // displayed net, so two rapid deposits can't let a stale earlier reply
+  // overwrite the fresh one (the persisted value is already correct).
+  const depSeq = React.useRef(0);
+
+  // Reset the desk's collection inputs ONLY when the modal opens — never on the
+  // async prescription arrival below — so an in-flight payment / deposit edit
+  // isn't wiped when the medicines load in.
+  useEffect(() => {
+    if (!isOpen) return;
+    setPayments([{ mode: "Cash", amount: "" }]);
+    // Seed with the deposit already held against this bill (0 → blank).
+    setDeposit(initialDeposit > 0 ? initialDeposit : "");
+    setAmountTouched(false);
+    setBillNote("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  // Re-seed the line items when (re)opened or when the prescribed medicines /
+  // consultation arrive (the modal is reused across patients). Kept separate
+  // from the reset above so a late prescription updates the rows without
+  // clobbering payment.
+  useEffect(() => {
+    if (!isOpen) return;
+    const seed = buildSeed();
+    nextId.current = seed.length + 1;
+    setLines([...seed, trailing(seed.length)]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, medicines, serviceFee, serviceName]);
+
+  // Clinic services catalog — offered in the item picker's "Services" section so
+  // the desk can add a service line (Consultation, Dressing, …) as well as meds.
+  const [serviceCatalog, setServiceCatalog] = useState<{ name: string; price: number }[]>([]);
+  useEffect(() => {
+    if (!isOpen || !wired) return;
+    listServices()
+      .then((svcs) => setServiceCatalog(svcs.map((s) => ({ name: s.name, price: s.price }))))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  // Bottom footer — the patient's registration date + most recent payment.
+  const [footer, setFooter] = useState<BillFooter | null>(null);
+  useEffect(() => {
+    if (!isOpen || !patientId) { setFooter(null); return; }
+    getBillFooter(patientId).then(setFooter).catch(() => setFooter(null));
+  }, [isOpen, patientId]);
+
+  const setPayment = (i: number, patch: Partial<{ mode: string; amount: number | "" }>) => {
+    if ("amount" in patch) setAmountTouched(true);
     setPayments((ps) => ps.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
+  };
   const addPayment = () => setPayments((ps) => [...ps, { mode: "Cash", amount: "" }]);
   const removePayment = (i: number) => setPayments((ps) => (ps.length === 1 ? ps : ps.filter((_, idx) => idx !== i)));
-  const PAST_DUE = 2500;
 
   const isTrailing = (l: Line) => l.name.trim() === "";
   const setLine = (id: number, patch: Partial<Line>) => setLines((ls) => ls.map((l) => (l.id === id ? { ...l, ...patch } : l)));
   const setName = (id: number, value: string) => setLines((ls) => {
-    const mapped = ls.map((l) => (l.id === id ? { ...l, name: value, unit: PRICE_OF(value) ?? l.unit } : l));
+    const mapped = ls.map((l) => (l.id === id ? { ...l, name: value, unit: priceOf(value) ?? l.unit } : l));
+    const filled = mapped.filter((l) => l.name.trim() !== "");
+    const existingEmpty = mapped.find((l) => l.name.trim() === "");
+    return [...filled, existingEmpty ?? emptyLine()];
+  });
+  // Picking a SERVICE (from the picker's Services section) turns the row into a
+  // service-kind line at the service's price — so it bills the consultation
+  // bucket, not pharmacy, and is excluded from inventory.
+  const pickService = (id: number, name: string, price: number) => setLines((ls) => {
+    const mapped = ls.map((l) => (l.id === id ? { ...l, name, unit: price, kind: "service" as const } : l));
     const filled = mapped.filter((l) => l.name.trim() !== "");
     const existingEmpty = mapped.find((l) => l.name.trim() === "");
     return [...filled, existingEmpty ?? emptyLine()];
