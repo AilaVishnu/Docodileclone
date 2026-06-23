@@ -3,6 +3,7 @@ package com.example.docodile.service
 import com.example.docodile.domain.Appointment
 import com.example.docodile.domain.Patient
 import com.example.docodile.repo.AppointmentRepository
+import com.example.docodile.repo.BillRepository
 import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.repo.PatientRepository
@@ -37,8 +38,13 @@ class AppointmentService(
         val startOfDay = date.atStartOfDay()
         val endOfDay = date.atTime(23, 59, 59)
 
+        // One grouped query → patientId → #bills on this date, so each row knows
+        // whether to show "Bill" or "View Bills" without an N+1.
+        val billCounts: Map<UUID, Int> = billRepository.countByPatientForDate(clinicId, date)
+            .associate { (it[0] as UUID) to (it[1] as Long).toInt() }
+
         return appointmentRepository.findAllByClinicIdAndScheduledTimeBetween(clinicId, startOfDay, endOfDay)
-            .map { it.toDTO() }
+            .map { it.toDTO().copy(todayBillCount = billCounts[it.patient?.id] ?: 0) }
     }
 
     @Transactional
