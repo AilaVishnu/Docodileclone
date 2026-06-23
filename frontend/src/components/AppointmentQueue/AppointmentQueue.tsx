@@ -727,230 +727,57 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               setToastMessage(`${baseMsg} · Inventory deduction failed: ${(err as Error).message}`);
             });
         }}
-        patientName={medsBillingApt?.patientName || ""}
-        medicines={billingMedicines}
-        loading={billingLoading}
+        patientName={medsBillingApt ? patientLabel(medsBillingApt.patientName, medsBillingApt.patientGender, medsBillingApt.patientAge) : ""}
+        patientId={medsBillingApt?.patientId}
+        // Blank for an additional bill (consultation + meds already invoiced);
+        // seeded with the prescribed meds for the first bill of the day.
+        medicines={additionalBill ? NO_MEDS : billingMedicines}
+        loading={additionalBill ? false : billingLoading}
+        // The patient's advance/deposit — seeds the Deposit field, adjusted via
+        // the drawer (add/refund) and auto-drawn on Charge & Bill. The backend
+        // owns the running net; we sync medsBillingApt so a re-open shows it.
+        initialDeposit={medsBillingApt?.deposit ?? 0}
+        onDeposit={async (amount, type, mode, details) => {
+          const patientId = medsBillingApt?.patientId;
+          if (!patientId) throw new Error("No patient to deposit against");
+          const { deposit } = await recordPatientDeposit(patientId, amount, type, mode, details);
+          setMedsBillingApt((cur) => (cur ? { ...cur, deposit } : cur));
+          setRefreshKey((k) => k + 1);
+          return deposit;
+        }}
         // Use this clinic's pharmacy inventory as the Add-medicine
         // catalog so prices match what the dispensary actually stocks.
         // Falls back to the modal's hardcoded default when empty.
         catalog={pharmacyStock.length > 0 ? pharmacyStock : undefined}
-        pendingDue={medsBillingApt?.payStatus === "DUE" ? (medsBillingApt.fee ?? 500) : 0}
+        // The pending consultation/service for this appointment, seeded as the
+        // first bill line — only while it's still UNPAID (any status that isn't
+        // PAID/WAIVED; the backend uses "Unpaid"/"DUE" interchangeably), so a
+        // paid consultation isn't re-billed. This is the old "pending due",
+        // now itemized.
+        serviceName={medsBillingApt?.service?.trim() || "Consultation"}
+        serviceFee={
+          !additionalBill && medsBillingApt && !["PAID", "WAIVED"].includes((medsBillingApt.payStatus || "").toUpperCase())
+            ? (medsBillingApt.fee ?? 0)
+            : 0
+        }
       />
 
-      {/* Pay Due popup — opened by the "Mark as Paid" menu action.
-          Tiny modal: shows patient + due amount, lets the receptionist
-          pick Cash/Card/UPI/Waive, then PATCHes payStatus → PAID. */}
-      {payDueApt && (() => {
-        const consultAmt = payDueApt.fee ?? 0;
-        const pharmacyAmt = payDueApt.pharmacyAmount ?? 0;
-        const subtotal = consultAmt + pharmacyAmt;
-        // Waive pins the bill to ₹0 (full 100% discount) and locks the
-        // discount input so the receptionist can't override it. Toggle
-        // back to Cash/Card/UPI and the prior discount values restore.
-        const isWaived = payDueMethod === "Waive";
-        const discountAmt = isWaived
-          ? subtotal
-          : (payDueDiscountMode === "%"
-              ? (subtotal * payDueDiscount) / 100
-              : payDueDiscount);
-        const totalDue = isWaived ? 0 : Math.max(0, subtotal - discountAmt);
-        const services: { name: string; price: number }[] = [];
-        if (consultAmt > 0) services.push({ name: payDueApt.service?.trim() || "Consultation", price: consultAmt });
-        if (pharmacyAmt > 0) services.push({ name: "Pharmacy", price: pharmacyAmt });
-        const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        return (
-        <Modal
-          isOpen
-          onClose={() => setPayDueApt(null)}
-          level="top"
-          surface="transparent"
-          padding={0}
-          radius={0}
-          shadow="none"
-          width={360}
-          closeOnBackdrop={false}
-          closeOnEsc={false}
-        >
-          <div style={{ display: "flex", flexDirection: "column", width: 360, maxWidth: "92vw" }}>
-            {/* Receipt card — patient header + bill body + actions, all
-                under one white sheet so the action buttons read as part
-                of the bill instead of hanging detached below the zigzag. */}
-            <div style={{ position: "relative", backgroundColor: colors.neutral100, padding: spacing.xl, borderRadius: "16px 16px 0 0", display: "flex", flexDirection: "column", gap: spacing.s }}>
-              {/* Close (X) — top-right; same as Cancel. Disabled mid-submit. */}
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={() => setPayDueApt(null)}
-                disabled={payDueSubmitting}
-                style={{
-                  position: "absolute", top: spacing.s, right: spacing.s,
-                  width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
-                  border: "none", borderRadius: "50%", background: "transparent",
-                  cursor: payDueSubmitting ? "default" : "pointer",
-                  color: colors.neutral500, fontSize: 18, lineHeight: 1,
-                }}
-                onMouseEnter={(e) => { if (!payDueSubmitting) e.currentTarget.style.backgroundColor = colors.primary100; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-              >
-                ✕
-              </button>
-              {/* Patient name header — serif, centered */}
-              <h3 style={{ margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.regular, color: colors.neutral900, textAlign: "center" as const }}>
-                {payDueApt.patientName}
-              </h3>
-              <div style={{ fontFamily: fonts.family.primary, fontSize: fonts.size.xs, color: colors.neutral500, textAlign: "center" as const, marginTop: -spacing["2xs"] }}>Pay Due</div>
+      <RecentBills
+        isOpen={!!billsHistoryApt}
+        onClose={() => setBillsHistoryApt(null)}
+        patientName={billsHistoryApt?.patientName || ""}
+        bills={historyBills}
+        loading={historyLoading}
+        // Create New Bill → close the history and open the editor for another
+        // invoice. It opens blank automatically because the patient already has
+        // a bill for the date (additionalBill = todayBillCount > 0).
+        onCreateNew={() => {
+          const apt = billsHistoryApt;
+          setBillsHistoryApt(null);
+          if (apt) setMedsBillingApt(apt);
+        }}
+      />
 
-              {/* Service line items in cream pills */}
-              {services.map((svc) => (
-                <div key={svc.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${spacing.xs} ${spacing.s}`, backgroundColor: colors.primary100, borderRadius: radii.m, fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral900 }}>
-                  <span>{svc.name}</span>
-                  <span style={{ fontVariantNumeric: "tabular-nums" as const, fontWeight: fonts.weight.medium }}>₹ {fmt(svc.price)}</span>
-                </div>
-              ))}
-              {services.length === 0 && (
-                <div style={{ padding: spacing.s, fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral500, textAlign: "center" as const }}>
-                  No charges on this booking.
-                </div>
-              )}
-
-              {/* Subtotal + Discount rows — underline style */}
-              {subtotal > 0 && (
-                <>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${spacing.xs} 0`, borderBottom: `1px solid ${colors.neutral200}`, fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral700 }}>
-                    <span>Subtotal</span>
-                    <span style={{ fontVariantNumeric: "tabular-nums" as const }}>₹ {fmt(subtotal)}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs} 0`, borderBottom: `1px solid ${colors.neutral200}`, fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral700, opacity: isWaived ? 0.5 : 1 }}>
-                    <span>Discount</span>
-                    <input
-                      type="number"
-                      min={0}
-                      value={isWaived ? (payDueDiscountMode === "%" ? 100 : subtotal) : (payDueDiscount || "")}
-                      placeholder="0"
-                      disabled={isWaived}
-                      onChange={(e) => setPayDueDiscount(Number(e.target.value) || 0)}
-                      style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", textAlign: "right" as const, fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral900, padding: 0, fontVariantNumeric: "tabular-nums" as const, cursor: isWaived ? "not-allowed" : "text" }}
-                    />
-                    {/* % / ₹ toggle — also disabled while Waive is on. */}
-                    <div style={{ display: "flex", border: `1px solid ${colors.neutral300}`, borderRadius: radii.s, overflow: "hidden", flexShrink: 0 }}>
-                      <button
-                        type="button"
-                        onClick={() => setPayDueDiscountMode("%")}
-                        disabled={isWaived}
-                        style={{
-                          padding: "2px 10px",
-                          border: "none",
-                          cursor: isWaived ? "not-allowed" : "pointer",
-                          fontFamily: fonts.family.primary,
-                          fontSize: fonts.control.xs,
-                          fontWeight: payDueDiscountMode === "%" ? fonts.weight.semibold : fonts.weight.regular,
-                          backgroundColor: payDueDiscountMode === "%" ? colors.active.shade100 : "transparent",
-                          color: payDueDiscountMode === "%" ? colors.neutral900 : colors.neutral500,
-                        }}
-                      >%</button>
-                      <button
-                        type="button"
-                        onClick={() => setPayDueDiscountMode("₹")}
-                        disabled={isWaived}
-                        style={{
-                          padding: "2px 10px",
-                          border: "none",
-                          cursor: isWaived ? "not-allowed" : "pointer",
-                          fontFamily: fonts.family.primary,
-                          fontSize: fonts.control.xs,
-                          fontWeight: payDueDiscountMode === "₹" ? fonts.weight.semibold : fonts.weight.regular,
-                          backgroundColor: payDueDiscountMode === "₹" ? colors.active.shade100 : "transparent",
-                          color: payDueDiscountMode === "₹" ? colors.neutral900 : colors.neutral500,
-                        }}
-                      >₹</button>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Total — cream-banded headline */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: `${spacing.xs} ${spacing.s}`, backgroundColor: colors.primary100, borderRadius: radii.m, marginTop: spacing["2xs"] }}>
-                <span style={{ fontFamily: fonts.family.primary, fontSize: fonts.control.md, fontWeight: fonts.weight.semibold, color: colors.neutral900 }}>Total</span>
-                <span style={{ fontFamily: fonts.family.secondary, fontSize: fonts.size.h4, lineHeight: 1, color: colors.neutral900, fontWeight: fonts.weight.regular, fontVariantNumeric: "tabular-nums" as const }}>₹ {fmt(totalDue)}</span>
-              </div>
-
-              {/* Method radio row */}
-              <div style={{ display: "flex", gap: spacing.m, justifyContent: "center", flexWrap: "wrap" as const, paddingTop: spacing["2xs"] }}>
-                {["Cash", "Card", "UPI", "Waive"].map((m) => (
-                  <label key={m} style={{ display: "flex", alignItems: "center", gap: spacing["2xs"], cursor: "pointer", fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: m === "Waive" ? colors.red200 : colors.neutral900 }}>
-                    <input
-                      type="radio"
-                      name="payDueMethod"
-                      checked={payDueMethod === m}
-                      onChange={() => setPayDueMethod(m)}
-                      style={{ margin: 0, cursor: "pointer" }}
-                    />
-                    {m}
-                  </label>
-                ))}
-              </div>
-
-              {/* Action buttons — inside the white card, above the zigzag */}
-              <div style={{ display: "flex", gap: spacing.s, justifyContent: "center", paddingTop: spacing.s }}>
-              <Button
-                variant="light"
-                size="sm"
-                onClick={() => { setPayDueApt(null); }}
-                disabled={payDueSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="dark"
-                size="sm"
-                disabled={payDueSubmitting}
-                onClick={async () => {
-                  const apt = payDueApt;
-                  setPayDueSubmitting(true);
-                  const token = localStorage.getItem("docodile_token");
-                  const newPayStatus = payDueMethod === "Waive" ? "WAIVED" : "PAID";
-                  try {
-                    const res = await fetch(`${API_BASE_URL}/api/tenant/appointments/${apt.id}/payment`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                      // Discount = full subtotal for Waive, computed
-                      // amount otherwise. Backend persists it for the
-                      // finance dashboard's collected-revenue rollup.
-                      body: JSON.stringify({
-                        payStatus: newPayStatus,
-                        paymentMethod: payDueMethod,
-                        discountAmount: discountAmt,
-                      }),
-                    });
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                    setToastMessage(payDueMethod === "Waive"
-                      ? `Bill waived for ${apt.patientName}`
-                      : `Marked ${apt.patientName} as Paid via ${payDueMethod}`);
-                    setRefreshKey((k) => k + 1);
-                    setPayDueApt(null);
-                  } catch (e) {
-                    setToastMessage(`Couldn't update payment: ${(e as Error).message}`);
-                  } finally {
-                    setPayDueSubmitting(false);
-                  }
-                }}
-              >
-                {payDueSubmitting ? "Saving…" : payDueMethod === "Waive" ? "Mark Waived" : "Pay Due"}
-              </Button>
-            </div>
-            </div>
-            {/* Zigzag torn-receipt edge under the unified card */}
-            <div style={{
-              width: "100%",
-              height: 20,
-              backgroundImage: `linear-gradient(135deg, ${colors.neutral100} 50%, transparent 50%), linear-gradient(225deg, ${colors.neutral100} 50%, transparent 50%)`,
-              backgroundSize: "20px 20px",
-              backgroundRepeat: "repeat-x",
-            }} />
-          </div>
-        </Modal>
-        );
-      })()}
     </div>
   );
 }
