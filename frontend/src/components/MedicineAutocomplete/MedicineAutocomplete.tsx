@@ -1,4 +1,5 @@
-import React, { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
+import React, { CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { colors, fonts, radii, spacing, strokes, zIndex } from "../../styles/theme";
 import { API_BASE_URL } from "../../apiConfig";
 import { listPharmacyStock } from "../../api/pharmacy";
@@ -17,10 +18,29 @@ type MedicineAutocompleteProps = {
   onSelect?: (name: string, genericName: string) => void;
   placeholder?: string;
   inputStyle?: CSSProperties;
+  /** Render the dropdown in a portal (position: fixed over the page) instead of
+   *  absolutely inside the input's wrapper. Use inside a scrolling/clipping
+   *  container (e.g. the bill modal) so the dropdown doesn't grow or get clipped
+   *  by an `overflow` ancestor. Off by default — the Rx pad keeps inline. */
+  dropdownPortal?: boolean;
+  /** Suggest ONLY the clinic's pharmacy inventory — skip the frequent-meds and
+   *  drug-DB ("eka care") fetches entirely. Used by the medicines bill, which
+   *  must only bill what's actually stocked. */
+  inventoryOnly?: boolean;
+  /** Clinic services to offer in a separate "Services" section above the
+   *  medicines (e.g. Consultation, Dressing). Used by the bill so the desk can
+   *  add a service line as well as medicines. */
+  services?: { name: string; price: number }[];
+  /** Called when a service (not a medicine) is picked from the Services section
+   *  — the host adds it as a service-kind line at the given price. */
+  onPickService?: (name: string, price: number) => void;
 };
 
-export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, inputStyle }: MedicineAutocompleteProps) {
+export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, inputStyle, dropdownPortal, inventoryOnly, services, onPickService }: MedicineAutocompleteProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuRect, setMenuRect] = useState<{ top: number; left: number; width: number } | null>(null);
   const [open, setOpen] = useState(false);
   const [drugs, setDrugs] = useState<Drug[]>([]);
   const [frequent, setFrequent] = useState<Drug[]>([]);
@@ -30,8 +50,10 @@ export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, i
   // a few hundred SKUs at most.
   const [stock, setStock] = useState<StockSuggestion[]>([]);
 
-  // Load frequently used medicines once on mount.
+  // Load frequently used medicines once on mount. Skipped in inventory-only
+  // mode — that picker shows pharmacy stock exclusively.
   useEffect(() => {
+    if (inventoryOnly) return;
     const token = localStorage.getItem("docodile_token") ?? "";
     fetch(`${API_BASE_URL}/api/medicines/frequent?limit=10`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -41,7 +63,7 @@ export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, i
         setFrequent(data.map((d) => ({ id: d.id, name: d.name, genericName: d.genericName ?? d.generic_name ?? "" })))
       )
       .catch(() => {});
-  }, []);
+  }, [inventoryOnly]);
 
   // Pull this clinic's pharmacy inventory once and roll multiple batches
   // of the same medicine into a single total — surfaced ABOVE the generic
