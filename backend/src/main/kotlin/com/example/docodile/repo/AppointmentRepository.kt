@@ -1,6 +1,7 @@
 package com.example.docodile.repo
 
 import com.example.docodile.domain.Appointment
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
@@ -94,4 +95,22 @@ interface AppointmentRepository : JpaRepository<Appointment, UUID> {
         """
     )
     fun markStaleAtDocAsUnseen(@Param("cutoff") cutoff: LocalDateTime): Int
+
+    // This patient's PAID/WAIVED appointments, most recent first — the bill
+    // footer reads the first row for the "Last Payment" line (its scheduled
+    // time + method). Pass PageRequest.of(0, 1) to fetch just the latest.
+    @Query(
+        """
+        SELECT a FROM Appointment a
+         WHERE a.clinic.id = :clinicId
+           AND a.patient.id = :patientId
+           AND UPPER(a.payStatus) IN ('PAID', 'WAIVED')
+         ORDER BY a.scheduledTime DESC NULLS LAST
+        """
+    )
+    fun findPaidByPatient(
+        @Param("clinicId") clinicId: UUID,
+        @Param("patientId") patientId: UUID,
+        pageable: Pageable,
+    ): List<Appointment>
 }
