@@ -369,11 +369,74 @@ export function BillModal({
     </div>
   );
 
+  const handleCharge = () => {
+    // Only medicine lines hit pharmacy inventory — the consultation/service line
+    // is excluded.
+    const items = lines
+      .filter((l) => !isService(l) && l.name.trim() !== "" && l.qty > 0)
+      .map((l) => ({ name: l.name, qty: l.qty, inStock: l.inStock !== false }));
+    // Full line snapshot for the bill/invoice record (carries prices, kind).
+    const lineItems = lines
+      .filter((l) => !isTrailing(l))
+      .map((l) => ({ name: l.name, qty: l.qty, unit: l.unit, gst: l.gst, disc: l.disc, discUnit: l.discUnit, kind: l.kind ?? "medicine" }));
+    onBilled?.({
+      method: methodLabel,
+      pharmacyAmount: isWaived ? 0 : pharmacyTotal,
+      serviceAmount: isWaived ? 0 : serviceTotal,
+      items,
+      billed: finalAmt,
+      paid: isWaived ? 0 : finalAmt,
+      due: 0,
+      refund: 0,
+      depositApplied: applied,
+      payStatus: isWaived ? "WAIVED" : "PAID",
+      lineItems,
+    });
+    onClose();
+  };
+  const hasBillableLine = lines.some((l) => !isTrailing(l) && l.qty > 0);
+
+  // Bottom strip: last payment (left) + registered-on (right). Rendered only
+  // once the footer data has loaded for this patient.
+  const footerNode = footer && (footer.registeredAt || footer.lastPaymentAt) ? (
+    <>
+      <span>Last Payment: {footer.lastPaymentAt ? daysAgo(footer.lastPaymentAt) : "—"}</span>
+      {footer.registeredAt && <span>Registered on: {fmtRegistered(footer.registeredAt)}</span>}
+    </>
+  ) : undefined;
+
   return (
     <BillLayout
       isOpen={isOpen}
       onClose={onClose}
-      header={<span style={{ fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 }}>{pt.code} : {pt.name} - {pt.meta}</span>}
+      rightOverlay={depositOpen ? (
+        <DepositPanel
+          onClose={() => setDepositOpen(false)}
+          deposited={dep}
+          // Deposits ADD to the running total; refunds draw it back down (never
+          // below 0). When wired, the backend owns the net and returns it; the
+          // local update is the fallback / optimistic value.
+          onApply={async (amt, mode, details) => {
+            const local = (Number(deposit) || 0) + amt;
+            setDeposit(local > 0 ? local : "");
+            setAmountTouched(false);
+            if (onDeposit) {
+              const seq = ++depSeq.current;
+              try { const net = await onDeposit(amt, "DEPOSIT", mode, details); if (seq === depSeq.current) setDeposit(net > 0 ? net : ""); } catch { /* keep optimistic */ }
+            }
+          }}
+          onRefund={async (amt, mode, details) => {
+            const local = Math.max(0, (Number(deposit) || 0) - amt);
+            setDeposit(local > 0 ? local : "");
+            setAmountTouched(false);
+            if (onDeposit) {
+              const seq = ++depSeq.current;
+              try { const net = await onDeposit(amt, "REFUND", mode, details); if (seq === depSeq.current) setDeposit(net > 0 ? net : ""); } catch { /* keep optimistic */ }
+            }
+          }}
+        />
+      ) : undefined}
+      header={<span style={{ fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 }}>{patientName ?? `${pt.code} : ${pt.name} - ${pt.meta}`}</span>}
       headerActions={
         <>
           <button onClick={() => {}} style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, fontSize: fonts.size.s, textDecoration: "underline", whiteSpace: "nowrap" }}>View bills</button>
@@ -386,7 +449,6 @@ export function BillModal({
       total={`₹ ${balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
       left={
         <>
-          <datalist id="bm-svc-list">{SERVICE_CATALOG.map((s) => <option key={s.name} value={s.name} />)}</datalist>
           {/* Bill date / deposit */}
           <div style={{ display: "flex", alignItems: "center", gap: spacing.m, flexWrap: "wrap" }}>
             <span style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>Bill date</span>
@@ -397,31 +459,37 @@ export function BillModal({
               )}
             </span>
             <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: spacing.xs, color: colors.neutral900 }}>
-              Deposit
+              Deposit Amount:
+              {/* Display only — not editable and not clickable. The deposit is
+                  entered solely via the "+" drawer beside it. */}
               <div style={{ width: 120, "--input-h": "32px" } as React.CSSProperties}>
-                <MeasureField box prefix="₹" placeholder="0" inputMode="decimal" ariaLabel="Deposit amount"
+                <MeasureField box prefix="₹" placeholder="0" inputMode="decimal" ariaLabel="Deposit amount" readOnly
                   value={deposit === "" ? "" : String(deposit)} onChange={(v) => setDeposit(v === "" ? "" : Number(v))} />
               </div>
+              <IconButton ariaLabel="Add deposit" onClick={() => setDepositOpen(true)} color={colors.neutral900}>
+                <Icon name="plus" size={20} tone="inherit" />
+              </IconButton>
             </span>
           </div>
 
           <div style={{ "--input-h": "32px" } as React.CSSProperties}>
-            <DataGrid columns={columns} rows={lines} rowKey={(l) => l.id} size="m" tdPadding="8px 6px" thPadding="8px 6px" />
+            {loading ? (
+              <div style={{ padding: "20px 8px", textAlign: "center", color: colors.neutral500, fontSize: fonts.size.s }}>Loading prescription…</div>
+            ) : (
+              <DataGrid columns={columns} rows={lines} rowKey={(l) => l.id} size="m" tdPadding="8px 6px" thPadding="8px 6px"
+                tdVerticalAlign="top"
+                rowStyle={(l) => (!isTrailing(l) && l.inStock === false ? { backgroundColor: colors.redAlpha10 } : undefined)} />
+            )}
           </div>
         </>
       }
       summary={
         <>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.active.shade50, color: colors.active.shade700, borderRadius: radii.m, padding: "6px 12px", fontSize: fonts.size.s }}>
-            <span>Past due: {inr(PAST_DUE)}</span>
-            <button onClick={() => setAddDue((v) => !v)} style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.active.shade700, fontSize: fonts.size.s, textDecoration: "underline" }}>{addDue ? "Added" : "Add to bill"}</button>
-          </div>
-
           {sumRow("Total billed", inr(billed))}
           {sumRow("Discount", `− ${inr(discount)}`)}
           {sumRow("Tax", inr(tax))}
-          {sumRow("Final amount", inr(finalAmt), true)}
-          {sumRow("Received", inr(recv))}
+          {sumRow("Final amount", inr(displayFinal), true)}
+          {sumRow("Received", inr(received))}
           {sumRow("Refund", `− ${inr(refund)}`)}
         </>
       }
