@@ -41,6 +41,13 @@ type BillLayoutProps = {
   payment: React.ReactNode;
   /** Action row pinned to the bottom of the payment card. */
   action: React.ReactNode;
+  /** Optional full-width strip across the bottom (e.g. last payment / registered
+      on). Spans the whole modal under the line-item + bill/payment columns. */
+  footer?: React.ReactNode;
+  /** Optional panel that wraps OVER the right column (the bill summary + payment
+      cards), filling exactly their footprint — e.g. the Deposit drawer. The left
+      line-item card and the footer stay visible. */
+  rightOverlay?: React.ReactNode;
 };
 
 export function BillLayout({
@@ -57,6 +64,8 @@ export function BillLayout({
   paymentTitle = "Payment",
   payment,
   action,
+  footer,
+  rightOverlay,
 }: BillLayoutProps) {
   const hasHeader = Boolean(header || headerActions);
   return (
@@ -100,8 +109,13 @@ export function BillLayout({
               {payment}
               <div style={styles.actionRow}>{action}</div>
             </div>
+
+            {/* Drawer that wraps over the summary + payment cards in place. */}
+            {rightOverlay && <div style={styles.rightOverlay}>{rightOverlay}</div>}
           </div>
         </div>
+
+        {footer && <div style={styles.footerCard}>{footer}</div>}
       </div>
     </Modal>
   );
@@ -156,11 +170,18 @@ const styles: Record<string, React.CSSProperties> = {
     overflowY: "auto",
   },
   rightCol: {
+    position: "relative",
     flex: "1 1 0",
     minWidth: 0,
     display: "flex",
     flexDirection: "column",
     gap: 6,
+  },
+  rightOverlay: {
+    position: "absolute",
+    inset: 0,
+    display: "flex",
+    flexDirection: "column",
   },
   billCard: {
     backgroundColor: colors.neutral100,
@@ -231,5 +252,19 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     gap: spacing.s,
     alignItems: "center",
+  },
+  // Full-width strip under the cards — patient meta (last payment / registered).
+  footerCard: {
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.m,
+    boxShadow: shadows.modal,
+    padding: `${spacing.s} ${spacing.xl}`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.m,
+    flexShrink: 0,
+    fontSize: fonts.size.s,
+    color: colors.neutral600,
   },
 };
