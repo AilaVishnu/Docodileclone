@@ -383,6 +383,8 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               notes: apt.notes || "",
               fee: apt.fee || 0,
               pharmacyAmount: apt.pharmacyAmount || 0,
+              deposit: apt.patientDeposit || 0,
+              todayBillCount: apt.todayBillCount || 0,
               patientArchived: apt.patientArchived || false,
               createdAt: apt.createdAt || undefined,
             });
@@ -580,30 +582,19 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                   }, apt.id, apt.doctorId || activeDoctorId);
                 }
               } },
-              { label: "Bill Medicines", onClick: (apt) => {
+              // Billing is ONE swapping item: before the day's first bill the
+              // kebab shows "Bill" (opens the editor). Once a bill exists for the
+              // appointment's date it disappears and "View/Create Bills" takes its
+              // place — the Recent Bills history, which carries its own
+              // "Create New Bill" for additional invoices.
+              { label: "Create Bill", visible: (apt) => !apt.todayBillCount, onClick: (apt) => {
                 if (apt.patientArchived) {
                   setToastMessage(`${apt.patientName} is archived — restore the patient to continue.`);
                   return;
                 }
                 setMedsBillingApt(apt);
               } },
-              // One-click consultation-fee paid. Only appears when the
-              // appointment is in DUE state (anything other than PAID/
-              // WAIVED). PATCHes payStatus → PAID with method "Cash"
-              // and refreshes the queue so the pill flips immediately.
-              {
-                label: "Mark as Paid",
-                visible: (apt) => {
-                  const ps = (apt.payStatus || "").toUpperCase();
-                  return ps !== "PAID" && ps !== "WAIVED";
-                },
-                onClick: (apt) => {
-                  setPayDueApt(apt);
-                  setPayDueMethod(apt.paymentMethod || "Cash");
-                  setPayDueDiscount(0);
-                  setPayDueDiscountMode("₹");
-                },
-              },
+              { label: "View/Create Bills", visible: (apt) => !!apt.todayBillCount, onClick: (apt) => openBillsHistory(apt) },
             ]}
             // Only today's queue can mutate appointment status — past
             // and future dates render the badge read-only so a stray
@@ -655,40 +646,55 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
         onCancel={() => setPendingCancelId(null)}
       />
 
-      <BillMedicinesModal
+      <BillModal
         isOpen={!!medsBillingApt}
         onClose={() => setMedsBillingApt(null)}
-        onBilled={(method, total, billedItems) => {
-          const inr = total.toLocaleString("en-IN", { minimumFractionDigits: 2 });
-          const baseMsg = method === "Waive"
+        onBilled={({ method, pharmacyAmount, serviceAmount, items, billed, paid, due, refund, depositApplied, payStatus: billPayStatus, lineItems }) => {
+          const isWaive = method === "Waive";
+          const totalCharged = pharmacyAmount + serviceAmount;
+          const inr = totalCharged.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+          const baseMsg = isWaive
             ? `Bill waived for ${medsBillingApt?.patientName}`
             : `₹${inr} billed via ${method} for ${medsBillingApt?.patientName}`;
 
-          // Persist pay status + method on the appointment row so the
-          // queue's Pay pill stays accurate after a reload. WAIVED for a
-          // waived bill, PAID for everything else; the channel is the
-          // selected radio. Fire-and-forget — toast on failure.
+          // Persist pay status + method on the appointment row so the queue's
+          // Pay pill stays accurate after a reload. The consultation/service and
+          // pharmacy buckets are written SEPARATELY (fee vs pharmacyAmount), each
+          // its net charged amount, so finance never double-counts; discount is
+          // baked in (0). WAIVED zeroes both. Fire-and-forget — toast on failure.
           const aptId = medsBillingApt?.id;
           if (aptId) {
             const token = localStorage.getItem("docodile_token");
-            const payStatus = method === "Waive" ? "WAIVED" : "PAID";
+            const payStatus = isWaive ? "WAIVED" : "PAID";
             fetch(`${API_BASE_URL}/api/tenant/appointments/${aptId}/payment`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-              // pharmacyAmount = the bill total minus any pending
-              // consultation due that's rolled in. For waived bills
-              // pass 0 so finance reflects the goodwill, not a charge.
-              body: JSON.stringify({ payStatus, paymentMethod: method, pharmacyAmount: method === "Waive" ? 0 : total }),
+              body: JSON.stringify({ payStatus, paymentMethod: method, pharmacyAmount, fee: serviceAmount, discountAmount: 0 }),
             })
               .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); })
               .then(() => setRefreshKey((k) => k + 1))
               .catch((err) => setToastMessage(`Pay status update failed: ${(err as Error).message}`));
           }
 
+          // Snapshot this invoice into the patient's Recent Bills history.
+          // Additive only — the appointment payment/finance/deposit were written
+          // above; this is the history record. Flips the kebab to "View Bills".
+          const patientId = medsBillingApt?.patientId;
+          if (patientId) {
+            createBill(patientId, {
+              appointmentId: aptId,
+              billed, paid, due, refund, depositApplied,
+              payStatus: billPayStatus, paymentMethod: method,
+              items: JSON.stringify(lineItems),
+            })
+              .then(() => setRefreshKey((k) => k + 1))
+              .catch((err) => setToastMessage(`Couldn't save bill record: ${(err as Error).message}`));
+          }
+
           // Only deduct meds the clinic actually stocks — out-of-stock
           // items have no inventory row to touch. Waived bills still
           // deduct (the meds were dispensed, just not charged).
-          const toDeduct = billedItems.filter((b) => b.inStock && b.qty > 0).map((b) => ({ name: b.name, qty: b.qty }));
+          const toDeduct = items.filter((b) => b.inStock && b.qty > 0).map((b) => ({ name: b.name, qty: b.qty }));
           if (toDeduct.length === 0) {
             setToastMessage(baseMsg);
             return;
