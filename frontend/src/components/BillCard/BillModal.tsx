@@ -505,7 +505,7 @@ export function BillModal({
                   <Select options={["Cash", "Card", "UPI", "Waive"]} value={p.mode} onChange={(m) => setPayment(i, { mode: m })} />
                 </div>
                 <div style={{ width: 110, flexShrink: 0 }}>
-                  <MeasureField box prefix="₹" placeholder={i === 0 ? String(balance) : "0"} inputMode="decimal" ariaLabel="Amount"
+                  <MeasureField box prefix="₹" placeholder={i === 0 ? String(Math.round(balance)) : "0"} inputMode="decimal" ariaLabel="Amount"
                     value={p.amount === "" ? "" : String(p.amount)} onChange={(v) => setPayment(i, { amount: v === "" ? "" : Number(v) })} />
                 </div>
                 {last ? (
@@ -520,13 +520,28 @@ export function BillModal({
               </div>
             );
           })}
+
+          {/* Free-text note for this payment — same "Add Details" box as the
+              Deposit drawer. */}
+          <div style={{ "--input-h": "40px" } as React.CSSProperties}>
+            <Field variant="box" ariaLabel="Bill details" placeholder="Add Details" value={billNote} onChange={setBillNote} />
+          </div>
         </>
       }
       action={
-        <Button variant="dark" size="md" onClick={onClose} style={{ flex: 1 }} iconLeft={<Icon name="verified-badge" size={20} tone="inverse" />}>
-          {balance > 0 ? `Pay ${inr(balance)}` : "Mark paid"}
-        </Button>
+        onBilled ? (
+          <Button variant="dark" size="md" onClick={handleCharge} style={{ flex: 1 }}
+            disabled={!hasBillableLine || (!isWaived && finalAmt <= 0)}
+            iconLeft={<Icon name="verified-badge" size={20} tone="inverse" />}>
+            {isWaived ? "Mark Waived" : "Charge & Bill"}
+          </Button>
+        ) : (
+          <Button variant="dark" size="md" onClick={onClose} style={{ flex: 1 }} iconLeft={<Icon name="verified-badge" size={20} tone="inverse" />}>
+            {balance > 0 ? `Pay ${inr(balance)}` : "Mark paid"}
+          </Button>
+        )
       }
+      footer={footerNode}
     />
   );
 }
