@@ -3,22 +3,22 @@ import { Tabs, TabItem } from "../Tabs";
 import { QueueTable, Appointment } from "./QueueTable";
 import { styles } from "./AppointmentQueue.styles";
 import { DatePicker } from "../DatePicker/DatePicker";
-import { colors, fonts, radii, spacing } from "../../styles/theme";
+import { colors, radii } from "../../styles/theme";
 import { BookAppointment, EditAppointmentData } from "./BookAppointment";
 import { PageHeader } from "../PageHeader/PageHeader";
 import { ChevronDown } from "../icons/ChevronDown";
-import { BillMedicinesModal } from "./BillMedicinesModal";
-import { BillCard } from "../BillCard/BillCard";
+import { BillModal } from "../BillCard/BillModal";
 import { DoctorStatusCard } from "./DoctorStatusCard";
 import { HeatmapCard } from "./HeatmapCard";
 import { Toast } from "../Toast";
 import { resolveToastIcon } from "../Toast/toastIcon";
-import { Button } from "../Button";
 import { ConfirmDialog } from "../ConfirmDialog";
-import { Modal } from "../Modal";
 import { API_BASE_URL } from "../../apiConfig";
 import { listPharmacyStock, deductPharmacyStock } from "../../api/pharmacy";
 import { getActiveSessions } from "../../api/visits";
+import { recordPatientDeposit } from "../../api/patientSearch";
+import { listBills, createBill, type Bill } from "../../api/bills";
+import { RecentBills } from "../BillCard/RecentBills";
 
 type Doctor = {
   id: string;
@@ -34,6 +34,20 @@ type BillingMedicine = {
   unitPrice: number;
   qty: number;
 };
+
+// Stable empty list for a blank ("Create Bill") editor. Must be a constant —
+// a fresh `[]` each render would re-fire BillModal's seed effect (which the 3s
+// queue poll re-renders into) and wipe the bill on every tick.
+const NO_MEDS: BillingMedicine[] = [];
+
+// Patient label for the bill header — "name (G|years)", matching the queue row.
+// `ageMonths` is stored in months (the queue divides by 12).
+function patientLabel(name: string, gender?: string, ageMonths?: number): string {
+  const g = gender ? gender.charAt(0).toUpperCase() : "";
+  const years = ageMonths != null && ageMonths > 0 ? Math.floor(ageMonths / 12) : null;
+  const parts = [g, years != null ? String(years) : ""].filter(Boolean);
+  return parts.length ? `${name} (${parts.join("|")})` : name;
+}
 
 type AppointmentQueueProps = {
   isBooking?: boolean;
@@ -55,13 +69,30 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
   const [toastMessage, setToastMessage] = useState("");
   const [pendingCancelId, setPendingCancelId] = useState<string | null>(null);
   const [medsBillingApt, setMedsBillingApt] = useState<Appointment | null>(null);
-  // "Mark as Paid" popup state — keeps the receptionist on the queue
-  // instead of opening the full Edit modal just to pick a channel.
-  const [payDueApt, setPayDueApt] = useState<Appointment | null>(null);
-  const [payDueMethod, setPayDueMethod] = useState<string>("Cash");
-  const [payDueSubmitting, setPayDueSubmitting] = useState(false);
-  const [payDueDiscount, setPayDueDiscount] = useState<number>(0);
-  const [payDueDiscountMode, setPayDueDiscountMode] = useState<"%" | "₹">("₹");
+  // An ADDITIONAL bill opens BLANK — the consultation + prescribed meds were
+  // already billed on the first invoice of the date. The FIRST bill (no prior
+  // bill that date) auto-seeds them. Derived from the live bill count so it can
+  // never get stuck on a stale flag.
+  const additionalBill = (medsBillingApt?.todayBillCount ?? 0) > 0;
+  // Recent Bills history (shown when the patient already has a bill today).
+  const [billsHistoryApt, setBillsHistoryApt] = useState<Appointment | null>(null);
+  const [historyBills, setHistoryBills] = useState<Bill[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const openBillsHistory = (apt: Appointment) => {
+    if (apt.patientArchived) {
+      setToastMessage(`${apt.patientName} is archived — restore the patient to continue.`);
+      return;
+    }
+    setBillsHistoryApt(apt);
+    setHistoryBills([]);
+    if (!apt.patientId) return;
+    setHistoryLoading(true);
+    listBills(apt.patientId)
+      .then(setHistoryBills)
+      .catch((err) => setToastMessage(`Couldn't load bills: ${(err as Error).message}`))
+      .finally(() => setHistoryLoading(false));
+  };
   // appointmentId → backend session start (ISO) for in-progress consultations.
   // Polled from the active-sessions endpoint; drives the live status-badge
   // timer (the badge itself ticks each second from this start instant).
