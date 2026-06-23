@@ -301,10 +301,9 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         return <HomeView onQuickAction={handleQuickAction} />;
       case "Appointments":
         return <AppointmentsView isBooking={isBooking} bookingKey={bookingKey} onBack={() => { setIsBooking(false); setIsEditing(false); }} onEditStart={() => setIsEditing(true)} onViewPatientFile={(patient, appointmentId) => {
-          // Open the patient's prescription/visit directly — same path
-          // PrescriptionQueue's View Pad uses, so the doctor lands inside
-          // the file instead of on the Patient Files index summary.
-          setPendingSessionNav({ patient, appointmentId });
+          // Open the patient's FILE on its Info tab (demographics), not the
+          // prescription pad. initialAction 4 = INFO_ACTION; Back → Appointments.
+          setPendingSessionNav({ patient, appointmentId, returnTab: "Appointments", initialAction: 4 });
           setActiveTab("Prescription");
         }} />;
       case "Prescription":
