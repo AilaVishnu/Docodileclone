@@ -160,7 +160,8 @@ class ClinicStatusController(
             }
             val pharmacyAmount = parseMoney("pharmacyAmount")
             val discountAmount = parseMoney("discountAmount")
-            ResponseEntity.ok(appointmentService.updatePayment(appointmentId, payStatus, paymentMethod, pharmacyAmount, discountAmount))
+            val fee = parseMoney("fee")
+            ResponseEntity.ok(appointmentService.updatePayment(appointmentId, payStatus, paymentMethod, pharmacyAmount, discountAmount, fee))
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
         }
