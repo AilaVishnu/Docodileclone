@@ -253,14 +253,50 @@ export function BillModal({
   // Discount per line is either a flat ₹ amount or a % of that line's subtotal.
   const discAmt = (l: Line) => (l.discUnit === "%" ? (l.qty * l.unit * (l.disc || 0)) / 100 : (l.disc || 0));
   const lineTotal = (l: Line) => l.qty * l.unit - discAmt(l);
+  // Per-line net INCLUDING its tax — the actual charged amount for that line.
+  const lineNet = (l: Line) => lineTotal(l) + (l.qty * l.unit * (l.gst || 0)) / 100;
+  const isService = (l: Line) => l.kind === "service";
   const billed = lines.reduce((s, l) => s + l.qty * l.unit, 0);
   const discount = lines.reduce((s, l) => s + discAmt(l), 0);
   const tax = lines.reduce((s, l) => s + (l.qty * l.unit * (l.gst || 0)) / 100, 0);
-  const finalAmt = billed - discount + tax + (addDue ? PAST_DUE : 0);
-  const recv = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  // Separate finance buckets: the consultation/service line(s) bill the
+  // appointment fee, everything else bills the pharmacy. Each is the NET charged
+  // amount (its discount + tax baked in), so fee + pharmacy = the bill total with
+  // no double-count.
+  const serviceTotal = lines.filter((l) => isService(l) && !isTrailing(l)).reduce((s, l) => s + lineNet(l), 0);
+  const pharmacyTotal = lines.filter((l) => !isService(l) && !isTrailing(l)).reduce((s, l) => s + lineNet(l), 0);
+  const finalAmt = serviceTotal + pharmacyTotal;
   const dep = Number(deposit) || 0;
-  const balance = Math.max(0, finalAmt - dep - recv);
-  const refund = Math.max(0, dep + recv - finalAmt);
+
+  // Payment: the primary line decides Waive (free dispense → ₹0). The recorded
+  // method is the distinct modes joined ("Cash", or "Cash + UPI" for a split).
+  const primaryMode = payments[0]?.mode ?? "Cash";
+  const isWaived = primaryMode === "Waive";
+  const methodLabel = isWaived ? "Waive" : Array.from(new Set(payments.map((p) => p.mode))).join(" + ");
+
+  const displayFinal = isWaived ? 0 : finalAmt;
+  // The patient's advance auto-covers the bill up to the bill total: only
+  // min(deposit, bill) is applied here, the rest stays as their advance (so a
+  // big advance never shows as a bill "refund"). Explicit refunds are the
+  // drawer's Refund tab, not billing — so the bill refund row is always 0.
+  const applied = isWaived ? 0 : Math.min(dep, finalAmt);
+  const received = applied;
+  const balance = isWaived ? 0 : Math.max(0, finalAmt - applied);
+  const refund = 0;
+
+  // Auto-fill the single payment line with what's left to collect (bill total −
+  // deposit), so the desk can Charge & Bill in one click. Stops as soon as they
+  // type/clear the amount, split the payment, or Waive — and tracks the total
+  // as items change until then.
+  useEffect(() => {
+    if (!isOpen || amountTouched || isWaived || payments.length !== 1) return;
+    const target = Math.max(0, Math.round(finalAmt - dep));
+    setPayments((ps) => {
+      const next: number | "" = target > 0 ? target : "";
+      return ps[0]?.amount === next ? ps : [{ ...ps[0], amount: next }];
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, amountTouched, isWaived, finalAmt, dep, payments.length]);
 
   // Numeric line-item field → cream FillInput. Stored as a number; blank shows
   // the placeholder rather than a literal 0.
@@ -271,12 +307,43 @@ export function BillModal({
       onChange={(v) => setLine(l.id, { [key]: key === "qty" ? Math.max(1, Math.floor(Number(v)) || 1) : Number(v) || 0 } as Partial<Line>)} />
   );
 
+  // Cells are top-aligned (so a "Not in stock" label can hang below the Item
+  // input without dropping the other inputs). Text/icon cells therefore need a
+  // 32px box — the input height — centered, so they line up with the input rows.
+  const midCell = (node: React.ReactNode) => (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 32 }}>{node}</div>
+  );
+
   const columns: GridColumn<Line>[] = [
-    { key: "n", header: "#", width: 24, align: "center", render: (l, i) => <span style={{ color: colors.neutral500 }}>{i + 1}</span> },
+    { key: "n", header: "#", width: 24, align: "center", render: (l, i) => midCell(<span style={{ color: colors.neutral500 }}>{i + 1}</span>) },
     { key: "svc", header: "Item", align: "left", render: (l) => (
-      <Field variant="box" fill="filled" list="bm-svc-list" placeholder="Type here" ariaLabel="Service"
-        style={{ padding: "0 8px" }}
-        value={l.name} onChange={(v) => setName(l.id, v)} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {/* The consultation/service line is a plain field (it's not a stocked
+            medicine). Medicine rows use the design-system inventory picker (same
+            as the Rx pad) — no native datalist; the unit price auto-fills from
+            the catalog via setName. */}
+        {wired && !isService(l) ? (
+          <MedicineAutocomplete
+            value={l.name}
+            onChange={(v) => setName(l.id, v)}
+            placeholder="Type here"
+            inputStyle={BILL_ITEM_INPUT_STYLE}
+            dropdownPortal
+            inventoryOnly
+            services={serviceCatalog}
+            onPickService={(name, price) => pickService(l.id, name, price)}
+          />
+        ) : (
+          <Field variant="box" fill="filled" placeholder="Type here" ariaLabel="Item"
+            style={{ padding: "0 8px" }}
+            value={l.name} onChange={(v) => setName(l.id, v)} />
+        )}
+        {/* Meds not in the clinic's stock: flag the row; its price is editable
+            (one-off rate) and the host skips it for inventory deduction. */}
+        {!isTrailing(l) && l.inStock === false && (
+          <span style={{ fontSize: fonts.size.xs, color: colors.red200, paddingLeft: 4 }}>Not in stock</span>
+        )}
+      </div>
     ) },
     { key: "qty", header: "Qty", width: 52, render: (l) => numFill(l, "qty", "1") },
     { key: "unit", header: "Unit ₹", width: 76, render: (l) => numFill(l, "unit", "0") },
@@ -289,9 +356,9 @@ export function BillModal({
         onToggleUnit={() => setLine(l.id, { discUnit: l.discUnit === "%" ? "₹" : "%" })}
         value={l.disc ? String(l.disc) : ""} onChange={(v) => setLine(l.id, { disc: Number(v) || 0 })} />
     ) },
-    { key: "tot", header: "Total", width: 80, align: "center", render: (l) => (isTrailing(l) ? "" : <span style={{ fontWeight: fonts.weight.medium }}>{inr(lineTotal(l))}</span>) },
-    { key: "x", header: "", width: 38, headerPadding: "8px 4px", cellPadding: "8px 4px", render: (l) => (isTrailing(l) ? "" : (
-      <button onClick={() => removeLine(l.id)} aria-label="Remove" style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, display: "flex", justifyContent: "center", width: "100%" }}><Icon name="trash" size={20} tone="inherit" style={{ flexShrink: 0 }} /></button>
+    { key: "tot", header: "Total", width: 84, align: "center", render: (l) => (isTrailing(l) ? "" : midCell(<span style={{ fontWeight: fonts.weight.medium, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{inr(lineTotal(l))}</span>)) },
+    { key: "x", header: "", width: 38, headerPadding: "8px 4px", cellPadding: "8px 4px", render: (l) => (isTrailing(l) ? "" : midCell(
+      <button onClick={() => removeLine(l.id)} aria-label="Remove" style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, display: "flex", justifyContent: "center" }}><Icon name="trash" size={20} tone="inherit" style={{ flexShrink: 0 }} /></button>
     )) },
   ];
 
