@@ -7,6 +7,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -54,5 +55,10 @@ class Patient(
     // Human-facing patient number, unique and sequential per clinic. Assigned
     // in creation/import order, skipping numbers already taken — see V46.
     @Column(name = "display_no")
-    var displayNo: Int? = null
+    var displayNo: Int? = null,
+
+    // Running advance/deposit balance — a credit held against future bills.
+    // Deposits add, refunds subtract, and Charge & Bill auto-draws against it;
+    // every movement is recorded in patient_deposit_ledger. Never negative.
+    var deposit: BigDecimal? = null
 )
