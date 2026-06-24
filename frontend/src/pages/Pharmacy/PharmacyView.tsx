@@ -537,12 +537,6 @@ const ms: Record<string, React.CSSProperties> = {
   footer: {
     display: "flex", justifyContent: "flex-end", gap: spacing.s,
   },
-  btnDanger: {
-    fontFamily: fonts.family.primary, fontSize: fonts.control.md,
-    color: colors.neutral100, backgroundColor: colors.red200,
-    border: "none", borderRadius: radii.full,
-    padding: "10px 20px", cursor: "pointer",
-  },
 };
 
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
@@ -785,14 +779,9 @@ export function DeleteConfirmBody({
 
       <footer style={ms.footer}>
         <Button variant="light" size="sm" onClick={onCancel} disabled={busy}>Cancel</Button>
-        <button
-          type="button"
-          onClick={submit}
-          disabled={busy}
-          style={{ ...ms.btnDanger, ...(busy ? { opacity: 0.45, cursor: "not-allowed" } : null) }}
-        >
+        <Button variant="danger" size="sm" onClick={submit} disabled={busy}>
           {busy ? "Removing…" : "Remove"}
-        </button>
+        </Button>
       </footer>
     </div>
   );
