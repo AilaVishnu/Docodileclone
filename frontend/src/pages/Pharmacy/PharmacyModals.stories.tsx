@@ -85,7 +85,7 @@ export const EditStock: Story = {
 
 export const AdjustQuantity: Story = {
   render: () => (
-    <Modal isOpen onClose={noop}>
+    <Modal isOpen onClose={noop} surface={colors.neutral100} padding={spacing.xl}>
       <AdjustQtyBody med={MED} onClose={noop} onSave={noopAsync} />
     </Modal>
   ),
@@ -93,7 +93,7 @@ export const AdjustQuantity: Story = {
 
 export const DeleteConfirm: Story = {
   render: () => (
-    <Modal isOpen onClose={noop}>
+    <Modal isOpen onClose={noop} surface={colors.neutral100} padding={spacing.xl}>
       <DeleteConfirmBody med={MED} onCancel={noop} onConfirm={noopAsync} />
     </Modal>
   ),

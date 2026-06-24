@@ -244,7 +244,7 @@ export function PharmacyView() {
         />
       </Modal>
 
-      <Modal isOpen={adjustingQty !== null} onClose={() => setAdjustingQty(null)}>
+      <Modal isOpen={adjustingQty !== null} onClose={() => setAdjustingQty(null)} surface={colors.neutral100} padding={spacing.xl}>
         {adjustingQty && (
           <AdjustQtyBody
             med={adjustingQty}
@@ -254,7 +254,7 @@ export function PharmacyView() {
         )}
       </Modal>
 
-      <Modal isOpen={deleting !== null} onClose={() => setDeleting(null)}>
+      <Modal isOpen={deleting !== null} onClose={() => setDeleting(null)} surface={colors.neutral100} padding={spacing.xl}>
         {deleting && (
           <DeleteConfirmBody
             med={deleting}
@@ -349,11 +349,11 @@ export function DetailBody({ med, onClose }: { med: Med; onClose: () => void }) 
   const out = med.unitsInStock === 0;
   const low = med.unitsInStock > 0 && med.unitsInStock < 5;
   // Stock/expiry status shows through the tile BACKGROUND (green/amber/red), not the value text.
-  const stockBg = out ? colors.redAlpha10 : low ? colors.yellowAlpha10 : colors.greenAlpha10;
-  const expiryBg = status === "bad" ? colors.redAlpha10 : status === "warn" ? colors.yellowAlpha10 : colors.greenAlpha10;
+  const stockBg = out ? colors.redAlpha20 : low ? colors.yellowAlpha20 : colors.greenAlpha20;
+  const expiryBg = status === "bad" ? colors.redAlpha20 : status === "warn" ? colors.yellowAlpha20 : colors.greenAlpha20;
   // State labels shown as a white chip inside the (colour-tinted) tile.
-  const stockChip = out ? { label: "Out", color: colors.red200 } : low ? { label: "Low", color: colors.yellow200 } : null;
-  const expiryChip = status === "bad" ? { label: "Expired", color: colors.red200 } : status === "warn" ? { label: "Expiring", color: colors.yellow200 } : null;
+  const stockChip = out ? { label: "Out", color: colors.red200 } : low ? { label: "Low", color: colors.yellow300 } : null;
+  const expiryChip = status === "bad" ? { label: "Expired", color: colors.red200 } : status === "warn" ? { label: "Expiring", color: colors.yellow300 } : null;
 
   return (
     <div style={ms.detailPanes}>
@@ -493,24 +493,6 @@ const ms: Record<string, React.CSSProperties> = {
     fontFamily: fonts.family.primary, fontSize: fonts.control.sm,
     color: colors.neutral600,
   },
-  identityStrip: {
-    display: "flex", alignItems: "center", gap: spacing.m,
-    backgroundColor: colors.primary100, borderRadius: radii.xl,
-    padding: `${spacing.s} ${spacing.m}`,
-  },
-  identityText: {
-    display: "flex", flexDirection: "column", gap: 6, minWidth: 0,
-  },
-  identityName: {
-    margin: 0,
-    fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h6, lineHeight: fonts.lineHeight.h6,
-    fontWeight: fonts.weight.regular, color: colors.neutral900,
-    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-  },
-  identityMeta: {
-    display: "flex", alignItems: "center", gap: spacing.xs, flexWrap: "wrap",
-  },
   metaChip: {
     fontFamily: fonts.family.primary, fontSize: fonts.control.xs,
     color: colors.neutral700, backgroundColor: colors.primary200,
@@ -544,14 +526,6 @@ const ms: Record<string, React.CSSProperties> = {
     display: "flex", justifyContent: "center",
     padding: `${spacing.s} 0`,
   },
-  textInput: {
-    width: "100%", height: "var(--input-h, 40px)", boxSizing: "border-box",
-    padding: `0 ${spacing.s}`,
-    border: `1px solid ${colors.neutral300}`, borderRadius: radii.m,
-    backgroundColor: colors.neutral150,
-    fontFamily: fonts.family.primary, fontSize: fonts.control.sm,
-    color: colors.neutral900, outline: "none",
-  },
   selectInput: {
     width: "100%", height: 35, boxSizing: "border-box",
     padding: `0 ${spacing.s}`,
@@ -581,24 +555,8 @@ function Field({ label, error, children }: { label: string; error?: string; chil
   );
 }
 
-function MedIdentityStrip({ med }: { med: Med }) {
-  return (
-    <div style={ms.identityStrip}>
-      <div style={ms.identityText}>
-        <p style={ms.identityName}>{med.name}</p>
-        <div style={ms.identityMeta}>
-          <Tag variant="outline" label={med.category} />
-          <Tag variant="outline" label={med.form} />
-          {med.batch && <Tag variant="outline" label={`Batch ${med.batch}`} />}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Stock form — used by both Add Stock and Edit batch. Mirrors the
-// EditPatientModal layout: serif header + cream identity strip (edit only)
-// + white form card + ghost/orange footer.
+// Stock form — used by both Add Stock and Edit Stock. Serif header + form
+// fields + ghost/orange footer. Edit and Add are identical bar the title.
 export function StockFormBody({
   initial,
   onClose,
@@ -664,11 +622,9 @@ export function StockFormBody({
   return (
     <div style={ms.container}>
       <ModalHeader
-        title={isEdit ? "Edit batch" : "Add stock"}
+        title={isEdit ? "Edit Stock" : "Add Stock"}
         onClose={onClose}
       />
-
-      {isEdit && initial && <MedIdentityStrip med={initial} />}
 
       <div style={{ display: "flex", flexDirection: "column", gap: spacing.s }}>
         <Field label="Medicine name *" error={touched && nameError ? "Name is required" : undefined}>
@@ -742,8 +698,8 @@ export function StockFormBody({
   );
 }
 
-// Adjust units-in-stock — single field, but same modal chrome (header,
-// identity strip, white card, ghost/primary footer) as Edit batch.
+// Adjust units-in-stock — single field; same chrome as the stock form
+// (header + field + ghost/primary footer), no identity strip or inner card.
 export function AdjustQtyBody({
   med,
   onClose,
@@ -778,25 +734,20 @@ export function AdjustQtyBody({
     <div style={ms.containerNarrow}>
       <ModalHeader
         title="Adjust stock"
-        subtitle={`Currently ${med.unitsInStock} units in stock`}
+        subtitle={`${med.name} — currently ${med.unitsInStock} in stock`}
         onClose={onClose}
       />
 
-      <MedIdentityStrip med={med} />
-
-      <div style={ms.formCard}>
-        <Field label="New units in stock" error={err ?? undefined}>
-          <input
-            type="number"
-            min={0}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-            autoFocus
-            style={ms.textInput}
-          />
-        </Field>
-      </div>
+      <MeasureField
+        box
+        value={value}
+        onChange={setValue}
+        inputMode="numeric"
+        placeholder="0"
+        invalid={!!err}
+        onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+      />
+      {err && <span style={ms.fieldError}>{err}</span>}
 
       <footer style={ms.footer}>
         <Button variant="light" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
@@ -808,8 +759,8 @@ export function AdjustQtyBody({
   );
 }
 
-// Delete confirmation — styled replacement for window.confirm. Same modal
-// chrome as the other two; primary button is red since it's destructive.
+// Delete confirmation — styled replacement for window.confirm. Med name is the
+// subtitle; the destructive button is red. No identity strip (redundant).
 export function DeleteConfirmBody({
   med,
   onCancel,
@@ -828,10 +779,9 @@ export function DeleteConfirmBody({
     <div style={ms.containerNarrow}>
       <ModalHeader
         title="Remove from inventory?"
+        subtitle={med.name}
         onClose={onCancel}
       />
-
-      <MedIdentityStrip med={med} />
 
       <footer style={ms.footer}>
         <Button variant="light" size="sm" onClick={onCancel} disabled={busy}>Cancel</Button>
