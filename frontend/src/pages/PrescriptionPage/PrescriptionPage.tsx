@@ -1413,7 +1413,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // video / edit) without crowding the section nav beside it.
   const contactMenuItems = [
     ...(selectedPatient?.phone
-      ? [{ icon: <Icon name="phone" tone="inherit" style={styles.kebabItemIcon} />, label: `${selectedPatient.phone}`, onClick: () => { window.location.href = `tel:${selectedPatient.phone}`; } }]
+      ? [{ icon: <Icon name="phone" tone="inherit" style={styles.kebabItemIcon} />, label: "Call patient", onClick: () => { window.location.href = `tel:${selectedPatient.phone}`; } }]
       : []),
     { icon: <Icon name="mail" tone="inherit" style={styles.kebabItemIcon} />, label: "Email patient", onClick: () => {} },
     { icon: <Icon name="videocamera" tone="inherit" style={styles.kebabItemIcon} />, label: "Video call", onClick: () => {} },
