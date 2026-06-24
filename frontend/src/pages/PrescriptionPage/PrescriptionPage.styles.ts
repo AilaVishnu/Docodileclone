@@ -723,40 +723,6 @@ export const styles: Record<string, CSSProperties> = {
     // offset existed to clear an overlapping avatar that no longer exists.
     marginTop: spacing.s,
   },
-  // Horizontal scroller holding the visit pills. `flex: 0 1 auto` + `minWidth: 0`
-  // lets it shrink below the pills' natural width so overflow-x engages and the
-  // chevrons (tabScrollBtn) page through it; scrollbar hidden via .no-scrollbar.
-  tabsScroller: {
-    display: "flex",
-    alignItems: "center",
-    gap: spacing.xs,
-    flex: "0 1 auto",
-    minWidth: 0,
-    overflowX: "auto",
-    overflowY: "hidden",
-    scrollBehavior: "smooth",
-  },
-  // Pagination chevrons flanking the scroller — 32px square, white fill + thin
-  // border so they read as solid buttons against the cream page.
-  tabScrollBtn: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 32,
-    height: 32,
-    flexShrink: 0,
-    padding: 0,
-    boxSizing: "border-box",
-    borderRadius: radii.m,
-    border: `${strokes.xs} solid ${colors.neutral200}`,
-    backgroundColor: colors.neutral100,
-    color: colors.neutral700,
-    cursor: "pointer",
-  },
-  tabScrollBtnDisabled: {
-    opacity: 0.4,
-    cursor: "default",
-  },
   // Figma node 2133:9927 — Tuning settings dropdown. Wrapper just pushes
   // the PopoverMenu trigger to the far right of the tabs row.
   tuningWrap: {
@@ -764,91 +730,13 @@ export const styles: Record<string, CSSProperties> = {
     flexShrink: 0,
     display: "inline-flex",
   },
-  // "+ New Visit" — dashed "new tab" affordance sitting right after the last
-  // visit pill. Quiet by default so it reads as "add another", not a CTA.
-  newVisitBtn: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: spacing["3xs"],
-    height: 32,
-    padding: `0 ${spacing.s}`,
-    borderRadius: radii.m,
-    border: `${strokes.xs} dashed ${colors.primary500}`,
-    backgroundColor: "transparent",
-    color: colors.neutral700,
-    cursor: "pointer",
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.s,
-    lineHeight: fonts.lineHeight.s,
-    whiteSpace: "nowrap",
-    flexShrink: 0,
-  },
-  newVisitPlus: {
-    fontSize: 18,
-    lineHeight: 1,
-  },
-  // Compact pill — same density as the header section nav, so the visit strip
-  // is a slim single-line row ("visit 1 · 12 May") and buys back vertical space.
-  tab: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-    padding: `${spacing["2xs"]} ${spacing.s}`,
-    borderRadius: radii.m,
-    cursor: "pointer",
-    backgroundColor: colors.alphaBlack0,
-    height: 32,
-    fontFamily: fonts.family.primary,
-    whiteSpace: "nowrap",
-  },
-  tabActive: {
-    backgroundColor: colors.neutral100,
-    color: colors.neutral900,
-  },
-  // Inactive tab text + caption use a solid neutral grey instead of
-  // alphaBlack3 — 30% black on the cream page background blended into the
-  // page tint, washing the labels out.
-  tabInactive: {
-    color: colors.neutral500,
-  },
+  // Inactive caption (legacy) — solid neutral grey instead of alphaBlack3,
+  // which washed out on the cream page tint.
   tabCaption: {
     fontSize: fonts.size.xs,
     lineHeight: fonts.lineHeight.xs,
     fontWeight: fonts.weight.regular,
     color: colors.neutral500,
-  },
-  // Visit number in a small circle (replaces the repeated "visit N" caption).
-  // Inactive: white fill. Active: filled peach.
-  tabNumber: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 19,
-    height: 19,
-    flexShrink: 0,
-    borderRadius: radii.full,
-    // Filled (not outlined) so the past-visit numbers read clearly on the
-    // cream page; the active tab keeps the stronger shade600 fill below.
-    border: "1.5px solid transparent",
-    backgroundColor: colors.neutral100,
-    color: colors.neutral700,
-    fontSize: fonts.size.xs,
-    lineHeight: 1,
-    // Optical nudge: digits ride high (no descender ink), so shift down ~1px.
-    paddingTop: 1,
-    boxSizing: "border-box",
-  },
-  tabNumberActive: {
-    border: "1.5px solid transparent",
-    backgroundColor: colors.active.shade600,
-    color: colors.neutral100,
-  },
-  tabLabel: {
-    fontSize: fonts.size.s,
-    lineHeight: fonts.lineHeight.s,
-    fontWeight: fonts.weight.regular,
-    color: "inherit",
   },
 
   // Section block — no longer a bordered card. Each section sits as a

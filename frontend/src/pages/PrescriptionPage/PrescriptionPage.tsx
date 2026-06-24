@@ -2,6 +2,7 @@ import React from "react";
 import { styles } from "./PrescriptionPage.styles";
 import { pickAvatar } from "../../utils/avatar";
 import { Icon } from "../../components/Icon";
+import { VisitTabs } from "../../components/VisitTabs";
 import { Card } from "../../components/Card";
 import { IconButton } from "../../components/IconButton";
 import { MeasureField } from "../../components/MeasureField";
@@ -622,51 +623,6 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // patient triggers the fetch.
   const { visits, loading: visitsLoading, loadedFor: visitsLoadedFor, refetch: refetchVisits } = useVisits(selectedPatientId);
   const [activeTab, setActiveTab] = React.useState(0);
-  // ── Visit-tab pagination ────────────────────────────────────────────────────
-  // The tabs live in a horizontal scroller; when they overflow the form width,
-  // left/right chevrons appear to page through them (each disabled at its end).
-  const tabsScrollRef = React.useRef<HTMLDivElement | null>(null);
-  const [tabNav, setTabNav] = React.useState({ overflow: false, left: false, right: false });
-  const updateTabNav = React.useCallback(() => {
-    const el = tabsScrollRef.current;
-    if (!el) return;
-    setTabNav({
-      overflow: el.scrollWidth > el.clientWidth + 1,
-      left: el.scrollLeft > 1,
-      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
-    });
-  }, []);
-  React.useEffect(() => {
-    const el = tabsScrollRef.current;
-    if (!el) return;
-    updateTabNav();
-    el.addEventListener("scroll", updateTabNav, { passive: true });
-    let ro: ResizeObserver | undefined;
-    if (typeof ResizeObserver !== "undefined") {
-      ro = new ResizeObserver(updateTabNav);
-      ro.observe(el);
-    }
-    return () => {
-      el.removeEventListener("scroll", updateTabNav);
-      ro?.disconnect();
-    };
-  }, [updateTabNav, visits.length]);
-  // Keep the active visit in view (it may be a mid-list unfinished visit, not
-  // just the latest) — scroll only the strip, never the page.
-  React.useEffect(() => {
-    const el = tabsScrollRef.current;
-    const tab = el?.children[activeTab] as HTMLElement | undefined;
-    if (!el || !tab) return;
-    const er = el.getBoundingClientRect();
-    const tr = tab.getBoundingClientRect();
-    if (tr.left < er.left) el.scrollLeft -= er.left - tr.left + 12;
-    else if (tr.right > er.right) el.scrollLeft += tr.right - er.right + 12;
-    updateTabNav();
-  }, [activeTab, visits.length, updateTabNav]);
-  const scrollTabs = (dir: -1 | 1) => {
-    const el = tabsScrollRef.current;
-    if (el) el.scrollBy({ left: dir * Math.max(160, el.clientWidth * 0.7), behavior: "smooth" });
-  };
   const [activeAction, setActiveAction] = React.useState(initialNav?.initialAction ?? 0);
   // Prescription output language (drives the printed/shared Rx language). UI
   // selector lives on the floating bar; wiring the actual translation is TBD.
@@ -2550,65 +2506,20 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
             </section>
           ) : (
             <>
-              {/* Visit tabs — sit OUTSIDE the cream sheet, above it. The tuning
-              button (Figma node 2133:9927) is pushed to the far right of the
-              row to filter / reconfigure the current visit's view. Each tab
+              {/* Visit tabs — sit OUTSIDE the cream sheet, above it. Each tab
               loads that visit's prescription data into the form below.
               `pointerEvents: auto` is forced on so the tabs remain clickable
-              even when the form below has `pointer-events: none` (locked
-              past visit / pre-Start state) — the doctor must always be
-              able to navigate back to today to start the session. */}
-              <div style={{ ...styles.tabsBar, pointerEvents: "auto" }}>
-                {/* Left/right chevrons only surface once the strip overflows; each
-                    disables at its end of the scroll range. */}
-                {tabNav.overflow && (
-                  <button
-                    type="button"
-                    style={{ ...styles.tabScrollBtn, ...(tabNav.left ? {} : styles.tabScrollBtnDisabled) }}
-                    onClick={() => scrollTabs(-1)}
-                    disabled={!tabNav.left}
-                    aria-label="Show earlier visits"
-                  >
-                    <Icon name="chevron-left" size={18} tone="inherit" />
-                  </button>
-                )}
-                <div ref={tabsScrollRef} style={styles.tabsScroller} className="no-scrollbar">
-                  {visits.map((v, i) => (
-                    <div
-                      key={v.id}
-                      style={{ ...styles.tab, ...(activeTab === i ? styles.tabActive : styles.tabInactive) }}
-                      onClick={() => setActiveTab(i)}
-                    >
-                      <span style={{ ...styles.tabNumber, ...(activeTab === i ? styles.tabNumberActive : {}) }}>{i + 1}</span>
-                      <span style={styles.tabLabel}>{formatVisitLabel(v.visitDate)}</span>
-                    </div>
-                  ))}
-                </div>
-                {tabNav.overflow && (
-                  <button
-                    type="button"
-                    style={{ ...styles.tabScrollBtn, ...(tabNav.right ? {} : styles.tabScrollBtnDisabled) }}
-                    onClick={() => scrollTabs(1)}
-                    disabled={!tabNav.right}
-                    aria-label="Show later visits"
-                  >
-                    <Icon name="chevron-right" size={18} tone="inherit" />
-                  </button>
-                )}
-                {/* "+ New Visit" — the "new tab" slot, kept OUTSIDE the scroller so
-                    the create action stays visible no matter where the strip is
-                    scrolled. Deliberately the ONLY create action here. */}
-                <button
-                  type="button"
-                  style={styles.newVisitBtn}
-                  onClick={handleAddVisit}
-                  disabled={addingVisit}
-                  title="Add a new visit"
-                >
-                  <span style={styles.newVisitPlus} aria-hidden="true">+</span>
-                  <span>{addingVisit ? "Creating…" : "New Visit"}</span>
-                </button>
-              </div>
+              even when the form below has `pointer-events: none` (locked past
+              visit / pre-Start state) — the doctor must always be able to
+              navigate back to today to start the session. */}
+              <VisitTabs
+                style={{ ...styles.tabsBar, pointerEvents: "auto" }}
+                tabs={visits.map((v) => ({ id: v.id, label: formatVisitLabel(v.visitDate) }))}
+                activeIndex={activeTab}
+                onSelect={setActiveTab}
+                onAddVisit={handleAddVisit}
+                addingVisit={addingVisit}
+              />
 
               {/* Cream sheet wrapping all visit-content sections. Keyed by the
               active tab so React unmounts/remounts the subtree on switch,
