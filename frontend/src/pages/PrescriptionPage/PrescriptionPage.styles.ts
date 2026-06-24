@@ -1807,7 +1807,9 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "row" as const,
     gap: spacing.s,
-    alignItems: "center",
+    // Top-align so a multi-line Notes grows DOWNWARD while the pickers stay on
+    // the first line (not floated to the Notes' vertical centre).
+    alignItems: "flex-start",
   },
   rxDataCell: {
     width: 120,

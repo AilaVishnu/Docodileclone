@@ -5,6 +5,7 @@ import { Icon } from "../../components/Icon";
 import { Card } from "../../components/Card";
 import { IconButton } from "../../components/IconButton";
 import { MeasureField } from "../../components/MeasureField";
+import { Field } from "../../components/Field";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 import { Toast } from "../../components/Toast";
@@ -2865,7 +2866,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                 <div style={styles.rxDataCell}><WhenPicker value={row.whenToTake} onChange={(v) => updateField("whenToTake", v)} /></div>
                                 <div style={styles.rxDataCell}><FrequencyIntervalPicker value={row.frequencyInterval} onChange={(v) => updateField("frequencyInterval", v)} /></div>
                                 <div style={styles.rxDataCell}><DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} /></div>
-                                <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={row.notes} onChange={(e) => updateField("notes", e.target.value)} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <Field multiline variant="box" fill="filled" placeholder="Notes" value={row.notes} onChange={(v) => updateField("notes", v)} style={{ minHeight: 40, padding: `${spacing.xs} ${spacing.s}` }} inputStyle={{ fontSize: fonts.control.sm }} />
+                                </div>
                                 {row.medicine.trim() && (
                                   <button type="button" style={styles.rxDeleteBtn} onClick={() => removeRxRow(i)} title="Remove medicine">
                                     <Icon name="trash" size={16} tone="inherit" />
@@ -2878,7 +2881,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                   <div style={styles.rxDataCell}><WhenPicker value={thenRow.whenToTake} onChange={(v) => updateThenField(i, ti, "whenToTake", v)} /></div>
                                   <div style={styles.rxDataCell}><FrequencyIntervalPicker value={thenRow.frequencyInterval} onChange={(v) => updateThenField(i, ti, "frequencyInterval", v)} /></div>
                                   <div style={styles.rxDataCell}><DurationPicker value={thenRow.duration} onChange={(v) => updateThenField(i, ti, "duration", v)} /></div>
-                                  <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={thenRow.notes} onChange={(e) => updateThenField(i, ti, "notes", e.target.value)} />
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <Field multiline variant="box" fill="filled" placeholder="Notes" value={thenRow.notes} onChange={(v) => updateThenField(i, ti, "notes", v)} style={{ minHeight: 40, padding: `${spacing.xs} ${spacing.s}` }} inputStyle={{ fontSize: fonts.control.sm }} />
+                                  </div>
                                   <button type="button" style={styles.rxDeleteBtn} onClick={() => removeThenRow(i, ti)} title="Remove tapering row">
                                     <Icon name="trash" size={16} tone="inherit" />
                                   </button>
