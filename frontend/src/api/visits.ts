@@ -24,6 +24,9 @@ export type VisitDTO = {
   patientId: string;
   clinicId: string;
   createdByDoctorId: string | null;
+  // Prescribing doctor's name, resolved server-side (robust for the print even
+  // when the doctor isn't in the caller's scoped /api/doctors list).
+  createdByDoctorName: string | null;
   visitDate: string; // ISO yyyy-MM-dd
 
   bpSystolic: string | null; bpDiastolic: string | null; bpUnit: string | null;
@@ -77,7 +80,7 @@ export type VisitDTO = {
 // doctor when a receptionist/admin opens View Pad on the doctor's behalf.
 export type SaveVisitRequest = Omit<
   VisitDTO,
-  "id" | "patientId" | "clinicId" | "createdByDoctorId" | "referDoctorName" | "appointmentId" | "appointmentStatus"
+  "id" | "patientId" | "clinicId" | "createdByDoctorId" | "createdByDoctorName" | "referDoctorName" | "appointmentId" | "appointmentStatus"
 > & {
   createdByDoctorId?: string | null;
   appointmentId?: string | null;

@@ -2147,7 +2147,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       visitDate: activeVisit.visitDate,
       visitTime: new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }),
       referredBy: referDoctorName || null,
-      doctorName: doctors.find((d) => d.id === activeVisit.createdByDoctorId)?.name ?? null,
+      // Prefer the server-resolved name (works even when the prescriber isn't in
+      // the caller's scoped doctors list); fall back to the loaded list.
+      doctorName: activeVisit.createdByDoctorName ?? doctors.find((d) => d.id === activeVisit.createdByDoctorId)?.name ?? null,
       doctorCredentials: null,
       complaints: complaintsValue,
       diagnosis: diagnosisValue,

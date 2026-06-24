@@ -313,6 +313,7 @@ class VisitService(
         patientId = this.patient?.id ?: UUID(0, 0),
         clinicId = this.clinic?.id ?: UUID(0, 0),
         createdByDoctorId = this.createdByDoctor?.id,
+        createdByDoctorName = this.createdByDoctor?.name,
         visitDate = this.visitDate,
         bpSystolic = this.bpSystolic, bpDiastolic = this.bpDiastolic, bpUnit = this.bpUnit,
         bmi = this.bmi, bmiUnit = this.bmiUnit,
