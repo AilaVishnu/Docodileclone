@@ -21,7 +21,7 @@ const meta = {
       },
     },
   },
-  args: { items: MEDS, groupBy: 'alpha' },
+  args: { items: MEDS },
 } satisfies Meta<typeof PharmacyListView>;
 
 export default meta;

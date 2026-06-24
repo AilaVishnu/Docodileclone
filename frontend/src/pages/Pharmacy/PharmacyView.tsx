@@ -4,17 +4,20 @@ import { PharmacyListView } from "./PharmacyListView";
 import { PharmacyShelfView } from "./PharmacyShelfView";
 import { Med, GroupBy, MedCategory, MedForm } from "./types";
 import { formatExpiry, expiryStatus } from "./expiry";
+import { needsAttention } from "./grouping";
 import { MedIllustration } from "./MedIllustration";
 import { Modal } from "../../components/Modal/Modal";
 import { UploadModal } from "../../components/UploadModal";
 import { Button } from "../../components/Button";
+import { ModalHeader } from "../../components/ModalHeader";
+import { Tag } from "../../components/Tag";
 import { IconButton } from "../../components/IconButton";
 import { Field as InputBox } from "../../components/Field";
 import { MeasureField } from "../../components/MeasureField";
 import { Select } from "../../components/Input/Select/Select";
 import { Tabs } from "../../components/Tabs";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
-import { colors, fonts, spacing, radii } from "../../styles/theme";
+import { colors, fonts, spacing, radii, shadows } from "../../styles/theme";
 import { Icon } from "../../components/Icon";
 import { listPharmacyStock, bulkCreatePharmacyStock, parseInventoryCsv, createPharmacyStock, updatePharmacyStock, deletePharmacyStock, medToRequest } from "../../api/pharmacy";
 import { Toast } from "../../components/Toast";
@@ -24,9 +27,10 @@ type ViewMode = "list" | "shelf";
 
 export function PharmacyView() {
   const [view, setView] = useState<ViewMode>("shelf");
-  const [groupBy, setGroupBy] = useState<GroupBy>("alpha");
+  const [groupBy, setGroupBy] = useState<GroupBy>("form");
   const [query, setQuery] = useState("");
   const [showZero, setShowZero] = useState(true);
+  const [attentionOnly, setAttentionOnly] = useState(false);
   const [selected, setSelected] = useState<Med | null>(null);
   // Live inventory pulled from /api/tenant/pharmacy-stock. Empty until the
   // first fetch settles.
@@ -99,6 +103,7 @@ export function PharmacyView() {
     const q = query.trim().toLowerCase();
     return inventory.filter((m) => {
       if (!showZero && m.unitsInStock === 0) return false;
+      if (attentionOnly && !needsAttention(m)) return false;
       if (!q) return true;
       return (
         m.name.toLowerCase().includes(q) ||
@@ -107,7 +112,7 @@ export function PharmacyView() {
         m.category.toLowerCase().includes(q)
       );
     });
-  }, [inventory, query, showZero]);
+  }, [inventory, query, showZero, attentionOnly]);
 
   return (
     <div style={styles.page}>
@@ -150,20 +155,30 @@ export function PharmacyView() {
           >
             In stock only
           </button>
+          <button
+            type="button"
+            style={{ ...styles.togglePill, ...(attentionOnly ? styles.togglePillActive : null) }}
+            onClick={() => setAttentionOnly((v) => !v)}
+            aria-pressed={attentionOnly}
+          >
+            Needs attention
+          </button>
         </div>
 
         <div style={styles.toolbarRight}>
-          <Tabs
-            variant="block"
-            inline
-            items={[
-              { id: "alpha", label: "A–Z" },
-              { id: "form", label: "Form" },
-              { id: "attention", label: "Attention" },
-            ]}
-            activeId={groupBy}
-            onSelect={(id) => setGroupBy(id as GroupBy)}
-          />
+          {view === "shelf" && (
+            <Tabs
+              variant="block"
+              inline
+              items={[
+                { id: "form", label: "Form" },
+                { id: "category", label: "Category" },
+                { id: "none", label: "None" },
+              ]}
+              activeId={groupBy}
+              onSelect={(id) => setGroupBy(id as GroupBy)}
+            />
+          )}
           <div style={styles.viewToggle} aria-label="View mode">
             <button
               type="button"
@@ -191,7 +206,6 @@ export function PharmacyView() {
         <div style={styles.listCard}>
           <PharmacyListView
             items={items}
-            groupBy={groupBy}
             onPick={setSelected}
             onEdit={(m) => { setEditing(m); setAddOpen(false); }}
             onAdjustQty={(m) => setAdjustingQty(m)}
@@ -203,7 +217,7 @@ export function PharmacyView() {
       )}
       </div>
 
-      <Modal isOpen={selected !== null} onClose={() => setSelected(null)}>
+      <Modal isOpen={selected !== null} onClose={() => setSelected(null)} surface="transparent" padding={0} shadow="none">
         {selected && <DetailBody med={selected} onClose={() => setSelected(null)} />}
       </Modal>
 
@@ -309,7 +323,6 @@ export function ImportInventoryBody({ isOpen, onClose, onImported }: {
       onClose={onClose}
       width={640}
       title="Import inventory (CSV)"
-      subtitle="Upload the supplier's current_inventory_*.csv. Existing batches refresh in place (matched on name + batch + invoice); new batches are added."
       dropHint="CSV file · supplier export"
       multiple={false}
       accept=".csv,text/csv"
@@ -333,38 +346,64 @@ export function ImportInventoryBody({ isOpen, onClose, onImported }: {
 
 export function DetailBody({ med, onClose }: { med: Med; onClose: () => void }) {
   const status = expiryStatus(med.expiry);
-  const expiryStyle =
-    status === "good" ? styles.expiryGood :
-      status === "warn" ? styles.expiryWarn :
-        styles.expiryBad;
+  const out = med.unitsInStock === 0;
+  const low = med.unitsInStock > 0 && med.unitsInStock < 5;
+  // Stock/expiry status shows through the tile BACKGROUND (green/amber/red), not the value text.
+  const stockBg = out ? colors.redAlpha10 : low ? colors.yellowAlpha10 : colors.greenAlpha10;
+  const expiryBg = status === "bad" ? colors.redAlpha10 : status === "warn" ? colors.yellowAlpha10 : colors.greenAlpha10;
+  // State labels shown as a white chip inside the (colour-tinted) tile.
+  const stockChip = out ? { label: "Out", color: colors.red200 } : low ? { label: "Low", color: colors.yellow200 } : null;
+  const expiryChip = status === "bad" ? { label: "Expired", color: colors.red200 } : status === "warn" ? { label: "Expiring", color: colors.yellow200 } : null;
 
   return (
-    <div style={ms.container}>
-      <ModalHeader
-        title={med.name}
-        subtitle={`${med.category} · ${med.form}${med.batch ? ` · Batch ${med.batch}` : ""}`}
-        onClose={onClose}
-      />
-
-      <div style={ms.illustrationWrap}>
-        <MedIllustration med={med} width={96} height={120} />
+    <div style={ms.detailPanes}>
+      {/* Left card — illustration + name (top group) and the form chip (bottom) */}
+      <div style={ms.detailLeft}>
+        <div style={ms.detailIdentity}>
+          <MedIllustration med={med} width={88} height={110} />
+          <p style={ms.detailName}>{med.name}</p>
+        </div>
+        <div style={ms.detailChips}>
+          <Tag variant="outline" label={med.form} />
+        </div>
       </div>
 
-      <div style={ms.formCard}>
-        <div style={ms.twoCol}>
-          <DetailField label="Invoice no." value={med.invoiceNo || "—"} />
-          <DetailField label="Batch" value={med.batch || "—"} />
+      {/* Right card — hero stats (the two decisions) over compact 3-col detail grids */}
+      <div style={{ ...ms.formCard, flex: 1, minWidth: 0, boxShadow: shadows.modal, padding: spacing.xl }}>
+        <div style={ms.detailHeroRow}>
+          <div style={ms.detailHeroTiles}>
+            <div style={{ ...ms.detailHeroTile, backgroundColor: stockBg }}>
+              <span style={ms.detailHeroLabel}>In stock</span>
+              <div style={ms.detailHeroValueRow}>
+                <span style={ms.detailHeroValue}>{med.unitsInStock}</span>
+                {stockChip && <span style={{ ...ms.detailHeroChip, color: stockChip.color }}>{stockChip.label}</span>}
+              </div>
+            </div>
+            <div style={{ ...ms.detailHeroTile, backgroundColor: expiryBg }}>
+              <span style={ms.detailHeroLabel}>Expiry</span>
+              <div style={ms.detailHeroValueRow}>
+                <span style={ms.detailHeroValue}>{formatExpiry(med.expiry)}</span>
+                {expiryChip && <span style={{ ...ms.detailHeroChip, color: expiryChip.color }}>{expiryChip.label}</span>}
+              </div>
+            </div>
+          </div>
+          <IconButton ariaLabel="Close" onClick={onClose} size={24} />
+        </div>
+
+        <div style={ms.detailDivider} />
+        <div style={ms.threeCol}>
           <DetailField label="Pack price" value={`₹${med.packPrice.toFixed(2)}`} />
           <DetailField label="MRP" value={`₹${med.packMrp.toFixed(2)}`} />
-          <DetailField label="Units per pack" value={String(med.unitsPerPack)} />
           <DetailField label="Unit price" value={`₹${med.unitPrice.toFixed(2)}`} />
-          <DetailField label="In stock" value={String(med.unitsInStock)} />
-          <DetailField
-            label="Expiry"
-            value={<span style={{ ...styles.expiryChip, ...expiryStyle }}>{formatExpiry(med.expiry)}</span>}
-          />
           <DetailField label="Discount" value={`${med.discountPct.toFixed(2)}%`} />
           <DetailField label="GST" value={`${med.gstPct.toFixed(2)}%`} />
+          <DetailField label="Units per pack" value={String(med.unitsPerPack)} />
+        </div>
+
+        <div style={ms.detailDivider} />
+        <div style={ms.threeCol}>
+          <DetailField label="Invoice no." value={med.invoiceNo || "—"} />
+          <DetailField label="Batch" value={med.batch || "—"} />
         </div>
       </div>
     </div>
@@ -393,6 +432,52 @@ const ms: Record<string, React.CSSProperties> = {
     display: "flex", flexDirection: "column", gap: spacing.s,
     width: 380, maxWidth: "100%",
   },
+  // Medicine detail — two floating cards (identity | details), no modal surface.
+  detailPanes: {
+    display: "flex", gap: spacing.m, alignItems: "stretch",
+    width: 700, maxWidth: "100%",
+  },
+  detailLeft: {
+    flex: "0 0 184px",
+    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between",
+    gap: spacing.s, textAlign: "center",
+    backgroundColor: colors.primary100, borderRadius: radii.xl, padding: spacing.xl,
+    boxShadow: shadows.modal,
+  },
+  detailName: {
+    margin: 0,
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h6, lineHeight: fonts.lineHeight.h6,
+    fontWeight: fonts.weight.regular, color: colors.neutral900,
+  },
+  // Illustration + name grouped at the top of the left card (name under illustration).
+  detailIdentity: { display: "flex", flexDirection: "column", alignItems: "center", gap: spacing.s },
+  detailChips: { display: "flex", flexWrap: "wrap", gap: spacing.xs, justifyContent: "center" },
+  // Layout A — hero stats (In stock / Expiry) + grouped sections in the right pane.
+  // Hero row: the two tiles (equal height) with the close button top-aligned to their right.
+  detailHeroRow: { display: "flex", alignItems: "flex-start", gap: spacing.s },
+  detailHeroTiles: { flex: 1, display: "flex", alignItems: "stretch", gap: spacing.s },
+  detailHeroTile: {
+    flex: 1, display: "flex", flexDirection: "column", gap: 2,
+    backgroundColor: colors.primary100, borderRadius: radii.l, padding: `${spacing.s} ${spacing.m}`,
+  },
+  detailHeroLabel: {
+    fontFamily: fonts.family.primary, fontSize: fonts.size.xs, lineHeight: fonts.lineHeight.xs,
+    color: colors.neutral500,
+  },
+  detailHeroValue: {
+    fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5,
+    fontWeight: fonts.weight.regular, color: colors.neutral900,
+  },
+  // Value + state chip on one line (chip to the right of the number/date).
+  detailHeroValueRow: { display: "flex", alignItems: "center", gap: spacing.xs },
+  detailHeroChip: {
+    backgroundColor: colors.neutral100, borderRadius: radii.full, padding: "1px 8px",
+    fontFamily: fonts.family.primary, fontSize: fonts.size.caption, lineHeight: fonts.lineHeight.caption,
+    fontWeight: fonts.weight.medium, whiteSpace: "nowrap",
+  },
+  threeCol: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: spacing.m },
+  detailDivider: { height: 1, backgroundColor: colors.neutral200, margin: `${spacing.xs} 0` },
   header: {
     display: "flex", alignItems: "flex-start", justifyContent: "space-between",
     gap: spacing.m,
@@ -453,7 +538,7 @@ const ms: Record<string, React.CSSProperties> = {
   },
   detailValue: {
     fontFamily: fonts.family.primary, fontSize: fonts.control.md,
-    fontWeight: fonts.weight.semibold, color: colors.neutral900,
+    fontWeight: fonts.weight.regular, color: colors.neutral900,
   },
   illustrationWrap: {
     display: "flex", justifyContent: "center",
@@ -496,27 +581,15 @@ function Field({ label, error, children }: { label: string; error?: string; chil
   );
 }
 
-function ModalHeader({ title, subtitle, onClose }: { title: string; subtitle?: string; onClose: () => void }) {
-  return (
-    <header style={ms.header}>
-      <div>
-        <h2 style={ms.title}>{title}</h2>
-        {subtitle && <p style={ms.subtitle}>{subtitle}</p>}
-      </div>
-      <IconButton ariaLabel="Close" onClick={onClose} />
-    </header>
-  );
-}
-
 function MedIdentityStrip({ med }: { med: Med }) {
   return (
     <div style={ms.identityStrip}>
       <div style={ms.identityText}>
         <p style={ms.identityName}>{med.name}</p>
         <div style={ms.identityMeta}>
-          <span style={ms.metaChip}>{med.category}</span>
-          <span style={ms.metaChip}>{med.form}</span>
-          {med.batch && <span style={ms.metaChip}>Batch {med.batch}</span>}
+          <Tag variant="outline" label={med.category} />
+          <Tag variant="outline" label={med.form} />
+          {med.batch && <Tag variant="outline" label={`Batch ${med.batch}`} />}
         </div>
       </div>
     </div>
@@ -592,7 +665,6 @@ export function StockFormBody({
     <div style={ms.container}>
       <ModalHeader
         title={isEdit ? "Edit batch" : "Add stock"}
-        subtitle={isEdit ? "Update inventory details for this batch" : undefined}
         onClose={onClose}
       />
 
@@ -756,7 +828,6 @@ export function DeleteConfirmBody({
     <div style={ms.containerNarrow}>
       <ModalHeader
         title="Remove from inventory?"
-        subtitle="This batch will be deleted from this clinic. This can't be undone."
         onClose={onCancel}
       />
 
