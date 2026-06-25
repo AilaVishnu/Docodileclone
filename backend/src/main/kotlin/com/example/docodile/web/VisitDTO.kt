@@ -64,6 +64,8 @@ data class VisitDTO(
     // the SessionBar's "Session Ended" pill.
     val sessionStartedAt: Instant?,
     val sessionEndedAt: Instant?,
+    // Sticky "completed at least once" (set on first completion, survives re-open).
+    val completedAt: Instant? = null,
     val sessionDurationSec: Int?,
 
     // The appointment this visit belongs to (null for legacy/imported

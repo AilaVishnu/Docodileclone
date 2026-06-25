@@ -270,6 +270,14 @@ class VisitService(
             } else {
                 r.sessionDurationSec
             }
+        // "Completed at least once" — STICKY: stamped the first time the visit is
+        // ended, never cleared on a later amend re-open (unlike sessionEndedAt,
+        // which the re-open clears). This is the server-side replacement for the
+        // localStorage visitCompleted flag that drives the footer's permanent
+        // switch from "Complete visit" to "Save changes".
+        if (r.sessionEndedAt != null && visit.completedAt == null) {
+            visit.completedAt = Instant.now()
+        }
         // Tag the visit with its appointment on create; never null it out
         // on a later update that omits the field.
         if (r.appointmentId != null) visit.appointmentId = r.appointmentId
@@ -372,6 +380,7 @@ class VisitService(
         reviewNotes = this.reviewNotes,
         sessionStartedAt = this.sessionStartedAt,
         sessionEndedAt = this.sessionEndedAt,
+        completedAt = this.completedAt,
         sessionDurationSec = this.sessionDurationSec,
         appointmentId = this.appointmentId,
         appointmentStatus = appointmentStatus,

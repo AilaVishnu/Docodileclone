@@ -80,6 +80,11 @@ class Visit(
     @Column(name = "session_started_at") var sessionStartedAt: Instant? = null,
     // Set when End Session fires; the bar locks at this instant.
     @Column(name = "session_ended_at")   var sessionEndedAt: Instant? = null,
+    // STICKY "completed at least once" — stamped on the first completion and
+    // never cleared on a later amend re-open (sessionEndedAt is cleared then).
+    // Drives the prescription footer's permanent "Complete visit" → "Save
+    // changes" switch (replaces the localStorage visitCompleted flag).
+    @Column(name = "completed_at")       var completedAt: Instant? = null,
     // Final elapsed seconds shown on the bar at End. Cached separately
     // so we don't have to recompute from started/ended (e.g. paused
     // segments make a wall-clock diff incorrect).
