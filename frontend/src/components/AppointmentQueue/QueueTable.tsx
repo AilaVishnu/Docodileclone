@@ -108,9 +108,14 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange, sessionSta
   sessionStartedAt?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [timerStarted, setTimerStarted] = useState(() =>
+  // "In progress" = the consultation session is live. The server owns this
+  // (sessionStartedAt, per appointment, from getActiveSessions) — that's the
+  // source of truth across devices; the per-device localStorage flag is only a
+  // fallback for before the session map has loaded.
+  const [localStarted, setLocalStarted] = useState(() =>
     appointment.patientId ? loadStartedSet().has(appointment.patientId) : false
   );
+  const timerStarted = !!sessionStartedAt || localStarted;
   const ref = useRef<HTMLDivElement>(null);
   // Lock the status badge while the doctor's actually in a session for
   // this patient — but only if the appointment is in flight. A stale
@@ -124,7 +129,7 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange, sessionSta
     if (!appointment.patientId) return;
     const pid = appointment.patientId;
     const interval = setInterval(() => {
-      setTimerStarted(loadStartedSet().has(pid));
+      setLocalStarted(loadStartedSet().has(pid));
     }, 1000);
     return () => clearInterval(interval);
   }, [appointment.patientId]);

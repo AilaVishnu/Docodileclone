@@ -60,6 +60,9 @@ export type VisitDTO = {
   // the doctor has interacted with Start / End on the floating bar.
   sessionStartedAt: string | null;
   sessionEndedAt: string | null;
+  // Sticky "completed at least once" — survives amend re-opens (unlike
+  // sessionEndedAt). Server-owned replacement for the localStorage flag.
+  completedAt: string | null;
   sessionDurationSec: number | null;
 
   // The appointment this visit belongs to (null for legacy/imported visits).
@@ -80,7 +83,7 @@ export type VisitDTO = {
 // doctor when a receptionist/admin opens View Pad on the doctor's behalf.
 export type SaveVisitRequest = Omit<
   VisitDTO,
-  "id" | "patientId" | "clinicId" | "createdByDoctorId" | "createdByDoctorName" | "referDoctorName" | "appointmentId" | "appointmentStatus"
+  "id" | "patientId" | "clinicId" | "createdByDoctorId" | "createdByDoctorName" | "referDoctorName" | "appointmentId" | "appointmentStatus" | "completedAt"
 > & {
   createdByDoctorId?: string | null;
   appointmentId?: string | null;

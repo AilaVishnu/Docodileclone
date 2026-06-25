@@ -3239,8 +3239,14 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   the visit. Clear all stays throughout the 24h window. */}
               {canEditForm
                 && (() => {
+                // "Completed at least once" — server-owned Visit.completedAt is
+                // the source of truth (survives amend re-opens, follows the
+                // patient across devices); the localStorage flag is a fallback
+                // for visits saved before the field existed / pre-restart.
                 const everCompleted =
-                  activeCompleted || (activeVisit ? wasVisitCompleted(activeVisit.id) : false);
+                  activeCompleted
+                  || activeVisit?.completedAt != null
+                  || (activeVisit ? wasVisitCompleted(activeVisit.id) : false);
                 // A live (running) session — the timer is going (started, not yet
                 // ended). The doctor may have stepped out mid-treatment leaving it
                 // running on purpose, so the button must stay available to END it
