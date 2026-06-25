@@ -53,3 +53,35 @@ export async function createBill(patientId: string, payload: CreateBillPayload):
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
+
+// One atomic Charge & Bill. The client sends the line items + method; the server
+// recomputes totals, writes payment, creates the invoice, auto-covers from the
+// deposit and deducts stock — all in one transaction.
+export type ChargeLine = {
+  name: string;
+  qty: number;
+  unit: number;
+  gst: number;
+  disc: number;
+  discUnit: string;   // "%" or "₹"
+  kind: string;       // "service" | "medicine"
+  inStock: boolean;
+};
+export type ChargeResult = {
+  bill: Bill;
+  depositApplied: number;
+  patientDeposit: number;
+  stock: { applied: { name: string; requested: number; deducted: number }[]; missing: string[] };
+};
+export async function chargeAppointment(
+  appointmentId: string,
+  payload: { method: string; discountAmount?: number; billDate?: string; items: ChargeLine[] },
+): Promise<ChargeResult> {
+  const res = await fetch(`${API_BASE_URL}/api/tenant/appointments/${appointmentId}/charge`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}

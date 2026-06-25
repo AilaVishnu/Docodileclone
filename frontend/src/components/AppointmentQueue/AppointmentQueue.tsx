@@ -14,10 +14,10 @@ import { Toast } from "../Toast";
 import { resolveToastIcon } from "../Toast/toastIcon";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { API_BASE_URL } from "../../apiConfig";
-import { listPharmacyStock, deductPharmacyStock } from "../../api/pharmacy";
+import { listPharmacyStock } from "../../api/pharmacy";
 import { getActiveSessions } from "../../api/visits";
 import { recordPatientDeposit } from "../../api/patientSearch";
-import { listBills, createBill, type Bill } from "../../api/bills";
+import { listBills, chargeAppointment, type Bill } from "../../api/bills";
 import { RecentBills } from "../BillCard/RecentBills";
 
 type Doctor = {
@@ -649,83 +649,44 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
       <BillModal
         isOpen={!!medsBillingApt}
         onClose={() => setMedsBillingApt(null)}
-        onBilled={({ method, pharmacyAmount, serviceAmount, items, billed, paid, due, refund, depositApplied, payStatus: billPayStatus, lineItems }) => {
-          const isWaive = method === "Waive";
-          const totalCharged = pharmacyAmount + serviceAmount;
-          const inr = totalCharged.toLocaleString("en-IN", { minimumFractionDigits: 2 });
-          const baseMsg = isWaive
-            ? `Bill waived for ${medsBillingApt?.patientName}`
-            : `₹${inr} billed via ${method} for ${medsBillingApt?.patientName}`;
-
-          // Persist pay status + method on the appointment row so the queue's
-          // Pay pill stays accurate after a reload. The consultation/service and
-          // pharmacy buckets are written SEPARATELY (fee vs pharmacyAmount), each
-          // its net charged amount, so finance never double-counts; discount is
-          // baked in (0). WAIVED zeroes both. Fire-and-forget — toast on failure.
+        onBilled={async ({ method, lineItems }) => {
+          // ONE atomic call: the server recomputes the totals from these line
+          // items, writes payment, creates the invoice, auto-covers from the
+          // deposit and deducts stock — so money + inventory never drift apart.
           const aptId = medsBillingApt?.id;
-          if (aptId) {
-            const token = localStorage.getItem("docodile_token");
-            const payStatus = isWaive ? "WAIVED" : "PAID";
-            fetch(`${API_BASE_URL}/api/tenant/appointments/${aptId}/payment`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ payStatus, paymentMethod: method, pharmacyAmount, fee: serviceAmount, discountAmount: 0 }),
-            })
-              .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); })
-              .then(() => setRefreshKey((k) => k + 1))
-              .catch((err) => setToastMessage(`Pay status update failed: ${(err as Error).message}`));
-          }
-
-          // Snapshot this invoice into the patient's Recent Bills history.
-          // Additive only — the appointment payment/finance/deposit were written
-          // above; this is the history record. Flips the kebab to "View Bills".
-          const patientId = medsBillingApt?.patientId;
-          if (patientId) {
-            createBill(patientId, {
-              appointmentId: aptId,
-              billed, paid, due, refund, depositApplied,
-              payStatus: billPayStatus, paymentMethod: method,
-              items: JSON.stringify(lineItems),
-            })
-              .then(() => setRefreshKey((k) => k + 1))
-              .catch((err) => setToastMessage(`Couldn't save bill record: ${(err as Error).message}`));
-          }
-
-          // Only deduct meds the clinic actually stocks — out-of-stock
-          // items have no inventory row to touch. Waived bills still
-          // deduct (the meds were dispensed, just not charged).
-          const toDeduct = items.filter((b) => b.inStock && b.qty > 0).map((b) => ({ name: b.name, qty: b.qty }));
-          if (toDeduct.length === 0) {
-            setToastMessage(baseMsg);
-            return;
-          }
-          deductPharmacyStock(toDeduct)
-            .then((result) => {
-              // Refresh the local catalog so the next bill modal sees
-              // the updated stock counts without a page reload.
-              listPharmacyStock().then((meds) => {
-                const byName = new Map<string, { id: string; name: string; unitPrice: number }>();
-                for (const m of meds) {
-                  const key = m.name.trim().toLowerCase();
-                  if (!key) continue;
-                  const existing = byName.get(key);
-                  if (!existing || m.unitPrice < existing.unitPrice) {
-                    byName.set(key, { id: m.id, name: m.name.trim(), unitPrice: m.unitPrice });
-                  }
+          const who = medsBillingApt?.patientName;
+          const isWaive = method === "Waive";
+          if (!aptId) { setToastMessage("No appointment to bill"); return; }
+          try {
+            const result = await chargeAppointment(aptId, { method, items: lineItems });
+            const inr = result.bill.billed.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+            const baseMsg = isWaive ? `Bill waived for ${who}` : `₹${inr} billed via ${method} for ${who}`;
+            setRefreshKey((k) => k + 1);
+            // Refresh the local catalog so the next bill sees updated stock.
+            listPharmacyStock().then((meds) => {
+              const byName = new Map<string, { id: string; name: string; unitPrice: number }>();
+              for (const m of meds) {
+                const key = m.name.trim().toLowerCase();
+                if (!key) continue;
+                const existing = byName.get(key);
+                if (!existing || m.unitPrice < existing.unitPrice) {
+                  byName.set(key, { id: m.id, name: m.name.trim(), unitPrice: m.unitPrice });
                 }
-                setPharmacyStock(Array.from(byName.values()));
-              }).catch(() => {});
-              const shortFills = result.applied.filter((a) => a.deducted < a.requested);
-              if (shortFills.length > 0) {
-                const names = shortFills.map((s) => `${s.name} (${s.deducted}/${s.requested})`).join(", ");
-                setToastMessage(`${baseMsg} · Short stock on: ${names}`);
-              } else {
-                setToastMessage(`${baseMsg} · Inventory updated`);
               }
-            })
-            .catch((err) => {
-              setToastMessage(`${baseMsg} · Inventory deduction failed: ${(err as Error).message}`);
-            });
+              setPharmacyStock(Array.from(byName.values()));
+            }).catch(() => {});
+            const shortFills = result.stock.applied.filter((a) => a.deducted < a.requested);
+            if (shortFills.length > 0) {
+              const names = shortFills.map((s) => `${s.name} (${s.deducted}/${s.requested})`).join(", ");
+              setToastMessage(`${baseMsg} · Short stock on: ${names}`);
+            } else if (result.stock.applied.length > 0) {
+              setToastMessage(`${baseMsg} · Inventory updated`);
+            } else {
+              setToastMessage(baseMsg);
+            }
+          } catch (err) {
+            setToastMessage(`Charge failed: ${(err as Error).message}`);
+          }
         }}
         patientName={medsBillingApt ? patientLabel(medsBillingApt.patientName, medsBillingApt.patientGender, medsBillingApt.patientAge) : ""}
         patientId={medsBillingApt?.patientId}

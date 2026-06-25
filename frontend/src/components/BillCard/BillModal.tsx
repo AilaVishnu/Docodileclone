@@ -104,7 +104,7 @@ export function BillModal({
     refund: number;
     depositApplied: number;
     payStatus: string;
-    lineItems: { name: string; qty: number; unit: number; gst: number; disc: number; discUnit: string; kind: string }[];
+    lineItems: { name: string; qty: number; unit: number; gst: number; disc: number; discUnit: string; kind: string; inStock: boolean }[];
   }) => void;
   /** Pending consultation/service for this appointment — seeded as the first
    *  line item (its total bills the consultation fee, kept out of pharmacy). */
@@ -378,7 +378,7 @@ export function BillModal({
     // Full line snapshot for the bill/invoice record (carries prices, kind).
     const lineItems = lines
       .filter((l) => !isTrailing(l))
-      .map((l) => ({ name: l.name, qty: l.qty, unit: l.unit, gst: l.gst, disc: l.disc, discUnit: l.discUnit, kind: l.kind ?? "medicine" }));
+      .map((l) => ({ name: l.name, qty: l.qty, unit: l.unit, gst: l.gst, disc: l.disc, discUnit: l.discUnit, kind: l.kind ?? "medicine", inStock: l.inStock !== false }));
     onBilled?.({
       method: methodLabel,
       pharmacyAmount: isWaived ? 0 : pharmacyTotal,
