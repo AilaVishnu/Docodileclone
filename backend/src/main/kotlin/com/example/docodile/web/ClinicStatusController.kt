@@ -19,7 +19,8 @@ import com.example.docodile.web.ClinicDetailsRequest
 @RequestMapping("/api/tenant")
 class ClinicStatusController(
     private val clinicStatusService: ClinicStatusService,
-    private val appointmentService: AppointmentService
+    private val appointmentService: AppointmentService,
+    private val chargeService: com.example.docodile.service.ChargeService
 ) {
     @GetMapping("/status")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST')")
@@ -162,6 +163,23 @@ class ClinicStatusController(
             val discountAmount = parseMoney("discountAmount")
             val fee = parseMoney("fee")
             ResponseEntity.ok(appointmentService.updatePayment(appointmentId, payStatus, paymentMethod, pharmacyAmount, discountAmount, fee))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
+        }
+    }
+
+    // Charge & Bill in ONE atomic transaction: recompute totals from the line
+    // items, write the payment, create the invoice, auto-cover from the deposit
+    // and deduct stock — replacing the three separate client calls so they can
+    // never drift apart.
+    @PostMapping("/appointments/{appointmentId}/charge")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
+    fun chargeAppointment(
+        @PathVariable appointmentId: UUID,
+        @RequestBody request: com.example.docodile.web.ChargeRequest,
+    ): ResponseEntity<Any> {
+        return try {
+            ResponseEntity.ok(chargeService.charge(appointmentId, request))
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
         }
