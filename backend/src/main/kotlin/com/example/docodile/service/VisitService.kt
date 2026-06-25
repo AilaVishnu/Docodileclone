@@ -305,8 +305,40 @@ class VisitService(
         frequency = this.frequency,
         frequencyInterval = this.frequencyInterval,
         duration = this.duration,
-        notes = this.notes
+        notes = this.notes,
+        dispenseQty = computeDispenseQty(this.medicine, this.dosage, this.frequency, this.duration)
     )
+
+    // ── Dispensary-quantity derivation (moved off the frontend so bills /
+    // inventory use one server-side rule). Topical/liquid "per-pack" forms are
+    // one unit; otherwise units/dose × doses/day × days, rounded up. Null when
+    // any piece is missing/non-numeric (SOS, "as directed", …). ──
+    private val PER_PACK_FORM = Regex(
+        "cream|lotion|gel|ointment|\\boil\\b|shampoo|soap|wash|serum|sunscreen|balm|paste|scrub|spray|powder|syrup|suspension|solution|drop|moisturi|conditioner|foam|emulsion|liniment|tincture",
+        RegexOption.IGNORE_CASE,
+    )
+    private fun parseDurationDays(d: String?): Int? {
+        if (d.isNullOrBlank()) return null
+        val m = Regex("(\\d+)\\s*(day|week|month|year|d|w|m|y)?", RegexOption.IGNORE_CASE).find(d) ?: return null
+        val n = m.groupValues[1].toIntOrNull() ?: return null
+        if (n <= 0) return null
+        val unit = m.groupValues[2].ifBlank { "day" }.lowercase()
+        return when {
+            unit.startsWith("w") -> n * 7
+            unit.startsWith("mon") || unit == "m" -> n * 30
+            unit.startsWith("y") -> n * 365
+            else -> n
+        }
+    }
+
+    private fun computeDispenseQty(name: String?, dosage: String?, frequency: String?, duration: String?): Int? {
+        if (name != null && PER_PACK_FORM.containsMatchIn(name)) return 1
+        val unitsPerDose = Regex("([\\d.]+)").find(dosage ?: "")?.groupValues?.get(1)?.toDoubleOrNull() ?: 1.0
+        val dosesPerDay = (frequency ?: "").split(Regex("[-+,/\\s]+")).mapNotNull { it.toIntOrNull() }.sum()
+        val days = parseDurationDays(duration) ?: return null
+        if (dosesPerDay <= 0 || unitsPerDose <= 0) return null
+        return Math.ceil(unitsPerDose * dosesPerDay * days).toInt()
+    }
 
     private fun Visit.toDTO(rxRows: List<RxRowDTO>, appointmentStatus: String? = null): VisitDTO = VisitDTO(
         id = this.id,

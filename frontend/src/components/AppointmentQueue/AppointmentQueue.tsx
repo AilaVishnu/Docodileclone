@@ -204,39 +204,9 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
       setBillingMedicines([]);
       return;
     }
-    // Derive the dispensary quantity from the prescription itself so the
-    // receptionist doesn't have to mentally compute
-    // (units/dose × doses/day × days). Falls back to 1 when any field is
-    // missing or non-numeric (e.g. SOS, "As directed").
-    const parseDurationDays = (d?: string): number | null => {
-      if (!d) return null;
-      const m = d.match(/(\d+)\s*(day|week|month|year|d|w|m|y)?/i);
-      if (!m) return null;
-      const n = parseInt(m[1], 10);
-      if (!Number.isFinite(n) || n <= 0) return null;
-      const unit = (m[2] ?? "day").toLowerCase();
-      if (unit.startsWith("w")) return n * 7;
-      if (unit.startsWith("mon") || unit === "m") return n * 30;
-      if (unit.startsWith("y")) return n * 365;
-      return n; // days / unknown unit
-    };
-    // Topical / liquid / per-pack forms (creams, lotions, drops, syrups…) are
-    // dispensed as ONE unit (a tube/bottle/bar) — not "doses × days" like
-    // tablets/capsules. Default those to 1; the receptionist can still adjust.
-    const PER_PACK_FORM = /cream|lotion|gel|ointment|\boil\b|shampoo|soap|wash|serum|sunscreen|balm|paste|scrub|spray|powder|syrup|suspension|solution|drop|moisturi|conditioner|foam|emulsion|liniment|tincture/i;
-    const computeQty = (name: string, dosage?: string, frequency?: string, duration?: string): number | null => {
-      if (PER_PACK_FORM.test(name)) return 1;
-      const dosageMatch = (dosage ?? "").match(/([\d.]+)/);
-      const unitsPerDose = dosageMatch ? parseFloat(dosageMatch[1]) : 1;
-      const dosesPerDay = (frequency ?? "")
-        .split(/[-+,/\s]+/)
-        .map((p) => parseInt(p, 10))
-        .filter((n) => Number.isFinite(n))
-        .reduce((a, b) => a + b, 0);
-      const days = parseDurationDays(duration);
-      if (!dosesPerDay || !days || !Number.isFinite(unitsPerDose) || unitsPerDose <= 0) return null;
-      return Math.ceil(unitsPerDose * dosesPerDay * days);
-    };
+    // Dispensary quantity is now derived server-side (RxRowDTO.dispenseQty), so
+    // bills and inventory share one rule. Default to 1 when the server can't
+    // compute it (SOS / "as directed"); the desk can still adjust.
     const patientId = medsBillingApt.patientId;
     setBillingLoading(true);
     const token = localStorage.getItem("docodile_token");
@@ -277,7 +247,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               // qty = units/dose × doses/day × days, ceiling to a whole
               // unit. The receptionist can still bump up/down in the
               // modal if the doctor wrote SOS or fractional doses.
-              qty: computeQty(name, p.dosage, p.frequency, p.duration) ?? 1,
+              qty: p.dispenseQty ?? 1,
             };
           });
         setBillingMedicines(rows);

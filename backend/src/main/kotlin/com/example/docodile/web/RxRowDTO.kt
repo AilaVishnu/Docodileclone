@@ -14,5 +14,9 @@ data class RxRowDTO(
     val frequency: String? = null,
     val frequencyInterval: String? = null,
     val duration: String? = null,
-    val notes: String? = null
+    val notes: String? = null,
+    // Server-derived dispensary quantity (units/dose × doses/day × days, ceil;
+    // per-pack forms = 1). Null when it can't be computed — the bill defaults to
+    // 1 and the desk can adjust. Computed here so bills/inventory agree.
+    val dispenseQty: Int? = null
 )
