@@ -43,8 +43,27 @@ class AppointmentService(
         val billCounts: Map<UUID, Int> = billRepository.countByPatientForDate(clinicId, date)
             .associate { (it[0] as UUID) to (it[1] as Long).toInt() }
 
+        val startOfToday = LocalDate.now().atStartOfDay()
         return appointmentRepository.findAllByClinicIdAndScheduledTimeBetween(clinicId, startOfDay, endOfDay)
-            .map { it.toDTO().copy(todayBillCount = billCounts[it.patient?.id] ?: 0) }
+            .map {
+                it.toDTO().copy(
+                    todayBillCount = billCounts[it.patient?.id] ?: 0,
+                    status = deriveDisplayStatus(it.status, it.scheduledTime, startOfToday),
+                )
+            }
+    }
+
+    // Display status for the queue (server-side, so every client agrees):
+    // legacy AT_DOC → IN_PROGRESS, blank → WAITING, and a still-pending row whose
+    // slot was before today reads NO_SHOW. Does NOT persist — the sweep job owns
+    // the stored transition; this is the live, request-time view.
+    private val pendingStatuses = setOf("BOOKED", "SCHEDULED", "WAITING")
+    private fun deriveDisplayStatus(rawStatus: String?, scheduledTime: LocalDateTime?, startOfToday: LocalDateTime): String {
+        val incoming = if (rawStatus?.uppercase() == "AT_DOC") "IN_PROGRESS" else rawStatus
+        val status = incoming ?: "WAITING"
+        if (status.uppercase() !in pendingStatuses) return status
+        if (scheduledTime == null) return status
+        return if (scheduledTime.isBefore(startOfToday)) "NO_SHOW" else status
     }
 
     @Transactional
