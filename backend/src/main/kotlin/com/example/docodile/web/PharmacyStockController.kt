@@ -18,6 +18,7 @@ import java.util.UUID
 class PharmacyStockController(
     private val repo: PharmacyStockRepository,
     private val clinicEntityRepository: ClinicEntityRepository,
+    private val pharmacyStockService: com.example.docodile.service.PharmacyStockService,
     private val currentUser: CurrentUser,
 ) {
 
@@ -148,37 +149,7 @@ class PharmacyStockController(
      */
     @PostMapping("/deduct")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
-    @Transactional
-    fun deduct(@RequestBody items: List<DeductItem>): DeductResult {
-        val clinicId = currentUser.clinicId()
-        val all = repo.findAllByClinicIdOrderByNameAsc(clinicId)
-        // Group by lowercase name so multiple batches of the same med are
-        // bundled. Earliest-expiry-first dispensing rotates stock naturally
-        // and avoids leaving short-dated batches behind.
-        val byName = all.groupBy { it.name.trim().lowercase() }
-        val applied = mutableListOf<DeductedItem>()
-        val missing = mutableListOf<String>()
-        for (it in items) {
-            val key = it.name.trim().lowercase()
-            if (key.isEmpty() || it.qty <= 0) continue
-            val batches = byName[key]?.sortedBy { b -> b.expiry } ?: emptyList()
-            if (batches.isEmpty()) { missing += it.name; continue }
-            var remaining = it.qty
-            var deducted = 0
-            for (b in batches) {
-                if (remaining <= 0) break
-                val take = minOf(b.unitsInStock, remaining)
-                if (take <= 0) continue
-                b.unitsInStock -= take
-                b.updatedAt = Instant.now()
-                repo.save(b)
-                remaining -= take
-                deducted += take
-            }
-            applied += DeductedItem(name = it.name, requested = it.qty, deducted = deducted)
-        }
-        return DeductResult(applied = applied, missing = missing)
-    }
+    fun deduct(@RequestBody items: List<DeductItem>): DeductResult = pharmacyStockService.deduct(items)
 
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgument(e: IllegalArgumentException): ResponseEntity<Map<String, String>> {
