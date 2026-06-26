@@ -9,6 +9,8 @@ import { DateRangeDropdown } from "../../components/DateRangeDropdown/DateRangeD
 import { DataGrid, GridColumn } from "../../components/DataGrid/DataGrid";
 import { SearchField } from "../../components/SearchField";
 import { BillStatusBadge, billStatusOf } from "../../components/BillStatusBadge";
+import { BillModal } from "../../components/BillCard/BillModal";
+import { BillReadModal, parseLines } from "./BillReadModal";
 import type { Bill } from "../../api/bills";
 import { colors, spacing } from "../../styles/theme";
 import { styles } from "./BillsView.styles";
@@ -25,7 +27,7 @@ const fmtDate = (iso: string) => {
 };
 
 const Kpi =({ label, value, tone }: { label: string; value: string; tone?: string }) => (
-  <Card variant="surface" elevation="raised" padding="l" style={{ flex: 1, display: "flex", flexDirection: "column", gap: spacing["2xs"] }}>
+  <Card variant="surface" elevation="none" padding="l" style={{ flex: 1, display: "flex", flexDirection: "column", gap: spacing["2xs"] }}>
     <span style={styles.kpiLabel}>{label}</span>
     <span style={{ ...styles.kpiValue, ...(tone ? { color: tone } : {}) }}>{value}</span>
   </Card>
@@ -35,6 +37,8 @@ const STATUS_TABS = [
   { id: "all", label: "All" },
   { id: "paid", label: "Paid" },
   { id: "due", label: "Due" },
+  { id: "refunded", label: "Refunded" },
+  { id: "waived", label: "Waived" },
 ];
 // Same preset set as the Stats page; "custom" opens the in-place range calendar.
 const PERIODS = [
@@ -63,10 +67,14 @@ export interface BillsViewProps {
  */
 export function BillsView({ bills, loading = false, onOpenBill, onPrintBill, onNewBill, onExport }: BillsViewProps) {
   const [status, setStatus] = React.useState("all");
-  const [period, setPeriod] = React.useState("thisMonth");
+  const [period, setPeriod] = React.useState("today");
   const [customStart, setCustomStart] = React.useState("");
   const [customEnd, setCustomEnd] = React.useState("");
   const [query, setQuery] = React.useState("");
+  // Row-click / "View bill" opens the bill: an unpaid draft → the editable
+  // BillModal (seeded); anything settled → the read-only BillReadModal.
+  const [openBill, setOpenBill] = React.useState<ClinicBill | null>(null);
+  const openBillModal = (b: ClinicBill) => { setOpenBill(b); onOpenBill?.(b); };
 
   const collectedToday = bills.filter((b) => b.today).reduce((s, b) => s + b.paid, 0);
   const outstanding = bills.reduce((s, b) => s + b.due, 0);
@@ -81,11 +89,11 @@ export function BillsView({ bills, loading = false, onOpenBill, onPrintBill, onN
   });
 
   const columns: GridColumn<ClinicBill>[] = [
-    { key: "patient", header: "Patient", align: "left", render: (b) => <span style={styles.patient}>{b.patientName}</span> },
+    { key: "patient", header: "Patient", align: "left", render: (b) => b.patientName },
     {
       key: "inv", header: "Invoice & date", align: "left", render: (b) => (
         <div style={styles.invCell}>
-          <span style={styles.invText}>{b.invoiceNo}</span>
+          <span>{b.invoiceNo}</span>
           <span style={styles.muted}>{fmtDate(b.billDate)}</span>
         </div>
       ),
@@ -94,7 +102,7 @@ export function BillsView({ bills, loading = false, onOpenBill, onPrintBill, onN
     { key: "paid", header: "Paid", align: "right", render: (b) => inr(b.paid) },
     { key: "due", header: "Due", align: "right", render: (b) => (b.due > 0 ? <span style={styles.due}>{inr(b.due)}</span> : <span style={styles.muted}>–</span>) },
     { key: "status", header: "Status", width: 132, align: "left", render: (b) => <BillStatusBadge status={billStatusOf(b)} /> },
-    { key: "method", header: "Method", width: 96, align: "left", render: (b) => <span style={styles.muted}>{b.paymentMethod ?? "–"}</span> },
+    { key: "method", header: "Method", width: 96, align: "left", render: (b) => b.paymentMethod ?? "–" },
     {
       key: "action", header: "", width: 56, align: "right", render: (b) => (
         <div style={styles.actions} onClick={(e) => e.stopPropagation()}>
@@ -102,9 +110,9 @@ export function BillsView({ bills, loading = false, onOpenBill, onPrintBill, onN
             ariaLabel="Bill actions"
             trigger={<Icon name="menu" size={20} tone="inherit" style={{ color: colors.neutral700 }} />}
             items={[
-              { label: "View bill", onClick: () => onOpenBill?.(b) },
+              { label: "View bill", onClick: () => openBillModal(b) },
               { label: "Print", onClick: () => onPrintBill?.(b) },
-              { label: "Record payment", onClick: () => {} },
+              ...(b.due > 0 ? [{ label: "Record payment", onClick: () => openBillModal(b) }] : []),
             ]}
           />
         </div>
@@ -115,7 +123,19 @@ export function BillsView({ bills, loading = false, onOpenBill, onPrintBill, onN
   return (
     <div style={styles.page}>
       <PageHeader
-        title="Bills"
+        title={
+          <>
+            <DateRangeDropdown
+              presets={PERIODS}
+              valueId={period}
+              customStart={customStart}
+              customEnd={customEnd}
+              onSelectPreset={setPeriod}
+              onSelectCustom={(start, end) => { setCustomStart(start); setCustomEnd(end); setPeriod("custom"); }}
+            />{" "}
+            Bills
+          </>
+        }
         actions={
           <>
             <Button variant="light" size="md" iconLeft={<Icon name="download" size={16} tone="inherit" />} onClick={onExport}>Export</Button>
@@ -126,7 +146,7 @@ export function BillsView({ bills, loading = false, onOpenBill, onPrintBill, onN
 
       <div style={styles.content}>
         <div style={styles.kpis}>
-          <Kpi label="Collected today" value={inr(collectedToday)} tone={colors.green200} />
+          <Kpi label="Collected today" value={inr(collectedToday)} />
           <Kpi label="Outstanding" value={inr(outstanding)} tone={colors.red200} />
           <Kpi label="Billed this month" value={inr(billedMonth)} />
           <Kpi label="Bills today" value={String(billsToday)} />
@@ -136,16 +156,6 @@ export function BillsView({ bills, loading = false, onOpenBill, onPrintBill, onN
           <div style={styles.toolbarLeft}>
             <SearchField value={query} onChange={setQuery} placeholder="Search patient or invoice no…" />
             <Tabs variant="block" size="sm" inline items={STATUS_TABS} activeId={status} onSelect={setStatus} />
-          </div>
-          <div style={styles.toolbarRight}>
-            <DateRangeDropdown
-              presets={PERIODS}
-              valueId={period}
-              customStart={customStart}
-              customEnd={customEnd}
-              onSelectPreset={setPeriod}
-              onSelectCustom={(start, end) => { setCustomStart(start); setCustomEnd(end); setPeriod("custom"); }}
-            />
           </div>
         </div>
 
@@ -160,12 +170,32 @@ export function BillsView({ bills, loading = false, onOpenBill, onPrintBill, onN
               size="m"
               tdPadding="14px 12px"
               thPadding="10px 12px"
-              onRowClick={(b) => onOpenBill?.(b)}
+              onRowClick={openBillModal}
               rowStyle={() => ({ cursor: "pointer" })}
             />
           )}
         </Card>
       </div>
+
+      {/* An unpaid bill is still a draft → the editable BillModal (seeded with
+          its line items); a settled bill → the read-only BillReadModal. */}
+      {openBill && (openBill.paid === 0 ? (
+        <BillModal
+          isOpen
+          onClose={() => setOpenBill(null)}
+          patientName={openBill.patientName}
+          invoiceNo={openBill.invoiceNo}
+          initialServices={parseLines(openBill.items).map((l) => ({ name: l.name, price: l.unit }))}
+        />
+      ) : (
+        <BillReadModal
+          key={openBill.id}
+          isOpen
+          onClose={() => setOpenBill(null)}
+          bill={openBill}
+          onPrint={onPrintBill}
+        />
+      ))}
     </div>
   );
 }

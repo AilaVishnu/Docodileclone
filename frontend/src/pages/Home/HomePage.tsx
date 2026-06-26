@@ -6,9 +6,10 @@ import { ServicesView } from "../Services";
 import { HomeView } from "./HomeView";
 import { StatsPage } from "../Stats";
 import { PharmacyView } from "../Pharmacy";
+import { BillsView } from "../Bills";
+import { sampleBills } from "../Bills/sampleBills";
 import { SettingsPage, DEFAULT_SETTINGS_SECTION, SettingsSection } from "../Settings";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
-import { ComingSoon } from "../../components/ComingSoon/ComingSoon";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { ChatBubble } from "../../components/Chat/ChatBubble";
 import { setPendingSessionNav } from "../../components/TopNav/SessionTrayButton";
@@ -319,7 +320,8 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       case "Settings":
         return <SettingsPage section={settingsSection} />;
       case "Billing":
-        return <ComingSoon title="Bills" />;
+        // TODO: swap sampleBills for a clinic-wide bills fetch once /api/bills exists.
+        return <BillsView bills={sampleBills} />;
       default:
         return (
           <div>
