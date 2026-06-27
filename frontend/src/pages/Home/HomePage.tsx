@@ -21,10 +21,9 @@ import { listServices, type ServiceDTO } from "../../api/services";
 type HomePageProps = {
   onLogout: () => void;
   onViewClinic: () => void;
-  onViewAllClinics: () => void;
 };
 
-export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageProps) {
+export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
   const [activeTab, setActiveTabState] = useState<NavTab>(() => {
     return (localStorage.getItem("docodile_home_tab") as NavTab) || "Home";
   });
@@ -328,7 +327,6 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
           <TopNav
             onBuildClinic={onViewClinic}
-            onViewAllClinics={onViewAllClinics}
             onLogout={onLogout}
             onNewAppointment={handleNewAppointment}
             isBooking={isBooking}
