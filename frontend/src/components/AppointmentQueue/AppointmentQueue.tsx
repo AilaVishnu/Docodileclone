@@ -259,33 +259,27 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
     const fetchData = async () => {
       setIsLoading(true);
       const token = localStorage.getItem("docodile_token");
-      const clinicId = localStorage.getItem("docodile_clinic_id");
 
-      if (!token || !clinicId) {
+      if (!token) {
         setIsLoading(false);
         return;
       }
 
       try {
-        // 1. Fetch Staff (to filter doctors)
+        // 1. Fetch doctors (clinic-scoped server-side via X-Tenant)
         if (doctors.length === 0) {
-          const staffRes = await fetch(`${API_BASE_URL}/api/tenant/clinics/${clinicId}/staff`, {
+          const doctorsRes = await fetch(`${API_BASE_URL}/api/doctors`, {
             headers: { Authorization: `Bearer ${token}` },
           });
 
-          if (staffRes.ok) {
-            const staffData = await staffRes.json();
-            // Exclude deactivated doctors — they keep their clinic membership
-            // (for the Deactivated list) but must not be bookable for future
-            // appointments. Only active doctors appear in the queue/booking.
-            const doctorList = staffData
-              .filter((s: any) => s.role === "DOCTOR" && s.active !== false)
-              .map((s: any) => ({
-                id: s.id,
-                name: s.name,
-                gender: (s.gender ?? "").toLowerCase(),
-                role: "Doctor",
-              }));
+          if (doctorsRes.ok) {
+            const doctorsData = await doctorsRes.json();
+            const doctorList = doctorsData.map((d: any) => ({
+              id: d.id,
+              name: d.name,
+              gender: (d.gender ?? "").toLowerCase(),
+              role: "Doctor",
+            }));
 
             setDoctors(doctorList);
             if (doctorList.length > 0) {

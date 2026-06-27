@@ -4,12 +4,11 @@ import { ChatPanel } from "./ChatPanel";
 import { Icon } from "../Icon";
 
 type Props = {
-  clinicId: string;
   currentUserId: string;
   currentUserName: string;
 };
 
-export function ChatBubble({ clinicId, currentUserId, currentUserName }: Props) {
+export function ChatBubble({ currentUserId, currentUserName }: Props) {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
 
@@ -17,7 +16,7 @@ export function ChatBubble({ clinicId, currentUserId, currentUserName }: Props) 
     setUnread(open ? 0 : total);
   }, [open]);
 
-  if (!clinicId || !currentUserId) return null;
+  if (!currentUserId) return null;
 
   return (
     <div style={styles.root}>
@@ -29,7 +28,6 @@ export function ChatBubble({ clinicId, currentUserId, currentUserName }: Props) 
       */}
       <div style={{ ...styles.panelWrapper, display: open ? "block" : "none" }}>
         <ChatPanel
-          clinicId={clinicId}
           currentUserId={currentUserId}
           currentUserName={currentUserName}
           onUnreadChange={handleUnreadChange}

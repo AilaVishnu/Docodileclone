@@ -3,7 +3,6 @@ import { colors, fonts, radii, spacing, fluidSpacing } from "../../styles/theme"
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { usePatients, Patient } from "../../hooks/usePatients";
 import { useDoctors } from "../../hooks/useDoctors";
-import { API_BASE_URL } from "../../apiConfig";
 import { Icon } from "../../components/Icon";
 import { Select } from "../../components/Input/Select/Select";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
@@ -46,34 +45,15 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
   const hasActiveFilter = department !== ANY || doctorId !== ANY || dateFrom != null || dateTo != null || sort !== "";
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  // Departments come from the clinic's configured list (set in Build Your
-  // Clinic), not from staff data. That way the filter shows every
-  // department the clinic supports even before a doctor has been added to
-  // it. Picking a department then narrows the doctor dropdown to staff
-  // tagged with that department.
-  const [clinicDepartments, setClinicDepartments] = useState<string[]>([]);
-  useEffect(() => {
-    const token = localStorage.getItem("docodile_token");
-    const clinicId = localStorage.getItem("docodile_clinic_id");
-    if (!token) return;
-    let cancelled = false;
-    fetch(`${API_BASE_URL}/api/tenant/clinics`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => (res.ok ? res.json() : []))
-      .then((all: Array<{ id: string; speciality?: string }>) => {
-        if (cancelled) return;
-        const active = clinicId ? all.find((c) => c.id === clinicId) : all[0];
-        const list = (active?.speciality || "")
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean);
-        setClinicDepartments(list);
-      })
-      .catch(() => { /* fall back to empty list */ });
-    return () => { cancelled = true; };
-  }, []);
-  const departments = clinicDepartments;
+  // Departments are derived from the clinic's doctors (already fetched above).
+  // Unique, non-null department values from the doctor list.
+  const departments = useMemo(() => {
+    const seen = new Set<string>();
+    for (const d of doctors) {
+      if (d.department) seen.add(d.department);
+    }
+    return Array.from(seen).sort();
+  }, [doctors]);
 
   const doctorOptions = useMemo(() => {
     return department === ANY

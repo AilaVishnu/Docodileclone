@@ -342,7 +342,6 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
     </div>
 
     <ChatBubble
-      clinicId={localStorage.getItem("docodile_clinic_id") ?? ""}
       currentUserId={localStorage.getItem("docodile_user_id") ?? ""}
       currentUserName={localStorage.getItem("docodile_user_email") ?? ""}
     />

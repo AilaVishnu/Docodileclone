@@ -5,7 +5,6 @@ import { IconButton } from "../IconButton";
 import { chatWithAssistant, AIChatTurn } from "../../api/ai";
 
 type Props = {
-  clinicId: string;
   currentUserId: string;
   currentUserName: string;
   onUnreadChange: (total: number) => void;
@@ -15,9 +14,9 @@ type Props = {
 
 type Conversation = { type: "group" } | { type: "dm"; partnerId: string; partnerName: string } | { type: "ai" };
 
-export function ChatPanel({ clinicId, currentUserId, currentUserName, onUnreadChange, onClose, isOpen }: Props) {
+export function ChatPanel({ currentUserId, currentUserName, onUnreadChange, onClose, isOpen }: Props) {
   const { messages, staff: realStaff, unread, connected, sendGroup, sendDirect, loadDmHistory, markSeen, dmKey } =
-    useChat(clinicId, currentUserId);
+    useChat(currentUserId);
   // DEMO: fall back to mock staff when the API returns none, so the DM
   // experience is visible. Remove before shipping.
   const staff = realStaff.length > 0 ? realStaff : DEMO_STAFF;

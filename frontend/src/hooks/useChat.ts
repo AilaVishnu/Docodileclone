@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Client, IMessage } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { API_BASE_URL } from "../apiConfig";
+import { currentTenant } from "../tenant";
 
 export type ChatMessage = {
   id: string;
@@ -33,7 +34,7 @@ function dmKey(a: string, b: string) {
   return [a, b].sort().join("_");
 }
 
-export function useChat(clinicId: string, currentUserId: string) {
+export function useChat(currentUserId: string) {
   const [messages, setMessages] = useState<ChatState>({ group: [], dms: {} });
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [unread, setUnread] = useState<Record<string, number>>({});
@@ -42,7 +43,7 @@ export function useChat(clinicId: string, currentUserId: string) {
 
   // Load history + staff on mount
   useEffect(() => {
-    if (!clinicId || !currentUserId) return;
+    if (!currentUserId) return;
     const token = localStorage.getItem("docodile_token") ?? "";
     const headers = { Authorization: `Bearer ${token}` };
 
@@ -55,11 +56,11 @@ export function useChat(clinicId: string, currentUserId: string) {
       setStaff(staffList);
       setUnread(unreadCounts);
     }).catch(() => {});
-  }, [clinicId, currentUserId]);
+  }, [currentUserId]);
 
   // WebSocket connection
   useEffect(() => {
-    if (!clinicId || !currentUserId) return;
+    if (!currentUserId) return;
     const token = localStorage.getItem("docodile_token") ?? "";
 
     const client = new Client({
@@ -91,7 +92,7 @@ export function useChat(clinicId: string, currentUserId: string) {
           .catch(() => {});
 
         // Subscribe to clinic group channel
-        client.subscribe(`/topic/clinic/${clinicId}`, (msg: IMessage) => {
+        client.subscribe(`/topic/clinic/${currentTenant() ?? ""}`, (msg: IMessage) => {
           const data: ChatMessage = JSON.parse(msg.body);
           setMessages(prev => ({ ...prev, group: [...prev.group, data] }));
           if (data.senderId !== currentUserId) {
@@ -119,7 +120,7 @@ export function useChat(clinicId: string, currentUserId: string) {
     client.activate();
     clientRef.current = client;
     return () => { client.deactivate(); };
-  }, [clinicId, currentUserId]);
+  }, [currentUserId]);
 
   const sendGroup = useCallback((content: string) => {
     clientRef.current?.publish({

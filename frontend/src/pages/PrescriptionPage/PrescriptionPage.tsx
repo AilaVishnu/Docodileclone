@@ -2001,7 +2001,8 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       });
     if (meds.length === 0) { showToast("Add a medicine before sharing"); return; }
 
-    const clinicName = localStorage.getItem("docodile_clinic_name") || "Clinic";
+    // TODO(plan-3): source clinic name from a settings endpoint
+    const clinicName = "";
     const lines = [
       `*${clinicName}*`,
       `Prescription for ${selectedPatient.name}`,

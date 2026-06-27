@@ -8,8 +8,8 @@ import { API_BASE_URL } from "../apiConfig";
 //
 // A module-level cache makes leaving the page and coming back instant: the
 // cached rows render immediately while a fresh fetch revalidates in the
-// background (stale-while-revalidate). The cache is keyed by clinic id, so a
-// different logged-in clinic never briefly sees another clinic's patients.
+// background (stale-while-revalidate). The cache is keyed by token so a
+// different logged-in user never briefly sees another session's patients.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type Patient = {
@@ -40,11 +40,11 @@ type UsePatientsResult = {
   error: string | null;
 };
 
-let cache: { clinicId: string | null; data: Patient[] } | null = null;
+let cache: { token: string | null; data: Patient[] } | null = null;
 
 export function usePatients(refreshKey?: number): UsePatientsResult {
-  const clinicId = localStorage.getItem("docodile_clinic_id");
-  const cached = cache && cache.clinicId === clinicId ? cache.data : null;
+  const token = localStorage.getItem("docodile_token");
+  const cached = cache && cache.token === token ? cache.data : null;
 
   const [data, setData] = useState<Patient[]>(cached ?? []);
   const [loading, setLoading] = useState(cached === null);
@@ -55,29 +55,28 @@ export function usePatients(refreshKey?: number): UsePatientsResult {
     (async () => {
       // Only surface the loading state when there's nothing cached to show;
       // otherwise revalidate quietly behind the rows already on screen.
-      const hasCache = cache !== null && cache.clinicId === clinicId;
+      const hasCache = cache !== null && cache.token === token;
       if (!hasCache) setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem("docodile_token");
         const res = await fetch(`${API_BASE_URL}/api/patients`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
           signal: controller.signal,
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json: Patient[] = await res.json();
-        cache = { clinicId, data: json };
+        cache = { token, data: json };
         setData(json);
       } catch (e) {
         if ((e as Error).name === "AbortError") return;
         setError((e as Error).message);
-        if (cache === null || cache.clinicId !== clinicId) setData([]);
+        if (cache === null || cache.token !== token) setData([]);
       } finally {
         setLoading(false);
       }
     })();
     return () => controller.abort();
-  }, [refreshKey, clinicId]);
+  }, [refreshKey, token]);
 
   return { data, loading, error };
 }
