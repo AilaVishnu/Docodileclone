@@ -1,4 +1,3 @@
-import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { ServicesView } from './ServicesView';
 import { HttpResponse, http } from 'msw';

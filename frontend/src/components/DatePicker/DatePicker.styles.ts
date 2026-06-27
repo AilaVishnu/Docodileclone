@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, radii, fonts, spacing, zIndex } from "../../styles/theme";
+import { colors, fonts, zIndex } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   backdrop: {

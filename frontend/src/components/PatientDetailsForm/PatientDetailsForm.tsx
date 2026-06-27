@@ -6,7 +6,7 @@ import { RadioGroup } from "../Radio";
 import { PatientSearchRow } from "../PatientSearchRow/PatientSearchRow";
 import { Icon } from "../Icon";
 import type { Patient } from "../../hooks/usePatients";
-import { colors, fonts, spacing } from "../../styles/theme";
+import { colors, spacing } from "../../styles/theme";
 import { styles } from "./PatientDetailsForm.styles";
 
 // ─────────────────────────────────────────────────────────────────────────────

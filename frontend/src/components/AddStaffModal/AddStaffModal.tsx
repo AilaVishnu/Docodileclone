@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { colors } from "../../styles/theme";
 import { Modal } from "../Modal";
 import { Card } from "../Card";
 import { StaffDetailsCard } from "../StaffDetailsCard";

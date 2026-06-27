@@ -12,7 +12,6 @@ import {
   createTemplate,
   deleteTemplate,
   ensureSeed,
-  loadTemplates,
   updateTemplate,
 } from "./storage";
 import { buildPrintHtml, openPrintWindow, PrintVisitData } from "./buildPrintHtml";

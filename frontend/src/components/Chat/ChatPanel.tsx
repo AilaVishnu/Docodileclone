@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { ChatMessage, useChat } from "../../hooks/useChat";
 import { IconButton } from "../IconButton";
 import { chatWithAssistant, AIChatTurn } from "../../api/ai";
@@ -73,8 +73,7 @@ export function ChatPanel({ currentUserId, currentUserName, onUnreadChange, onCl
       mr.onstop = () => {
         mr.stream.getTracks().forEach(t => t.stop());
         if (mode === "send") {
-          const blob = new Blob(recordingChunksRef.current, { type: "audio/webm" });
-          // TODO: upload blob to backend and send as a voice-note attachment.
+          // TODO: upload the recorded audio to backend and send as a voice-note attachment.
           // For the v1 UI, just send a placeholder message.
           const seconds = Math.max(1, Math.round(recordingMs / 1000));
           const placeholder = `🎤 Voice note · ${seconds}s`;

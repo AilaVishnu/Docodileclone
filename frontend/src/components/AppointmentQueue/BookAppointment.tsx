@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { styles } from "./BookAppointment.styles";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { colors, fonts, spacing } from "../../styles/theme";
 import { Icon } from "../Icon";
 import { Card } from "../Card/Card";
 import { PageHeader } from "../PageHeader/PageHeader";
@@ -10,8 +10,6 @@ import { UnderlineSelect } from "../Input/UnderlineSelect/UnderlineSelect";
 import { Select } from "../Input/Select/Select";
 import { Toast } from "../Toast";
 import { resolveToastIcon } from "../Toast/toastIcon";
-import { Button } from "../Button";
-import { MeasureField } from "../MeasureField";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { RadioGroup } from "../Radio";
 import { PatientDetailsForm } from "../PatientDetailsForm";
@@ -217,7 +215,6 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.discount, discountMode, form.services]);
 
-  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const formatDob = (digits: string): string => {
     const dd = digits.slice(0, 2);
     const mm = digits.slice(2, 4);

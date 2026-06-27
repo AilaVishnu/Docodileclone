@@ -25,11 +25,6 @@ type ChatState = {
   dms: Record<string, ChatMessage[]>; // keyed by partner userId
 };
 
-function authHeaders() {
-  const token = localStorage.getItem("docodile_token") ?? "";
-  return { Authorization: `Bearer ${token}` };
-}
-
 function dmKey(a: string, b: string) {
   return [a, b].sort().join("_");
 }

@@ -5,7 +5,6 @@ import { pickAvatar } from "../../utils/avatar";
 import { Button } from "../../components/Button";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { loadStartedSet } from "../../utils/sessionStarted";
-import { Icon } from "../../components/Icon";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { ChevronDown } from "../../components/icons/ChevronDown";
 import { StatusBadge } from "../../components/AppointmentQueue/StatusBadge";

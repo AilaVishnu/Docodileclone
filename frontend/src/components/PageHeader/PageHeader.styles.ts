@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts, radii, spacing, strokes, fluidSpacing, layout } from "../../styles/theme";
+import { colors, fonts, radii, spacing, fluidSpacing, layout } from "../../styles/theme";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PAGE HEADER — shared sticky app-bar

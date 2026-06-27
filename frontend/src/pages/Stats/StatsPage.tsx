@@ -6,7 +6,6 @@ import { tableHeadCell, tableDivider } from "../../styles/tableStyles";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { DateRangeDropdown } from "../../components/DateRangeDropdown/DateRangeDropdown";
 import {
-  AgePyramid,
   AreaTrend,
   CategoryRows,
   InsetLabelBar,

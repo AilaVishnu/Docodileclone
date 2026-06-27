@@ -11,7 +11,6 @@ import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 import { Toast } from "../../components/Toast";
 import { resolveToastIcon } from "../../components/Toast/toastIcon";
-import { Autocomplete } from "../../components/Autocomplete/Autocomplete";
 import { MedicineAutocomplete } from "../../components/MedicineAutocomplete/MedicineAutocomplete";
 import { FrequencyPicker } from "../../components/FrequencyPicker/FrequencyPicker";
 import { WhenPicker } from "../../components/WhenPicker/WhenPicker";
@@ -602,7 +601,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // opened from another screen (Patient Files, the session tray, etc.).
   // Falls back to clearing selection so the prescription home picker
   // reappears, matching the original behavior.
-  const [returnTab, setReturnTab] = React.useState<import("../../components/SideNav").NavTab | null>(
+  const [, setReturnTab] = React.useState<import("../../components/SideNav").NavTab | null>(
     initialNav?.returnTab ?? null,
   );
   React.useEffect(() => {
@@ -799,7 +798,6 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // session hasn't been ended. Once the doctor ends the session the visit
   // is locked permanently (read-only history). This intentionally covers
   // past visits the doctor left open — they stay editable until ended.
-  const isLatestVisit = visits.length === 0 || activeTab === visits.length - 1;
   // Editability runs on a 24h timer that STARTS when the View Pad is opened
   // (sessionStartedAt) — NOT the visit date, and NOT the end of the
   // consultation. While the session is open (un-ended) the pad stays editable
@@ -1565,21 +1563,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   //   0 = Visits   1 = Files   2 = Timeline   3 = Bills
   // Header label per section. Timeline (2) is implemented (a visit feed);
   // only Bills (3) is still a "coming soon" placeholder.
-  const sectionLabel = activeAction === 2 ? "Timeline" : activeAction === 3 ? "Bills" : null;
   const comingSoonLabel = activeAction === 3 ? "Bills" : null;
-  const headerTitle =
-    listViewConfig?.title ?? sectionLabel ?? "Visits";
-  // Subtitle: row count for list views (backend data + client uploads),
-  // visit count for the Timeline feed, the placeholder for Bills, and a static
-  // line for the default Visits view.
-  const fileCount = activeAction === 1 ? serverFiles.length : (listViewConfig?.rows.length ?? 0);
-  const headerSubtitle = listViewConfig
-    ? `${fileCount} ${listViewConfig.title.toLowerCase()} on file`
-    : activeAction === 2
-      ? `${visits.length} ${visits.length === 1 ? "visit" : "visits"}`
-      : comingSoonLabel
-        ? "Coming soon"
-        : "Patient visit history and prescription";
 
   // Each collapsible section starts expanded; clicking the header chevron toggles.
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({

@@ -47,9 +47,9 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
   const [themeMode] = useState<ThemeMode>("primary");
 
   const [bookingKey, setBookingKey] = useState(0);
-  const [isEditing, setIsEditing] = useState(false);
+  const [, setIsEditing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [patientFileNavId, setPatientFileNavId] = useState<string | null>(null);
+  const [patientFileNavId] = useState<string | null>(null);
   const [showNewRxModal, setShowNewRxModal] = useState(false);
   // Bumped after a walk-in is created so the Prescription queue refetches
   // and shows the new "At Doc" card without a manual reload.

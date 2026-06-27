@@ -85,7 +85,7 @@ export function Select({
       window.removeEventListener("scroll", updateRect, true);
       window.removeEventListener("resize", updateRect);
     };
-  }, [isOpen]);
+  }, [isOpen, options.length]);
 
   const normalizedOptions: SelectOption[] = options.map((opt) =>
     typeof opt === "string" ? { label: opt, value: opt } : opt

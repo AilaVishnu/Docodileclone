@@ -1,4 +1,3 @@
-import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { Icon } from './Icon';
 import { ICON_NAMES } from './iconRegistry';

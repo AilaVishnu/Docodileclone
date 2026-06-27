@@ -1,7 +1,6 @@
 import React, { CSSProperties } from "react";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { Icon } from "../Icon";
-import { Button } from "../Button";
 import { ConfirmDialog } from "../ConfirmDialog";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -271,11 +270,6 @@ export function SessionBar({
     onEnd?.(finalSeconds);
   };
 
-  // Resume is only offered while we're inside the 24h buffer window. Once
-  // the window expires (or the recorded endedAt is unknown — legacy state)
-  // the visit is considered closed and the Resume button is suppressed.
-  const interactiveCanResume =
-    endedAtMs != null && Date.now() - endedAtMs < RESUME_BUFFER_MS;
   // Use the combined endedAtMs (DB sessionEndedAt, falling back to the
   // locally-persisted end time) rather than the DB prop alone — otherwise a
   // session ended on this device but not yet synced to the DB column shows
