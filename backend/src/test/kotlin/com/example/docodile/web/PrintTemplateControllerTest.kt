@@ -1,10 +1,7 @@
 package com.example.docodile.web
 
-import com.example.docodile.domain.ClinicEntity
 import com.example.docodile.domain.PrintTemplate
-import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.PrintTemplateRepository
-import com.example.docodile.security.CurrentUser
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
@@ -32,28 +29,20 @@ class PrintTemplateControllerTest @Autowired constructor(
     private lateinit var tokenService: com.example.docodile.security.TokenService
 
     @MockitoBean
-    private lateinit var revokedTokenRepository: com.example.docodile.repo.RevokedTokenRepository
+    private lateinit var userSessionRepository: com.example.docodile.repo.UserSessionRepository
 
     @MockitoBean
     private lateinit var repo: PrintTemplateRepository
 
-    @MockitoBean
-    private lateinit var clinicEntityRepository: ClinicEntityRepository
-
-    @MockitoBean
-    private lateinit var currentUser: CurrentUser
-
     private val mapper = ObjectMapper()
-    private val clinicId = UUID.randomUUID()
 
     private fun tpl(id: UUID = UUID.randomUUID(), name: String, isDefault: Boolean = false, config: String = "{}") =
-        PrintTemplate(id = id, clinic = null, name = name, isDefault = isDefault, config = config)
+        PrintTemplate(id = id, name = name, isDefault = isDefault, config = config)
 
     @Test
     @WithMockUser(roles = ["DOCTOR"])
     fun `list returns 200 with templates`() {
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-        whenever(repo.findAllByClinicIdOrderByCreatedAtAsc(clinicId))
+        whenever(repo.findAllByOrderByCreatedAtAsc())
             .thenReturn(listOf(tpl(name = "Default", isDefault = true)))
 
         mockMvc.perform(get("/api/tenant/print-templates"))
@@ -65,9 +54,7 @@ class PrintTemplateControllerTest @Autowired constructor(
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `create returns 201 with saved template`() {
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-        whenever(clinicEntityRepository.findById(clinicId))
-            .thenReturn(Optional.of(ClinicEntity(id = clinicId, name = "C")))
+        whenever(repo.findAllByOrderByCreatedAtAsc()).thenReturn(emptyList())
         whenever(repo.save(any<PrintTemplate>())).thenAnswer { it.arguments[0] as PrintTemplate }
 
         val req = PrintTemplateRequest(name = "Letterhead", isDefault = false, config = "{\"k\":1}")
@@ -82,10 +69,7 @@ class PrintTemplateControllerTest @Autowired constructor(
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `create with isDefault flips other defaults off`() {
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-        whenever(clinicEntityRepository.findById(clinicId))
-            .thenReturn(Optional.of(ClinicEntity(id = clinicId, name = "C")))
-        whenever(repo.findAllByClinicIdOrderByCreatedAtAsc(clinicId))
+        whenever(repo.findAllByOrderByCreatedAtAsc())
             .thenReturn(listOf(tpl(name = "Old", isDefault = true)))
         whenever(repo.save(any<PrintTemplate>())).thenAnswer { it.arguments[0] as PrintTemplate }
 
@@ -106,8 +90,8 @@ class PrintTemplateControllerTest @Autowired constructor(
     @WithMockUser(roles = ["ADMIN"])
     fun `update returns 200 with updated template`() {
         val id = UUID.randomUUID()
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-        whenever(repo.findByIdAndClinicId(id, clinicId)).thenReturn(tpl(id = id, name = "Old"))
+        whenever(repo.findById(id)).thenReturn(Optional.of(tpl(id = id, name = "Old")))
+        whenever(repo.findAllByOrderByCreatedAtAsc()).thenReturn(emptyList())
         whenever(repo.save(any<PrintTemplate>())).thenAnswer { it.arguments[0] as PrintTemplate }
 
         val req = PrintTemplateRequest(name = "Renamed", isDefault = false, config = "{\"v\":2}")
@@ -124,8 +108,7 @@ class PrintTemplateControllerTest @Autowired constructor(
     @WithMockUser(roles = ["ADMIN"])
     fun `update returns 404 when template missing`() {
         val id = UUID.randomUUID()
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-        whenever(repo.findByIdAndClinicId(eq(id), eq(clinicId))).thenReturn(null)
+        whenever(repo.findById(eq(id))).thenReturn(Optional.empty())
 
         val req = PrintTemplateRequest(name = "X", isDefault = false, config = "{}")
         mockMvc.perform(put("/api/tenant/print-templates/$id")
@@ -139,8 +122,8 @@ class PrintTemplateControllerTest @Autowired constructor(
     @WithMockUser(roles = ["ADMIN"])
     fun `delete returns 204 when template exists`() {
         val id = UUID.randomUUID()
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-        whenever(repo.findByIdAndClinicId(id, clinicId)).thenReturn(tpl(id = id, name = "Del", isDefault = false))
+        whenever(repo.findById(id)).thenReturn(Optional.of(tpl(id = id, name = "Del", isDefault = false)))
+        whenever(repo.findAllByOrderByCreatedAtAsc()).thenReturn(emptyList())
 
         mockMvc.perform(delete("/api/tenant/print-templates/$id").with(csrf()))
             .andExpect(status().isNoContent)
@@ -150,9 +133,8 @@ class PrintTemplateControllerTest @Autowired constructor(
     @WithMockUser(roles = ["ADMIN"])
     fun `delete of default promotes next template to default`() {
         val id = UUID.randomUUID()
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-        whenever(repo.findByIdAndClinicId(id, clinicId)).thenReturn(tpl(id = id, name = "Del", isDefault = true))
-        whenever(repo.findAllByClinicIdOrderByCreatedAtAsc(clinicId))
+        whenever(repo.findById(id)).thenReturn(Optional.of(tpl(id = id, name = "Del", isDefault = true)))
+        whenever(repo.findAllByOrderByCreatedAtAsc())
             .thenReturn(listOf(tpl(name = "Next", isDefault = false)))
         whenever(repo.save(any<PrintTemplate>())).thenAnswer { it.arguments[0] as PrintTemplate }
 
@@ -164,8 +146,7 @@ class PrintTemplateControllerTest @Autowired constructor(
     @WithMockUser(roles = ["ADMIN"])
     fun `delete returns 404 when template missing`() {
         val id = UUID.randomUUID()
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-        whenever(repo.findByIdAndClinicId(eq(id), eq(clinicId))).thenReturn(null)
+        whenever(repo.findById(eq(id))).thenReturn(Optional.empty())
 
         mockMvc.perform(delete("/api/tenant/print-templates/$id").with(csrf()))
             .andExpect(status().isNotFound)

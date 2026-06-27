@@ -1,9 +1,7 @@
 package com.example.docodile.repo
 
-import com.example.docodile.domain.ClinicEntity
 import com.example.docodile.domain.Patient
 import com.example.docodile.domain.RxRow
-import com.example.docodile.domain.Tenant
 import com.example.docodile.domain.Visit
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -24,13 +22,9 @@ class RxRowRepositoryTest @Autowired constructor(
 
     @BeforeEach
     fun setup() {
-        val tenant = Tenant(name = "Test Tenant")
-        entityManager.persist(tenant)
-        val clinic = ClinicEntity(name = "Test Clinic", tenant = tenant)
-        entityManager.persist(clinic)
-        val patient = Patient(name = "P", clinic = clinic)
+        val patient = Patient(name = "P")
         entityManager.persist(patient)
-        visit = Visit(clinic = clinic, patient = patient, visitDate = LocalDate.now())
+        visit = Visit(patient = patient, visitDate = LocalDate.now())
         entityManager.persist(visit)
         entityManager.flush()
     }

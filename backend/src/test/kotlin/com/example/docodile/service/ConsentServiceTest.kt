@@ -13,14 +13,14 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.argumentCaptor
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argumentCaptor
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
@@ -46,12 +46,10 @@ class ConsentServiceTest {
 
     private fun consent(
         patientId: UUID,
-        clinicId: UUID,
         purpose: String = "treatment",
         withdrawnAt: Instant? = null,
     ) = PatientConsent(
         patientId = patientId,
-        clinicId = clinicId,
         purpose = purpose,
         version = "v1",
         withdrawnAt = withdrawnAt,
@@ -62,10 +60,8 @@ class ConsentServiceTest {
     @Test
     fun `grantConsent persists a consent and logs CONSENT_GRANTED when patient exists`() {
         val svc = service(false)
-        val clinicId = UUID.randomUUID()
         val patientId = UUID.randomUUID()
-        `when`(currentUser.clinicId()).thenReturn(clinicId)
-        `when`(patientRepository.findByIdAndClinicId(patientId, clinicId)).thenReturn(Patient())
+        `when`(patientRepository.findById(patientId)).thenReturn(Optional.of(Patient()))
         `when`(consentRepository.save(any()))
             .thenAnswer { it.arguments[0] }
 
@@ -79,8 +75,6 @@ class ConsentServiceTest {
             anyOrNull(),
             anyString(),
             anyOrNull(),
-            anyOrNull(),
-            anyOrNull(),
             any(),
         )
         assertEquals(AuditAction.CONSENT_GRANTED, actionCaptor.firstValue)
@@ -89,10 +83,8 @@ class ConsentServiceTest {
     @Test
     fun `grantConsent throws when patient is not found`() {
         val svc = service(false)
-        val clinicId = UUID.randomUUID()
         val patientId = UUID.randomUUID()
-        `when`(currentUser.clinicId()).thenReturn(clinicId)
-        `when`(patientRepository.findByIdAndClinicId(patientId, clinicId)).thenReturn(null)
+        `when`(patientRepository.findById(patientId)).thenReturn(Optional.empty())
 
         assertThrows(IllegalArgumentException::class.java) {
             svc.grantConsent(patientId, "treatment", "v1")
@@ -104,11 +96,10 @@ class ConsentServiceTest {
     @Test
     fun `withdrawConsent sets withdrawnAt and logs CONSENT_WITHDRAWN`() {
         val svc = service(false)
-        val clinicId = UUID.randomUUID()
         val patientId = UUID.randomUUID()
         val consentId = UUID.randomUUID()
-        val existing = consent(patientId, clinicId)
-        `when`(currentUser.clinicId()).thenReturn(clinicId)
+        val existing = consent(patientId)
+        existing.id = consentId
         `when`(consentRepository.findById(consentId)).thenReturn(Optional.of(existing))
 
         svc.withdrawConsent(patientId, consentId)
@@ -123,8 +114,6 @@ class ConsentServiceTest {
             anyOrNull(),
             anyString(),
             anyOrNull(),
-            anyOrNull(),
-            anyOrNull(),
             any(),
         )
         assertEquals(AuditAction.CONSENT_WITHDRAWN, actionCaptor.firstValue)
@@ -133,11 +122,10 @@ class ConsentServiceTest {
     @Test
     fun `withdrawConsent throws when already withdrawn`() {
         val svc = service(false)
-        val clinicId = UUID.randomUUID()
         val patientId = UUID.randomUUID()
         val consentId = UUID.randomUUID()
-        val existing = consent(patientId, clinicId, withdrawnAt = Instant.now())
-        `when`(currentUser.clinicId()).thenReturn(clinicId)
+        val existing = consent(patientId, withdrawnAt = Instant.now())
+        existing.id = consentId
         `when`(consentRepository.findById(consentId)).thenReturn(Optional.of(existing))
 
         assertThrows(IllegalArgumentException::class.java) {
@@ -150,11 +138,9 @@ class ConsentServiceTest {
     @Test
     fun `hasActiveConsent returns true for a non-withdrawn consent for the purpose`() {
         val svc = service(false)
-        val clinicId = UUID.randomUUID()
         val patientId = UUID.randomUUID()
-        `when`(currentUser.clinicId()).thenReturn(clinicId)
-        `when`(consentRepository.findAllByPatientIdAndClinicId(patientId, clinicId))
-            .thenReturn(listOf(consent(patientId, clinicId, purpose = "treatment")))
+        `when`(consentRepository.findAllByPatientId(patientId))
+            .thenReturn(listOf(consent(patientId, purpose = "treatment")))
 
         assertTrue(svc.hasActiveConsent(patientId, "treatment"))
     }
@@ -162,20 +148,9 @@ class ConsentServiceTest {
     @Test
     fun `hasActiveConsent returns false when only a withdrawn consent exists`() {
         val svc = service(false)
-        val clinicId = UUID.randomUUID()
         val patientId = UUID.randomUUID()
-        `when`(currentUser.clinicId()).thenReturn(clinicId)
-        `when`(consentRepository.findAllByPatientIdAndClinicId(patientId, clinicId))
-            .thenReturn(listOf(consent(patientId, clinicId, purpose = "treatment", withdrawnAt = Instant.now())))
-
-        assertFalse(svc.hasActiveConsent(patientId, "treatment"))
-    }
-
-    @Test
-    fun `hasActiveConsent fails closed and returns false when clinic context is unavailable`() {
-        val svc = service(false)
-        val patientId = UUID.randomUUID()
-        `when`(currentUser.clinicId()).thenThrow(IllegalStateException("Missing clinic"))
+        `when`(consentRepository.findAllByPatientId(patientId))
+            .thenReturn(listOf(consent(patientId, purpose = "treatment", withdrawnAt = Instant.now())))
 
         assertFalse(svc.hasActiveConsent(patientId, "treatment"))
     }
@@ -185,11 +160,8 @@ class ConsentServiceTest {
     @Test
     fun `checkConsent does not throw when enforcement disabled even with no consent`() {
         val svc = service(false)
-        val clinicId = UUID.randomUUID()
         val patientId = UUID.randomUUID()
-        `when`(currentUser.clinicId()).thenReturn(clinicId)
-        `when`(consentRepository.findAllByPatientIdAndClinicId(patientId, clinicId))
-            .thenReturn(emptyList())
+        `when`(consentRepository.findAllByPatientId(patientId)).thenReturn(emptyList())
 
         assertDoesNotThrow { svc.checkConsent(patientId, "treatment") }
     }
@@ -197,11 +169,8 @@ class ConsentServiceTest {
     @Test
     fun `checkConsent throws ConsentRequiredException when enforcement enabled and no active consent`() {
         val svc = service(true)
-        val clinicId = UUID.randomUUID()
         val patientId = UUID.randomUUID()
-        `when`(currentUser.clinicId()).thenReturn(clinicId)
-        `when`(consentRepository.findAllByPatientIdAndClinicId(patientId, clinicId))
-            .thenReturn(emptyList())
+        `when`(consentRepository.findAllByPatientId(patientId)).thenReturn(emptyList())
 
         assertThrows(ConsentRequiredException::class.java) {
             svc.checkConsent(patientId, "treatment")
@@ -211,11 +180,9 @@ class ConsentServiceTest {
     @Test
     fun `checkConsent does not throw when enforcement enabled and active consent exists`() {
         val svc = service(true)
-        val clinicId = UUID.randomUUID()
         val patientId = UUID.randomUUID()
-        `when`(currentUser.clinicId()).thenReturn(clinicId)
-        `when`(consentRepository.findAllByPatientIdAndClinicId(patientId, clinicId))
-            .thenReturn(listOf(consent(patientId, clinicId, purpose = "treatment")))
+        `when`(consentRepository.findAllByPatientId(patientId))
+            .thenReturn(listOf(consent(patientId, purpose = "treatment")))
 
         assertDoesNotThrow { svc.checkConsent(patientId, "treatment") }
     }

@@ -1,10 +1,7 @@
 package com.example.docodile.web
 
-import com.example.docodile.domain.CorrectionRequest
-import com.example.docodile.domain.DeletionRequest
-import com.example.docodile.domain.DeletionRequestStatus
-import com.example.docodile.service.CorrectionRequestService
-import com.example.docodile.service.DeletionRequestService
+import com.example.docodile.domain.DataSubjectRequest
+import com.example.docodile.service.DataSubjectRequestService
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
@@ -31,29 +28,19 @@ class DataWorkflowControllerTest @Autowired constructor(
     private lateinit var tokenService: com.example.docodile.security.TokenService
 
     @MockitoBean
-    private lateinit var revokedTokenRepository: com.example.docodile.repo.RevokedTokenRepository
+    private lateinit var userSessionRepository: com.example.docodile.repo.UserSessionRepository
 
     @MockitoBean
-    private lateinit var deletionService: DeletionRequestService
+    private lateinit var dataSubjectRequestService: DataSubjectRequestService
 
-    @MockitoBean
-    private lateinit var correctionService: CorrectionRequestService
-
-    private fun deletion(patientId: UUID = UUID.randomUUID()) = DeletionRequest(
+    private fun dataSubjectRequest(
+        patientId: UUID = UUID.randomUUID(),
+        type: String = "DELETION",
+    ) = DataSubjectRequest(
         id = UUID.randomUUID(),
         patientId = patientId,
-        clinicId = UUID.randomUUID(),
-        tenantId = UUID.randomUUID(),
-        requestedBy = UUID.randomUUID(),
-    )
-
-    private fun correction(patientId: UUID = UUID.randomUUID()) = CorrectionRequest(
-        id = UUID.randomUUID(),
-        patientId = patientId,
-        clinicId = UUID.randomUUID(),
-        tenantId = UUID.randomUUID(),
-        fieldName = "name",
-        newValue = "New",
+        type = type,
+        status = "SUBMITTED",
         requestedBy = UUID.randomUUID(),
     )
 
@@ -64,7 +51,8 @@ class DataWorkflowControllerTest @Autowired constructor(
     fun `submit deletion returns 201`() {
         val patientId = UUID.randomUUID()
         val req = SubmitDeletionRequest(patientId = patientId, reason = "patient request")
-        `when`(deletionService.submit(patientId, "patient request")).thenReturn(deletion(patientId))
+        `when`(dataSubjectRequestService.submitDeletion(patientId, "patient request"))
+            .thenReturn(dataSubjectRequest(patientId, "DELETION"))
 
         mockMvc.perform(post("/api/data-requests/deletions")
             .with(csrf())
@@ -76,7 +64,7 @@ class DataWorkflowControllerTest @Autowired constructor(
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `list deletions as admin returns 200`() {
-        `when`(deletionService.list()).thenReturn(listOf(deletion()))
+        `when`(dataSubjectRequestService.listDeletions()).thenReturn(listOf(dataSubjectRequest()))
 
         mockMvc.perform(get("/api/data-requests/deletions"))
             .andExpect(status().isOk)
@@ -96,7 +84,7 @@ class DataWorkflowControllerTest @Autowired constructor(
                 .any { it is org.springframework.security.authorization.AuthorizationDeniedException },
             "expected an AuthorizationDeniedException in the cause chain",
         )
-        org.mockito.Mockito.verify(deletionService, org.mockito.Mockito.never()).list()
+        org.mockito.Mockito.verify(dataSubjectRequestService, org.mockito.Mockito.never()).listDeletions()
     }
 
     @Test
@@ -104,27 +92,14 @@ class DataWorkflowControllerTest @Autowired constructor(
     fun `transition deletion with valid status returns 200`() {
         val id = UUID.randomUUID()
         val req = TransitionRequest(status = "VERIFIED")
-        `when`(deletionService.transition(id, DeletionRequestStatus.VERIFIED, null)).thenReturn(deletion())
+        `when`(dataSubjectRequestService.transitionDeletion(id, "VERIFIED", null))
+            .thenReturn(dataSubjectRequest())
 
         mockMvc.perform(post("/api/data-requests/deletions/$id/transition")
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content(tools.jackson.databind.ObjectMapper().writeValueAsString(req)))
             .andExpect(status().isOk)
-    }
-
-    @Test
-    @WithMockUser(roles = ["ADMIN"])
-    fun `transition deletion with unknown status returns 400`() {
-        val id = UUID.randomUUID()
-        val req = TransitionRequest(status = "NONSENSE")
-
-        mockMvc.perform(post("/api/data-requests/deletions/$id/transition")
-            .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(tools.jackson.databind.ObjectMapper().writeValueAsString(req)))
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").value("Unknown status: NONSENSE"))
     }
 
     // ── Corrections ────────────────────────────────────────────────────────────
@@ -134,7 +109,8 @@ class DataWorkflowControllerTest @Autowired constructor(
     fun `submit correction returns 201`() {
         val patientId = UUID.randomUUID()
         val req = SubmitCorrectionRequest(patientId = patientId, fieldName = "name", oldValue = "Old", newValue = "New")
-        `when`(correctionService.submit(patientId, "name", "Old", "New")).thenReturn(correction(patientId))
+        `when`(dataSubjectRequestService.submitCorrection(patientId, "name", "Old", "New"))
+            .thenReturn(dataSubjectRequest(patientId, "CORRECTION"))
 
         mockMvc.perform(post("/api/data-requests/corrections")
             .with(csrf())
@@ -172,7 +148,8 @@ class DataWorkflowControllerTest @Autowired constructor(
     fun `review correction returns 200`() {
         val id = UUID.randomUUID()
         val req = ReviewCorrectionRequest(approve = true)
-        `when`(correctionService.review(id, true, null)).thenReturn(correction())
+        `when`(dataSubjectRequestService.reviewCorrection(id, true, null))
+            .thenReturn(dataSubjectRequest(type = "CORRECTION"))
 
         mockMvc.perform(post("/api/data-requests/corrections/$id/review")
             .with(csrf())

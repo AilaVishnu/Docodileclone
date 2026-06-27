@@ -27,9 +27,6 @@ class AccountControllerTest @Autowired constructor(
     private lateinit var tokenService: com.example.docodile.security.TokenService
 
     @MockitoBean
-    private lateinit var revokedTokenRepository: com.example.docodile.repo.RevokedTokenRepository
-
-    @MockitoBean
     private lateinit var userSessionRepository: UserSessionRepository
 
     @MockitoBean

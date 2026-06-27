@@ -25,7 +25,7 @@ class MfaControllerTest @Autowired constructor(
     private lateinit var tokenService: com.example.docodile.security.TokenService
 
     @MockitoBean
-    private lateinit var revokedTokenRepository: com.example.docodile.repo.RevokedTokenRepository
+    private lateinit var userSessionRepository: com.example.docodile.repo.UserSessionRepository
 
     @MockitoBean
     private lateinit var mfaService: MfaService
@@ -104,7 +104,7 @@ class MfaControllerTest @Autowired constructor(
     fun `complete returns 200 with token for valid code`() {
         val req = MfaCompleteRequest(mfaPendingToken = "pending", code = "123456")
         val userId = UUID.randomUUID()
-        val response = LoginResponse(token = "jwt_token", role = "ADMIN", clinicId = UUID.randomUUID(), clinicName = "Clinic", gender = null)
+        val response = LoginResponse(token = "jwt_token", role = "ADMIN", gender = null)
 
         `when`(mfaService.verifyFromPendingToken("pending", "123456")).thenReturn(userId)
         `when`(authService.completeMfaLogin("pending")).thenReturn(response)

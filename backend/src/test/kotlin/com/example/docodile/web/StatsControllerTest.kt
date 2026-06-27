@@ -9,11 +9,9 @@ import com.example.docodile.repo.AppointmentRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.repo.RxRowRepository
 import com.example.docodile.repo.VisitRepository
-import com.example.docodile.security.CurrentUser
 import com.example.docodile.service.AuditService
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
@@ -40,7 +38,7 @@ class StatsControllerTest @Autowired constructor(
     private lateinit var tokenService: com.example.docodile.security.TokenService
 
     @MockitoBean
-    private lateinit var revokedTokenRepository: com.example.docodile.repo.RevokedTokenRepository
+    private lateinit var userSessionRepository: com.example.docodile.repo.UserSessionRepository
 
     @MockitoBean
     private lateinit var appointmentRepository: AppointmentRepository
@@ -55,12 +53,7 @@ class StatsControllerTest @Autowired constructor(
     private lateinit var rxRowRepository: RxRowRepository
 
     @MockitoBean
-    private lateinit var currentUser: CurrentUser
-
-    @MockitoBean
     private lateinit var auditService: AuditService
-
-    private val clinicId: UUID = UUID.randomUUID()
 
     // ── fixtures ──────────────────────────────────────────────────────────
 
@@ -126,20 +119,15 @@ class StatsControllerTest @Autowired constructor(
         createdByDoctor = doc,
     )
 
-    private fun stubClinic() {
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-    }
-
     // ── /doctors ──────────────────────────────────────────────────────────
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `doctors returns per-doctor stats with paid revenue summed`() {
-        stubClinic()
         val drA = doctor("DrA")
         val drB = doctor("DrB")
         whenever(
-            appointmentRepository.findAllByClinicIdAndScheduledTimeBetween(eq(clinicId), any(), any())
+            appointmentRepository.findAllByScheduledTimeBetween(any(), any())
         ).thenReturn(
             listOf(
                 appointment(doc = drA, payStatus = "PAID", fee = BigDecimal("500")),
@@ -163,7 +151,6 @@ class StatsControllerTest @Autowired constructor(
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `overview computes totals, revenue and composition`() {
-        stubClinic()
         val now = LocalDate.now().atTime(LocalTime.of(10, 0))
         val appts = listOf(
             appointment(scheduledTime = now, status = "COMPLETED", payStatus = "PAID", fee = BigDecimal("500"), type = "new", service = "Consultation"),
@@ -171,11 +158,11 @@ class StatsControllerTest @Autowired constructor(
             appointment(scheduledTime = now, status = "BOOKED", payStatus = "UNPAID", fee = BigDecimal("400"), isWalkin = true),
         )
         whenever(
-            appointmentRepository.findAllByClinicIdAndScheduledTimeBetween(eq(clinicId), any(), any())
+            appointmentRepository.findAllByScheduledTimeBetween(any(), any())
         ).thenReturn(appts)
-        whenever(patientRepository.findAllByClinicId(clinicId)).thenReturn(emptyList())
+        whenever(patientRepository.findAllByDeletedAtIsNull()).thenReturn(emptyList())
         whenever(
-            visitRepository.findAllByClinicIdAndVisitDateBetween(eq(clinicId), any(), any())
+            visitRepository.findAllByVisitDateBetween(any(), any())
         ).thenReturn(emptyList())
 
         mockMvc.perform(get("/api/stats/overview"))
@@ -195,8 +182,7 @@ class StatsControllerTest @Autowired constructor(
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `patients returns age groups and gender split`() {
-        stubClinic()
-        whenever(patientRepository.findAllByClinicId(clinicId)).thenReturn(
+        whenever(patientRepository.findAllByDeletedAtIsNull()).thenReturn(
             listOf(
                 // age is persisted in MONTHS (years × 12): 8y, 35y, 70y.
                 patient(name = "kid", age = 8 * 12, gender = "male"),
@@ -220,9 +206,8 @@ class StatsControllerTest @Autowired constructor(
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `health returns overall score with four subscores`() {
-        stubClinic()
         whenever(
-            appointmentRepository.findAllByClinicIdAndScheduledTimeBetween(eq(clinicId), any(), any())
+            appointmentRepository.findAllByScheduledTimeBetween(any(), any())
         ).thenReturn(
             listOf(
                 appointment(status = "COMPLETED", payStatus = "PAID", fee = BigDecimal("500")),
@@ -230,7 +215,7 @@ class StatsControllerTest @Autowired constructor(
             )
         )
         whenever(
-            visitRepository.findAllByClinicIdAndVisitDateBetween(eq(clinicId), any(), any())
+            visitRepository.findAllByVisitDateBetween(any(), any())
         ).thenReturn(
             listOf(visit(diagnosis = "Flu", reviewDate = LocalDate.now().plusDays(7)))
         )
@@ -248,10 +233,9 @@ class StatsControllerTest @Autowired constructor(
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `overdue returns one row per patient with days since review`() {
-        stubClinic()
         val pat = patient(name = "Late Larry")
         val reviewDate = LocalDate.now().minusDays(5)
-        whenever(visitRepository.findOverdueReviews(eq(clinicId), any())).thenReturn(
+        whenever(visitRepository.findOverdueReviews(any())).thenReturn(
             listOf(visit(reviewDate = reviewDate, pat = pat, doc = doctor("DrA")))
         )
 
@@ -266,9 +250,8 @@ class StatsControllerTest @Autowired constructor(
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `complaints trend returns named series with seven weekly points`() {
-        stubClinic()
         whenever(
-            visitRepository.findAllByClinicIdAndVisitDateBetween(eq(clinicId), any(), any())
+            visitRepository.findAllByVisitDateBetween(any(), any())
         ).thenReturn(
             listOf(
                 visit(complaints = "Fever", visitDate = LocalDate.now()),
@@ -289,12 +272,11 @@ class StatsControllerTest @Autowired constructor(
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `schedule groups appointment counts by doctor and weekday`() {
-        stubClinic()
         val dr = doctor("DrA")
         // pick a fixed weekday inside the current week (Monday)
         val monday = LocalDate.now().with(java.time.DayOfWeek.MONDAY).atTime(9, 0)
         whenever(
-            appointmentRepository.findAllByClinicIdAndScheduledTimeBetween(eq(clinicId), any(), any())
+            appointmentRepository.findAllByScheduledTimeBetween(any(), any())
         ).thenReturn(
             listOf(
                 appointment(doc = dr, scheduledTime = monday),
@@ -312,11 +294,10 @@ class StatsControllerTest @Autowired constructor(
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `clinical returns top complaints, diagnoses and review rate`() {
-        stubClinic()
         val v1 = visit(complaints = "Fever", diagnosis = "Viral", reviewDate = LocalDate.now().plusDays(3))
         val v2 = visit(complaints = "Fever", diagnosis = "Viral")
         whenever(
-            visitRepository.findAllByClinicIdAndVisitDateBetween(eq(clinicId), any(), any())
+            visitRepository.findAllByVisitDateBetween(any(), any())
         ).thenReturn(listOf(v1, v2))
         whenever(rxRowRepository.findMedicinesByVisitIds(any())).thenReturn(listOf("Paracetamol", "Paracetamol"))
 
@@ -335,10 +316,9 @@ class StatsControllerTest @Autowired constructor(
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `finance computes collected revenue, dues and bill counts`() {
-        stubClinic()
         val now = LocalDate.now().atTime(11, 0)
         whenever(
-            appointmentRepository.findAllByClinicIdAndScheduledTimeBetween(eq(clinicId), any(), any())
+            appointmentRepository.findAllByScheduledTimeBetween(any(), any())
         ).thenReturn(
             listOf(
                 // paid: fee 500 + pharmacy 100 - discount 50 = 550
@@ -367,9 +347,8 @@ class StatsControllerTest @Autowired constructor(
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `operations computes cancellation and no-show rates`() {
-        stubClinic()
         whenever(
-            appointmentRepository.findAllByClinicIdAndScheduledTimeBetween(eq(clinicId), any(), any())
+            appointmentRepository.findAllByScheduledTimeBetween(any(), any())
         ).thenReturn(
             listOf(
                 appointment(status = "COMPLETED"),

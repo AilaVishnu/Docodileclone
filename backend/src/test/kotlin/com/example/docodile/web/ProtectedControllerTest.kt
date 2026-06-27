@@ -10,7 +10,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
-import java.util.*
 
 @WebMvcTest(ProtectedController::class)
 @org.springframework.context.annotation.Import(com.example.docodile.security.JwtAuthenticationFilter::class)
@@ -18,25 +17,22 @@ class ProtectedControllerTest @Autowired constructor(
     private val mockMvc: MockMvc
 ) {
 
-    
-
     @org.springframework.test.context.bean.override.mockito.MockitoBean
     private lateinit var tokenService: com.example.docodile.security.TokenService
 
     @org.springframework.test.context.bean.override.mockito.MockitoBean
-    private lateinit var revokedTokenRepository: com.example.docodile.repo.RevokedTokenRepository
+    private lateinit var userSessionRepository: com.example.docodile.repo.UserSessionRepository
 
     @MockitoBean
     private lateinit var currentUser: CurrentUser
 
     @Test
     @WithMockUser(roles = ["DOCTOR"])
-    fun `me-clinic should return current clinic id`() {
-        val clinicId = UUID.randomUUID()
-        `when`(currentUser.clinicIdOrNull()).thenReturn(clinicId)
+    fun `me-clinic should return current schema`() {
+        `when`(currentUser.schema()).thenReturn("clinic_test")
 
         mockMvc.perform(get("/api/me/clinic"))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.clinic_id").value(clinicId.toString()))
+            .andExpect(jsonPath("$.schema").value("clinic_test"))
     }
 }

@@ -27,7 +27,7 @@ class SuggestionControllerTest @Autowired constructor(
     private lateinit var tokenService: com.example.docodile.security.TokenService
 
     @MockitoBean
-    private lateinit var revokedTokenRepository: com.example.docodile.repo.RevokedTokenRepository
+    private lateinit var revokedTokenRepository: com.example.docodile.repo.UserSessionRepository
 
     @MockitoBean
     private lateinit var suggestionService: SuggestionService

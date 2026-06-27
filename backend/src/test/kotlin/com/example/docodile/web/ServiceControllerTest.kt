@@ -1,10 +1,7 @@
 package com.example.docodile.web
 
-import com.example.docodile.domain.ClinicEntity
 import com.example.docodile.domain.Service as ServiceEntity
-import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.ServiceRepository
-import com.example.docodile.security.CurrentUser
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
@@ -32,23 +29,14 @@ class ServiceControllerTest @Autowired constructor(
     private lateinit var tokenService: com.example.docodile.security.TokenService
 
     @MockitoBean
-    private lateinit var revokedTokenRepository: com.example.docodile.repo.RevokedTokenRepository
+    private lateinit var userSessionRepository: com.example.docodile.repo.UserSessionRepository
 
     @MockitoBean
     private lateinit var serviceRepository: ServiceRepository
 
-    @MockitoBean
-    private lateinit var clinicEntityRepository: ClinicEntityRepository
-
-    @MockitoBean
-    private lateinit var currentUser: CurrentUser
-
-    private val clinicId: UUID = UUID.randomUUID()
-
     private fun service(id: UUID = UUID.randomUUID(), name: String = "Consultation", code: String = "CONS") =
         ServiceEntity(
             id = id,
-            clinic = ClinicEntity(id = clinicId, name = "Clinic"),
             name = name,
             code = code
         )
@@ -56,8 +44,7 @@ class ServiceControllerTest @Autowired constructor(
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `list should return 200`() {
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-        whenever(serviceRepository.findAllByClinicIdOrderByCreatedAtAsc(eq(clinicId)))
+        whenever(serviceRepository.findAllByOrderByCreatedAtAsc())
             .thenReturn(listOf(service()))
 
         mockMvc.perform(get("/api/tenant/services"))
@@ -68,11 +55,8 @@ class ServiceControllerTest @Autowired constructor(
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `create with valid request should return 201`() {
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-        whenever(serviceRepository.findAllByClinicIdOrderByCreatedAtAsc(eq(clinicId)))
+        whenever(serviceRepository.findAllByOrderByCreatedAtAsc())
             .thenReturn(emptyList())
-        whenever(clinicEntityRepository.findById(eq(clinicId)))
-            .thenReturn(Optional.of(ClinicEntity(id = clinicId, name = "Clinic")))
         whenever(serviceRepository.save(any())).thenAnswer { it.arguments[0] }
 
         val req = ServiceRequest(name = "Consultation", code = "CONS", price = BigDecimal.TEN)
@@ -90,8 +74,6 @@ class ServiceControllerTest @Autowired constructor(
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `create with blank name should return 400`() {
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-
         val req = ServiceRequest(name = "", code = "CONS")
 
         mockMvc.perform(
@@ -107,8 +89,7 @@ class ServiceControllerTest @Autowired constructor(
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `create duplicate should return 400`() {
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-        whenever(serviceRepository.findAllByClinicIdOrderByCreatedAtAsc(eq(clinicId)))
+        whenever(serviceRepository.findAllByOrderByCreatedAtAsc())
             .thenReturn(listOf(service(name = "Consultation", code = "CONS")))
 
         val req = ServiceRequest(name = "Consultation", code = "OTHER")
@@ -127,9 +108,8 @@ class ServiceControllerTest @Autowired constructor(
     @WithMockUser(roles = ["ADMIN"])
     fun `update should return 200 when found`() {
         val id = UUID.randomUUID()
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-        whenever(serviceRepository.findByIdAndClinicId(eq(id), eq(clinicId))).thenReturn(service(id = id))
-        whenever(serviceRepository.findAllByClinicIdOrderByCreatedAtAsc(eq(clinicId)))
+        whenever(serviceRepository.findById(eq(id))).thenReturn(Optional.of(service(id = id)))
+        whenever(serviceRepository.findAllByOrderByCreatedAtAsc())
             .thenReturn(listOf(service(id = id)))
         whenever(serviceRepository.save(any())).thenAnswer { it.arguments[0] }
 
@@ -149,8 +129,7 @@ class ServiceControllerTest @Autowired constructor(
     @WithMockUser(roles = ["ADMIN"])
     fun `update should return 404 when not found`() {
         val id = UUID.randomUUID()
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-        whenever(serviceRepository.findByIdAndClinicId(eq(id), eq(clinicId))).thenReturn(null)
+        whenever(serviceRepository.findById(eq(id))).thenReturn(Optional.empty())
 
         val req = ServiceRequest(name = "Updated", code = "UPD")
 
@@ -167,8 +146,7 @@ class ServiceControllerTest @Autowired constructor(
     @WithMockUser(roles = ["ADMIN"])
     fun `delete should return 204 when found`() {
         val id = UUID.randomUUID()
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-        whenever(serviceRepository.findByIdAndClinicId(eq(id), eq(clinicId))).thenReturn(service(id = id))
+        whenever(serviceRepository.findById(eq(id))).thenReturn(Optional.of(service(id = id)))
 
         mockMvc.perform(delete("/api/tenant/services/$id").with(csrf()))
             .andExpect(status().isNoContent)
@@ -178,8 +156,7 @@ class ServiceControllerTest @Autowired constructor(
     @WithMockUser(roles = ["ADMIN"])
     fun `delete should return 404 when not found`() {
         val id = UUID.randomUUID()
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-        whenever(serviceRepository.findByIdAndClinicId(eq(id), eq(clinicId))).thenReturn(null)
+        whenever(serviceRepository.findById(eq(id))).thenReturn(Optional.empty())
 
         mockMvc.perform(delete("/api/tenant/services/$id").with(csrf()))
             .andExpect(status().isNotFound)
