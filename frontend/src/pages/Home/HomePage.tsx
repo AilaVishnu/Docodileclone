@@ -7,7 +7,6 @@ import { HomeView } from "./HomeView";
 import { StatsPage } from "../Stats";
 import { PharmacyView } from "../Pharmacy";
 import { BillsView } from "../Bills";
-import { sampleBills } from "../Bills/sampleBills";
 import { SettingsPage, DEFAULT_SETTINGS_SECTION, SettingsSection } from "../Settings";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
@@ -319,8 +318,8 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
       case "Settings":
         return <SettingsPage section={settingsSection} />;
       case "Billing":
-        // TODO: swap sampleBills for a clinic-wide bills fetch once /api/bills exists.
-        return <BillsView bills={sampleBills} />;
+        // Self-fetches clinic-wide bills from /api/tenant/bills for its period.
+        return <BillsView />;
       default:
         return (
           <div>
