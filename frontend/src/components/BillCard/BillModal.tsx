@@ -269,15 +269,10 @@ export function BillModal({
     return next.some(isTrailing) ? next : [...next, emptyLine()];
   });
 
-  // Roll the patient's outstanding past due into this bill as a `pastdue` line.
-  const addPastDue = () => {
-    setLines((ls) => {
-      const filled = ls.filter((l) => !isTrailing(l));
-      const line: Line = { id: nextId.current++, name: "Previous due", qty: 1, unit: pastDue, gst: 0, disc: 0, discUnit: "₹", kind: "pastdue", inStock: false };
-      return [...filled, line, emptyLine()];
-    });
-    setPastDueAdded(true);
-  };
+  // Roll the patient's outstanding past due into this bill — shown as a Bill
+  // summary line (not an editable item); on Charge it rides along as a `pastdue`
+  // line so the server folds it into the total and clears the old dues.
+  const addPastDue = () => setPastDueAdded(true);
 
   // Discount per line is either a flat ₹ amount or a % of that line's subtotal.
   const discAmt = (l: Line) => (l.discUnit === "%" ? (l.qty * l.unit * (l.disc || 0)) / 100 : (l.disc || 0));
@@ -307,8 +302,10 @@ export function BillModal({
   // bill total exceeds it becomes due — Received + Balance update live as the
   // amount is typed. Explicit refunds aren't part of creating a bill.
   const paidEntered = isWaived ? 0 : payments.reduce((s, p) => s + (p.amount === "" ? 0 : Number(p.amount)), 0);
-  const received = isWaived ? 0 : Math.min(paidEntered, finalAmt);
-  const balance = isWaived ? 0 : Math.max(0, finalAmt - paidEntered);
+  // Current bill + any carried past due = the full amount owed this visit.
+  const dueTotal = finalAmt + (pastDueAdded ? pastDue : 0);
+  const received = isWaived ? 0 : Math.min(paidEntered, dueTotal);
+  const balance = isWaived ? 0 : Math.max(0, dueTotal - paidEntered);
   const refund = 0;
 
   // Auto-fill the single payment line with the full amount to collect, so the
@@ -409,6 +406,11 @@ export function BillModal({
     const lineItems = lines
       .filter((l) => !isTrailing(l))
       .map((l) => ({ name: l.name, qty: l.qty, unit: l.unit, gst: l.gst, disc: l.disc, discUnit: l.discUnit, kind: l.kind ?? "medicine", inStock: l.inStock !== false }));
+    // The carried past due rides along as a `pastdue` line (not an editable row)
+    // so the server folds it into the total + clears the patient's old dues.
+    if (pastDueAdded && pastDue > 0) {
+      lineItems.push({ name: "Previous due", qty: 1, unit: pastDue, gst: 0, disc: 0, discUnit: "₹", kind: "pastdue", inStock: false });
+    }
     onBilled?.({
       method: methodLabel,
       pharmacyAmount: isWaived ? 0 : pharmacyTotal,
@@ -490,11 +492,23 @@ export function BillModal({
             </div>
           )}
           {sumRow("Total billed", inr(billed))}
-          {sumRow("Discount", `− ${inr(discount)}`)}
-          {sumRow("Tax", inr(tax))}
+          {/* A waive is a full write-off → show it as a 100% discount so the
+              Final amount drops cleanly to ₹0 (Total − 100% = 0). */}
+          {sumRow(isWaived ? "Discount (100%)" : "Discount", `− ${inr(isWaived ? billed : discount)}`)}
+          {sumRow("Tax", inr(isWaived ? 0 : tax))}
           {sumRow("Final amount", inr(displayFinal), true)}
           {sumRow("Received", inr(received))}
           {sumRow("Refund", `− ${inr(refund)}`)}
+          {pastDueAdded && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: fonts.size.m, fontFamily: fonts.family.primary }}>
+              <span style={{ color: colors.neutral600 }}>Past Due Amount</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: spacing.xs, color: colors.neutral900 }}>
+                {inr(pastDue)}
+                <button type="button" onClick={() => setPastDueAdded(false)} aria-label="Remove past due"
+                  style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral500, fontSize: fonts.size.m, lineHeight: 1, padding: 0 }}>✕</button>
+              </span>
+            </div>
+          )}
         </>
       }
       payment={
