@@ -3,27 +3,25 @@ package com.example.docodile.service
 import com.example.docodile.domain.AuditAction
 import com.example.docodile.domain.Patient
 import com.example.docodile.repo.PatientRepository
-import com.example.docodile.repo.RevokedTokenRepository
 import com.example.docodile.repo.UserSessionRepository
+import com.example.docodile.tenancy.TenantTaskExecutor
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.isNull
+import org.mockito.kotlin.whenever
 import org.mockito.Mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
-import java.time.Instant
 import java.util.UUID
 
 @ExtendWith(MockitoExtension::class)
 class PurgeJobTest {
-
-    @Mock
-    private lateinit var revokedTokenRepository: RevokedTokenRepository
 
     @Mock
     private lateinit var userSessionRepository: UserSessionRepository
@@ -34,18 +32,20 @@ class PurgeJobTest {
     @Mock
     private lateinit var auditService: AuditService
 
-    private fun purgeJob() = PurgeJob(
-        revokedTokenRepository, userSessionRepository, patientRepository, auditService,
-    )
+    @Mock
+    private lateinit var perClinic: TenantTaskExecutor
 
-    @Test
-    fun `purgeExpiredRevokedTokens deletes expired revoked tokens`() {
-        `when`(revokedTokenRepository.deleteExpired(any())).thenReturn(0)
-
-        purgeJob().purgeExpiredRevokedTokens()
-
-        verify(revokedTokenRepository).deleteExpired(any())
+    // Run the per-clinic work block inline so the job's logic is exercised.
+    @BeforeEach
+    fun stubPerClinic() {
+        whenever(perClinic.forEachActiveClinic(any(), any())).thenAnswer {
+            @Suppress("UNCHECKED_CAST") (it.arguments[1] as () -> Unit).invoke(); null
+        }
     }
+
+    private fun purgeJob() = PurgeJob(
+        userSessionRepository, patientRepository, auditService, perClinic,
+    )
 
     @Test
     fun `purgeExpiredSessions deletes expired sessions`() {
@@ -69,8 +69,6 @@ class PurgeJobTest {
             isNull(),
             eq("PENDING_REVIEW"),
             isNull(),
-            isNull(),
-            isNull(),
             any(),
         )
     }
@@ -81,9 +79,7 @@ class PurgeJobTest {
 
         purgeJob().reportPurgeablePatients()
 
-        verify(auditService, times(0)).log(
-            any(),
-            any(),
+        verify(auditService, never()).log(
             any(),
             any(),
             any(),

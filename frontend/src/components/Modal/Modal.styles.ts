@@ -19,7 +19,7 @@ export const styles: Record<string, CSSProperties> = {
 
   content: {
     backgroundColor: colors.active.shade200,
-    borderRadius: radii.primary,
+    borderRadius: radii["2xl"],
     padding: spacing["2xl"], // was 24, bumped to 32 for more generous interior
     minWidth: 420,
     maxWidth: "90vw",

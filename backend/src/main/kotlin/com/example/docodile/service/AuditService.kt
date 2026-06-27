@@ -18,10 +18,9 @@ class AuditService(
     private val objectMapper: ObjectMapper,
 ) {
     /**
-     * Log a security or data event.
-     *
-     * actorId / tenantId / clinicId default to the current authenticated user
-     * when omitted — pass them explicitly for unauthenticated events (e.g. login
+     * Log a security or data event. The clinic/tenant is implicit in the schema
+     * the row is written to. actorId defaults to the current authenticated user
+     * when omitted — pass it explicitly for unauthenticated events (e.g. login
      * attempts) where the security context is not yet populated.
      */
     fun log(
@@ -30,15 +29,11 @@ class AuditService(
         entityId: UUID? = null,
         outcome: String = "SUCCESS",
         actorId: UUID? = null,
-        tenantId: UUID? = null,
-        clinicId: UUID? = null,
         metadata: Map<String, Any?> = emptyMap(),
     ) {
         val request = currentRequest()
         val entry = AuditLog(
-            actorId  = actorId  ?: runCatching { currentUser.userId()   }.getOrNull(),
-            tenantId = tenantId ?: runCatching { currentUser.tenantId() }.getOrNull(),
-            clinicId = clinicId ?: runCatching { currentUser.clinicIdOrNull() }.getOrNull(),
+            actorId  = actorId ?: runCatching { currentUser.userId() }.getOrNull(),
             action   = action.name,
             entityType = entityType,
             entityId   = entityId,

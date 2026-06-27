@@ -1,10 +1,10 @@
 package com.example.docodile.web
 
-import com.example.docodile.domain.CorrectionRequest
-import com.example.docodile.domain.DeletionRequest
-import com.example.docodile.domain.DeletionRequestStatus
-import com.example.docodile.service.CorrectionRequestService
-import com.example.docodile.service.DeletionRequestService
+import com.example.docodile.domain.DataSubjectRequest
+import com.example.docodile.service.DataSubjectRequestService
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Size
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -13,9 +13,6 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
-import jakarta.validation.Valid
-import jakarta.validation.constraints.NotBlank
-import jakarta.validation.constraints.Size
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
@@ -32,43 +29,38 @@ data class ReviewCorrectionRequest(val approve: Boolean, @field:Size(max = 1000)
 @RestController
 @RequestMapping("/api/data-requests")
 class DataWorkflowController(
-    private val deletionService: DeletionRequestService,
-    private val correctionService: CorrectionRequestService,
+    private val dataSubjectRequestService: DataSubjectRequestService,
 ) {
 
     // ── Deletion workflow ──────────────────────────────────────────────────────
 
     @GetMapping("/deletions")
     @PreAuthorize("hasAnyRole('ADMIN')")
-    fun listDeletions(): List<DeletionRequest> = deletionService.list()
+    fun listDeletions(): List<DataSubjectRequest> = dataSubjectRequestService.listDeletions()
 
     @PostMapping("/deletions")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
-    fun submitDeletion(@Valid @RequestBody req: SubmitDeletionRequest): ResponseEntity<DeletionRequest> =
-        ResponseEntity.status(201).body(deletionService.submit(req.patientId, req.reason))
+    fun submitDeletion(@Valid @RequestBody req: SubmitDeletionRequest): ResponseEntity<DataSubjectRequest> =
+        ResponseEntity.status(201).body(dataSubjectRequestService.submitDeletion(req.patientId, req.reason))
 
     @PostMapping("/deletions/{id}/transition")
     @PreAuthorize("hasRole('ADMIN')")
     fun transitionDeletion(
         @PathVariable id: UUID,
         @RequestBody req: TransitionRequest,
-    ): DeletionRequest {
-        val status = runCatching { DeletionRequestStatus.valueOf(req.status.uppercase()) }
-            .getOrElse { throw IllegalArgumentException("Unknown status: ${req.status}") }
-        return deletionService.transition(id, status, req.rejectionNote)
-    }
+    ): DataSubjectRequest = dataSubjectRequestService.transitionDeletion(id, req.status.uppercase(), req.rejectionNote)
 
     // ── Correction workflow ────────────────────────────────────────────────────
 
     @GetMapping("/corrections")
     @PreAuthorize("hasAnyRole('ADMIN')")
-    fun listCorrections(): List<CorrectionRequest> = correctionService.list()
+    fun listCorrections(): List<DataSubjectRequest> = dataSubjectRequestService.listCorrections()
 
     @PostMapping("/corrections")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
-    fun submitCorrection(@Valid @RequestBody req: SubmitCorrectionRequest): ResponseEntity<CorrectionRequest> =
+    fun submitCorrection(@Valid @RequestBody req: SubmitCorrectionRequest): ResponseEntity<DataSubjectRequest> =
         ResponseEntity.status(201).body(
-            correctionService.submit(req.patientId, req.fieldName, req.oldValue, req.newValue)
+            dataSubjectRequestService.submitCorrection(req.patientId, req.fieldName, req.oldValue, req.newValue)
         )
 
     @PostMapping("/corrections/{id}/review")
@@ -76,7 +68,7 @@ class DataWorkflowController(
     fun reviewCorrection(
         @PathVariable id: UUID,
         @Valid @RequestBody req: ReviewCorrectionRequest,
-    ): CorrectionRequest = correctionService.review(id, req.approve, req.rejectionNote)
+    ): DataSubjectRequest = dataSubjectRequestService.reviewCorrection(id, req.approve, req.rejectionNote)
 
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleBadRequest(e: IllegalArgumentException): ResponseEntity<Map<String, String>> =

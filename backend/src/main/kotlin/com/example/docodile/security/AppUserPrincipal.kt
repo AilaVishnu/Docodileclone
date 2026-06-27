@@ -7,8 +7,7 @@ import java.util.UUID
 
 class AppUserPrincipal(
     val userId: UUID,
-    val tenantId: UUID,
-    val clinicId: UUID?,
+    val schema: String,
     private val role: String,
     private val email: String,
     private val passwordHash: String,

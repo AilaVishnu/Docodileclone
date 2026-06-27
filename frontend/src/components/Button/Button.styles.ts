@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts, radii, spacing } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   base: {
@@ -8,7 +8,7 @@ export const styles: Record<string, CSSProperties> = {
     justifyContent: "center",
     gap: 4,
     borderRadius: radii.pill,
-    borderWidth: 1.5,
+    borderWidth: strokes.s,
     borderStyle: "solid",
     padding: "8px 16px",
     fontWeight: fonts.weight.regular,
@@ -23,28 +23,30 @@ export const styles: Record<string, CSSProperties> = {
     flexShrink: 0,
   },
 
-  // Button text uses STATIC control sizes (fonts.control.*) so proportions
-  // don't drift at larger viewports. See theme.ts `fonts.control` comment.
+  // Button text uses STATIC control sizes within a breakpoint, but steps
+  // down at <1440 via CSS vars (see globals.css --btn-sm-h, --btn-md-h,
+  // --btn-fs). 1440 baseline preserved: --btn-sm-h:40, --btn-md-h:42,
+  // --btn-fs:16. Below 1440: 32 / 34 / 14.
   smIcon: {
-    fontSize: fonts.control.md,
-    height: 40,
+    fontSize: "var(--btn-fs)",
+    height: "var(--btn-sm-h)",
     padding: spacing.xs
   },
 
   mdIcon: {
-    fontSize: fonts.control.md,
-    height: 42,
+    fontSize: "var(--btn-fs)",
+    height: "var(--btn-md-h)",
     padding: spacing.xs
   },
 
   sm: {
-    fontSize: fonts.control.md,
-    height: 40
+    fontSize: "var(--btn-fs)",
+    height: "var(--btn-sm-h)"
   },
 
   md: {
-    fontSize: fonts.control.md,
-    height: 42,
+    fontSize: "var(--btn-fs)",
+    height: "var(--btn-md-h)",
   },
 };
 
@@ -61,9 +63,9 @@ export const variants = {
       color: colors.neutral100,
     },
     disabled: {
-      backgroundColor: colors.neutralAlphaBlack,
-      borderColor: colors.neutralAlphaBlack,
-      color: colors.neutral300,
+      backgroundColor: colors.neutral200,
+      borderColor: colors.neutral200,
+      color: colors.neutral500,
     },
   },
 
@@ -96,9 +98,9 @@ export const variants = {
       color: colors.neutral100,
     },
     disabled: {
-      backgroundColor: colors.active.shade300,
-      borderColor: colors.active.shade300,
-      color: colors.neutral100,
+      backgroundColor: colors.neutral200,
+      borderColor: colors.neutral200,
+      color: colors.neutral500,
     },
   },
 
@@ -114,26 +116,29 @@ export const variants = {
       color: colors.active.shade700,
     },
     disabled: {
-      borderColor: colors.active.shade400,
-      color: colors.active.shade400,
+      borderColor: colors.neutral400,
+      color: colors.neutral400,
     },
   },
 
+  // secondary — solid green CTA (e.g. "New Prescription"). Resting at
+  // secondary/700, darkening to secondary/800 on hover (mirrors how primary
+  // darkens). Merged from the old secondary/secondarySolid pair (2026-06-11).
   secondary: {
     default: {
-      backgroundColor: colors.secondary800,
-      borderColor: colors.secondary800,
-      color: colors.neutral100,
-    },
-    hover: {
       backgroundColor: colors.secondary700,
       borderColor: colors.secondary700,
       color: colors.neutral100,
     },
-    disabled: {
-      backgroundColor: colors.secondary300,
-      borderColor: colors.secondary300,
+    hover: {
+      backgroundColor: colors.secondary800,
+      borderColor: colors.secondary800,
       color: colors.neutral100,
+    },
+    disabled: {
+      backgroundColor: colors.neutral200,
+      borderColor: colors.neutral200,
+      color: colors.neutral500,
     },
   },
 
@@ -149,25 +154,29 @@ export const variants = {
       color: colors.secondary700,
     },
     disabled: {
-      borderColor: colors.secondary400,
-      color: colors.secondary400,
+      borderColor: colors.neutral400,
+      color: colors.neutral400,
     },
   },
 
-  dangerLight: {
+  // danger — solid red CTA for destructive/irreversible actions (cancel
+  // appointment, end session, remove staff). Used by ConfirmDialog destructive.
+  danger: {
     default: {
-      borderColor: colors.red200,
-      color: colors.red200,
-      backgroundColor: "transparent",
+      backgroundColor: colors.red100,
+      borderColor: colors.red100,
+      color: colors.neutral100,
     },
     hover: {
-      backgroundColor: colors.redAlpha10,
+      backgroundColor: colors.red200,
       borderColor: colors.red200,
-      color: colors.red200,
+      color: colors.neutral100,
     },
     disabled: {
-      borderColor: colors.red100,
-      color: colors.red100,
+      backgroundColor: colors.neutral200,
+      borderColor: colors.neutral200,
+      color: colors.neutral500,
     },
   },
+
 };

@@ -1,15 +1,14 @@
 import React, { useState, useCallback } from "react";
 import { colors, fonts } from "../../styles/theme";
 import { ChatPanel } from "./ChatPanel";
-import { ReactComponent as ChatIcon } from "../../assets/icons/chat-dots.svg";
+import { Icon } from "../Icon";
 
 type Props = {
-  clinicId: string;
   currentUserId: string;
   currentUserName: string;
 };
 
-export function ChatBubble({ clinicId, currentUserId, currentUserName }: Props) {
+export function ChatBubble({ currentUserId, currentUserName }: Props) {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
 
@@ -17,7 +16,7 @@ export function ChatBubble({ clinicId, currentUserId, currentUserName }: Props) 
     setUnread(open ? 0 : total);
   }, [open]);
 
-  if (!clinicId || !currentUserId) return null;
+  if (!currentUserId) return null;
 
   return (
     <div style={styles.root}>
@@ -29,7 +28,6 @@ export function ChatBubble({ clinicId, currentUserId, currentUserName }: Props) 
       */}
       <div style={{ ...styles.panelWrapper, display: open ? "block" : "none" }}>
         <ChatPanel
-          clinicId={clinicId}
           currentUserId={currentUserId}
           currentUserName={currentUserName}
           onUnreadChange={handleUnreadChange}
@@ -43,7 +41,7 @@ export function ChatBubble({ clinicId, currentUserId, currentUserName }: Props) 
         title="Clinic Chat"
         aria-label="Open clinic chat"
       >
-        <ChatIcon width={22} height={22} style={{ color: colors.neutral100 }} />
+        <Icon name="chat-dots" size={22} tone="inverse" />
         {unread > 0 && !open && (
           <div style={styles.badge}>{unread > 99 ? "99+" : unread}</div>
         )}

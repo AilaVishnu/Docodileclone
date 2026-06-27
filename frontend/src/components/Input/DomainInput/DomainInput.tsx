@@ -5,11 +5,14 @@ import { API_BASE_URL } from "../../../apiConfig";
 
 type DomainInputProps = {
   value: string;
-  onChange: (value: string) => void;
+  onChange?: (value: string) => void;
   placeholder?: string;
   suffix?: string;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   disabled?: boolean;
+  /** Display-only (e.g. on a ClinicCard): the input bg goes transparent and
+   *  the availability check is skipped. */
+  readOnly?: boolean;
 };
 
 export function DomainInput({
@@ -19,12 +22,13 @@ export function DomainInput({
   suffix = ".docodile.app",
   onKeyDown,
   disabled = false,
+  readOnly = false,
 }: DomainInputProps) {
   const [availability, setAvailability] = useState<"idle" | "checking" | "available" | "taken">("idle");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!value || value.trim().length < 2 || disabled) {
+    if (!value || value.trim().length < 2 || disabled || readOnly) {
       setAvailability("idle");
       return;
     }
@@ -56,7 +60,7 @@ export function DomainInput({
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [value, disabled]);
+  }, [value, disabled, readOnly]);
 
   const statusText =
     availability === "checking" ? "Checking..." :
@@ -69,26 +73,37 @@ export function DomainInput({
     availability === "taken" ? colors.red200 :
     colors.neutral700;
 
-  const borderColor =
-    availability === "taken" ? colors.red200 :
-    availability === "available" ? colors.secondary700 :
-    undefined;
+  // "taken" is the invalid state — match the canonical Field error look:
+  // red200 border + a soft redAlpha10 fill. "available" is a non-error accent
+  // (secondary700 border only).
+  const stateStyle: React.CSSProperties =
+    availability === "taken"
+      ? { borderColor: colors.red200, backgroundColor: colors.redAlpha10 }
+      : availability === "available"
+      ? { borderColor: colors.secondary700 }
+      : {};
 
   return (
     <div>
       <div style={{
         ...styles.container,
         ...(disabled ? { opacity: 0.6, cursor: "not-allowed" } : {}),
-        ...(borderColor ? { borderColor } : {}),
+        ...stateStyle,
       }}>
         <input
           type="text"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => onChange?.(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
           disabled={disabled}
-          style={{ ...styles.input, ...(disabled ? { cursor: "not-allowed" } : {}) }}
+          readOnly={readOnly}
+          style={{
+            ...styles.input,
+            // editable → white input; read-only → transparent (shows the card).
+            backgroundColor: readOnly ? "transparent" : colors.neutral100,
+            ...(disabled ? { cursor: "not-allowed" } : {}),
+          }}
         />
         <div style={styles.suffix}>{suffix}</div>
       </div>

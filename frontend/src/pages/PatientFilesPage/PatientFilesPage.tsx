@@ -1,14 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { colors, fonts, radii, spacing } from "../../styles/theme";
+import { colors, fonts, radii, spacing, fluidSpacing } from "../../styles/theme";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { usePatients, Patient } from "../../hooks/usePatients";
 import { useDoctors } from "../../hooks/useDoctors";
-import { API_BASE_URL } from "../../apiConfig";
-import { fetchPatientSummary, generatePatientSummary, parsePatientSummary, PatientSummary } from "../../api/ai";
-import { ReactComponent as SearchIcon } from "../../assets/search.svg";
-import { ReactComponent as PrescriptionIconSVG } from "../../assets/prescription.svg";
+import { Icon } from "../../components/Icon";
 import { Select } from "../../components/Input/Select/Select";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
-import { styles as queueStyles } from "../../components/AppointmentQueue/AppointmentQueue.styles";
+import { tableStyles as queueStyles } from "./PatientFilesPage.styles";
 import { setPendingSessionNav } from "../../components/TopNav/SessionTrayButton";
 import { searchPatientContent, type PatientContentMatch } from "../../api/patientSearch";
 import type { NavTab } from "../../components/SideNav";
@@ -46,44 +44,16 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
   // Auto-open when any filter is set so users see what's currently applied.
   const hasActiveFilter = department !== ANY || doctorId !== ANY || dateFrom != null || dateTo != null || sort !== "";
   const [filtersOpen, setFiltersOpen] = useState(false);
-  // Split-pane: left index lets you scan, right pane shows the selected file
-  // in full. selection auto-falls to the first visible patient when the
-  // current one is filtered out.
-  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
 
-  // When navigated here with a specific patient (e.g. from the queue's
-  // "View Patient File"), jump straight to that patient's right-pane.
-  useEffect(() => {
-    if (initialSelectedId) setSelectedId(initialSelectedId);
-  }, [initialSelectedId]);
-  // Departments come from the clinic's configured list (set in Build Your
-  // Clinic), not from staff data. That way the filter shows every
-  // department the clinic supports even before a doctor has been added to
-  // it. Picking a department then narrows the doctor dropdown to staff
-  // tagged with that department.
-  const [clinicDepartments, setClinicDepartments] = useState<string[]>([]);
-  useEffect(() => {
-    const token = localStorage.getItem("docodile_token");
-    const clinicId = localStorage.getItem("docodile_clinic_id");
-    if (!token) return;
-    let cancelled = false;
-    fetch(`${API_BASE_URL}/api/tenant/clinics`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => (res.ok ? res.json() : []))
-      .then((all: Array<{ id: string; speciality?: string }>) => {
-        if (cancelled) return;
-        const active = clinicId ? all.find((c) => c.id === clinicId) : all[0];
-        const list = (active?.speciality || "")
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean);
-        setClinicDepartments(list);
-      })
-      .catch(() => { /* fall back to empty list */ });
-    return () => { cancelled = true; };
-  }, []);
-  const departments = clinicDepartments;
+  // Departments are derived from the clinic's doctors (already fetched above).
+  // Unique, non-null department values from the doctor list.
+  const departments = useMemo(() => {
+    const seen = new Set<string>();
+    for (const d of doctors) {
+      if (d.department) seen.add(d.department);
+    }
+    return Array.from(seen).sort();
+  }, [doctors]);
 
   const doctorOptions = useMemo(() => {
     return department === ANY
@@ -179,28 +149,6 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
     return () => io.disconnect();
   }, [limit, visible.length]);
 
-  // Keep selection valid as filters change. If the current selection vanishes
-  // from `visible`, fall back to the first item.
-  useEffect(() => {
-    if (visible.length === 0) {
-      setSelectedId(null);
-      return;
-    }
-    if (!selectedId || !visible.some((p) => p.id === selectedId)) {
-      setSelectedId(visible[0].id);
-    }
-  }, [visible, selectedId]);
-
-  const selectedPatient = visible.find((p) => p.id === selectedId) ?? null;
-
-  // Select from the list AND jump back to the top, so the chosen patient's
-  // file + action buttons are visible regardless of how far the list was
-  // scrolled. Used only for explicit row clicks (not auto-selection).
-  const handleSelect = (id: string) => {
-    setSelectedId(id);
-    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   const handleOpen = (patient: Patient, opts?: { initialAction?: number }) => {
     // Record where the doctor came from so the Prescription page's Back
     // button can route them back to Patient Files rather than dumping
@@ -218,16 +166,13 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
 
   return (
     <div ref={topRef} style={styles.container}>
-      <div style={styles.headerRow}>
-        <h1 style={styles.title}>Patient Files</h1>
-      </div>
+      <PageHeader title="Patient Files" />
 
-      <div style={styles.layout}>
-        {/* LEFT — index. Search at top, segment chips, advanced filters
-            collapsed inline, then the patient list. */}
-        <div style={styles.indexPane}>
+      {/* Single centered column: search (with inline filter toggle) → optional
+          filter dropdowns → results list. No right-hand preview. */}
+      <div style={styles.content}>
           <div style={styles.searchBox}>
-            <SearchIcon style={styles.searchIcon} />
+            <Icon name="search" tone="inherit" style={styles.searchIcon} />
             <input
               type="text"
               value={search}
@@ -339,10 +284,10 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
                 </colgroup>
                 <thead>
                   <tr>
-                    <th style={{ ...queueStyles.th, paddingLeft: 8, paddingRight: 8 }}>#</th>
-                    <th style={{ ...queueStyles.th, paddingLeft: 8, paddingRight: 8 }}>Name</th>
-                    <th style={{ ...queueStyles.th, textAlign: "center" }}>Phone</th>
-                    <th style={{ ...queueStyles.th, textAlign: "left" }}>
+                    <th style={{ ...queueStyles.th, paddingTop: 0, paddingLeft: 8, paddingRight: 8 }}>#</th>
+                    <th style={{ ...queueStyles.th, paddingTop: 0, paddingLeft: 8, paddingRight: 8 }}>Name</th>
+                    <th style={{ ...queueStyles.th, paddingTop: 0, textAlign: "center" }}>Phone</th>
+                    <th style={{ ...queueStyles.th, paddingTop: 0, textAlign: "left" }}>
                       {search.trim() ? "Match" : "Email"}
                     </th>
                   </tr>
@@ -353,8 +298,8 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
                       key={p.id}
                       patient={p}
                       query={search.trim().toLowerCase()}
-                      selected={p.id === selectedId}
-                      onSelect={() => handleSelect(p.id)}
+                      selected={false}
+                      onSelect={() => handleOpen(p)}
                     />
                   ))}
                 </tbody>
@@ -433,46 +378,9 @@ export function PatientFilesPage({ onNavigate, initialSelectedId }: Props) {
               </div>
             </div>
           )}
-        </div>
-
-        {/* RIGHT — open file. The cabinet visual gets to breathe here, with
-            real content on top of it. */}
-        <div style={styles.openPane}>
-          {selectedPatient ? (
-            <OpenFile
-              patient={selectedPatient}
-              onOpenChart={() => handleOpen(selectedPatient)}
-              onOpenBills={() => handleOpen(selectedPatient, { initialAction: 3 })}
-            />
-          ) : (
-            <div style={styles.openEmpty}>Select a patient to view their file</div>
-          )}
-        </div>
       </div>
     </div>
   );
-}
-
-// ─── One patient file ───────────────────────────────────────────────────────
-
-type Tone = "soft" | "warn" | "info";
-type FileTag = { label: string; tone: Tone };
-
-function tagsFor(p: Patient): FileTag[] {
-  const out: FileTag[] = [];
-  if (p.lastVisitDate == null) {
-    out.push({ label: "New", tone: "info" });
-  } else {
-    const days = Math.floor((Date.now() - new Date(p.lastVisitDate).getTime()) / 86400000);
-    if (days <= 7) out.push({ label: "Recent", tone: "soft" });
-    else if (days >= 180) out.push({ label: "Stale", tone: "warn" });
-  }
-  if (p.age != null) {
-    const years = Math.floor(p.age / 12);
-    if (years < 13) out.push({ label: "Pediatric", tone: "info" });
-    else if (years >= 60) out.push({ label: "Senior", tone: "info" });
-  }
-  return out;
 }
 
 
@@ -512,21 +420,21 @@ function IndexRow({
     >
       <td style={queueStyles.serialCell}>{code}</td>
       <td style={queueStyles.nameCell}>
+        {/* "<name> - <gender> <age>", all one colour/size (e.g. "Ramesh - M 64"). */}
         <div style={queueStyles.nameInner}>
-          <span style={queueStyles.namePrimary}>{patient.name}</span>
-          {ageShort !== "—" && (
-            <span style={queueStyles.nameMeta}>
-              <span style={queueStyles.nameMetaDot}>|</span>
-              <span>{ageShort}</span>
-            </span>
-          )}
+          <span style={queueStyles.namePrimary}>
+            {patient.name}{ageShort !== "—" ? ` - ${ageShort}` : ""}
+          </span>
         </div>
       </td>
       <td style={{ ...queueStyles.td, textAlign: "center", color: phone === "—" ? colors.neutral400 : undefined }}>{phone}</td>
       <td style={{ ...queueStyles.td, textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {query ? (
           matchField ? (
-            <span style={{ ...styles.tag, ...TAG_TONES.info }}>matched: {matchField}</span>
+            <span>
+              <span style={{ color: colors.neutral500 }}>{matchField.field} · </span>
+              <HighlightSnippet value={matchField.value} query={query} />
+            </span>
           ) : null
         ) : (
           <span style={{ color: email === "—" ? colors.neutral400 : undefined }}>{email}</span>
@@ -545,12 +453,13 @@ function IndexRow({
 // Backend follow-up: when a /api/patients/search?q= endpoint lands that joins
 // visit notes / prescriptions / treatments / services, replace the body of
 // this function with a snippet from the response (e.g. "fever, amoxicillin").
-type MatchField = "name" | "phone" | "email" | "code";
-function matchesQuery(p: Patient, q: string): MatchField | null {
-  if (p.name.toLowerCase().includes(q)) return "name";
-  if ((p.phone ?? "").toLowerCase().includes(q)) return "phone";
-  if ((p.email ?? "").toLowerCase().includes(q)) return "email";
-  if (patientCode(p).toLowerCase().includes(q)) return "code";
+type MatchField = "name" | "phone" | "email" | "ID";
+type Match = { field: MatchField; value: string };
+function matchesQuery(p: Patient, q: string): Match | null {
+  if (p.name.toLowerCase().includes(q)) return { field: "name", value: p.name };
+  if ((p.phone ?? "").toLowerCase().includes(q)) return { field: "phone", value: p.phone! };
+  if ((p.email ?? "").toLowerCase().includes(q)) return { field: "email", value: p.email! };
+  if (patientCode(p).toLowerCase().includes(q)) return { field: "ID", value: patientCode(p) };
   return null;
 }
 
@@ -574,9 +483,9 @@ function HighlightSnippet({ value, query }: { value: string; query: string }) {
 // matches stroke weight of TopNav icons (1.5).
 function FunnelIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
-        d="M2 3h14l-5.5 7v5l-3-1.5V10L2 3z"
+        d="M3 5h18l-7 8v7l-4-2v-5L3 5z"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
@@ -622,7 +531,7 @@ function DateTrigger({
       style={{
         ...styles.dateTrigger,
         borderColor: active || filled ? colors.neutral900 : colors.neutral300,
-        color: filled ? colors.neutral900 : colors.neutral500,
+        color: filled ? colors.neutral900 : colors.neutral400,
       }}
     >
       <span>
@@ -644,331 +553,13 @@ function DateTrigger({
   );
 }
 
-// ─── Open file (right pane) ─────────────────────────────────────────────────
-//
-// The folder visual fills the pane, with rich content on top: code+name as
-// the heading, AI summary, smart chips, contact/demographics, recent visits
-// as cards, action buttons. This is where the cabinet design gets to breathe.
-function OpenFile({ patient, onOpenChart, onOpenBills }: { patient: Patient; onOpenChart: () => void; onOpenBills?: () => void }) {
-  const code = patientCode(patient);
-  const ageShort = genderAgeShort(patient);
-  const metaLine = [
-    ageShort !== "—" ? `(${ageShort})` : null,
-    patient.phone || null,
-  ]
-    .filter(Boolean)
-    .join("  ");
-
-
-  return (
-    <div style={styles.openFile}>
-      <svg
-        viewBox="0 0 1051 426"
-        preserveAspectRatio="none"
-        style={styles.openFolderShape}
-        aria-hidden
-      >
-        <path
-          d="M290.227 0.510742C295.422 0.5108 300.099 3.66211 302.049 8.47754L313.609 37.0215C315.404 41.4516 319.706 44.3505 324.485 44.3506H1037.55C1044.6 44.3508 1050.31 50.0615 1050.31 57.1055V412C1050.31 419.044 1044.6 424.755 1037.55 424.755H13.2637C6.21959 424.755 0.509766 419.044 0.509766 412V53.543C0.509766 48.4667 4.62486 44.3506 9.70117 44.3506C13.0294 44.3504 16.025 42.3319 17.2744 39.2471L29.7363 8.47754C31.6866 3.6621 36.3632 0.510792 41.5586 0.510742H290.227Z"
-          fill={colors.neutral100}
-          stroke={colors.primary300}
-          strokeWidth="1"
-        />
-      </svg>
-
-      <div style={styles.openBody}>
-        <div style={styles.openContent}>
-          <div style={styles.openHeaderRow}>
-            <Avatar name={patient.name} photoUrl={patient.photoUrl} />
-            <div style={styles.nameBlock}>
-              <h2 style={styles.nameLine}>
-                {code}: {patient.name}
-              </h2>
-              {metaLine && <p style={styles.metaLine}>{metaLine}</p>}
-            </div>
-          </div>
-
-          <div style={styles.summaryCard}>
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-              <h3 style={styles.summaryTitle}>AI Summary</h3>
-              {patient.lastVisitDate && (
-                <span style={{ fontFamily: fonts.family.primary, fontSize: fonts.control.xs, color: colors.neutral500, flexShrink: 0 }}>
-                  Last visit: {new Date(patient.lastVisitDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
-                </span>
-              )}
-            </div>
-            <AIPatientSummary patientId={patient.id} />
-          </div>
-        </div>
-      </div>
-
-      {/* Buttons pinned to the top-right corner of the card, straddling the right edge */}
-      <div style={{ ...styles.iconColumn, position: "absolute", right: "-35px", top: "60px" }}>
-        <IconAction
-          label={patient.phone ? `Call ${patient.phone}` : "No phone on file"}
-          href={patient.phone ? `tel:${patient.phone}` : undefined}
-          onClick={patient.phone ? undefined : () => window.alert("No phone number on file for this patient.")}
-          icon={<PhoneIconSVG style={styles.iconActionGlyph} />}
-        />
-        <IconAction
-          label={patient.email ? `Email ${patient.email}` : "No email on file"}
-          href={patient.email ? `mailto:${patient.email}` : undefined}
-          onClick={patient.email ? undefined : () => window.alert("No email on file for this patient.")}
-          icon={<LetterIconSVG style={styles.iconActionGlyph} />}
-        />
-        <IconAction
-          label="Open chart / book visit"
-          onClick={onOpenChart}
-          tone="secondary"
-          icon={<CalendarIconSVG style={styles.iconActionGlyph} />}
-        />
-        <IconAction
-          label="Open Bills"
-          onClick={onOpenBills}
-          tone="secondary"
-          icon={<BillingIconSVG style={styles.iconActionGlyph} />}
-        />
-      </div>
-    </div>
-  );
-}
-
-// AI-backed patient summary card. On open we only do a cache lookup — no
-// OpenAI call. If a fresh cached summary exists (visit fingerprint matches)
-// we render it; otherwise we show a Generate button so the doctor decides
-// when to spend tokens. Adding/editing a visit invalidates the cache and
-// the Generate button reappears on next open.
-function AIPatientSummary({ patientId }: { patientId: string }) {
-  const [data, setData] = useState<PatientSummary | null>(null);
-  const [generated, setGenerated] = useState(false);
-  const [loading, setLoading] = useState(true);     // initial cache check
-  const [busy, setBusy] = useState(false);          // explicit generation in flight
-  const [error, setError] = useState<string | null>(null);
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-
-  // Cache-only read on mount / patient switch. Never costs tokens.
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
-    fetchPatientSummary(patientId)
-      .then((r) => {
-        setGenerated(r.generated);
-        setUpdatedAt(r.updatedAt);
-        if (r.generated && r.content) {
-          const parsed = parsePatientSummary(r.content);
-          setData(parsed);
-          if (parsed.error) setError(parsed.error);
-        } else {
-          setData(null);
-        }
-      })
-      .catch((e) => setError((e as Error).message))
-      .finally(() => setLoading(false));
-  }, [patientId]);
-
-  const generate = () => {
-    setBusy(true);
-    setError(null);
-    generatePatientSummary(patientId)
-      .then((r) => {
-        setGenerated(r.generated);
-        setUpdatedAt(r.updatedAt);
-        const parsed = parsePatientSummary(r.content);
-        setData(parsed);
-        if (parsed.error) setError(parsed.error);
-      })
-      .catch((e) => setError((e as Error).message))
-      .finally(() => setBusy(false));
-  };
-
-  if (loading) {
-    return <p style={{ ...styles.summaryBody, color: colors.neutral500 }}>Checking…</p>;
-  }
-  // No fresh cached summary → show Generate button.
-  if (!generated) {
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <p style={{ ...styles.summaryBody, color: colors.neutral500 }}>
-          {data ? "Visit data has changed since the last summary." : "No AI summary yet for this patient."}
-        </p>
-        <button
-          type="button"
-          onClick={generate}
-          disabled={busy}
-          style={{
-            alignSelf: "flex-start",
-            background: colors.secondary700,
-            color: colors.neutral100,
-            border: "none",
-            padding: "6px 14px",
-            borderRadius: 999,
-            cursor: busy ? "default" : "pointer",
-            fontSize: fonts.control.xs,
-            opacity: busy ? 0.6 : 1,
-          }}
-        >
-          {busy ? "Generating…" : "Generate AI summary"}
-        </button>
-        {error && <span style={{ fontSize: 11, color: colors.red200 }}>{error}</span>}
-      </div>
-    );
-  }
-  if (!data || (!data.summary && data.activeConditions.length === 0 && data.allergies.length === 0)) {
-    return <p style={{ ...styles.summaryBody, color: colors.neutral500 }}>Not enough visit data yet.</p>;
-  }
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {data.summary && <p style={styles.summaryBody}>{data.summary}</p>}
-      {data.activeConditions.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {data.activeConditions.map((c, i) => (
-            <span key={`c-${i}`} style={{ fontSize: fonts.control.xs, padding: "2px 8px", borderRadius: 999, backgroundColor: colors.primary200, color: colors.neutral900 }}>{c}</span>
-          ))}
-        </div>
-      )}
-      {data.allergies.length > 0 && (
-        <p style={{ ...styles.summaryBody, fontSize: fonts.control.xs }}>
-          <strong>Allergies:</strong> {data.allergies.join(", ")}
-        </p>
-      )}
-      {data.riskFlags.length > 0 && (
-        <ul style={{ margin: 0, paddingLeft: 16 }}>
-          {data.riskFlags.map((r, i) => (
-            <li key={`r-${i}`} style={{ ...styles.summaryBody, color: "#9a4a1c" }}>{r}</li>
-          ))}
-        </ul>
-      )}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: colors.neutral500 }}>
-        <span>AI-generated — verify before clinical decisions.</span>
-        <button
-          type="button"
-          onClick={generate}
-          disabled={busy}
-          style={{ background: "none", border: "none", color: colors.secondary700, cursor: busy ? "default" : "pointer", textDecoration: "underline", padding: 0, fontSize: 11, opacity: busy ? 0.6 : 1 }}
-        >
-          {busy ? "Regenerating…" : `Regenerate${updatedAt ? ` · ${new Date(updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}`}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// Patient avatar — uses the real photo when the backend supplies `photoUrl`,
-// falls back to a circle with the patient's initial otherwise. Image errors
-// (broken URL, 404) gracefully degrade to the initial.
-function Avatar({ name, photoUrl }: { name: string; photoUrl?: string | null }) {
-  const initial = name.trim().charAt(0).toUpperCase() || "?";
-  const [errored, setErrored] = useState(false);
-  const showImage = photoUrl && !errored;
-  return (
-    <div style={styles.avatar} aria-label={name}>
-      {showImage ? (
-        <img
-          src={photoUrl}
-          alt=""
-          style={styles.avatarImg}
-          onError={() => setErrored(true)}
-        />
-      ) : (
-        <span style={styles.avatarInitial}>{initial}</span>
-      )}
-    </div>
-  );
-}
-
-// Square icon-only button used in the right vertical action column. Renders
-// as <a> when an href is given (tel: / mailto:), otherwise <button>.
-//
-// `tone` selects the chip background per Figma node 2441:1552 — communication
-// actions (call/email) use the primary tan; transactional actions (book / bill)
-// use the secondary sage so the two intents are distinguishable at a glance.
-
-function PhoneIconSVG({ style }: { style?: React.CSSProperties }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
-      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.63 3.38a2 2 0 0 1 1.99-2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.72-.72a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
-    </svg>
-  );
-}
-
-function LetterIconSVG({ style }: { style?: React.CSSProperties }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
-      <rect x="2" y="4" width="20" height="16" rx="2" />
-      <polyline points="2,7 12,14 22,7" />
-    </svg>
-  );
-}
-
-function CalendarIconSVG({ style }: { style?: React.CSSProperties }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <line x1="16" y1="2" x2="16" y2="6" />
-      <line x1="8" y1="2" x2="8" y2="6" />
-      <line x1="3" y1="10" x2="21" y2="10" />
-    </svg>
-  );
-}
-
-// Linear / Money / Bill — Figma node 2500:5141. A banknote with wavy top
-// and bottom edges and three evenly-spaced lines. The outline path keeps
-// the design's exact geometry, translated to sit centred in a 24×24 box.
-function BillingIconSVG({ style }: { style?: React.CSSProperties }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
-      <path
-        transform="translate(2.25 1.82)"
-        d="M15.375 19.1779C16.0166 18.6076 16.9834 18.6076 17.625 19.1779C18.0609 19.5654 18.75 19.2559 18.75 18.6727V1.68292C18.75 1.09969 18.0609 0.790248 17.625 1.17772C16.9834 1.74802 16.0166 1.74802 15.375 1.17772C14.7334 0.607425 13.7666 0.607425 13.125 1.17772C12.4834 1.74802 11.5166 1.74802 10.875 1.17772C10.2334 0.607425 9.26659 0.607425 8.625 1.17772C7.98341 1.74802 7.01659 1.74802 6.375 1.17772C5.73341 0.607425 4.76659 0.607425 4.125 1.17772C3.48341 1.74802 2.51659 1.74802 1.875 1.17772C1.43909 0.790248 0.75 1.09969 0.75 1.68292V18.6727C0.75 19.2559 1.43909 19.5654 1.875 19.1779C2.51659 18.6076 3.48341 18.6076 4.125 19.1779C4.76659 19.7482 5.73341 19.7482 6.375 19.1779C7.01659 18.6076 7.98341 18.6076 8.625 19.1779C9.26659 19.7482 10.2334 19.7482 10.875 19.1779C11.5166 18.6076 12.4834 18.6076 13.125 19.1779C13.7666 19.7482 14.7334 19.7482 15.375 19.1779Z"
-      />
-      <line x1="7.5" y1="8.5" x2="16.5" y2="8.5" />
-      <line x1="7.5" y1="12" x2="16.5" y2="12" />
-      <line x1="7.5" y1="15.5" x2="16.5" y2="15.5" />
-    </svg>
-  );
-}
-
-type IconActionTone = "primary" | "secondary";
-function IconAction({
-  label,
-  href,
-  onClick,
-  icon,
-  tone = "primary",
-}: {
-  label: string;
-  href?: string;
-  onClick?: () => void;
-  icon: React.ReactNode;
-  tone?: IconActionTone;
-}) {
-  const style = {
-    ...styles.iconAction,
-    backgroundColor: tone === "secondary" ? colors.secondary200 : colors.primary300,
-  };
-  const props = {
-    title: label,
-    "aria-label": label,
-    style,
-  } as const;
-  return href ? (
-    <a {...props} href={href}>
-      {icon}
-    </a>
-  ) : (
-    <button type="button" {...props} onClick={onClick}>
-      {icon}
-    </button>
-  );
-}
-
 // Compact "M|25" / "F|30" / "U|—" — first letter of gender, pipe, age in years.
 // Pipe matches the Figma design (node 2503:5154) for the patient meta line.
 function genderAgeShort(p: Patient): string {
   const g = p.gender ? p.gender.charAt(0).toUpperCase() : "";
   const y = p.age != null ? Math.floor(p.age / 12) : null;
   if (!g && y == null) return "—";
-  if (g && y != null) return `${g}|${y}`;
+  if (g && y != null) return `${g} ${y}`;
   return g || (y != null ? String(y) : "—");
 }
 
@@ -1002,71 +593,36 @@ function shortCode(id: string): string {
   return `T${n.toString().padStart(3, "0")}`;
 }
 
-// Tone-specific tag colors — muted so the chips read as labels rather than
-// alerts. Soft = recent/positive; warn = needs attention; info = demographic.
-const TAG_TONES: Record<Tone, React.CSSProperties> = {
-  soft: { backgroundColor: colors.secondary100, color: colors.secondary800 },
-  warn: { backgroundColor: colors.primary300, color: colors.primary800 },
-  info: { backgroundColor: colors.neutral150, color: colors.neutral700 },
-};
-
 // ─── Styles ─────────────────────────────────────────────────────────────────
 
 const styles: Record<string, React.CSSProperties> = {
-  // The host <main> already paints active-shade-200 (= primary200), so we
-  // just sit on top of it without a wrapper background.
+  // Own scroll container filling <main> (like the Appointments / Rx Pad
+  // queues) so the shared <PageHeader> can stick to the very top. No top
+  // padding — the sticky bar hugs the top; the content gap lives below it.
   container: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     display: "flex",
     flexDirection: "column",
-    gap: spacing.xl,
-    width: "100%",
+    padding: `0 ${fluidSpacing.outerX} ${fluidSpacing.outerY}`,
+    overflowY: "auto",
+    overflowX: "hidden",
   },
 
-  // Title centered (matches Prescription/Appointments).
-  headerRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    margin: 0,
-    textAlign: "center",
-    fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h5,
-    lineHeight: fonts.lineHeight.h5,
-    fontWeight: fonts.weight.regular,
-    color: colors.neutral900,
-  },
-  // Split-pane: index list (left) + open file (right).
-  layout: {
-    display: "flex",
-    gap: spacing.xl,
-    alignItems: "stretch",
+  // Single centered column: search + filters + results. No right preview.
+  content: {
     width: "100%",
-    minWidth: 0,
-    minHeight: 600,
-  },
-  indexPane: {
-    flex: "0 0 40%",
+    maxWidth: 820,
+    marginLeft: "auto",
+    marginRight: "auto",
+    marginTop: "var(--main-gap, 24px)",
     minWidth: 0,
     display: "flex",
     flexDirection: "column",
     gap: spacing.s,
-  },
-  openPane: {
-    flex: 1,
-    minWidth: 0,
-    display: "flex",
-    flexDirection: "column",
-  },
-  openEmpty: {
-    flex: 1,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.s,
-    color: colors.neutral500,
   },
 
   // Same dimensions as TopNav.searchBarContainer (40px tall, 55px radius,
@@ -1076,7 +632,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     width: "100%",
-    height: 40,
+    height: "var(--search-h)",
     gap: 12,
     padding: "0 16px",
     borderRadius: 55,
@@ -1084,8 +640,8 @@ const styles: Record<string, React.CSSProperties> = {
     boxSizing: "border-box",
   },
   searchIcon: {
-    width: 20,
-    height: 20,
+    width: "var(--search-icon)",
+    height: "var(--search-icon)",
     color: colors.neutral400,
     flexShrink: 0,
   },
@@ -1096,7 +652,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "transparent",
     outline: "none",
     fontFamily: fonts.family.primary,
-    fontSize: fonts.control.md,
+    fontSize: "var(--search-fs)",
     color: colors.neutral900,
   },
   clearBtn: {
@@ -1158,7 +714,10 @@ const styles: Record<string, React.CSSProperties> = {
   dateTrigger: {
     flex: 1,
     minWidth: 0,
-    height: 40,
+    // Track the shared input height so it matches the Select boxes on both
+    // tiers (40px baseline / 32px compact). Was hardcoded 40 → taller than the
+    // Selects below 1440.
+    height: "var(--input-h, 40px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -1167,9 +726,10 @@ const styles: Record<string, React.CSSProperties> = {
     border: `1px solid ${colors.neutral300}`,
     borderRadius: radii.m,
     backgroundColor: colors.neutral100,
+    boxSizing: "border-box",
     cursor: "pointer",
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.m,
+    fontSize: fonts.control.md, // match the Select value/placeholder size
     transition: "border-color 0.15s ease, color 0.15s ease",
     overflow: "hidden",
     whiteSpace: "nowrap",
@@ -1596,18 +1156,6 @@ const styles: Record<string, React.CSSProperties> = {
     textDecoration: "none",
     display: "inline-flex",
     alignItems: "center",
-  },
-
-  // Tag chip — used by the index dots and the open-file tag row.
-  tag: {
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.control.xs,
-    fontWeight: fonts.weight.medium,
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
-    padding: "2px 8px",
-    borderRadius: radii.full,
-    lineHeight: "16px",
   },
 
   statusMsg: {

@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository
 import java.util.UUID
 
 interface PatientConsentRepository : JpaRepository<PatientConsent, UUID> {
-    fun findAllByPatientIdAndClinicId(patientId: UUID, clinicId: UUID): List<PatientConsent>
+    fun findAllByPatientId(patientId: UUID): List<PatientConsent>
 }

@@ -3,8 +3,8 @@ import { fonts, radii, spacing, colors } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   card: {
-    borderRadius: radii.primary,
-    padding: 48,
+    borderRadius: radii["2xl"], // was radii.primary(20) — cards snap to 16
+    padding: 40,
     width: "100%",
     maxWidth: 560,
     display: "flex",

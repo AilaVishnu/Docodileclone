@@ -4,24 +4,33 @@ import { PharmacyListView } from "./PharmacyListView";
 import { PharmacyShelfView } from "./PharmacyShelfView";
 import { Med, GroupBy, MedCategory, MedForm } from "./types";
 import { formatExpiry, expiryStatus } from "./expiry";
+import { needsAttention } from "./grouping";
 import { MedIllustration } from "./MedIllustration";
 import { Modal } from "../../components/Modal/Modal";
+import { UploadModal } from "../../components/UploadModal";
 import { Button } from "../../components/Button";
-import { colors, fonts, spacing, radii } from "../../styles/theme";
-import { PlusIcon } from "../../iconsUtil";
-import { ReactComponent as SearchIcon } from "../../assets/search.svg";
-import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
-import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
+import { ModalHeader } from "../../components/ModalHeader";
+import { Tag } from "../../components/Tag";
+import { IconButton } from "../../components/IconButton";
+import { Field as InputBox } from "../../components/Field";
+import { MeasureField } from "../../components/MeasureField";
+import { Select } from "../../components/Input/Select/Select";
+import { Tabs } from "../../components/Tabs";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
+import { colors, fonts, spacing, radii, shadows } from "../../styles/theme";
+import { Icon } from "../../components/Icon";
 import { listPharmacyStock, bulkCreatePharmacyStock, parseInventoryCsv, createPharmacyStock, updatePharmacyStock, deletePharmacyStock, medToRequest } from "../../api/pharmacy";
 import { Toast } from "../../components/Toast";
+import { resolveToastIcon } from "../../components/Toast/toastIcon";
 
 type ViewMode = "list" | "shelf";
 
 export function PharmacyView() {
   const [view, setView] = useState<ViewMode>("shelf");
-  const [groupBy, setGroupBy] = useState<GroupBy>("alpha");
+  const [groupBy, setGroupBy] = useState<GroupBy>("form");
   const [query, setQuery] = useState("");
   const [showZero, setShowZero] = useState(true);
+  const [attentionOnly, setAttentionOnly] = useState(false);
   const [selected, setSelected] = useState<Med | null>(null);
   // Live inventory pulled from /api/tenant/pharmacy-stock. Empty until the
   // first fetch settles.
@@ -94,6 +103,7 @@ export function PharmacyView() {
     const q = query.trim().toLowerCase();
     return inventory.filter((m) => {
       if (!showZero && m.unitsInStock === 0) return false;
+      if (attentionOnly && !needsAttention(m)) return false;
       if (!q) return true;
       return (
         m.name.toLowerCase().includes(q) ||
@@ -102,36 +112,34 @@ export function PharmacyView() {
         m.category.toLowerCase().includes(q)
       );
     });
-  }, [inventory, query, showZero]);
+  }, [inventory, query, showZero, attentionOnly]);
 
   return (
     <div style={styles.page}>
-      <div style={styles.header}>
-        <div style={styles.headerSpacer} />
-        <h1 style={styles.title}>Pharmacy Stocks</h1>
-        <div style={{ ...styles.headerActions, display: "flex", gap: 8 }}>
-          <Button
-            variant="light"
-            size="md"
-            onClick={() => setImportOpen(true)}
-          >
-            Import CSV
-          </Button>
-          <Button
-            variant="dark"
-            size="md"
-            iconLeft={<PlusIcon style={{ width: 16, height: 16 }} />}
-            onClick={() => { setEditing(null); setAddOpen(true); }}
-          >
-            Add Stock
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Pharmacy Stocks"
+        actions={
+          <>
+            <Button variant="light" size="md" onClick={() => setImportOpen(true)}>
+              Import CSV
+            </Button>
+            <Button
+              variant="dark"
+              size="md"
+              iconLeft={<Icon name="plus" size={16} tone="inherit" />}
+              onClick={() => { setEditing(null); setAddOpen(true); }}
+            >
+              Add Stock
+            </Button>
+          </>
+        }
+      />
 
+      <div style={styles.content}>
       <div style={styles.toolbar}>
         <div style={styles.toolbarLeft}>
           <div style={styles.searchWrap}>
-            <SearchIcon style={styles.searchIcon} />
+            <Icon name="search" tone="inherit" style={styles.searchIcon} />
             <input
               style={styles.searchInput}
               placeholder="Search medicine, batch, invoice…"
@@ -147,27 +155,30 @@ export function PharmacyView() {
           >
             In stock only
           </button>
+          <button
+            type="button"
+            style={{ ...styles.togglePill, ...(attentionOnly ? styles.togglePillActive : null) }}
+            onClick={() => setAttentionOnly((v) => !v)}
+            aria-pressed={attentionOnly}
+          >
+            Needs attention
+          </button>
         </div>
 
         <div style={styles.toolbarRight}>
-          <div style={styles.sortGroup} role="radiogroup" aria-label="Sort by">
-            {[
-              { value: "alpha" as const, label: "A–Z" },
-              { value: "form" as const, label: "Form" },
-              { value: "attention" as const, label: "Attention" },
-            ].map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                role="radio"
-                aria-checked={groupBy === opt.value}
-                style={{ ...styles.sortChip, ...(groupBy === opt.value ? styles.sortChipActive : null) }}
-                onClick={() => setGroupBy(opt.value)}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          {view === "shelf" && (
+            <Tabs
+              variant="block"
+              inline
+              items={[
+                { id: "form", label: "Form" },
+                { id: "category", label: "Category" },
+                { id: "none", label: "None" },
+              ]}
+              activeId={groupBy}
+              onSelect={(id) => setGroupBy(id as GroupBy)}
+            />
+          )}
           <div style={styles.viewToggle} aria-label="View mode">
             <button
               type="button"
@@ -176,7 +187,7 @@ export function PharmacyView() {
               aria-label="List view"
               aria-pressed={view === "list"}
             >
-              <ListSortIcon width={20} height={20} />
+              <Icon name="list-sort" size={20} tone="inherit" />
             </button>
             <button
               type="button"
@@ -185,7 +196,7 @@ export function PharmacyView() {
               aria-label="Shelf view"
               aria-pressed={view === "shelf"}
             >
-              <WidgetIcon width={20} height={20} />
+              <Icon name="grid" size={20} tone="inherit" />
             </button>
           </div>
         </div>
@@ -195,7 +206,6 @@ export function PharmacyView() {
         <div style={styles.listCard}>
           <PharmacyListView
             items={items}
-            groupBy={groupBy}
             onPick={setSelected}
             onEdit={(m) => { setEditing(m); setAddOpen(false); }}
             onAdjustQty={(m) => setAdjustingQty(m)}
@@ -205,25 +215,27 @@ export function PharmacyView() {
       ) : (
         <PharmacyShelfView items={items} groupBy={groupBy} onPick={setSelected} />
       )}
+      </div>
 
-      <Modal isOpen={selected !== null} onClose={() => setSelected(null)}>
+      <Modal isOpen={selected !== null} onClose={() => setSelected(null)} surface="transparent" padding={0} shadow="none">
         {selected && <DetailBody med={selected} onClose={() => setSelected(null)} />}
       </Modal>
 
-      <Modal isOpen={importOpen} onClose={() => setImportOpen(false)}>
-        <ImportInventoryBody
-          onClose={() => setImportOpen(false)}
-          onImported={(msg) => {
-            setImportOpen(false);
-            setToastMsg(msg);
-            refresh();
-          }}
-        />
-      </Modal>
+      <ImportInventoryBody
+        isOpen={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={(msg) => {
+          setImportOpen(false);
+          setToastMsg(msg);
+          refresh();
+        }}
+      />
 
       <Modal
         isOpen={addOpen || editing !== null}
         onClose={() => { setAddOpen(false); setEditing(null); }}
+        surface={colors.neutral100}
+        padding={spacing.xl}
       >
         <StockFormBody
           initial={editing}
@@ -232,7 +244,7 @@ export function PharmacyView() {
         />
       </Modal>
 
-      <Modal isOpen={adjustingQty !== null} onClose={() => setAdjustingQty(null)}>
+      <Modal isOpen={adjustingQty !== null} onClose={() => setAdjustingQty(null)} surface={colors.neutral100} padding={spacing.xl}>
         {adjustingQty && (
           <AdjustQtyBody
             med={adjustingQty}
@@ -242,7 +254,7 @@ export function PharmacyView() {
         )}
       </Modal>
 
-      <Modal isOpen={deleting !== null} onClose={() => setDeleting(null)}>
+      <Modal isOpen={deleting !== null} onClose={() => setDeleting(null)} surface={colors.neutral100} padding={spacing.xl}>
         {deleting && (
           <DeleteConfirmBody
             med={deleting}
@@ -252,15 +264,16 @@ export function PharmacyView() {
         )}
       </Modal>
 
-      <Toast message={toastMsg} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
+      <Toast message={toastMsg} {...resolveToastIcon(toastMsg)} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
       {loading && inventory.length === 0 && (
-        <div style={{ padding: 24, textAlign: "center", color: "#666" }}>Loading inventory…</div>
+        <div style={{ padding: 24, textAlign: "center", color: colors.neutral600 }}>Loading inventory…</div>
       )}
     </div>
   );
 }
 
-function ImportInventoryBody({ onClose, onImported }: {
+export function ImportInventoryBody({ isOpen, onClose, onImported }: {
+  isOpen: boolean;
   onClose: () => void;
   onImported: (message: string) => void;
 }) {
@@ -268,8 +281,6 @@ function ImportInventoryBody({ onClose, onImported }: {
   const [fileName, setFileName] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const preview = useMemo(() => parseInventoryCsv(text), [text]);
 
   const readFile = (file: File) => {
@@ -307,108 +318,92 @@ function ImportInventoryBody({ onClose, onImported }: {
   };
 
   return (
-    <div style={{ width: "min(640px, 92vw)", padding: 24, display: "flex", flexDirection: "column", gap: 12 }}>
-      <h2 style={{ margin: 0, fontSize: 18 }}>Import inventory (CSV)</h2>
-      <p style={{ margin: 0, fontSize: 13, color: "#666" }}>
-        Upload the supplier's <code style={{ fontSize: 12 }}>current_inventory_*.csv</code> file.
-        Existing batches refresh in place (matched on name + batch + invoice), new batches are added.
-      </p>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".csv,text/csv"
-        style={{ display: "none" }}
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) readFile(f);
-          // Allow re-picking the same filename later.
-          e.target.value = "";
-        }}
-      />
-
-      <div
-        onClick={() => fileInputRef.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragOver(false);
-          const f = e.dataTransfer.files?.[0];
-          if (f) readFile(f);
-        }}
-        style={{
-          border: `2px dashed ${dragOver ? "#2c6e49" : "#bbb"}`,
-          borderRadius: 8,
-          padding: 24,
-          textAlign: "center",
-          cursor: "pointer",
-          background: dragOver ? "#f1f8f3" : "#fafafa",
-          fontSize: 13,
-          color: "#555",
-        }}
-      >
-        {fileName ? (
-          <>
-            <div style={{ fontWeight: 600, color: "#222" }}>{fileName}</div>
-            <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-              {preview.rows.length} of {preview.rawLines} rows ready to import. Click to pick a different file.
-            </div>
-          </>
-        ) : (
-          <>
-            <div style={{ fontWeight: 600, color: "#222" }}>Click to choose a CSV file</div>
-            <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>…or drag & drop it here.</div>
-          </>
-        )}
-      </div>
-
-      {error && <span style={{ fontSize: 12, color: "#b54040" }}>{error}</span>}
-
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-        <Button variant="light" size="sm" onClick={onClose} disabled={importing}>Cancel</Button>
-        <Button variant="dark" size="sm" onClick={handleImport} disabled={importing || preview.rows.length === 0}>
-          {importing ? "Importing…" : preview.rows.length > 0 ? `Import ${preview.rows.length}` : "Import"}
-        </Button>
-      </div>
-    </div>
+    <UploadModal
+      isOpen={isOpen}
+      onClose={onClose}
+      width={640}
+      title="Import inventory (CSV)"
+      dropHint="CSV file · supplier export"
+      multiple={false}
+      accept=".csv,text/csv"
+      onFiles={(files) => { if (files[0]) readFile(files[0]); }}
+      error={error}
+      confirmLabel={importing ? "Importing…" : preview.rows.length > 0 ? `Import ${preview.rows.length}` : "Import"}
+      onConfirm={handleImport}
+      confirmDisabled={importing || preview.rows.length === 0}
+    >
+      {fileName && (
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontWeight: 600, color: colors.neutral900, fontSize: 13 }}>{fileName}</div>
+          <div style={{ fontSize: 12, color: colors.neutral600, marginTop: 4 }}>
+            {preview.rows.length} of {preview.rawLines} rows ready to import
+          </div>
+        </div>
+      )}
+    </UploadModal>
   );
 }
 
-function DetailBody({ med, onClose }: { med: Med; onClose: () => void }) {
+export function DetailBody({ med, onClose }: { med: Med; onClose: () => void }) {
   const status = expiryStatus(med.expiry);
-  const expiryStyle =
-    status === "good" ? styles.expiryGood :
-      status === "warn" ? styles.expiryWarn :
-        styles.expiryBad;
+  const out = med.unitsInStock === 0;
+  const low = med.unitsInStock > 0 && med.unitsInStock < 5;
+  // Stock/expiry status shows through the tile BACKGROUND (green/amber/red), not the value text.
+  const stockBg = out ? colors.redAlpha20 : low ? colors.yellowAlpha20 : colors.greenAlpha20;
+  const expiryBg = status === "bad" ? colors.redAlpha20 : status === "warn" ? colors.yellowAlpha20 : colors.greenAlpha20;
+  // State labels shown as a white chip inside the (colour-tinted) tile.
+  const stockChip = out ? { label: "Out", color: colors.red200 } : low ? { label: "Low", color: colors.yellow300 } : null;
+  const expiryChip = status === "bad" ? { label: "Expired", color: colors.red200 } : status === "warn" ? { label: "Expiring", color: colors.yellow300 } : null;
 
   return (
-    <div style={ms.container}>
-      <ModalHeader
-        title={med.name}
-        subtitle={`${med.category} · ${med.form}${med.batch ? ` · Batch ${med.batch}` : ""}`}
-        onClose={onClose}
-      />
-
-      <div style={ms.illustrationWrap}>
-        <MedIllustration med={med} width={96} height={120} />
+    <div style={ms.detailPanes}>
+      {/* Left card — illustration + name (top group) and the form chip (bottom) */}
+      <div style={ms.detailLeft}>
+        <div style={ms.detailIdentity}>
+          <MedIllustration med={med} width={88} height={110} />
+          <p style={ms.detailName}>{med.name}</p>
+        </div>
+        <div style={ms.detailChips}>
+          <Tag variant="outline" label={med.form} />
+        </div>
       </div>
 
-      <div style={ms.formCard}>
-        <div style={ms.twoCol}>
-          <DetailField label="Invoice no." value={med.invoiceNo || "—"} />
-          <DetailField label="Batch" value={med.batch || "—"} />
+      {/* Right card — hero stats (the two decisions) over compact 3-col detail grids */}
+      <div style={{ ...ms.formCard, flex: 1, minWidth: 0, boxShadow: shadows.modal, padding: spacing.xl }}>
+        <div style={ms.detailHeroRow}>
+          <div style={ms.detailHeroTiles}>
+            <div style={{ ...ms.detailHeroTile, backgroundColor: stockBg }}>
+              <span style={ms.detailHeroLabel}>In stock</span>
+              <div style={ms.detailHeroValueRow}>
+                <span style={ms.detailHeroValue}>{med.unitsInStock}</span>
+                {stockChip && <span style={{ ...ms.detailHeroChip, color: stockChip.color }}>{stockChip.label}</span>}
+              </div>
+            </div>
+            <div style={{ ...ms.detailHeroTile, backgroundColor: expiryBg }}>
+              <span style={ms.detailHeroLabel}>Expiry</span>
+              <div style={ms.detailHeroValueRow}>
+                <span style={ms.detailHeroValue}>{formatExpiry(med.expiry)}</span>
+                {expiryChip && <span style={{ ...ms.detailHeroChip, color: expiryChip.color }}>{expiryChip.label}</span>}
+              </div>
+            </div>
+          </div>
+          <IconButton ariaLabel="Close" onClick={onClose} size={24} />
+        </div>
+
+        <div style={ms.detailDivider} />
+        <div style={ms.threeCol}>
           <DetailField label="Pack price" value={`₹${med.packPrice.toFixed(2)}`} />
           <DetailField label="MRP" value={`₹${med.packMrp.toFixed(2)}`} />
-          <DetailField label="Units per pack" value={String(med.unitsPerPack)} />
           <DetailField label="Unit price" value={`₹${med.unitPrice.toFixed(2)}`} />
-          <DetailField label="In stock" value={String(med.unitsInStock)} />
-          <DetailField
-            label="Expiry"
-            value={<span style={{ ...styles.expiryChip, ...expiryStyle }}>{formatExpiry(med.expiry)}</span>}
-          />
           <DetailField label="Discount" value={`${med.discountPct.toFixed(2)}%`} />
           <DetailField label="GST" value={`${med.gstPct.toFixed(2)}%`} />
+          <DetailField label="Units per pack" value={String(med.unitsPerPack)} />
+        </div>
+
+        <div style={ms.detailDivider} />
+        <div style={ms.threeCol}>
+          <DetailField label="Invoice no." value={med.invoiceNo || "—"} />
+          <DetailField label="Batch" value={med.batch || "—"} />
         </div>
       </div>
     </div>
@@ -437,6 +432,52 @@ const ms: Record<string, React.CSSProperties> = {
     display: "flex", flexDirection: "column", gap: spacing.s,
     width: 380, maxWidth: "100%",
   },
+  // Medicine detail — two floating cards (identity | details), no modal surface.
+  detailPanes: {
+    display: "flex", gap: spacing.m, alignItems: "stretch",
+    width: 700, maxWidth: "100%",
+  },
+  detailLeft: {
+    flex: "0 0 184px",
+    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between",
+    gap: spacing.s, textAlign: "center",
+    backgroundColor: colors.primary100, borderRadius: radii.xl, padding: spacing.xl,
+    boxShadow: shadows.modal,
+  },
+  detailName: {
+    margin: 0,
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h6, lineHeight: fonts.lineHeight.h6,
+    fontWeight: fonts.weight.regular, color: colors.neutral900,
+  },
+  // Illustration + name grouped at the top of the left card (name under illustration).
+  detailIdentity: { display: "flex", flexDirection: "column", alignItems: "center", gap: spacing.s },
+  detailChips: { display: "flex", flexWrap: "wrap", gap: spacing.xs, justifyContent: "center" },
+  // Layout A — hero stats (In stock / Expiry) + grouped sections in the right pane.
+  // Hero row: the two tiles (equal height) with the close button top-aligned to their right.
+  detailHeroRow: { display: "flex", alignItems: "flex-start", gap: spacing.s },
+  detailHeroTiles: { flex: 1, display: "flex", alignItems: "stretch", gap: spacing.s },
+  detailHeroTile: {
+    flex: 1, display: "flex", flexDirection: "column", gap: 2,
+    backgroundColor: colors.primary100, borderRadius: radii.l, padding: `${spacing.s} ${spacing.m}`,
+  },
+  detailHeroLabel: {
+    fontFamily: fonts.family.primary, fontSize: fonts.size.xs, lineHeight: fonts.lineHeight.xs,
+    color: colors.neutral500,
+  },
+  detailHeroValue: {
+    fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5,
+    fontWeight: fonts.weight.regular, color: colors.neutral900,
+  },
+  // Value + state chip on one line (chip to the right of the number/date).
+  detailHeroValueRow: { display: "flex", alignItems: "center", gap: spacing.xs },
+  detailHeroChip: {
+    backgroundColor: colors.neutral100, borderRadius: radii.full, padding: "1px 8px",
+    fontFamily: fonts.family.primary, fontSize: fonts.size.caption, lineHeight: fonts.lineHeight.caption,
+    fontWeight: fonts.weight.medium, whiteSpace: "nowrap",
+  },
+  threeCol: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: spacing.m },
+  detailDivider: { height: 1, backgroundColor: colors.neutral200, margin: `${spacing.xs} 0` },
   header: {
     display: "flex", alignItems: "flex-start", justifyContent: "space-between",
     gap: spacing.m,
@@ -444,36 +485,13 @@ const ms: Record<string, React.CSSProperties> = {
   title: {
     margin: 0,
     fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h6, lineHeight: fonts.lineHeight.h6,
+    fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5,
     fontWeight: fonts.weight.regular, color: colors.neutral900,
   },
   subtitle: {
     margin: 0, marginTop: 4,
     fontFamily: fonts.family.primary, fontSize: fonts.control.sm,
     color: colors.neutral600,
-  },
-  closeBtn: {
-    background: "none", border: "none", color: colors.neutral900,
-    fontFamily: fonts.family.primary, fontSize: fonts.size.m,
-    cursor: "pointer", padding: 0, flexShrink: 0,
-  },
-  identityStrip: {
-    display: "flex", alignItems: "center", gap: spacing.m,
-    backgroundColor: colors.primary100, borderRadius: radii.xl,
-    padding: `${spacing.s} ${spacing.m}`,
-  },
-  identityText: {
-    display: "flex", flexDirection: "column", gap: 6, minWidth: 0,
-  },
-  identityName: {
-    margin: 0,
-    fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h6, lineHeight: fonts.lineHeight.h6,
-    fontWeight: fonts.weight.regular, color: colors.neutral900,
-    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-  },
-  identityMeta: {
-    display: "flex", alignItems: "center", gap: spacing.xs, flexWrap: "wrap",
   },
   metaChip: {
     fontFamily: fonts.family.primary, fontSize: fonts.control.xs,
@@ -486,7 +504,7 @@ const ms: Record<string, React.CSSProperties> = {
     border: `1px solid ${colors.neutral200}`, padding: spacing.m,
   },
   twoCol: {
-    display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing.m,
+    display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: spacing.m,
   },
   fieldWrap: {
     display: "flex", flexDirection: "column", gap: 4,
@@ -502,19 +520,11 @@ const ms: Record<string, React.CSSProperties> = {
   },
   detailValue: {
     fontFamily: fonts.family.primary, fontSize: fonts.control.md,
-    fontWeight: fonts.weight.semibold, color: colors.neutral900,
+    fontWeight: fonts.weight.regular, color: colors.neutral900,
   },
   illustrationWrap: {
     display: "flex", justifyContent: "center",
     padding: `${spacing.s} 0`,
-  },
-  textInput: {
-    width: "100%", height: 35, boxSizing: "border-box",
-    padding: `0 ${spacing.s}`,
-    border: `1px solid ${colors.neutral300}`, borderRadius: radii.m,
-    backgroundColor: colors.neutral150,
-    fontFamily: fonts.family.primary, fontSize: fonts.control.sm,
-    color: colors.neutral900, outline: "none",
   },
   selectInput: {
     width: "100%", height: 35, boxSizing: "border-box",
@@ -526,25 +536,6 @@ const ms: Record<string, React.CSSProperties> = {
   },
   footer: {
     display: "flex", justifyContent: "flex-end", gap: spacing.s,
-    paddingTop: spacing.s, borderTop: `1px solid ${colors.neutral200}`,
-  },
-  btnGhost: {
-    fontFamily: fonts.family.primary, fontSize: fonts.control.md,
-    color: colors.neutral900, background: "transparent",
-    border: `1px solid ${colors.primary300}`, borderRadius: radii.full,
-    padding: "10px 20px", cursor: "pointer",
-  },
-  btnPrimary: {
-    fontFamily: fonts.family.primary, fontSize: fonts.control.md,
-    color: colors.neutral100, backgroundColor: colors.primary700,
-    border: "none", borderRadius: radii.full,
-    padding: "10px 20px", cursor: "pointer",
-  },
-  btnDanger: {
-    fontFamily: fonts.family.primary, fontSize: fonts.control.md,
-    color: colors.neutral100, backgroundColor: colors.red200,
-    border: "none", borderRadius: radii.full,
-    padding: "10px 20px", cursor: "pointer",
   },
 };
 
@@ -558,37 +549,9 @@ function Field({ label, error, children }: { label: string; error?: string; chil
   );
 }
 
-function ModalHeader({ title, subtitle, onClose }: { title: string; subtitle?: string; onClose: () => void }) {
-  return (
-    <header style={ms.header}>
-      <div>
-        <h2 style={ms.title}>{title}</h2>
-        {subtitle && <p style={ms.subtitle}>{subtitle}</p>}
-      </div>
-      <button type="button" onClick={onClose} aria-label="Close" style={ms.closeBtn}>✕</button>
-    </header>
-  );
-}
-
-function MedIdentityStrip({ med }: { med: Med }) {
-  return (
-    <div style={ms.identityStrip}>
-      <div style={ms.identityText}>
-        <p style={ms.identityName}>{med.name}</p>
-        <div style={ms.identityMeta}>
-          <span style={ms.metaChip}>{med.category}</span>
-          <span style={ms.metaChip}>{med.form}</span>
-          {med.batch && <span style={ms.metaChip}>Batch {med.batch}</span>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Stock form — used by both Add Stock and Edit batch. Mirrors the
-// EditPatientModal layout: serif header + cream identity strip (edit only)
-// + white form card + ghost/orange footer.
-function StockFormBody({
+// Stock form — used by both Add Stock and Edit Stock. Serif header + form
+// fields + ghost/orange footer. Edit and Add are identical bar the title.
+export function StockFormBody({
   initial,
   onClose,
   onSave,
@@ -597,6 +560,9 @@ function StockFormBody({
   onClose: () => void;
   onSave: (data: Omit<Med, "id">) => Promise<void> | void;
 }) {
+  // Expiry is stored as YYYY-MM but shown/typed as MM-YYYY.
+  const toExpiryDisplay = (s: string) => { const m = /^(\d{4})-(\d{2})$/.exec(s); return m ? `${m[2]}-${m[1]}` : s; };
+  const toExpiryStore = (s: string) => { const m = /^(\d{2})-(\d{4})$/.exec(s.trim()); return m ? `${m[2]}-${m[1]}` : s.trim(); };
   const CATEGORY_OPTIONS: MedCategory[] = ["Acne & skin", "Cleansers & soaps", "Topicals", "Tablets", "Serums & boosters"];
   const FORM_OPTIONS: MedForm[] = ["tablet", "syrup", "cream", "spray", "soap", "serum", "drops", "ointment"];
 
@@ -610,8 +576,9 @@ function StockFormBody({
   const [unitsPerPack, setUnitsPerPack] = useState(String(initial?.unitsPerPack ?? 1));
   const [unitPrice, setUnitPrice] = useState(String(initial?.unitPrice ?? ""));
   const [unitsInStock, setUnitsInStock] = useState(String(initial?.unitsInStock ?? 0));
-  const [expiry, setExpiry] = useState(initial?.expiry ?? "");
+  const [expiry, setExpiry] = useState(toExpiryDisplay(initial?.expiry ?? ""));
   const [discountPct, setDiscountPct] = useState(String(initial?.discountPct ?? 0));
+  const [discountMode, setDiscountMode] = useState<"%" | "₹">("%");
   const [gstPct, setGstPct] = useState(String(initial?.gstPct ?? 0));
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -633,7 +600,7 @@ function StockFormBody({
         unitsPerPack: parseInt(unitsPerPack, 10) || 1,
         unitPrice: Number(unitPrice) || 0,
         unitsInStock: parseInt(unitsInStock, 10) || 0,
-        expiry: expiry.trim(),
+        expiry: toExpiryStore(expiry),
         discountPct: Number(discountPct) || 0,
         gstPct: Number(gstPct) || 0,
       });
@@ -649,86 +616,66 @@ function StockFormBody({
   return (
     <div style={ms.container}>
       <ModalHeader
-        title={isEdit ? "Edit batch" : "Add stock"}
-        subtitle={isEdit ? "Update inventory details for this batch" : "Add a new medicine batch to this clinic's inventory"}
+        title={isEdit ? "Edit Stock" : "Add Stock"}
         onClose={onClose}
       />
 
-      {isEdit && initial && <MedIdentityStrip med={initial} />}
-
-      <div style={ms.formCard}>
+      <div style={{ display: "flex", flexDirection: "column", gap: spacing.s }}>
         <Field label="Medicine name *" error={touched && nameError ? "Name is required" : undefined}>
-          <input
-            type="text" value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Paracetamol 500mg"
-            style={ms.textInput}
-          />
+          <InputBox variant="box" value={name} onChange={setName} placeholder="e.g. Paracetamol 500mg" error={touched && nameError} autoFocus inputStyle={{ fontSize: fonts.size.s }} />
         </Field>
 
         <div style={ms.twoCol}>
           <Field label="Category">
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value as MedCategory)}
-              style={ms.selectInput}
-            >
-              {CATEGORY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <Select options={CATEGORY_OPTIONS} value={category} onChange={(v) => setCategory(v as MedCategory)} />
           </Field>
           <Field label="Form">
-            <select
-              value={form}
-              onChange={(e) => setForm(e.target.value as MedForm)}
-              style={ms.selectInput}
-            >
-              {FORM_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
-            </select>
+            <Select options={FORM_OPTIONS} value={form} onChange={(v) => setForm(v as MedForm)} />
           </Field>
         </div>
 
         <div style={ms.twoCol}>
           <Field label="Invoice no.">
-            <input type="text" value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} placeholder="e.g. A00709" style={ms.textInput} />
+            <InputBox variant="box" value={invoiceNo} onChange={setInvoiceNo} placeholder="e.g. A00709" inputStyle={{ fontSize: fonts.size.s }} />
           </Field>
           <Field label="Batch">
-            <input type="text" value={batch} onChange={(e) => setBatch(e.target.value)} placeholder="e.g. 204" style={ms.textInput} />
+            <InputBox variant="box" value={batch} onChange={setBatch} placeholder="e.g. 204" inputStyle={{ fontSize: fonts.size.s }} />
           </Field>
         </div>
 
         <div style={ms.twoCol}>
-          <Field label="Pack price ₹">
-            <input type="text" value={packPrice} onChange={(e) => setPackPrice(e.target.value)} placeholder="0.00" style={ms.textInput} />
+          <Field label="Pack price">
+            <MeasureField box prefix="₹" value={packPrice} onChange={setPackPrice} inputMode="decimal" placeholder="0.00" />
           </Field>
-          <Field label="Pack MRP ₹">
-            <input type="text" value={packMrp} onChange={(e) => setPackMrp(e.target.value)} placeholder="0.00" style={ms.textInput} />
+          <Field label="Pack MRP">
+            <MeasureField box prefix="₹" value={packMrp} onChange={setPackMrp} inputMode="decimal" placeholder="0.00" />
           </Field>
         </div>
 
         <div style={ms.twoCol}>
           <Field label="Units per pack">
-            <input type="text" value={unitsPerPack} onChange={(e) => setUnitsPerPack(e.target.value)} placeholder="1" style={ms.textInput} />
+            <MeasureField box value={unitsPerPack} onChange={setUnitsPerPack} inputMode="numeric" placeholder="1" />
           </Field>
-          <Field label="Unit price ₹">
-            <input type="text" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder="0.00" style={ms.textInput} />
+          <Field label="Unit price">
+            <MeasureField box prefix="₹" value={unitPrice} onChange={setUnitPrice} inputMode="decimal" placeholder="0.00" />
           </Field>
         </div>
 
         <div style={ms.twoCol}>
           <Field label="Units in stock">
-            <input type="text" value={unitsInStock} onChange={(e) => setUnitsInStock(e.target.value)} placeholder="0" style={ms.textInput} />
+            <MeasureField box value={unitsInStock} onChange={setUnitsInStock} inputMode="numeric" placeholder="0" />
           </Field>
-          <Field label="Expiry (YYYY-MM)">
-            <input type="text" value={expiry} onChange={(e) => setExpiry(e.target.value)} placeholder="2027-03" style={ms.textInput} />
+          <Field label="Expiry (MM-YYYY)">
+            <InputBox variant="box" value={expiry} onChange={setExpiry} placeholder="03-2027" inputStyle={{ fontSize: fonts.size.s }} />
           </Field>
         </div>
 
         <div style={ms.twoCol}>
-          <Field label="Discount %">
-            <input type="text" value={discountPct} onChange={(e) => setDiscountPct(e.target.value)} placeholder="0" style={ms.textInput} />
+          <Field label="Discount">
+            <MeasureField box unitFilled value={discountPct} onChange={setDiscountPct} unit={discountMode} onToggleUnit={() => setDiscountMode(discountMode === "%" ? "₹" : "%")} inputMode="decimal" placeholder="0" />
           </Field>
-          <Field label="GST %">
-            <input type="text" value={gstPct} onChange={(e) => setGstPct(e.target.value)} placeholder="0" style={ms.textInput} />
+          <Field label="GST">
+            <MeasureField box unit="%" value={gstPct} onChange={setGstPct} inputMode="decimal" placeholder="0" />
           </Field>
         </div>
 
@@ -736,23 +683,18 @@ function StockFormBody({
       </div>
 
       <footer style={ms.footer}>
-        <button type="button" onClick={onClose} disabled={saving} style={ms.btnGhost}>Cancel</button>
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={saving}
-          style={{ ...ms.btnPrimary, ...(saving ? { opacity: 0.45, cursor: "not-allowed" } : null) }}
-        >
+        <Button variant="light" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button variant="primary" size="sm" onClick={handleSubmit} disabled={saving}>
           {saving ? "Saving…" : isEdit ? "Save changes" : "Add stock"}
-        </button>
+        </Button>
       </footer>
     </div>
   );
 }
 
-// Adjust units-in-stock — single field, but same modal chrome (header,
-// identity strip, white card, ghost/primary footer) as Edit batch.
-function AdjustQtyBody({
+// Adjust units-in-stock — single field; same chrome as the stock form
+// (header + field + ghost/primary footer), no identity strip or inner card.
+export function AdjustQtyBody({
   med,
   onClose,
   onSave,
@@ -786,44 +728,34 @@ function AdjustQtyBody({
     <div style={ms.containerNarrow}>
       <ModalHeader
         title="Adjust stock"
-        subtitle={`Currently ${med.unitsInStock} units in stock`}
+        subtitle={`${med.name} — currently ${med.unitsInStock} in stock`}
         onClose={onClose}
       />
 
-      <MedIdentityStrip med={med} />
-
-      <div style={ms.formCard}>
-        <Field label="New units in stock" error={err ?? undefined}>
-          <input
-            type="number"
-            min={0}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-            autoFocus
-            style={ms.textInput}
-          />
-        </Field>
-      </div>
+      <MeasureField
+        box
+        value={value}
+        onChange={setValue}
+        inputMode="numeric"
+        placeholder="0"
+        invalid={!!err}
+        onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+      />
+      {err && <span style={ms.fieldError}>{err}</span>}
 
       <footer style={ms.footer}>
-        <button type="button" onClick={onClose} disabled={saving} style={ms.btnGhost}>Cancel</button>
-        <button
-          type="button"
-          onClick={submit}
-          disabled={saving}
-          style={{ ...ms.btnPrimary, ...(saving ? { opacity: 0.45, cursor: "not-allowed" } : null) }}
-        >
+        <Button variant="light" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button variant="primary" size="sm" onClick={submit} disabled={saving}>
           {saving ? "Saving…" : "Update"}
-        </button>
+        </Button>
       </footer>
     </div>
   );
 }
 
-// Delete confirmation — styled replacement for window.confirm. Same modal
-// chrome as the other two; primary button is red since it's destructive.
-function DeleteConfirmBody({
+// Delete confirmation — styled replacement for window.confirm. Med name is the
+// subtitle; the destructive button is red. No identity strip (redundant).
+export function DeleteConfirmBody({
   med,
   onCancel,
   onConfirm,
@@ -841,22 +773,15 @@ function DeleteConfirmBody({
     <div style={ms.containerNarrow}>
       <ModalHeader
         title="Remove from inventory?"
-        subtitle="This batch will be deleted from this clinic. This can't be undone."
+        subtitle={med.name}
         onClose={onCancel}
       />
 
-      <MedIdentityStrip med={med} />
-
       <footer style={ms.footer}>
-        <button type="button" onClick={onCancel} disabled={busy} style={ms.btnGhost}>Cancel</button>
-        <button
-          type="button"
-          onClick={submit}
-          disabled={busy}
-          style={{ ...ms.btnDanger, ...(busy ? { opacity: 0.45, cursor: "not-allowed" } : null) }}
-        >
+        <Button variant="light" size="sm" onClick={onCancel} disabled={busy}>Cancel</Button>
+        <Button variant="danger" size="sm" onClick={submit} disabled={busy}>
           {busy ? "Removing…" : "Remove"}
-        </button>
+        </Button>
       </footer>
     </div>
   );

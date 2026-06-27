@@ -154,14 +154,14 @@ const MONTH_TO_NUM: Record<string, string> = {
 function parseExpiry(raw: string): string {
   // Accepts "Mar-2027", "2027-03", "03/2027", "Mar 2027", etc → "2027-03"
   const cleaned = raw.trim();
-  const m = cleaned.match(/^([A-Za-z]+)[-\s\/]+(\d{4})$/);
+  const m = cleaned.match(/^([A-Za-z]+)[-\s/]+(\d{4})$/);
   if (m) {
     const num = MONTH_TO_NUM[m[1].slice(0, 3).toLowerCase()];
     return num ? `${m[2]}-${num}` : "";
   }
-  const isoMatch = cleaned.match(/^(\d{4})[-\/](\d{1,2})$/);
+  const isoMatch = cleaned.match(/^(\d{4})[-/](\d{1,2})$/);
   if (isoMatch) return `${isoMatch[1]}-${isoMatch[2].padStart(2, "0")}`;
-  const slashMatch = cleaned.match(/^(\d{1,2})[-\/](\d{4})$/);
+  const slashMatch = cleaned.match(/^(\d{1,2})[-/](\d{4})$/);
   if (slashMatch) return `${slashMatch[2]}-${slashMatch[1].padStart(2, "0")}`;
   return "";
 }

@@ -1,10 +1,7 @@
 package com.example.docodile.web
 
-import com.example.docodile.domain.Role
 import com.example.docodile.repo.AppUserRepository
-import com.example.docodile.repo.ClinicEntityRepository
-import com.example.docodile.repo.ClinicStaffRepository
-import com.example.docodile.security.CurrentUser
+import com.example.docodile.repo.ClinicSettingsRepository
 import com.example.docodile.service.EmailService
 import com.example.docodile.service.PasswordTokenService
 import com.example.docodile.service.TokenInvalidException
@@ -24,11 +21,9 @@ data class SetupPasswordRequest(
 class PasswordSetupController(
     private val passwordTokenService: PasswordTokenService,
     private val appUserRepository: AppUserRepository,
-    private val clinicEntityRepository: ClinicEntityRepository,
-    private val clinicStaffRepository: ClinicStaffRepository,
+    private val clinicSettingsRepository: ClinicSettingsRepository,
     private val passwordEncoder: PasswordEncoder,
     private val emailService: EmailService,
-    private val currentUser: CurrentUser,
 ) {
     @GetMapping("/auth/validate-token")
     fun validateToken(@RequestParam token: String): ResponseEntity<Map<String, Any?>> {
@@ -47,32 +42,15 @@ class PasswordSetupController(
 
     @PostMapping("/auth/forgot-password")
     fun forgotPassword(@RequestBody request: ForgotPasswordRequest): ResponseEntity<Map<String, Any?>> {
+        // The clinic is resolved from the request subdomain (tenant schema), so the
+        // user lookup is implicitly clinic-scoped — any active user of this clinic
+        // may request a password reset.
         val email = request.email.trim()
-        val domain = request.domain?.trim()
-
         val user = appUserRepository.findByEmail(email).orElse(null)
             ?: return ResponseEntity.status(404).body(mapOf("error" to "Email ID does not exist"))
 
         if (!user.active) {
             return ResponseEntity.status(404).body(mapOf("error" to "Email ID does not exist"))
-        }
-
-        if (domain != null) {
-            // Staff flow: validate clinic domain and membership
-            val clinic = clinicEntityRepository.findByDomainIgnoreCase(domain).orElse(null)
-                ?: return ResponseEntity.status(404).body(mapOf("error" to "Email ID does not exist"))
-            if (user.role == Role.ADMIN) {
-                return ResponseEntity.status(404).body(mapOf("error" to "Email ID does not exist"))
-            }
-            val isMember = clinicStaffRepository.existsByIdClinicIdAndIdStaffId(clinic.id, user.id)
-            if (!isMember) {
-                return ResponseEntity.status(404).body(mapOf("error" to "Email ID does not exist"))
-            }
-        } else {
-            // Admin flow: user must be an admin
-            if (user.role != Role.ADMIN) {
-                return ResponseEntity.status(404).body(mapOf("error" to "Email ID does not exist"))
-            }
         }
 
         val rawToken = passwordTokenService.generateToken(user.id)
@@ -112,16 +90,12 @@ class PasswordSetupController(
     @PostMapping("/api/tenant/staff/{staffId}/resend-welcome")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     fun resendWelcome(@PathVariable staffId: UUID): ResponseEntity<Map<String, Any?>> {
-        val tenantId = currentUser.tenantId()
         val user = appUserRepository.findById(staffId)
-            .filter { it.tenant?.id == tenantId }
             .orElseThrow { IllegalArgumentException("Staff member not found") }
 
         val rawToken = passwordTokenService.generateToken(user.id)
         val setupLink = passwordTokenService.buildSetupLink(rawToken)
-        val clinicName = user.tenant?.id?.let {
-            clinicEntityRepository.findFirstByTenantIdOrderByCreatedAtAsc(it).orElse(null)?.name
-        } ?: "your clinic"
+        val clinicName = clinicSettingsRepository.findAll().firstOrNull()?.name ?: "your clinic"
         emailService.sendWelcomeEmail(user.email, user.name ?: "", clinicName, setupLink)
 
         return ResponseEntity.ok(mapOf("success" to true))

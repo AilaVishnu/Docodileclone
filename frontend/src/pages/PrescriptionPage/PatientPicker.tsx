@@ -1,5 +1,6 @@
 import React from "react";
 import { styles } from "./PatientPicker.styles";
+import { Field } from "../../components/Field";
 import { Patient, usePatients } from "../../hooks/usePatients";
 import { pickAvatar } from "../../utils/avatar";
 
@@ -36,12 +37,13 @@ export function PatientPicker({ onSelect, refreshKey }: PatientPickerProps) {
       </header>
 
       <div style={styles.searchWrap}>
-        <input
-          style={styles.searchInput}
+        <Field
+          variant="pill"
+          type="search"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={setQuery}
           placeholder="Search patients…"
-          aria-label="Search patients"
+          ariaLabel="Search patients"
         />
       </div>
 

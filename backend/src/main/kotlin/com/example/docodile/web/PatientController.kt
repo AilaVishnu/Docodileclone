@@ -1,17 +1,21 @@
 package com.example.docodile.web
 
 import com.example.docodile.domain.AuditAction
+import com.example.docodile.repo.AppointmentRepository
 import com.example.docodile.repo.PatientRepository
-import com.example.docodile.security.CurrentUser
 import com.example.docodile.service.AuditService
+import com.example.docodile.service.BillService
+import com.example.docodile.service.PatientDepositService
 import com.example.docodile.service.PatientService
 import com.example.docodile.service.VisitService
+import org.springframework.data.domain.PageRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.*
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.UUID
 
 data class UpdatePatientRequest(
@@ -23,15 +27,97 @@ data class UpdatePatientRequest(
     val age: Int?       // months, or null
 )
 
+// Footer shown at the bottom of the Bill modal: when the patient was first
+// registered, and their most recent payment (date + method).
+data class BillFooterDTO(
+    val registeredAt: Instant?,
+    val lastPaymentAt: LocalDateTime?,
+    val lastPaymentMethod: String?,
+)
+
 @RestController
 @RequestMapping("/api/patients")
 class PatientController(
     private val patientService: PatientService,
     private val patientRepository: PatientRepository,
+    private val appointmentRepository: AppointmentRepository,
     private val visitService: VisitService,
-    private val currentUser: CurrentUser,
     private val auditService: AuditService,
+    private val patientDepositService: PatientDepositService,
+    private val billService: BillService,
 ) {
+
+    // Bill-modal footer: patient registration date + the most recent PAID/WAIVED
+    // appointment's time and method ("Last Payment: N days ago (method)").
+    @GetMapping("/{patientId}/bill-footer")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
+    fun billFooter(@PathVariable patientId: UUID): ResponseEntity<Any> {
+        val patient = patientRepository.findById(patientId).orElse(null)
+            ?: return ResponseEntity.notFound().build()
+        val lastPaid = appointmentRepository
+            .findPaidByPatient(patientId, PageRequest.of(0, 1))
+            .firstOrNull()
+        return ResponseEntity.ok(
+            BillFooterDTO(
+                registeredAt = patient.createdAt,
+                lastPaymentAt = lastPaid?.scheduledTime,
+                lastPaymentMethod = lastPaid?.paymentMethod,
+            )
+        )
+    }
+
+    // Patient advance/deposit: current net + full movement history.
+    @GetMapping("/{patientId}/deposit")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
+    fun getDeposit(@PathVariable patientId: UUID): ResponseEntity<Any> =
+        ResponseEntity.ok(patientDepositService.getDeposit(patientId))
+
+    // Record a deposit (type=DEPOSIT) or refund (type=REFUND) from the Deposit
+    // drawer. `amount` is the non-negative magnitude; `mode`/`details` are kept
+    // in the ledger. Returns the updated net + history.
+    @PostMapping("/{patientId}/deposit")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
+    fun recordDeposit(
+        @PathVariable patientId: UUID,
+        @RequestBody body: Map<String, Any?>,
+    ): ResponseEntity<Any> {
+        return try {
+            val amount = when (val v = body["amount"]) {
+                is Number -> java.math.BigDecimal(v.toString())
+                is String -> if (v.isBlank()) throw IllegalArgumentException("amount is required") else java.math.BigDecimal(v)
+                else -> throw IllegalArgumentException("amount is required")
+            }
+            val type = body["type"]?.toString() ?: "DEPOSIT"
+            val mode = body["mode"]?.toString()
+            val details = body["details"]?.toString()
+            ResponseEntity.ok(patientDepositService.recordMovement(patientId, type, amount, mode, details))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
+        } catch (e: NumberFormatException) {
+            ResponseEntity.badRequest().body(mapOf("error" to "amount must be a number"))
+        }
+    }
+
+    // Recent Bills history for a patient (newest invoice first).
+    @GetMapping("/{patientId}/bills")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
+    fun listBills(@PathVariable patientId: UUID): ResponseEntity<Any> =
+        ResponseEntity.ok(billService.listBills(patientId))
+
+    // Snapshot one bill/invoice on Charge & Bill. Additive history — does not
+    // touch appointment payment/finance/deposit (those go via /payment).
+    @PostMapping("/{patientId}/bills")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
+    fun createBill(
+        @PathVariable patientId: UUID,
+        @RequestBody request: com.example.docodile.web.CreateBillRequest,
+    ): ResponseEntity<Any> {
+        return try {
+            ResponseEntity.ok(billService.createBill(patientId, request))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
+        }
+    }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
@@ -63,12 +149,10 @@ class PatientController(
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     @Transactional
     fun archive(@PathVariable patientId: UUID): ResponseEntity<Void> {
-        val clinicId = currentUser.clinicId()
-        val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
+        val patient = patientRepository.findById(patientId).orElse(null)
             ?: return ResponseEntity.notFound().build()
         if (patient.deletedAt == null) {
             patient.deletedAt = Instant.now()
-            patient.deletedBy = currentUser.userId()
             patientRepository.save(patient)
             auditService.log(AuditAction.PATIENT_ARCHIVED, entityType = "Patient", entityId = patientId)
         }
@@ -79,12 +163,10 @@ class PatientController(
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     @Transactional
     fun unarchive(@PathVariable patientId: UUID): ResponseEntity<Void> {
-        val clinicId = currentUser.clinicId()
-        val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
+        val patient = patientRepository.findById(patientId).orElse(null)
             ?: return ResponseEntity.notFound().build()
         if (patient.deletedAt != null) {
             patient.deletedAt = null
-            patient.deletedBy = null
             patientRepository.save(patient)
             auditService.log(AuditAction.PATIENT_UNARCHIVED, entityType = "Patient", entityId = patientId)
         }
@@ -98,8 +180,7 @@ class PatientController(
         @PathVariable patientId: UUID,
         @RequestBody req: UpdatePatientRequest
     ): ResponseEntity<Void> {
-        val clinicId = currentUser.clinicId()
-        val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
+        val patient = patientRepository.findById(patientId).orElse(null)
             ?.takeIf { it.deletedAt == null }
             ?: return ResponseEntity.notFound().build()
 

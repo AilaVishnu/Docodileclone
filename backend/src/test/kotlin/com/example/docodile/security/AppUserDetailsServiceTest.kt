@@ -2,10 +2,12 @@ package com.example.docodile.security
 
 import com.example.docodile.domain.AppUser
 import com.example.docodile.domain.Role
-import com.example.docodile.domain.Tenant
 import com.example.docodile.repo.AppUserRepository
+import com.example.docodile.tenancy.TenantContext
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
@@ -24,15 +26,23 @@ class AppUserDetailsServiceTest {
     @InjectMocks
     private lateinit var appUserDetailsService: AppUserDetailsService
 
+    @BeforeEach
+    fun setup() {
+        TenantContext.set("tskin")
+    }
+
+    @AfterEach
+    fun teardown() {
+        TenantContext.clear()
+    }
+
     @Test
     fun `loadUserByUsername should return user principal for valid email`() {
-        val tenant = Tenant(id = UUID.randomUUID())
         val user = AppUser(
             id = UUID.randomUUID(),
             email = "user@example.com",
             passwordHash = "hash",
             role = Role.ADMIN,
-            tenant = tenant,
             active = true
         )
 
@@ -41,7 +51,7 @@ class AppUserDetailsServiceTest {
         val principal = appUserDetailsService.loadUserByUsername("user@example.com") as AppUserPrincipal
 
         assertEquals(user.id, principal.userId)
-        assertEquals(tenant.id, principal.tenantId)
+        assertEquals("tskin", principal.schema)
         assertEquals("user@example.com", principal.username)
     }
 

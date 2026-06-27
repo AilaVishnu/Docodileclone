@@ -4,7 +4,6 @@ import com.example.docodile.repo.AppointmentRepository
 import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.repo.VisitRepository
-import com.example.docodile.security.CurrentUser
 import com.example.docodile.web.PatientWithLastVisitDTO
 import org.springframework.stereotype.Service
 
@@ -14,11 +13,10 @@ class PatientService(
     private val visitRepository: VisitRepository,
     private val appointmentRepository: AppointmentRepository,
     private val appUserRepository: AppUserRepository,
-    private val currentUser: CurrentUser
 ) {
-    fun listPatients() = patientRepository.findAllByClinicIdAndDeletedAtIsNull(currentUser.clinicId())
+    fun listPatients() = patientRepository.findAllByDeletedAtIsNull()
 
-    fun listArchived() = patientRepository.findAllByClinicIdAndDeletedAtIsNotNull(currentUser.clinicId())
+    fun listArchived() = patientRepository.findAllByDeletedAtIsNotNull()
 
     /**
      * List patients in the caller's clinic with their most recent
@@ -30,20 +28,19 @@ class PatientService(
      * Joined in-memory.
      */
     fun listPatientsWithLastVisit(): List<PatientWithLastVisitDTO> {
-        val clinicId = currentUser.clinicId()
-        val patients = patientRepository.findAllByClinicIdAndDeletedAtIsNull(clinicId)
-        val lastVisitMap = visitRepository.findLastVisitDatesByClinic(clinicId)
+        val patients = patientRepository.findAllByDeletedAtIsNull()
+        val lastVisitMap = visitRepository.findLastVisitDates()
             .associateBy({ it.getPatientId() }, { it.getLastVisitDate() })
         // Build patientId -> set of treating doctor ids from both visits AND
         // scheduled appointments. Appointment pairs cover the case where a
         // patient has been booked with a doctor but no visit has been created
         // yet (filter would otherwise miss them until first View Pad).
         val doctorMap = mutableMapOf<java.util.UUID, MutableSet<java.util.UUID>>()
-        visitRepository.findPatientDoctorPairsByClinic(clinicId).forEach { row ->
+        visitRepository.findPatientDoctorPairs().forEach { row ->
             val docId = row.getDoctorId() ?: return@forEach
             doctorMap.getOrPut(row.getPatientId()) { mutableSetOf() }.add(docId)
         }
-        appointmentRepository.findPatientDoctorPairsByClinic(clinicId).forEach { row ->
+        appointmentRepository.findPatientDoctorPairs().forEach { row ->
             val docId = row.getDoctorId() ?: return@forEach
             doctorMap.getOrPut(row.getPatientId()) { mutableSetOf() }.add(docId)
         }

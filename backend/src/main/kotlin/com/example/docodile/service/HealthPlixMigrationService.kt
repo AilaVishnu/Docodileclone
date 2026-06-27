@@ -4,12 +4,10 @@ import com.example.docodile.domain.MigrationRun
 import com.example.docodile.domain.Patient
 import com.example.docodile.domain.RxRow
 import com.example.docodile.domain.Visit
-import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.MigrationRunRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.repo.RxRowRepository
 import com.example.docodile.repo.VisitRepository
-import com.example.docodile.security.CurrentUser
 import jakarta.persistence.EntityManager
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -40,9 +38,7 @@ class HealthPlixMigrationService(
     private val patientRepository: PatientRepository,
     private val visitRepository: VisitRepository,
     private val rxRowRepository: RxRowRepository,
-    private val clinicEntityRepository: ClinicEntityRepository,
     private val migrationRunRepository: MigrationRunRepository,
-    private val currentUser: CurrentUser,
     private val entityManager: EntityManager,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -120,10 +116,6 @@ class HealthPlixMigrationService(
         investigationsCsv: String?,
         medicationsCsv: String?,
     ): Result {
-        val clinicId = currentUser.clinicId()
-        val clinic = clinicEntityRepository.findById(clinicId)
-            .orElseThrow { IllegalArgumentException("Clinic not found") }
-
         // Validate every supplied file's header against the slot it landed
         // in. A mismatched file is rejected with a clear message before any
         // row is touched — nothing is imported until all files look right.
@@ -135,11 +127,10 @@ class HealthPlixMigrationService(
         )
         if (headerErrors.isNotEmpty()) throw IllegalArgumentException(headerErrors.joinToString("  "))
 
-        // Preload everything previously imported for this clinic so a
-        // re-run upserts instead of duplicating.
-        val patientByRef = patientRepository.findAllByClinicIdAndExternalRefIsNotNull(clinicId)
+        // Preload everything previously imported so a re-run upserts instead of duplicating.
+        val patientByRef = patientRepository.findAllByExternalRefIsNotNull()
             .associateByTo(HashMap()) { it.externalRef!! }
-        val visitByRef = visitRepository.findAllByClinicIdAndExternalRefIsNotNull(clinicId)
+        val visitByRef = visitRepository.findAllByExternalRefIsNotNull()
             .associateByTo(HashMap()) { it.externalRef!! }
         // Visits that already existed before this run — only these can carry
         // stale rx_rows worth clearing. Brand-new visits never do, so they
@@ -161,9 +152,9 @@ class HealthPlixMigrationService(
         // Patient numbering. Imported patients keep the numeric part of their
         // HealthPlix id ("T960" → 960) so staff recognise them from old
         // records. Anything missing/non-numeric, or a number already taken,
-        // falls back to the next free number above the clinic's current max.
+        // falls back to the next free number above the current max.
         // A re-run keeps existing numbers and only numbers genuinely new rows.
-        val takenDisplayNos = patientRepository.findDisplayNosByClinicId(clinicId).toHashSet()
+        val takenDisplayNos = patientRepository.findAllDisplayNos().toHashSet()
         var nextDisplayNo = takenDisplayNos.maxOrNull() ?: 0
         fun numericRef(ref: String): Int? = ref.filter { it.isDigit() }.toIntOrNull()?.takeIf { it > 0 }
         fun reserveDisplayNo(preferred: Int?): Int {
@@ -186,7 +177,6 @@ class HealthPlixMigrationService(
         fun resolvePatient(ref: String): Patient {
             patientByRef[ref]?.let { return it }
             val stub = Patient(
-                clinic = clinic,
                 name = ref,           // best we can do without the APD row
                 createdAt = now,
                 externalRef = ref,
@@ -206,7 +196,6 @@ class HealthPlixMigrationService(
             visitByRef[key]?.let { touchedVisitIds.add(it.id); return it }
             val patient = resolvePatient(patientRef)
             val v = Visit(
-                clinic = clinic,
                 patient = patient,
                 visitDate = date,
                 createdAt = now,
@@ -231,7 +220,7 @@ class HealthPlixMigrationService(
 
                 val existing = patientByRef[ref]
                 val p = existing ?: Patient(
-                    clinic = clinic, externalRef = ref, createdAt = now, displayNo = reserveDisplayNo(numericRef(ref)),
+                    externalRef = ref, createdAt = now, displayNo = reserveDisplayNo(numericRef(ref)),
                 )
                 p.name = name
                 p.phone = cell(row, header, "phone_number").trim().ifBlank { null }
@@ -370,7 +359,6 @@ class HealthPlixMigrationService(
         // Record the run so the Import data screen can show "last import".
         migrationRunRepository.save(
             MigrationRun(
-                clinic = clinic,
                 platform = "HealthPlix",
                 patients = patients,
                 visits = visits,
@@ -383,8 +371,8 @@ class HealthPlixMigrationService(
         )
 
         log.info(
-            "HealthPlix migration into clinic {} — patients={} visits={} prescriptions={} medicines={} inv={} skipped={}",
-            clinicId, patients, visits, prescriptions, medicines, investigations, skipped,
+            "HealthPlix migration — patients={} visits={} prescriptions={} medicines={} inv={} skipped={}",
+            patients, visits, prescriptions, medicines, investigations, skipped,
         )
         return Result(
             patients, visits, prescriptions, medicines,

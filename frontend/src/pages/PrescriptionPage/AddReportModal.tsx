@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Modal } from "../../components/Modal/Modal";
+import React, { useEffect, useMemo, useState } from "react";
+import { UploadModal } from "../../components/UploadModal";
 import { Select } from "../../components/Input/Select/Select";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
@@ -104,9 +104,7 @@ export function AddReportModal({
   onAdd,
 }: Props) {
   const [drafts, setDrafts] = useState<DraftEntry[]>([]);
-  const [dragOver, setDragOver] = useState(false);
   const [openPickerFor, setOpenPickerFor] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset drafts whenever the modal opens fresh. Skip revoke for drafts that
   // were "kept" by handleSave (their URL is now owned by the caller).
@@ -148,22 +146,20 @@ export function AddReportModal({
       return prev.filter((d) => d.id !== id);
     });
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) addFiles(e.target.files);
-    e.target.value = "";
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    if (e.dataTransfer.files) addFiles(e.dataTransfer.files);
-  };
-
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   const handleSave = async () => {
-    if (drafts.length === 0) return;
+    // Validate on click (button is now clickable by default): surface a friendly
+    // message via the existing uploadError banner instead of disabling the button.
+    if (drafts.length === 0) {
+      setUploadError("Please add at least one report.");
+      return;
+    }
+    if (drafts.some((d) => !d.category)) {
+      setUploadError("Please choose a category for each report.");
+      return;
+    }
     setUploading(true);
     setUploadError(null);
     let anyFailed = false;
@@ -241,56 +237,22 @@ export function AddReportModal({
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <div style={styles.container}>
-        <header style={styles.header}>
-          <div>
-            <h2 style={styles.title}>{titleCopy}</h2>
-            <p style={styles.subtitle}>{headerSubtitle}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            style={styles.closeBtn}
-          >
-            ✕
-          </button>
-        </header>
-
-        {/* Drop zone — clickable, also accepts drag/drop. Stays visible even
-            after files are added so the user can append more in the same
-            session. */}
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={handleDrop}
-          style={{
-            ...styles.dropZone,
-            ...(dragOver ? styles.dropZoneActive : null),
-          }}
-        >
-          <ArrowUpIcon />
-
-          <span style={styles.dropZoneTitle}>
-            {drafts.length === 0
-              ? "Drag files here, or click to choose"
-              : "Add more files"}
-          </span>
-          <span style={styles.dropZoneHint}>
-            Any file type · multi-select supported
-          </span>
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          onChange={handleFileInput}
-          style={{ display: "none" }}
-        />
-
+    <UploadModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={titleCopy}
+      subtitle={headerSubtitle}
+      dropTitleActive="Add more files"
+      dropHint="Any file type · multi-select supported"
+      hasFiles={drafts.length > 0}
+      multiple
+      onFiles={addFiles}
+      error={uploadError}
+      cancelLabel={uploadError ? "Close anyway" : "Cancel"}
+      confirmLabel={uploading ? "Uploading…" : `Add${drafts.length > 1 ? ` (${drafts.length})` : ""}`}
+      onConfirm={handleSave}
+      confirmDisabled={uploading}
+    >
         {drafts.length > 0 && (
           <div style={styles.draftList}>
             {drafts.map((d) => (
@@ -348,11 +310,6 @@ export function AddReportModal({
                             setOpenPickerFor(null);
                           }}
                           onClose={() => setOpenPickerFor(null)}
-                          style={{
-                            top: "calc(100% + 8px)",
-                            left: 0,
-                            transform: "none",
-                          }}
                         />
                       )}
                     </div>
@@ -395,27 +352,7 @@ export function AddReportModal({
           </div>
         )}
 
-        {uploadError && (
-          <p style={styles.uploadError}>{uploadError}</p>
-        )}
-        <footer style={styles.footer}>
-          <button type="button" onClick={onClose} style={styles.btnGhost}>
-            {uploadError ? "Close anyway" : "Cancel"}
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={uploading || drafts.length === 0 || drafts.some(d => !d.category)}
-            style={{
-              ...styles.btnPrimary,
-              ...(uploading || drafts.length === 0 || drafts.some(d => !d.category) ? { opacity: 0.45, cursor: "not-allowed" } : null),
-            }}
-          >
-            {uploading ? "Uploading…" : `Add${drafts.length > 1 ? ` (${drafts.length})` : ""}`}
-          </button>
-        </footer>
-      </div>
-    </Modal>
+      </UploadModal>
   );
 }
 
@@ -425,29 +362,6 @@ function fileExt(filename: string): string {
   return (m ? m[1] : "FILE").slice(0, 4).toUpperCase();
 }
 
-// Inline arrow-up glyph matching Figma node 2524:5157 (Linear / Arrows /
-// Arrow Up). Drawn at 24×24 viewBox, rendered slightly larger than the old
-// emoji per design feedback.
-function ArrowUpIcon() {
-  return (
-    <svg
-      width="32"
-      height="32"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden
-      style={{ color: colors.primary700 }}
-    >
-      <path
-        d="M12 4v16M12 4l-5 5M12 4l5 5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 // These are local to the modal — every other dropdown / picker / date input
@@ -466,17 +380,15 @@ const styles: Record<string, React.CSSProperties> = {
     overflowY: "auto",
   },
   header: {
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: spacing.m,
+    position: "relative",
+    textAlign: "center",
   },
   title: {
     margin: 0,
     fontFamily: fonts.family.secondary,
     fontSize: fonts.size.h5,
     lineHeight: fonts.lineHeight.h5,
-    fontWeight: fonts.weight.regular,
+    fontWeight: fonts.weight.semibold,
     color: colors.neutral900,
   },
   subtitle: {
@@ -485,18 +397,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: fonts.family.primary,
     fontSize: fonts.control.sm,
     color: colors.neutral600,
-  },
-  // Matches AddStaffModal's closeButton — plain text "✕", no background
-  // circle. Keeps modal headers consistent across the app.
-  closeBtn: {
-    background: "none",
-    border: "none",
-    color: colors.neutral900,
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.m,
-    cursor: "pointer",
-    padding: 0,
-    flexShrink: 0,
   },
   dropZone: {
     display: "flex",
@@ -653,38 +553,16 @@ const styles: Record<string, React.CSSProperties> = {
   uploadError: {
     margin: 0,
     padding: `${spacing.s} ${spacing.m}`,
-    backgroundColor: "#FFF3CD",
-    border: `1px solid #FFEAA7`,
+    backgroundColor: colors.yellowAlpha10,
+    border: `1px solid ${colors.yellow200}`,
     borderRadius: radii.m,
     fontFamily: fonts.family.primary,
     fontSize: fonts.control.sm,
-    color: "#856404",
+    color: colors.neutral900,
   },
   footer: {
     display: "flex",
-    justifyContent: "flex-end",
+    justifyContent: "center",
     gap: spacing.s,
-    paddingTop: spacing.s,
-    borderTop: `1px solid ${colors.neutral200}`,
-  },
-  btnGhost: {
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.control.md,
-    color: colors.neutral900,
-    background: "transparent",
-    border: `1px solid ${colors.primary300}`,
-    borderRadius: radii.full,
-    padding: "10px 20px",
-    cursor: "pointer",
-  },
-  btnPrimary: {
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.control.md,
-    color: colors.neutral100,
-    backgroundColor: colors.primary700,
-    border: "none",
-    borderRadius: radii.full,
-    padding: "10px 20px",
-    cursor: "pointer",
   },
 };

@@ -1,37 +1,29 @@
 import React, { useState } from "react";
 import { styles } from "./LoginCard.styles";
-import { TextInput } from "../Input/TextInput";
-import { DomainInput } from "../Input/DomainInput";
+import { Field } from "../Field";
 import { Button } from "../Button";
 import { Card } from "../Card";
-import { ReactComponent as MailIcon } from "../../assets/Letter.svg";
-import { ReactComponent as PasswordIcon } from "../../assets/Key.svg";
-import { ReactComponent as EyeIcon } from "../../assets/Eye.svg";
-import { ReactComponent as EyeClosedIcon } from "../../assets/Eye Closed.svg";
+import { Icon } from "../Icon";
 import { colors, fonts } from "../../styles/theme";
 import { API_BASE_URL } from "../../apiConfig";
 import { Toast } from "../Toast";
+import { resolveToastIcon } from "../Toast/toastIcon";
 
 
-type LoginMode = "admin" | "staff";
 type View = "login" | "forgot";
 
 type LoginCardProps = {
-  mode: LoginMode;
   onLoginSuccess?: () => void;
-  onSwitchMode?: () => void;
 };
 
 type LoginResponse = {
   token: string;
   role: string;
-  clinicId?: string | null;
-  clinicName?: string;
-  gender?: string | null;
+  gender?: string;
+  mfaPending?: boolean;
 };
 
-export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps) {
-  const [domain, setDomain] = useState("");
+export function LoginCard({ onLoginSuccess }: LoginCardProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -40,12 +32,7 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
 
   const [view, setView] = useState<View>("login");
   const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotDomain, setForgotDomain] = useState("");
   const [forgotSubmitting, setForgotSubmitting] = useState(false);
-
-  const isStaff = mode === "staff";
-  const isDomainValid = !isStaff || domain.trim().length > 0;
-  const canSubmit = email.trim().length > 0 && password.trim().length > 0 && isDomainValid;
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -53,23 +40,13 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
       return;
     }
 
-    if (isStaff && !domain.trim()) {
-      setToastMessage("Please enter clinic domain.");
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      const url = isStaff ? `${API_BASE_URL}/auth/staff/login` : `${API_BASE_URL}/auth/login`;
-      const body = isStaff
-        ? { domain: domain.trim(), email, password }
-        : { email, password };
-
-      const response = await fetch(url, {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
@@ -89,14 +66,6 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
         if (payload.user_id) localStorage.setItem("docodile_user_id", payload.user_id);
         if (payload.email) localStorage.setItem("docodile_user_email", payload.email);
       } catch { /* ignore decode errors */ }
-      if (data.clinicId) {
-        localStorage.setItem("docodile_clinic_id", data.clinicId);
-      } else {
-        localStorage.removeItem("docodile_clinic_id");
-      }
-      if (data.clinicName) {
-        localStorage.setItem("docodile_clinic_name", data.clinicName);
-      }
 
       setToastMessage("Login successful");
       onLoginSuccess?.();
@@ -113,7 +82,7 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && canSubmit && !isSubmitting) {
+    if (e.key === "Enter" && !isSubmitting) {
       handleLogin();
     }
   };
@@ -125,20 +94,12 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
       return;
     }
 
-    if (isStaff && !forgotDomain.trim()) {
-      setToastMessage("Enter clinic domain");
-      return;
-    }
-
     setForgotSubmitting(true);
     try {
-      const body: Record<string, string> = { email: emailVal };
-      if (isStaff) body.domain = forgotDomain.trim();
-
       const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ email: emailVal }),
       });
 
       if (response.status === 404) {
@@ -153,7 +114,6 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
 
       setToastMessage(`Password reset email sent to ${emailVal}`);
       setForgotEmail("");
-      setForgotDomain("");
       setView("login");
     } catch {
       setToastMessage("Network error. Please try again.");
@@ -170,28 +130,21 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
 
   if (view === "forgot") {
     return (
-      <Card style={{ ...styles.card, width: "40vw", backgroundColor: isStaff ? colors.active.shade100 : colors.secondary50 }}>
+      <Card style={{ ...styles.card, width: "40vw", backgroundColor: colors.secondary50 }}>
         <h4 style={styles.title}>Reset Password</h4>
 
-        {isStaff && (
-          <DomainInput
-            value={forgotDomain}
-            onChange={setForgotDomain}
-            onKeyDown={handleForgotKeyDown}
-          />
-        )}
-
-        <TextInput
+        <Field
+          variant="underline"
           type="email"
           value={forgotEmail}
           onChange={setForgotEmail}
           placeholder="hello@example.com"
-          iconLeft={<MailIcon />}
+          iconLeft={<Icon name="mail" tone="inherit" />}
           onKeyDown={handleForgotKeyDown}
         />
 
         <Button
-          variant={isStaff ? "primary" : "secondary"}
+          variant="secondary"
           size="md"
           onClick={handleForgotPassword}
           disabled={forgotSubmitting}
@@ -201,7 +154,7 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
 
         <div style={{ display: "flex", justifyContent: "center", marginTop: -8 }}>
           <span
-            onClick={() => { setView("login"); setForgotEmail(""); setForgotDomain(""); }}
+            onClick={() => { setView("login"); setForgotEmail(""); }}
             style={{
               fontFamily: fonts.family.primary,
               fontSize: fonts.size.s,
@@ -213,7 +166,7 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
               transition: "color 0.2s ease",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.color = isStaff ? colors.secondary800 : colors.active.shade700;
+              e.currentTarget.style.color = colors.active.shade700;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.color = colors.neutral700;
@@ -225,6 +178,7 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
 
         <Toast
           message={toastMessage}
+          {...resolveToastIcon(toastMessage)}
           isVisible={!!toastMessage}
           onClose={() => setToastMessage("")}
         />
@@ -233,116 +187,75 @@ export function LoginCard({ mode, onLoginSuccess, onSwitchMode }: LoginCardProps
   }
 
   return (
-    <Card style={{ ...styles.card, width: "40vw", backgroundColor: isStaff ? colors.active.shade100 : colors.secondary50 }}>
+    <Card style={{ ...styles.card, width: "var(--login-card-w)", backgroundColor: colors.secondary50 }}>
       <h4 style={styles.title}>
-        Login as {isStaff ? "Staff" : "Admin"}
+        Login
       </h4>
 
-      {/* Domain (staff only) */}
-      {isStaff && (
-        <DomainInput
-          value={domain}
-          onChange={setDomain}
-          onKeyDown={handleKeyDown}
-        />
-      )}
-
       {/* Email */}
-      <TextInput
+      <Field
+        variant="underline"
         type="email"
         value={email}
         onChange={setEmail}
         placeholder="hello@example.com"
-        iconLeft={<MailIcon />}
+        iconLeft={<Icon name="mail" tone="inherit" />}
         onKeyDown={handleKeyDown}
       />
 
       {/* Password */}
       <div style={styles.passwordRow}>
-        <TextInput
+        <Field
+          variant="underline"
           type={showPassword ? "text" : "password"}
           value={password}
           onChange={setPassword}
           placeholder="Enter your password"
-          iconLeft={<PasswordIcon />}
+          iconLeft={<Icon name="key" tone="inherit" />}
           onKeyDown={handleKeyDown}
           iconRight={<button
             type="button"
             onClick={() => setShowPassword((p) => !p)}
             style={styles.eyeButton}
           >
-            {showPassword ? <EyeClosedIcon /> : <EyeIcon />}
+            {showPassword ? <Icon name="eye-closed" tone="inherit" /> : <Icon name="eye" tone="inherit" />}
           </button>}
         />
       </div>
 
       {/* Sign in */}
       <Button
-        variant={isStaff ? "primary" : "secondary"}
+        variant="secondary"
         size="md"
         onClick={handleLogin}
-        disabled={isSubmitting || !canSubmit}
+        disabled={isSubmitting}
       >
         {isSubmitting ? "Signing in..." : "Sign in"}
       </Button>
 
-      {onSwitchMode && (
-        <div style={{ display: "flex", justifyContent: "center", marginTop: -8 }}>
-          <span
-            onClick={onSwitchMode}
-            style={{
-              fontFamily: fonts.family.primary,
-              fontSize: fonts.size.s,
-              fontWeight: fonts.weight.medium,
-              color: colors.neutral700,
-              cursor: "pointer",
-              textDecoration: "underline",
-              textUnderlineOffset: "3px",
-              transition: "color 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = isStaff ? colors.secondary800 : colors.active.shade700;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = colors.neutral700;
-            }}
-          >
-            {isStaff ? "Login as Admin" : "Login as Staff"}
-          </span>
-        </div>
-      )}
-
       <Toast
         message={toastMessage}
+        {...resolveToastIcon(toastMessage)}
         isVisible={!!toastMessage}
         onClose={() => setToastMessage("")}
       />
 
       {/* Footer */}
       <div style={styles.footer}>
-        {/* "New to docodile? Book Demo" is for the public admin sign-up
-            funnel, not staff — clinic staff are seeded by their admin, so
-            hide the CTA on the staff login. */}
-        {!isStaff && (
-          <p style={styles.footerText}>
-            New to docodile?{" "}
-            <strong
-              style={{ cursor: "pointer" }}
-              onClick={() => window.open("https://calendar.app.google/uQskDY6DM4F8q8Kd9", "_blank")}
-            >
-              Book Demo
-            </strong>
-          </p>
-        )}
+        <p style={styles.footerText}>
+          New to docodile?{" "}
+          <strong
+            style={{ cursor: "pointer" }}
+            onClick={() => window.open("https://calendar.app.google/uQskDY6DM4F8q8Kd9", "_blank")}
+          >
+            Book Demo
+          </strong>
+        </p>
 
-        {/* On the staff login, Book Demo above is hidden — the flex
-            space-between would otherwise pull this to the left, so push
-            it back to the right. Admin login keeps the natural layout. */}
         <p
           style={{
             ...styles.footerText,
             cursor: "pointer",
-            ...(isStaff ? { marginLeft: "auto" } : null),
           }}
           onClick={() => setView("forgot")}
         >

@@ -1,4 +1,4 @@
-import { Med, MedForm, GroupBy } from "./types";
+import { Med, MedForm, MedCategory, GroupBy } from "./types";
 import { expiryStatus } from "./expiry";
 
 export type Group = { key: string; label: string; items: Med[] };
@@ -18,31 +18,16 @@ const FORM_ORDER: MedForm[] = [
   "tablet", "ointment", "cream", "soap", "spray", "serum", "syrup", "drops",
 ];
 
-// Shared grouping engine — same buckets feed both shelf and list views.
-export function groupItems(items: Med[], by: GroupBy): Group[] {
-  if (by === "alpha") {
-    return groupAlpha(items);
-  }
-  if (by === "form") {
-    return groupForm(items);
-  }
-  return groupAttention(items);
-}
+const CATEGORY_ORDER: MedCategory[] = [
+  "Tablets", "Topicals", "Acne & skin", "Cleansers & soaps", "Serums & boosters",
+];
 
-function groupAlpha(items: Med[]): Group[] {
-  const map = new Map<string, Med[]>();
-  for (const m of items) {
-    const letter = (m.name[0] ?? "#").toUpperCase();
-    const k = /[A-Z]/.test(letter) ? letter : "#";
-    if (!map.has(k)) map.set(k, []);
-    map.get(k)!.push(m);
-  }
-  const keys = Array.from(map.keys()).sort();
-  return keys.map((k) => ({
-    key: k,
-    label: k,
-    items: map.get(k)!.sort((a, b) => a.name.localeCompare(b.name)),
-  }));
+// Shared grouping engine — feeds the shelf view's aisle sections. The list view
+// no longer groups (its rows order by the clickable column headers).
+export function groupItems(items: Med[], by: GroupBy): Group[] {
+  if (by === "category") return groupCategory(items);
+  if (by === "none") return groupNone(items);
+  return groupForm(items);
 }
 
 function groupForm(items: Med[]): Group[] {
@@ -60,26 +45,31 @@ function groupForm(items: Med[]): Group[] {
     }));
 }
 
-// Attention view — three urgency buckets, items appear in the most
-// urgent one they qualify for. Healthy stock is excluded.
-function groupAttention(items: Med[]): Group[] {
-  const out: Med[] = [];
-  const expiring: Med[] = [];
-  const low: Med[] = [];
-
+function groupCategory(items: Med[]): Group[] {
+  const map = new Map<MedCategory, Med[]>();
   for (const m of items) {
-    if (m.unitsInStock === 0) {
-      out.push(m);
-    } else if (expiryStatus(m.expiry) === "bad") {
-      expiring.push(m);
-    } else if (m.unitsInStock < 5) {
-      low.push(m);
-    }
+    if (!map.has(m.category)) map.set(m.category, []);
+    map.get(m.category)!.push(m);
   }
+  // Known categories first (in CATEGORY_ORDER), then any stragglers alphabetically.
+  const known = CATEGORY_ORDER.filter((c) => map.has(c));
+  const extra = Array.from(map.keys()).filter((c) => !CATEGORY_ORDER.includes(c)).sort();
+  return [...known, ...extra].map((c) => ({
+    key: c,
+    label: c,
+    items: map.get(c)!.sort((a, b) => a.name.localeCompare(b.name)),
+  }));
+}
 
-  const groups: Group[] = [];
-  if (out.length) groups.push({ key: "out", label: "Out of stock", items: out });
-  if (expiring.length) groups.push({ key: "exp", label: "Expiring soon", items: expiring });
-  if (low.length) groups.push({ key: "low", label: "Low stock", items: low });
-  return groups;
+// Ungrouped — one section with no header (the shelf hides the header when the
+// label is empty), names sorted A→Z.
+function groupNone(items: Med[]): Group[] {
+  if (items.length === 0) return [];
+  return [{ key: "all", label: "", items: [...items].sort((a, b) => a.name.localeCompare(b.name)) }];
+}
+
+// A medicine "needs attention" if it's out of stock, expiring within 3 months,
+// or running low (<5 units). Drives the shared "Needs attention" filter.
+export function needsAttention(m: Med): boolean {
+  return m.unitsInStock === 0 || expiryStatus(m.expiry) === "bad" || m.unitsInStock < 5;
 }

@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, radii, fonts, spacing } from "../../styles/theme";
+import { colors, fonts } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   backdrop: {
@@ -10,10 +10,12 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   overlay: {
-    position: "absolute",
+    // Center on the viewport (was anchored to the parent chip, which could
+    // push the popup off-screen on narrower viewports like 1024).
+    position: "fixed",
     top: "50%",
-    left: "calc(100% + 12px)",
-    transform: "translateY(-50%)",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
     zIndex: 1100,
   },
 
@@ -37,7 +39,7 @@ export const styles: Record<string, CSSProperties> = {
 
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
+    gridTemplateColumns: "repeat(6, 1fr)",
     gap: "4px",
   },
 

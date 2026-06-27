@@ -5,17 +5,24 @@ export const styles: Record<string, CSSProperties> = {
   container: {
     display: "flex",
     alignItems: "center",
-    border: `1px solid ${colors.neutral300}`,
+    // Longhand so the availability/error states can override just borderColor
+    // without React's shorthand/non-shorthand mixing warning.
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: colors.neutral300,
     borderRadius: radii.m,
     gap: spacing.xs,
     overflow: "hidden",
-    backgroundColor: colors.neutralAlphaBlack,
-    height: 54,
+    // Container is transparent — the input paints its own bg (white when
+    // editable, transparent when read-only); the suffix stays transparent.
+    backgroundColor: "transparent",
+    height: "var(--input-h, 40px)",
     width: "100%",
   },
 
   input: {
     flex: 1,
+    minWidth: 0, // allow the input to squeeze so the suffix keeps its full width
     height: "100%",
     border: "none",
     outline: "none",
@@ -27,6 +34,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   suffix: {
+    flexShrink: 0, // fixed width — never squeeze; the input flexes instead
     height: "100%",
     display: "flex",
     alignItems: "center",

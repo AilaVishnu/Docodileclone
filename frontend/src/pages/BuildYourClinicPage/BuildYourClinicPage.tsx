@@ -1,165 +1,106 @@
 import React, { useEffect, useState } from "react";
 import { AddStaffModal } from "../../components/AddStaffModal";
-import { ClinicTabs, Clinic, Staff } from "../../components/ClinicTabs";
+import { Clinic, Staff } from "../../components/ClinicTabs";
 import { styles } from "./BuildYourClinicPage.styles";
 import { ClinicWorkspace } from "../../components/ClinicWorkspace";
 import { Button } from "../../components/Button";
 import { API_BASE_URL } from "../../apiConfig";
 import { ClinicInfoCard } from "../../components/ClinicInfoCard";
 import { StaffIllustration } from "../../components/AddStaffModal/StaffIllustration";
-import { ReactComponent as NextIcon } from "../../assets/Arrow Right.svg";
-import { ReactComponent as HelpIcon } from "../../assets/Help.svg";
-import { ReactComponent as PlusIcon } from "../../assets/Plus.svg";
+import { Icon } from "../../components/Icon";
 import { ReactComponent as ClinicRoof } from "../../assets/clinic roof.svg";
 import { ReactComponent as Bush } from "../../assets/bush.svg";
 import { Toast } from "../../components/Toast";
+import { resolveToastIcon } from "../../components/Toast/toastIcon";
 import { StaffWindow } from "../../components/StaffWindow";
 
 export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
-  const [clinics, setClinics] = useState<Clinic[]>([]);
-  const [activeClinicId, setActiveClinicId] = useState<string>("");
+  const [clinic, setClinic] = useState<Clinic | null>(null);
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | undefined>(undefined);
   const [toastMessage, setToastMessage] = useState("");
-  const [maxClinics, setMaxClinics] = useState(0);
-  const [maxStaffPerClinic, setMaxStaffPerClinic] = useState(0);
 
   useEffect(() => {
     document.title = "Docodile | Build Your Clinic";
 
-    const fetchConfig = async () => {
+    const fetchClinic = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/tenant/config`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("docodile_token")}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setMaxClinics(data.maxClinics);
-          setMaxStaffPerClinic(data.maxStaffPerClinic);
-        }
-      } catch (e) {
-        console.error("Failed to fetch tenant config:", e);
-      }
-    };
+        const [clinicRes, staffRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/tenant/clinic`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("docodile_token")}` },
+          }),
+          fetch(`${API_BASE_URL}/api/tenant/staff`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("docodile_token")}` },
+          }),
+        ]);
 
-    const fetchClinics = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/tenant/clinics`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.length > 0) {
-            const mappedClinics: Clinic[] = await Promise.all(data.map(async (c: any) => {
-              // Fetch staff for this clinic
-              let staffList: Staff[] = [];
-              try {
-                const staffResponse = await fetch(`${API_BASE_URL}/api/tenant/clinics/${c.id}/staff`, {
-                  headers: {
-                    Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
-                  },
-                });
-                if (staffResponse.ok) {
-                  const staffData = await staffResponse.json();
-                  staffList = staffData.map((s: any) => ({
-                    id: s.id,
-                    name: s.name || "",
-                    role: s.role === "OTHER" && s.customRole
-                      ? s.customRole
-                      : s.role.split("_").map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "),
-                    gender: s.gender || "",
-                    email: s.email || "",
-                    phone: s.phone || "",
-                    department: s.department || "",
-                    specialty: s.specialty || "",
-                    registrationNo: s.registrationNo || "",
-                    qualification: s.qualification || "",
-                    medicalCouncil: s.medicalCouncil || "",
-                    experienceYears: s.experienceYears != null ? String(s.experienceYears) : "",
-                    active: s.active !== false,
-                    accountStatus: s.accountStatus ?? "ACTIVE",
-                  }));
-                }
-              } catch (e) {
-                console.error(`Failed to fetch staff for clinic ${c.id}`, e);
-              }
-
-              return {
-                id: c.id,
-                name: c.name || "Your Clinic",
-                domain: c.domain || "",
-                phone: c.phone || "",
-                address: c.address || "",
-                departments: c.speciality ? c.speciality.split(",").map((s: string) => s.trim()).filter(Boolean) : [],
-                staff: staffList
-              };
-            }));
-            setClinics(mappedClinics);
-            setActiveClinicId(mappedClinics[0].id);
-          } else {
-            // Default first clinic if none exist
-            const defaultClinic: Clinic = {
-              id: "new-1",
-              name: "Your Clinic",
-              domain: "",
-              phone: "",
-              address: "",
-              departments: [],
-              staff: []
-            };
-            setClinics([defaultClinic]);
-            setActiveClinicId(defaultClinic.id);
-          }
+        let clinicData: any = {};
+        if (clinicRes.ok) {
+          clinicData = await clinicRes.json();
         }
+
+        let staffList: Staff[] = [];
+        if (staffRes.ok) {
+          const staffData = await staffRes.json();
+          staffList = staffData.map((s: any) => ({
+            id: s.id,
+            name: s.name || "",
+            role: s.role === "OTHER" && s.customRole
+              ? s.customRole
+              : s.role.split("_").map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "),
+            gender: s.gender || "",
+            email: s.email || "",
+            phone: s.phone || "",
+            department: s.department || "",
+            specialty: s.specialty || "",
+            registrationNo: s.registrationNo || "",
+            qualification: s.qualification || "",
+            medicalCouncil: s.medicalCouncil || "",
+            experienceYears: s.experienceYears != null ? String(s.experienceYears) : "",
+            active: s.active !== false,
+            accountStatus: s.accountStatus ?? "ACTIVE",
+          }));
+        }
+
+        setClinic({
+          id: clinicData.id || "new-1",
+          name: clinicData.name || "Your Clinic",
+          domain: clinicData.domain || "",
+          phone: clinicData.phone || "",
+          address: clinicData.address || "",
+          departments: clinicData.speciality
+            ? clinicData.speciality.split(",").map((s: string) => s.trim()).filter(Boolean)
+            : [],
+          staff: staffList,
+        });
       } catch (error) {
-        console.error("Failed to fetch clinics:", error);
+        console.error("Failed to fetch clinic:", error);
+        setClinic({
+          id: "new-1",
+          name: "Your Clinic",
+          domain: "",
+          phone: "",
+          address: "",
+          departments: [],
+          staff: [],
+        });
       }
     };
 
-    fetchConfig();
-    fetchClinics();
+    fetchClinic();
   }, []);
 
-  const activeClinic = clinics.find(c => c.id === activeClinicId) || clinics[0];
-
-  const handleAddClinic = () => {
-    if (clinics.length >= maxClinics) {
-      setToastMessage(`Maximum of ${maxClinics} clinics reached`);
-      return;
-    }
-
-    const newClinic: Clinic = {
-      id: String(Date.now()),
-      name: `Your Clinic ${clinics.length + 1}`,
-      domain: "",
-      phone: "",
-      address: "",
-      departments: [],
-      staff: []
-    };
-    setClinics([...clinics, newClinic]);
-    setActiveClinicId(newClinic.id);
-  };
-
   const handleUpdateClinic = (updates: Partial<Clinic>) => {
-    setClinics(clinics.map(c =>
-      c.id === activeClinicId ? { ...c, ...updates } : c
-    ));
+    setClinic(prev => prev ? { ...prev, ...updates } : prev);
   };
 
-  // Push the active clinic's current state (name, address, departments, etc.)
-  // to the backend before opening the staff modal. Otherwise the user can add
-  // a department locally without clicking Save on the clinic, then assign a
-  // staff member to it — and the staff POST fails server-side validation with
-  // "Department '<X>' is not configured for this clinic". Returns true on
-  // success (or when clinic isn't saved yet, in which case caller already
-  // handled it earlier).
+  // Push the clinic's current state to the backend before opening the staff
+  // modal. Ensures departments are saved server-side before a staff POST that
+  // references them. Returns true on success.
   const syncClinicToBackend = async (): Promise<boolean> => {
-    if (!activeClinic) return false;
+    if (!clinic) return false;
     const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-    if (!isUuid(activeClinic.id)) {
+    if (!isUuid(clinic.id)) {
       // Clinic hasn't been saved yet — staff save itself will surface the
       // "save clinic first" toast.
       return true;
@@ -172,12 +113,11 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
         },
         body: JSON.stringify({
-          id: activeClinic.id,
-          name: activeClinic.name,
-          address: activeClinic.address,
-          phone: activeClinic.phone,
-          domain: activeClinic.domain,
-          speciality: activeClinic.departments.join(","),
+          id: clinic.id,
+          name: clinic.name,
+          address: clinic.address,
+          phone: clinic.phone,
+          speciality: clinic.departments.join(","),
         }),
       });
       if (!res.ok) {
@@ -193,10 +133,6 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   };
 
   const handleOpenAddStaff = async () => {
-    if (activeClinic && activeClinic.staff.length >= maxStaffPerClinic) {
-      setToastMessage(`Maximum of ${maxStaffPerClinic} staff members reached`);
-      return;
-    }
     if (!(await syncClinicToBackend())) return;
     setEditingStaff(undefined);
     setIsAddStaffOpen(true);
@@ -209,11 +145,11 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   };
 
   const handleDeleteStaff = async () => {
-    if (!editingStaff) return;
+    if (!editingStaff || !clinic) return;
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/tenant/clinics/${activeClinicId}/staff/${editingStaff.id}`,
+        `${API_BASE_URL}/api/tenant/staff/${editingStaff.id}`,
         {
           method: "DELETE",
           headers: {
@@ -226,7 +162,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
         const removedName = editingStaff.name;
         // Soft removal — keep the row but flag it inactive so it moves to the
         // "Deactivated" list (where it can be reactivated) instead of vanishing.
-        const updatedStaff = activeClinic.staff.map(s =>
+        const updatedStaff = clinic.staff.map(s =>
           s.id === editingStaff.id ? { ...s, active: false } : s
         );
         handleUpdateClinic({ staff: updatedStaff });
@@ -243,9 +179,10 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   };
 
   const handleReactivateStaff = async (staff: Staff) => {
+    if (!clinic) return;
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/tenant/clinics/${activeClinicId}/staff/${staff.id}/reactivate`,
+        `${API_BASE_URL}/api/tenant/staff/${staff.id}/reactivate`,
         {
           method: "PATCH",
           headers: {
@@ -254,7 +191,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
         }
       );
       if (response.ok) {
-        const updatedStaff = activeClinic.staff.map(s =>
+        const updatedStaff = clinic.staff.map(s =>
           s.id === staff.id ? { ...s, active: true } : s
         );
         handleUpdateClinic({ staff: updatedStaff });
@@ -270,10 +207,11 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
   };
 
   const handleSaveStaff = async (data: Omit<Staff, "id" | "active">) => {
+    if (!clinic) return;
     try {
       const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
-      if (!isUuid(activeClinicId)) {
+      if (!isUuid(clinic.id)) {
         setToastMessage("Please save the clinic details first before adding staff");
         setIsAddStaffOpen(false);
         return;
@@ -281,7 +219,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
 
       const staffId = editingStaff && isUuid(editingStaff.id) ? editingStaff.id : null;
 
-      const response = await fetch(`${API_BASE_URL}/api/tenant/clinics/${activeClinicId}/staff`, {
+      const response = await fetch(`${API_BASE_URL}/api/tenant/staff`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -325,20 +263,20 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
         };
 
         if (editingStaff) {
-          const updatedStaff = activeClinic.staff.map(s =>
+          const updatedStaff = clinic.staff.map(s =>
             s.id === editingStaff.id ? mappedStaff : s
           );
           handleUpdateClinic({ staff: updatedStaff });
           setToastMessage(`${mappedStaff.name} updated`);
         } else {
-          handleUpdateClinic({ staff: [...activeClinic.staff, mappedStaff] });
+          handleUpdateClinic({ staff: [...clinic.staff, mappedStaff] });
           setToastMessage(`${mappedStaff.name} added to staff`);
         }
         setIsAddStaffOpen(false);
       } else {
         // Surface the backend's error message verbatim when possible; fall
         // back to the HTTP status so 500s without a JSON body still tell us
-        // something useful (e.g. schema mismatch before a migration runs).
+        // something useful.
         const raw = await response.text();
         let msg = "";
         try {
@@ -379,27 +317,20 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
       {/* Page title */}
       <h2 style={styles.title}>Build your Clinic</h2>
 
-      {/* Clinic tabs + workspace */}
+      {/* Clinic workspace */}
       <div style={styles.workspaceContainer}>
-        <ClinicTabs
-          clinics={clinics}
-          activeClinicId={activeClinicId}
-          onSelectClinic={setActiveClinicId}
-          onAddClinic={handleAddClinic}
-        />
-
         <ClinicWorkspace
           left={
-            activeClinic ? (
+            clinic ? (
               <ClinicInfoCard
-                clinic={activeClinic}
+                clinic={clinic}
                 onUpdate={handleUpdateClinic}
                 onShowToast={setToastMessage}
               />
             ) : null
           }
           right={
-            activeClinic ? (
+            clinic ? (
               <div style={styles.rightContainer}>
                 <div style={styles.houseContainer}>
                   {/* Roof */}
@@ -410,7 +341,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                       below so they can be reactivated. */}
                   <div style={styles.houseBody}>
                     <div style={styles.staffList}>
-                      {activeClinic.staff.filter((s: Staff) => s.active).map((staff: Staff, index: number) => (
+                      {clinic.staff.filter((s: Staff) => s.active).map((staff: Staff, index: number) => (
                         <div key={staff.id} style={styles.staffCardWrapper}>
                           <StaffWindow colorIndex={index} onClick={() => handleEditStaff(staff)}>
                             <StaffIllustration
@@ -446,15 +377,13 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
                       ))}
 
                       {/* Add Staff arch */}
-                      {activeClinic.staff.filter((s: Staff) => s.active).length < maxStaffPerClinic && (
-                        <div style={styles.staffCardWrapper}>
-                          <StaffWindow dashed onClick={handleOpenAddStaff}>
-                            <PlusIcon style={{ width: 32, height: 32 }} />
-                          </StaffWindow>
-                          <div style={styles.staffName}>&nbsp;</div>
-                          <div style={styles.staffRole}>&nbsp;</div>
-                        </div>
-                      )}
+                      <div style={styles.staffCardWrapper}>
+                        <StaffWindow dashed onClick={handleOpenAddStaff}>
+                          <Icon name="plus" size={32} tone="inherit" />
+                        </StaffWindow>
+                        <div style={styles.staffName}>&nbsp;</div>
+                        <div style={styles.staffRole}>&nbsp;</div>
+                      </div>
                     </div>
                   </div>
 
@@ -464,10 +393,10 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
 
                 {/* Deactivated staff — removed members kept on record. Admin
                     can reactivate them here; their history stays intact. */}
-                {activeClinic.staff.some((s: Staff) => !s.active) && (
+                {clinic.staff.some((s: Staff) => !s.active) && (
                   <div style={styles.deactivatedSection}>
                     <div style={styles.deactivatedTitle}>Deactivated staff</div>
-                    {activeClinic.staff.filter((s: Staff) => !s.active).map((staff: Staff) => (
+                    {clinic.staff.filter((s: Staff) => !s.active).map((staff: Staff) => (
                       <div key={staff.id} style={styles.deactivatedRow}>
                         <div style={styles.deactivatedInfo}>
                           <span style={styles.deactivatedName}>{staff.name}</span>
@@ -492,53 +421,48 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
           onDelete={handleDeleteStaff}
           initialData={editingStaff}
           onShowToast={setToastMessage}
-          clinicDepartments={activeClinic?.departments || []}
+          clinicDepartments={clinic?.departments || []}
         />
 
         {/* Footer actions */}
         <div style={styles.footer}>
-          <Button size="md" variant="secondaryLight" iconRight={<HelpIcon />} style={{ minWidth: 180 }}>
+          <Button size="md" variant="secondaryLight" iconRight={<Icon name="help" tone="inherit" />} style={{ minWidth: 180 }}>
             Help
           </Button>
-          <Button size="md" variant="dark" iconRight={<NextIcon />} style={{ minWidth: 180 }} onClick={async () => {
-            const incomplete = clinics.find(c => !c.name.trim() || !c.phone.trim() || !c.domain.trim() || !c.address.trim());
-            if (incomplete) {
-              setActiveClinicId(incomplete.id);
-              setToastMessage(`Please complete all fields for "${incomplete.name || "Your Clinic"}"`);
+          <Button size="md" variant="dark" iconRight={<Icon name="arrow-right" tone="inherit" />} style={{ minWidth: 180 }} onClick={async () => {
+            if (!clinic) return;
+            if (!clinic.name.trim() || !clinic.phone.trim() || !clinic.address.trim()) {
+              setToastMessage(`Please complete all fields for "${clinic.name || "Your Clinic"}"`);
               return;
             }
 
             const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
             try {
-              for (const c of clinics) {
-                const clinicId = isUuid(c.id) ? c.id : null;
-                const res = await fetch(`${API_BASE_URL}/api/tenant/clinic`, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
-                  },
-                  body: JSON.stringify({
-                    id: clinicId,
-                    name: c.name,
-                    address: c.address,
-                    phone: c.phone,
-                    domain: c.domain,
-                    speciality: c.departments.join(","),
-                  }),
-                });
-                if (!res.ok) {
-                  const err = await res.json();
-                  setActiveClinicId(c.id);
-                  setToastMessage(err.error || `Failed to save "${c.name}"`);
-                  return;
-                }
-                const saved = await res.json();
-                handleUpdateClinic({ id: saved.id });
+              const clinicId = isUuid(clinic.id) ? clinic.id : null;
+              const res = await fetch(`${API_BASE_URL}/api/tenant/clinic`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
+                },
+                body: JSON.stringify({
+                  id: clinicId,
+                  name: clinic.name,
+                  address: clinic.address,
+                  phone: clinic.phone,
+                  speciality: clinic.departments.join(","),
+                }),
+              });
+              if (!res.ok) {
+                const err = await res.json();
+                setToastMessage(err.error || `Failed to save "${clinic.name}"`);
+                return;
               }
+              const saved = await res.json();
+              handleUpdateClinic({ id: saved.id });
               onNext?.();
             } catch {
-              setToastMessage("An error occurred while saving clinics");
+              setToastMessage("An error occurred while saving clinic");
             }
           }}>
             Next
@@ -548,6 +472,7 @@ export function BuildYourClinicPage({ onNext }: { onNext?: () => void }) {
 
       <Toast
         message={toastMessage}
+        {...resolveToastIcon(toastMessage)}
         isVisible={!!toastMessage}
         onClose={() => setToastMessage("")}
       />

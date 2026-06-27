@@ -6,11 +6,11 @@ import { ServicesView } from "../Services";
 import { HomeView } from "./HomeView";
 import { StatsPage } from "../Stats";
 import { PharmacyView } from "../Pharmacy";
+import { BillsView } from "../Bills";
+import { sampleBills } from "../Bills/sampleBills";
 import { SettingsPage, DEFAULT_SETTINGS_SECTION, SettingsSection } from "../Settings";
-import { DesignSystemPage } from "../DesignSystem";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
-import { confirmStyles } from "../../components/AddStaffModal/AddStaffModal.styles";
-import { Button } from "../../components/Button";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { ChatBubble } from "../../components/Chat/ChatBubble";
 import { setPendingSessionNav } from "../../components/TopNav/SessionTrayButton";
 import { hydrateScheduleFromBackend } from "../../components/DoctorSchedule/scheduleStorage";
@@ -22,10 +22,9 @@ import { listServices, type ServiceDTO } from "../../api/services";
 type HomePageProps = {
   onLogout: () => void;
   onViewClinic: () => void;
-  onViewAllClinics: () => void;
 };
 
-export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageProps) {
+export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
   const [activeTab, setActiveTabState] = useState<NavTab>(() => {
     return (localStorage.getItem("docodile_home_tab") as NavTab) || "Home";
   });
@@ -34,7 +33,6 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
     localStorage.setItem("docodile_home_tab", tab);
     setActiveTabState(tab);
   };
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isBooking, setIsBooking] = useState(false);
 
   // Pull the canonical clinic schedule from the backend on mount and seed the
@@ -49,9 +47,9 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   const [themeMode] = useState<ThemeMode>("primary");
 
   const [bookingKey, setBookingKey] = useState(0);
-  const [isEditing, setIsEditing] = useState(false);
+  const [, setIsEditing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [patientFileNavId, setPatientFileNavId] = useState<string | null>(null);
+  const [patientFileNavId] = useState<string | null>(null);
   const [showNewRxModal, setShowNewRxModal] = useState(false);
   // Bumped after a walk-in is created so the Prescription queue refetches
   // and shows the new "At Doc" card without a manual reload.
@@ -178,10 +176,10 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
     phone: d.phone || null,
     email: d.email || null,
     gender: d.gender || null,
-    // The Add view collects "years / months"; combine to total months to match
-    // how booking persists `age` (years × 12 + months) — months are no longer
-    // dropped.
+    // The Add view collects whole years; convert to months to match how
+    // booking persists `age` (years × 12 + months).
     ageMonths: (() => {
+      // PatientDetailsForm stores age as "years / months" (e.g. "40 / 2").
       const y = parseInt(d.age.split("/")[0]?.trim() || "0", 10) || 0;
       const m = parseInt(d.age.split("/")[1]?.trim() || "0", 10) || 0;
       return (y || m) ? y * 12 + m : null;
@@ -249,18 +247,20 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       backgroundColor: colors.active.shade300,
     },
     contentArea: {
-      marginLeft: isSidebarExpanded ? "204px" : "95px",
-      width: isSidebarExpanded ? "calc(100% - 204px)" : "calc(100% - 95px)",
+      marginLeft: "var(--sidenav-w)",
+      width: "calc(100% - var(--sidenav-w))",
       display: "flex",
       flexDirection: "column" as const,
-      transition: "margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     },
     mainContent: {
-      padding: "40px 40px 24px",
+      padding: "var(--page-pad-top) var(--page-pad-x) var(--page-pad-bottom)",
       display: "flex",
       flexDirection: "column" as const,
-      gap: "24px",
+      // Sticky header → page body gap. Generous (24) on the baseline tier,
+      // tighter (16) on the compact tier via --main-gap (set in globals.css).
+      gap: "var(--main-gap, 24px)",
       flex: 1,
+      minHeight: 0,                       // let the flex child shrink so it can scroll
       overflowY: "auto" as const,
       overflowX: "hidden" as const,
       backgroundColor: colors.active.shade200,
@@ -279,16 +279,31 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
   } as const;
 
 
+  // Route the Home pinboard's quick-action tiles to the matching section.
+  const handleQuickAction = (key: string) => {
+    switch (key) {
+      case "book":
+        handleNewAppointment();
+        break;
+      case "script":
+        setActiveTab("Prescription");
+        break;
+      case "patient":
+      case "records":
+        setActiveTab("Patient Files");
+        break;
+    }
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case "Home":
-        return <HomeView />;
+        return <HomeView onQuickAction={handleQuickAction} />;
       case "Appointments":
         return <AppointmentsView isBooking={isBooking} bookingKey={bookingKey} onBack={() => { setIsBooking(false); setIsEditing(false); }} onEditStart={() => setIsEditing(true)} onViewPatientFile={(patient, appointmentId) => {
-          // Open the patient's prescription/visit directly — same path
-          // PrescriptionQueue's View Pad uses, so the doctor lands inside
-          // the file instead of on the Patient Files index summary.
-          setPendingSessionNav({ patient, appointmentId });
+          // Open the patient's FILE on its Info tab (demographics), not the
+          // prescription pad. initialAction 4 = INFO_ACTION; Back → Appointments.
+          setPendingSessionNav({ patient, appointmentId, returnTab: "Appointments", initialAction: 4 });
           setActiveTab("Prescription");
         }} />;
       case "Prescription":
@@ -303,13 +318,14 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
         return <PharmacyView />;
       case "Settings":
         return <SettingsPage section={settingsSection} />;
-      case "Design System":
-        return <DesignSystemPage />;
+      case "Billing":
+        // TODO: swap sampleBills for a clinic-wide bills fetch once /api/bills exists.
+        return <BillsView bills={sampleBills} />;
       default:
         return (
           <div>
             <h1 style={styles.title}>{activeTab}</h1>
-            <p style={{ marginTop: '12px', color: '#666' }}>This section is currently under development.</p>
+            <p style={{ marginTop: '12px', color: colors.neutral600 }}>This section is currently under development.</p>
           </div>
         );
     }
@@ -321,23 +337,18 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       <SideNav
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        isExpanded={isSidebarExpanded}
-        onToggleExpand={() => setIsSidebarExpanded(!isSidebarExpanded)}
-        settingsSection={settingsSection}
-        onSettingsSection={setSettingsSection}
       />
       <div style={styles.contentArea}>
-        {/* Paint the content cream behind the panel so its rounded top-left
-            corner blends, instead of revealing the darker tan shell as a
-            notch in that corner. */}
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: colors.active.shade200 }}>
+        {/* Transparent backdrop so the content panel's rounded top-left corner
+            reveals the darker shell behind it — a visible rounded corner. */}
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
           <TopNav
             onBuildClinic={onViewClinic}
-            onViewAllClinics={onViewAllClinics}
             onLogout={onLogout}
             onNewAppointment={handleNewAppointment}
             isBooking={isBooking}
             primaryActionLabel={activeTab === "Prescription" ? "New Prescription" : undefined}
+            primaryActionVariant={activeTab === "Prescription" ? "secondary" : "primary"}
             onNavigate={setActiveTab}
           />
           <main style={styles.mainContent}>
@@ -348,27 +359,19 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
     </div>
 
     <ChatBubble
-      clinicId={localStorage.getItem("docodile_clinic_id") ?? ""}
       currentUserId={localStorage.getItem("docodile_user_id") ?? ""}
       currentUserName={localStorage.getItem("docodile_user_email") ?? ""}
     />
 
-    {showConfirm && (
-      <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>
-        <div style={confirmStyles.dialog}>
-          <h4 style={confirmStyles.title}>Are you sure?</h4>
-          <p style={{ margin: 0, fontSize: fonts.size.s, color: colors.neutral600, textAlign: "center" }}>Current booking data will be discarded.</p>
-          <div style={confirmStyles.actions}>
-            <Button variant="dangerLight" size="sm" onClick={() => setShowConfirm(false)}>
-              Nope
-            </Button>
-            <Button variant="dark" size="sm" onClick={handleConfirmNewAppointment}>
-              Yes
-            </Button>
-          </div>
-        </div>
-      </div>
-    )}
+    <ConfirmDialog
+      isOpen={showConfirm}
+      title="Are you sure?"
+      message="Current booking data will be discarded."
+      confirmLabel="Yes"
+      cancelLabel="Nope"
+      onConfirm={handleConfirmNewAppointment}
+      onCancel={() => setShowConfirm(false)}
+    />
 
     <NewPrescriptionModal
       isOpen={showNewRxModal}
@@ -377,17 +380,15 @@ export function HomePage({ onLogout, onViewClinic, onViewAllClinics }: HomePageP
       onAddPatient={handleWalkinNew}
     />
 
-    {walkinError && (
-      <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>
-        <div style={confirmStyles.dialog}>
-          <h4 style={confirmStyles.title}>Walk-in failed</h4>
-          <p style={{ margin: 0, fontSize: fonts.size.s, color: colors.neutral600, textAlign: "center" }}>{walkinError}</p>
-          <div style={confirmStyles.actions}>
-            <Button variant="dark" size="sm" onClick={() => setWalkinError("")}>OK</Button>
-          </div>
-        </div>
-      </div>
-    )}
+    <ConfirmDialog
+      isOpen={!!walkinError}
+      title="Walk-in failed"
+      message={walkinError}
+      confirmLabel="OK"
+      hideCancel
+      onConfirm={() => setWalkinError("")}
+      onCancel={() => setWalkinError("")}
+    />
     </>
   );
 }

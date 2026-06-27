@@ -29,7 +29,7 @@ class VisitControllerTest @Autowired constructor(
     private lateinit var tokenService: com.example.docodile.security.TokenService
 
     @MockitoBean
-    private lateinit var revokedTokenRepository: com.example.docodile.repo.RevokedTokenRepository
+    private lateinit var revokedTokenRepository: com.example.docodile.repo.UserSessionRepository
 
     @MockitoBean
     private lateinit var visitService: VisitService
@@ -45,6 +45,7 @@ class VisitControllerTest @Autowired constructor(
         patientId = patientId,
         clinicId = UUID.randomUUID(),
         createdByDoctorId = null,
+        createdByDoctorName = null,
         visitDate = LocalDate.now(),
         bpSystolic = null, bpDiastolic = null, bpUnit = null,
         bmi = null, bmiUnit = null,
@@ -63,6 +64,7 @@ class VisitControllerTest @Autowired constructor(
         reviewDate = null, reviewDays = null, reviewNotes = null,
         sessionStartedAt = null, sessionEndedAt = null, sessionDurationSec = null,
         appointmentId = null,
+        appointmentStatus = null,
         prescriptions = emptyList()
     )
 

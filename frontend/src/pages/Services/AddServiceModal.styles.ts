@@ -1,53 +1,11 @@
 import { CSSProperties } from "react";
-import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
+import { colors, fonts, spacing } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1000,
-    padding: spacing.m,
-  },
-
-  card: {
-    width: "min(440px, calc(100vw - 32px))",
-    backgroundColor: colors.neutral100,
-    borderRadius: radii["2xl"],
-    padding: spacing.xl,
+  cardBody: {
     display: "flex",
     flexDirection: "column",
     gap: spacing.l,
-  },
-
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  title: {
-    margin: 0,
-    fontSize: fonts.size.h6,
-    lineHeight: fonts.lineHeight.h6,
-    fontWeight: fonts.weight.semibold,
-    color: colors.neutral900,
-  },
-
-  closeBtn: {
-    border: "none",
-    background: "transparent",
-    cursor: "pointer",
-    color: colors.neutral500,
-    padding: 0,
-    width: "28px",
-    height: "28px",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
   },
 
   form: {
@@ -79,65 +37,6 @@ export const styles: Record<string, CSSProperties> = {
     marginLeft: 2,
   },
 
-  inputWrap: {
-    display: "flex",
-    alignItems: "center",
-    gap: spacing.xs,
-    border: `${strokes.xs} solid ${colors.neutral200}`,
-    borderRadius: radii.m,
-    padding: `${spacing.xs} ${spacing.s}`,
-    backgroundColor: colors.neutral100,
-  },
-
-  inputWrapError: {
-    borderColor: colors.red200,
-  },
-
-  prefix: {
-    fontSize: fonts.size.s,
-    color: colors.neutral500,
-  },
-
-  suffix: {
-    fontSize: fonts.size.s,
-    color: colors.neutral500,
-  },
-
-  input: {
-    flex: 1,
-    width: "100%",
-    border: "none",
-    outline: "none",
-    background: "transparent",
-    fontSize: fonts.size.s,
-    fontFamily: fonts.family.primary,
-    color: colors.neutral900,
-    minWidth: 0,
-    MozAppearance: "textfield",
-  },
-
-  modeToggle: {
-    display: "inline-flex",
-    border: `${strokes.xs} solid ${colors.neutral200}`,
-    borderRadius: radii.s,
-    overflow: "hidden",
-  },
-
-  modeBtn: {
-    border: "none",
-    background: "transparent",
-    cursor: "pointer",
-    padding: `2px ${spacing.xs}`,
-    fontSize: fonts.size.xs,
-    fontFamily: fonts.family.primary,
-    color: colors.neutral500,
-  },
-
-  modeBtnActive: {
-    backgroundColor: colors.neutral900,
-    color: colors.neutral100,
-  },
-
   errorText: {
     fontSize: fonts.size.xs,
     color: colors.red200,
@@ -151,32 +50,4 @@ export const styles: Record<string, CSSProperties> = {
     marginTop: spacing.xs,
   },
 
-  cancelBtn: {
-    border: "none",
-    background: "transparent",
-    color: colors.neutral700,
-    fontSize: fonts.size.s,
-    fontWeight: fonts.weight.medium,
-    cursor: "pointer",
-    padding: `${spacing.xs} ${spacing.m}`,
-    textDecoration: "underline",
-    fontFamily: fonts.family.primary,
-  },
-
-  saveBtn: {
-    backgroundColor: colors.neutral900,
-    color: colors.neutral100,
-    border: "none",
-    borderRadius: radii.full,
-    padding: `${spacing.xs} ${spacing.l}`,
-    fontSize: fonts.size.s,
-    fontWeight: fonts.weight.medium,
-    fontFamily: fonts.family.primary,
-    cursor: "pointer",
-  },
-
-  saveBtnDisabled: {
-    opacity: 0.5,
-    cursor: "not-allowed",
-  },
 };

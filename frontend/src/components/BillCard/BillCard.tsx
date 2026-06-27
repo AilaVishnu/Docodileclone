@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { styles } from "./BillCard.styles";
 import { colors, spacing } from "../../styles/theme";
-import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
-import { ReactComponent as ScaleIcon } from "../../assets/icons/scale.svg";
-import { ReactComponent as PaidStamp } from "../../assets/icons/paid-stamp.svg";
+import { RadioGroup } from "../Radio";
+import { Icon } from "../Icon";
 
 type BillCardProps = {
   paymentMethod: string;
@@ -56,9 +55,9 @@ export function BillCard({
   return (
     <div style={{ ...styles.wrapper, position: "relative" }}>
       {isPaid && (
-        <PaidStamp
-          width={80}
-          height={80}
+        <Icon
+          name="paid-stamp"
+          size={80}
           style={{
             position: "absolute",
             right: "-35px",
@@ -71,8 +70,8 @@ export function BillCard({
         <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <h3 style={styles.title}>Bill</h3>
           <div style={{ position: "absolute", right: 0, display: "flex", alignItems: "center", gap: spacing.s }}>
-            <PrinterIcon width={20} height={20} style={{ cursor: "pointer" }} />
-            <ScaleIcon width={20} height={20} style={{ cursor: "pointer" }} />
+            <Icon name="printer" size={20} tone="inherit" style={{ cursor: "pointer" }} />
+            <Icon name="scale" size={20} tone="inherit" style={{ cursor: "pointer" }} />
           </div>
         </div>
 
@@ -108,7 +107,7 @@ export function BillCard({
             <label style={styles.label}>Discount</label>
             <div style={styles.fieldValue}>
               <input
-                style={{ ...styles.input, width: "40px", flex: "none" }}
+                style={{ ...styles.input, minWidth: 0 }}
                 type="number"
                 placeholder="0"
                 value={discount || ""}
@@ -140,24 +139,13 @@ export function BillCard({
         </div>
 
         <div style={styles.methodRow}>
-          {["Cash", "Card", "UPI", "Waive"].map((m) => (
-            <label key={m} style={{
-              ...styles.radioLabel,
-              color: m === "Waive" ? colors.red200 : styles.radioLabel.color,
-              cursor: isPaid ? "not-allowed" : styles.radioLabel.cursor,
-              opacity: isPaid ? 0.7 : 1,
-            }}>
-              <input
-                type="radio"
-                name="billPayment"
-                checked={paymentMethod === m}
-                onChange={() => onPaymentMethodChange(m)}
-                style={styles.radioInput}
-                disabled={isPaid}
-              />
-              {m}
-            </label>
-          ))}
+          <RadioGroup
+            name="billPayment"
+            value={paymentMethod}
+            onChange={onPaymentMethodChange}
+            disabled={isPaid}
+            options={["Cash", "Card", "UPI", { label: "Waive", value: "Waive", color: colors.red200 }]}
+          />
         </div>
       </div>
 

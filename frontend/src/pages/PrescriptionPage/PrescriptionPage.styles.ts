@@ -1,31 +1,61 @@
 import { CSSProperties } from "react";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes, fluidSpacing, shadows, zIndex } from "../../styles/theme";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Prescription page — baseline scaffold per Figma node 2057:6224
-// Two-column layout: patient/context pane on the left (308px fixed),
+// Two-column layout: patient/context pane on the left (246px fixed),
 // visit-form area on the right (grows).
 // All sections rendered as Cards to match the existing design system.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const styles: Record<string, CSSProperties> = {
+  // Acts as its OWN scroll container (mirroring AppointmentQueue.container
+   // and PrescriptionQueue.page) so the sticky <PageHeader/> can hug the very
+   // top of main. paddingBottom 80 reserves room for the floating SessionBar.
   page: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,
-    width: "100%",
-    // Reserve room at the bottom so the floating SessionBar (fixed-
-    // positioned ~60px tall + 20px from viewport bottom) never covers
-    // the last form fields. Extra room lets the doctor scroll past the
-    // last row comfortably.
-    paddingBottom: 80,
+    // Extra bottom room so the two stacked floating bars (session pill +
+    // the nav/actions bar) never cover the last form rows.
+    padding: `0 ${fluidSpacing.outerX} 160px`,
+    overflowY: "auto",
+    overflowX: "hidden",
   },
 
-  // Header uses the same column grid as the body so the title (column 2)
-  // aligns with the right area's left edge — i.e. above the visit tabs.
+  // Inner tabs ("All" / "Reports" / "Files") for the Files view — matches the
+  // Rx Pad home filter-pill style (PrescriptionQueue.styles.tab), including
+  // the tier-responsive --rxq-tab-padx variable for horizontal padding.
+  // Sized to match the visit chips (height 32, compact pill) for consistency.
+  listTab: {
+    height: 32,
+    padding: `${spacing["2xs"]} ${spacing.s}`,
+    borderRadius: radii.m,
+    border: "none",
+    backgroundColor: colors.alphaBlack0,
+    color: colors.alphaBlack3,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+  },
+  listTabActive: {
+    backgroundColor: colors.neutral100,
+    color: colors.neutral900,
+  },
+
+  // (Old inline header grid — no longer used; <PageHeader/> took over.
+   // Left here in case anything still references the styles.header key.)
   header: {
     display: "grid",
-    gridTemplateColumns: "308px minmax(0, 1fr)",
+    gridTemplateColumns: "246px minmax(0, 1fr)",
     gap: spacing.m,
     alignItems: "start",
   },
@@ -71,18 +101,453 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.s,
     color: colors.neutral500,
   },
+  // Single column — the section nav + contact actions live in a floating
+  // bottom bar now, so the form spans the FULL content width. Page
+  // responsiveness = the form stretching / squeezing.
+  // Form content is capped at a fixed --rx-content-max and centered; the
+  // page's horizontal padding + these auto margins are the stretchy gutters
+  // (wide at 1440+, squeezing toward the 1200 floor).
   body: {
-    display: "grid",
-    gridTemplateColumns: "308px minmax(0, 1fr)",
-    gap: spacing.m,
-    alignItems: "start",
+    display: "block",
+    width: "100%",
+    maxWidth: "var(--rx-content-max)",
+    marginLeft: "auto",
+    marginRight: "auto",
   },
 
   // ── Left column ──────────────────────────────────────────────────────────
+  // Slim icon rail — sticks below the sticky header while the long form
+  // scrolls, so Visits / Files / Timeline / Bills stay reachable.
   leftColumn: {
+    position: "sticky" as const,
+    top: spacing.m,
+    alignSelf: "start" as const,
     display: "flex",
     flexDirection: "column",
+    gap: spacing.s,
+  },
+
+  // ── Icon rail (Figma-adjacent; mirrors the app's main 80px sidebar) ──────
+  iconNav: {
+    backgroundColor: colors.primary100,
+    borderRadius: radii.m,
+    padding: spacing["2xs"],
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing["3xs"],
+  },
+  railItem: {
+    position: "relative" as const,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing["3xs"],
+    padding: `${spacing.xs} ${spacing["2xs"]}`,
+    borderRadius: radii.s,
+    border: "none",
+    backgroundColor: "transparent",
+    color: colors.neutral700,
+    cursor: "pointer",
+    width: "100%",
+    minHeight: 56,
+  },
+  railItemActive: {
+    backgroundColor: colors.primary700,
+    color: colors.neutral100,
+  },
+  railIconWrap: {
+    position: "relative" as const,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 24,
+    height: 24,
+  },
+  railLabel: {
+    fontSize: fonts.size.xs,
+    lineHeight: fonts.lineHeight.xs,
+    fontFamily: fonts.family.primary,
+    color: "inherit",
+    textAlign: "center" as const,
+  },
+  // Count badge — small pill anchored to the top-right of the rail icon.
+  railBadge: {
+    position: "absolute" as const,
+    top: -6,
+    right: -10,
+    minWidth: 16,
+    height: 16,
+    paddingLeft: 4,
+    paddingRight: 4,
+    borderRadius: radii.full,
+    backgroundColor: colors.primary200,
+    color: colors.neutral700,
+    fontSize: 10,
+    lineHeight: "16px",
+    fontFamily: fonts.family.primary,
+    textAlign: "center" as const,
+    boxSizing: "border-box" as const,
+  },
+  railBadgeActive: {
+    backgroundColor: colors.primary100,
+    color: colors.primary700,
+  },
+
+  // AI Summary trigger — a ✨ button in the rail; opens the popover panel.
+  railAiBtn: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing["3xs"],
+    padding: `${spacing.xs} ${spacing["2xs"]}`,
+    borderRadius: radii.m,
+    border: `${strokes.xs} solid ${colors.primary300}`,
+    backgroundColor: colors.primary100,
+    color: colors.neutral900,
+    cursor: "pointer",
+    width: "100%",
+    minHeight: 56,
+  },
+  railAiBtnActive: {
+    borderColor: colors.primary500,
+  },
+
+  // AI Summary popover — floats above the bottom bar, near the ✨ button.
+  aiPopover: {
+    position: "fixed" as const,
+    bottom: 84,
+    right: fluidSpacing.outerX,
+    width: 320,
+    maxHeight: 360,
+    overflowY: "auto" as const,
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.l,
+    boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+    padding: spacing.m,
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.xs,
+    zIndex: 1200,
+  },
+  aiPopoverBackdrop: {
+    position: "fixed" as const,
+    inset: 0,
+    zIndex: 1199,
+  },
+
+  // ── Header patient identity (centered in the sticky bar) ─────────────────
+  // ── Bespoke single-row sticky header (replaces the shared PageHeader on this
+  // page). Full-bleed bar; inner caps at --rx-content-max and centers, so its
+  // content edge-aligns with the prescription form below. ~half the old height.
+  rxHeader: {
+    position: "sticky",
+    top: 0,
+    zIndex: 100,
+    // Shared header chrome — see globals.css --header-* (matches PageHeader).
+    backgroundColor: "var(--header-bg)",
+    borderBottom: "1px solid var(--header-border)",
+    // Full-bleed: cancel the page's horizontal padding so the bar paints
+    // edge-to-edge; the inner re-centers content at the form width.
+    marginLeft: `calc(-1 * ${fluidSpacing.outerX})`,
+    marginRight: `calc(-1 * ${fluidSpacing.outerX})`,
+    borderRadius: `${radii["2xl"]}px 0 0 0`,
+    boxSizing: "border-box",
+  },
+  // Horizontal-padding wrapper — recreates the page's outer gutter so the inner
+  // (capped at the form width) centers within the SAME box as the form below,
+  // keeping the avatar edge-aligned to the form at every width (incl. 1200).
+  rxHeaderPad: {
+    width: "100%",
+    paddingLeft: fluidSpacing.outerX,
+    paddingRight: fluidSpacing.outerX,
+    boxSizing: "border-box",
+  },
+  rxHeaderInner: {
+    display: "flex",
+    alignItems: "center",
     gap: spacing.m,
+    width: "100%",
+    maxWidth: "var(--rx-content-max)",
+    marginLeft: "auto",
+    marginRight: "auto",
+    minHeight: "var(--header-h)",
+    paddingTop: "var(--header-pad-y)",
+    paddingBottom: "var(--header-pad-y)",
+    boxSizing: "border-box",
+  },
+  // Back arrow pinned in the left gutter (absolute → outside the inner flow),
+  // so the avatar is the first inner element and aligns to the form edge.
+  rxBackBtn: {
+    position: "absolute",
+    left: "var(--header-back-inset)",
+    top: 0,
+    bottom: 0,
+    width: 28,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "none",
+    backgroundColor: "transparent",
+    color: colors.neutral900,
+    cursor: "pointer",
+    padding: 0,
+  },
+  rxHeaderSpacer: {
+    flex: 1,
+    minWidth: spacing.s,
+  },
+
+  headerPatient: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.s,
+    flexShrink: 0,
+  },
+  // Patient name only (no avatar / T-number / meta) — sans (Inter) at the CTA
+  // font size, like the other header titles. LEFT-aligned (the prescription-
+  // file exception).
+  headerName: {
+    fontSize: "var(--btn-fs)",
+    fontFamily: fonts.family.primary,
+    fontWeight: fonts.weight.semibold,
+    color: colors.neutral900,
+    whiteSpace: "nowrap" as const,
+  },
+
+  // Print / Download / Share — icon-only actions in the sticky PageHeader's
+  // right slot (moved here from the floating SessionBar).
+  headerActionBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 36,
+    height: 36,
+    padding: 0,
+    background: "transparent",
+    border: "none",
+    borderRadius: radii.m,
+    cursor: "pointer",
+    color: colors.neutral700,
+  },
+  // Leading icon inside each contact-kebab menu item ([phone] +91…, etc.).
+  kebabItemIcon: {
+    width: 18,
+    height: 18,
+    flexShrink: 0,
+    color: "currentColor",
+  },
+  // Three-dot contact kebab trigger sitting in the header actions slot.
+  kebabTrigger: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 36,
+    height: 36,
+    fontSize: 22,
+    lineHeight: 1,
+    color: colors.neutral700,
+  },
+
+  // ── Header stack: identity row on top, section nav below ─────────────────
+  // The header center cell now carries two rows; both stay centered.
+  headerStack: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: spacing.xs,
+    minWidth: 0,
+  },
+  // Section nav (Visits / Files / Timeline / Bills) — full-height underline
+  // tabs. Stretched to the bar's full height (cancelling the inner's vertical
+  // padding) so the active underline lands flush on the header's bottom edge.
+  headerSectionNav: {
+    display: "flex",
+    alignItems: "stretch",
+    alignSelf: "stretch",
+    gap: spacing.m,
+    flexWrap: "nowrap",
+    marginTop: "calc(-1 * var(--header-pad-y))",
+    marginBottom: "calc(-1 * var(--header-pad-y))",
+  },
+  // Underline tabs: every section shows icon + label; the active tab carries a
+  // peach underline flush with the header's bottom edge (full-height tab).
+  headerSectionTab: {
+    position: "relative",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    height: "100%",
+    padding: `0 ${spacing["2xs"]}`,
+    border: "none",
+    // Underline via inset boxShadow (sits at the very bottom of the full-height
+    // tab) — avoids the border shorthand/longhand mix warning.
+    boxShadow: "inset 0 -2px 0 transparent",
+    backgroundColor: "transparent",
+    color: colors.neutral600,
+    cursor: "pointer",
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    whiteSpace: "nowrap",
+    boxSizing: "border-box",
+  },
+  // Active = peach underline + peach label, slightly bolder.
+  headerSectionTabActive: {
+    color: colors.primary700,
+    fontWeight: fonts.weight.medium,
+    boxShadow: `inset 0 -2px 0 ${colors.active.shade600}`,
+  },
+  headerSectionIcon: {
+    position: "relative",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // Small peach dot on an inactive icon-only tab when that section has a count
+  // (e.g. Files · 1). Ringed in the header tint so it reads as a badge.
+  headerSectionDot: {
+    position: "absolute",
+    top: -1,
+    right: -3,
+    width: 7,
+    height: 7,
+    borderRadius: radii.full,
+    backgroundColor: colors.active.shade600,
+    border: "1.5px solid var(--header-bg)",
+    boxSizing: "border-box",
+  },
+  // Count badge — light tint with dark-peach text (sits beside the label).
+  headerSectionBadge: {
+    minWidth: 18,
+    height: 18,
+    paddingLeft: 5,
+    paddingRight: 5,
+    borderRadius: radii.full,
+    backgroundColor: colors.primary200,
+    color: colors.primary700,
+    fontSize: 11,
+    lineHeight: "18px",
+    textAlign: "center",
+    boxSizing: "border-box",
+  },
+  headerSectionBadgeActive: {
+    backgroundColor: colors.primary100,
+    color: colors.primary700,
+  },
+
+  // ── Floating bottom bar — section nav (left) + contact actions (right) ───
+  // Mirrors the SessionBar's centered-floating-pill treatment. Sits stacked
+  // just below the (lifted) session pill.
+  bottomBar: {
+    position: "fixed" as const,
+    bottom: spacing.l,
+    // Viewport-centered, matching the SessionBar so the two pills align.
+    left: "50%",
+    transform: "translateX(-50%)",
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.s,
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.xl,
+    boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+    padding: `${spacing["2xs"]} ${spacing.s}`,
+    zIndex: 1090,
+  },
+  // Per-section action buttons inside the floating bar (Download / Print /
+  // Share / Clear all for Visits). Output actions group together; Clear all
+  // gets the danger tint + a divider so it never sits flush with them.
+  barBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: spacing.xs,
+    height: 36,
+    padding: `0 ${spacing.s}`,
+    borderRadius: radii.m,
+    border: "none",
+    backgroundColor: "transparent",
+    color: colors.neutral900,
+    cursor: "pointer",
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    whiteSpace: "nowrap",
+  },
+  barBtnDanger: {
+    color: colors.red200,
+  },
+  barDivider: {
+    width: 1,
+    alignSelf: "stretch",
+    backgroundColor: colors.neutral200,
+    margin: `${spacing["2xs"]} ${spacing["2xs"]}`,
+  },
+  bottomNav: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing["3xs"],
+  },
+  bottomNavItem: {
+    position: "relative" as const,
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.xs,
+    padding: `${spacing.xs} ${spacing.s}`,
+    borderRadius: radii.m,
+    border: "none",
+    backgroundColor: "transparent",
+    color: colors.neutral700,
+    cursor: "pointer",
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    whiteSpace: "nowrap" as const,
+  },
+  bottomNavItemActive: {
+    backgroundColor: colors.primary700,
+    color: colors.neutral100,
+  },
+  bottomNavBadge: {
+    minWidth: 18,
+    height: 18,
+    paddingLeft: 5,
+    paddingRight: 5,
+    borderRadius: radii.full,
+    backgroundColor: colors.primary200,
+    color: colors.neutral700,
+    fontSize: 11,
+    lineHeight: "18px",
+    textAlign: "center" as const,
+    boxSizing: "border-box" as const,
+  },
+  bottomNavBadgeActive: {
+    backgroundColor: colors.primary100,
+    color: colors.primary700,
+  },
+  bottomDivider: {
+    width: 1,
+    alignSelf: "stretch",
+    backgroundColor: colors.neutral200,
+    margin: `${spacing["2xs"]} ${spacing["2xs"]}`,
+  },
+  bottomActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing["3xs"],
+  },
+  bottomActionBtn: {
+    width: 36,
+    height: 36,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radii.m,
+    border: "none",
+    backgroundColor: "transparent",
+    color: colors.neutral900,
+    cursor: "pointer",
+    padding: 0,
   },
   // Patient identity block — avatar overlaps the top of the text tile so the
   // circle sits half-in, half-out of the card. Wrapper has no bg; the tile
@@ -113,7 +578,9 @@ export const styles: Record<string, CSSProperties> = {
   patientCard: {
     backgroundColor: colors.primary100,
     borderRadius: radii.xl,
-    padding: `${spacing["3xl"]} ${spacing.m} ${spacing.m}`,
+    // Horizontal padding trimmed one step (m 16 → s 12) so the identity
+    // line has more room inside the narrower 246px left column.
+    padding: `${spacing["3xl"]} ${spacing.s} ${spacing.m}`,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -139,7 +606,10 @@ export const styles: Record<string, CSSProperties> = {
     fontWeight: fonts.weight.regular,
     color: colors.neutral900,
     textAlign: "center",
-    whiteSpace: "nowrap" as const,
+    // Allow the "<name> (M|64)" line to wrap onto a second line when it
+    // would overflow the 246px left column — no truncation.
+    whiteSpace: "normal" as const,
+    overflowWrap: "anywhere" as const,
   },
 
   // Figma node 2059:6764 — left-rail action list ("Visits / Reports / Files /
@@ -147,7 +617,8 @@ export const styles: Record<string, CSSProperties> = {
   actionList: {
     backgroundColor: colors.primary100,
     borderRadius: radii.m,
-    padding: `${spacing.m} ${spacing.l}`,
+    // Horizontal padding trimmed one step (l 20 → m 16).
+    padding: spacing.m,
     display: "flex",
     flexDirection: "column",
     gap: spacing.xs,
@@ -194,6 +665,12 @@ export const styles: Record<string, CSSProperties> = {
   actionLabel: {
     flex: 1,
   },
+  // Quick Actions (phone / email / video / edit) — secondary affordances,
+  // so the labels read one rung smaller than the primary nav above
+  // (size.s 14 vs. size.m 16).
+  shareActionRow: {
+    fontSize: fonts.size.s,
+  },
   actionCount: {
     color: colors.neutral500,
     fontSize: fonts.size.xs,
@@ -204,7 +681,8 @@ export const styles: Record<string, CSSProperties> = {
   shareCard: {
     backgroundColor: colors.primary100,
     borderRadius: radii.m,
-    padding: `${spacing.m} ${spacing.l}`,
+    // Horizontal padding trimmed one step (l 20 → m 16) — matches actionList.
+    padding: spacing.m,
     display: "flex",
     flexDirection: "column",
     gap: spacing.xs,
@@ -241,9 +719,9 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: spacing.xs,
-    // Pushed down so the tabs sit on the same baseline as the patient
-    // identity card on the left (which is offset by the overlapping avatar).
-    marginTop: 36,
+    // Small breathing room under the (now compact) sticky header. The old 36px
+    // offset existed to clear an overlapping avatar that no longer exists.
+    marginTop: spacing.s,
   },
   // Figma node 2133:9927 — Tuning settings dropdown. Wrapper just pushes
   // the PopoverMenu trigger to the far right of the tabs row.
@@ -252,52 +730,26 @@ export const styles: Record<string, CSSProperties> = {
     flexShrink: 0,
     display: "inline-flex",
   },
-  tab: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-    padding: `${spacing.xs} ${spacing.m}`,
-    borderRadius: radii.xl,
-    cursor: "pointer",
-    backgroundColor: colors.alphaBlack0,
-    minWidth: 136,
-    height: 40,
-    fontFamily: fonts.family.primary,
-  },
-  tabActive: {
-    backgroundColor: colors.neutral100,
-    color: colors.neutral900,
-  },
-  // Inactive tab text + caption use a solid neutral grey instead of
-  // alphaBlack3 — 30% black on the cream page background blended into the
-  // page tint, washing the labels out.
-  tabInactive: {
-    color: colors.neutral500,
-  },
+  // Inactive caption (legacy) — solid neutral grey instead of alphaBlack3,
+  // which washed out on the cream page tint.
   tabCaption: {
     fontSize: fonts.size.xs,
     lineHeight: fonts.lineHeight.xs,
     fontWeight: fonts.weight.regular,
     color: colors.neutral500,
   },
-  tabLabel: {
-    fontSize: fonts.size.m,
-    lineHeight: fonts.lineHeight.m,
-    fontWeight: fonts.weight.regular,
-    color: "inherit",
-  },
 
-  // Figma node 2057:6284 — section card. Solid primary300 border (no shadow),
-  // radii.m, padding l/m. Title is Libertinus Serif Semi-Bold.
+  // Section block — no longer a bordered card. Each section sits as a
+  // vertical strip with a thin bottom-border line as the divider; the form
+  // sheet's white background shows through. This buys back the horizontal
+  // padding the boxes used to eat, so vitals/history/rx inputs get more
+  // breathing room on the row.
   sectionCard: {
-    backgroundColor: colors.neutral100,
-    border: `${strokes.xs} solid ${colors.primary300}`,
-    borderRadius: radii.m,
-    padding: `${spacing.m} ${spacing.l}`,
     display: "flex",
     flexDirection: "column",
     gap: spacing.l,
+    padding: `${spacing.m} 0`,
+    borderBottom: `${strokes.xs} solid ${colors.primary300}`,
   },
   sectionHeader: {
     display: "flex",
@@ -339,20 +791,19 @@ export const styles: Record<string, CSSProperties> = {
   // field (cream value 80×28 + bordered-white unit pill at right). Single-
   // cell columns push their content to the bottom so the second (isolated)
   // Hip aligns with BMI / Weight / Pulse on the lower row.
+  // Single responsive grid — one cell per vital. Column count is tier-driven
+  // (--vital-cols: 5 at 1440+, 4 at 1200–1439); the row-gap is sized so the
+  // absolute error line under a row-1 cell can't collide with the row below.
   vitalsGrid: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "stretch",
-    gap: spacing.l,
-    // Reserve space below the bottom row so absolutely-positioned error
-    // helper text ("Enter valid details …") doesn't overlap the card edge.
-    paddingBottom: spacing.l,
-  },
-  vitalColumn: {
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "flex-end",
-    gap: spacing["2xl"],
+    display: "grid",
+    gridTemplateColumns: "repeat(var(--vital-cols), minmax(0, 1fr))",
+    columnGap: "var(--vital-col-gap)",
+    rowGap: "var(--vital-row-gap)",
+    alignItems: "start",
+    // Small reserve below the bottom row for the absolutely-positioned error
+    // helper text; the section card's own bottom padding carries the rest, so
+    // the block stays vertically balanced between its dividers (not bottom-heavy).
+    paddingBottom: spacing.s,
   },
   vitalCell: {
     position: "relative" as const,
@@ -449,9 +900,12 @@ export const styles: Record<string, CSSProperties> = {
     padding: `0 ${spacing["3xs"]}`,
     userSelect: "none" as const,
   },
-  // Figma node 2057:6296 — unit pill: white bg, 1px primary300 cream border,
-  // right-rounded corners, neutral500 grey text. Clickable to toggle between
-  // alternate units (cm↔in, kg↔lb, °C↔°F, mmHg↔kPa).
+  // Figma node 2057:6296 — unit pill: white bg, right-rounded corners.
+  // Two variants:
+  //   • Static units (cm / bpm / % …) — cream primary300 border, grey
+  //     neutral500 text. Pure display, not interactive.
+  //   • Clickable toggles (cm↔in, kg↔lb, °C↔°F, mmHg↔kPa, kg/m² calc)
+  //     — black neutral900 border + black text, signalling the affordance.
   vitalUnit: {
     height: "100%",
     padding: spacing.xs,
@@ -469,6 +923,14 @@ export const styles: Record<string, CSSProperties> = {
     whiteSpace: "nowrap" as const,
     boxSizing: "border-box" as const,
     outline: "none",
+  },
+  // Variant applied when the pill is clickable (canToggle === true).
+  // Border is primary500 (lighter peach) so the affordance reads as
+  // interactive without competing with the darker CTA peach above; text
+  // is neutral800 — slightly softer than 900 against the cream page.
+  vitalUnitClickable: {
+    color: colors.neutral800,
+    borderColor: colors.primary500,
   },
 
   // 2x2 text-field grid (Chief Complaints — legacy)
@@ -530,7 +992,8 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,
-    paddingLeft: spacing.l,
+    // No left inset — Tests / Diet / Treatment Plan / Next Review align
+    // flush with the section strips above.
   },
   noteRow: {
     display: "flex",
@@ -730,6 +1193,181 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.alphaBlack3,
   },
 
+  // ── Timeline tab — chronological feed of visits (peach node + synopsis) ──
+  timeline: {
+    paddingTop: spacing.m,
+    paddingBottom: spacing.xl,
+  },
+  timelineList: {
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.l,
+  },
+  // The vertical rail behind the dots (dots are 20px; centre at x=10).
+  timelineLine: {
+    position: "absolute",
+    left: 9,
+    top: 8,
+    bottom: 8,
+    width: 2,
+    backgroundColor: colors.primary300,
+  },
+  timelineItem: {
+    position: "relative",
+    display: "flex",
+    gap: spacing.m,
+    alignItems: "flex-start",
+  },
+  timelineDot: {
+    position: "relative",
+    zIndex: 1,
+    flexShrink: 0,
+    width: 20,
+    height: 20,
+    borderRadius: radii.full,
+    backgroundColor: colors.active.shade600,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  timelineDotIcon: {
+    width: 12,
+    height: 12,
+    color: colors.neutral100,
+  },
+  timelineContent: {
+    flex: 1,
+    minWidth: 0,
+    paddingTop: 1,
+  },
+  timelineHead: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: spacing.xs,
+  },
+  timelineTitle: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.m,
+    fontWeight: fonts.weight.medium,
+    color: colors.neutral900,
+  },
+  timelineDate: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.xs,
+    color: colors.neutral500,
+  },
+  timelineSynopsis: {
+    margin: `${spacing["3xs"]} 0 0`,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.s,
+    color: colors.neutral700,
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical" as const,
+    overflow: "hidden",
+  },
+
+  // ── Info tab — reuses the New Appointment cards (ID/avatar · fields · AI) ──
+  // 3-column grid matching the booking layout (book-col tokens) so the cards
+  // line up with the rest of the app.
+  infoGrid: {
+    display: "grid",
+    gridTemplateColumns: "var(--book-col-left) minmax(0, 1fr) var(--book-col-right)",
+    gap: "var(--book-grid-gap, 16px)",
+    alignItems: "stretch",
+    paddingTop: spacing.m,
+    paddingBottom: spacing.xl,
+  },
+  // Avatar + T-number card — mirrors BookAppointment's patient ID card.
+  infoIdCard: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    padding: spacing.l,
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.m,
+  },
+  infoAvatar: {
+    width: "var(--book-patient-avatar, 140px)",
+    height: "var(--book-patient-avatar, 140px)",
+    objectFit: "contain",
+    display: "block",
+  },
+  infoIdText: {
+    margin: 0,
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h2,
+    color: colors.neutral900,
+  },
+  // Basic-info card — same shape as the booking details card, but the fields
+  // are read-only text (no input underline).
+  infoFieldsCard: {
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    gap: spacing.l,
+    padding: `${spacing.l} ${spacing.xl}`,
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.m,
+  },
+  infoRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.s,
+  },
+  infoRowIcon: {
+    width: 22,
+    height: 22,
+    flexShrink: 0,
+    color: colors.neutral700,
+  },
+  infoValue: {
+    fontSize: fonts.size.m,
+    lineHeight: fonts.lineHeight.m,
+    color: colors.neutral900,
+  },
+  // AI summary card — occupies the Bill card's slot on the right.
+  infoAiCard: {
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.s,
+    padding: spacing.l,
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.m,
+  },
+  infoAiHead: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  infoAiSparkle: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 24,
+    height: 24,
+    borderRadius: radii.s,
+    backgroundColor: colors.primary200,
+    fontSize: 14,
+  },
+  infoAiTitle: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.m,
+    fontWeight: fonts.weight.medium,
+    color: colors.neutral900,
+  },
+  infoAiBody: {
+    margin: 0,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    lineHeight: fonts.lineHeight.l,
+    color: colors.neutral700,
+  },
+
   // Figma node 2143:11171 — "+ Add Report" pill on the page header. Dark
   // neutral900 fill with primary100 text, full-radius pill.
   addReportButton: {
@@ -758,7 +1396,8 @@ export const styles: Record<string, CSSProperties> = {
   aiSummaryCard: {
     backgroundColor: colors.primary100,
     borderRadius: radii.xl,
-    padding: spacing.l,
+    // Horizontal padding trimmed one step (l 20 → m 16); vertical stays at 20.
+    padding: `${spacing.l} ${spacing.m}`,
     display: "flex",
     flexDirection: "column",
     gap: spacing.xs,
@@ -778,6 +1417,25 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.s,
     lineHeight: fonts.lineHeight.s,
     color: colors.neutral900,
+  },
+  aiSummaryStale: {
+    margin: 0,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.xs,
+    color: colors.neutral500,
+  },
+  aiGenerateBtn: {
+    marginTop: spacing.xs,
+    alignSelf: "flex-start" as const,
+    padding: `${spacing["2xs"]} ${spacing.s}`,
+    border: `1px solid ${colors.neutral200}`,
+    borderRadius: radii.m,
+    backgroundColor: colors.neutral100,
+    color: colors.neutral900,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    fontWeight: fonts.weight.medium,
+    cursor: "pointer",
   },
 
   // Figma node 2143:10938 — Reports table. Header row of column captions
@@ -854,14 +1512,17 @@ export const styles: Record<string, CSSProperties> = {
   // Private Notes) two-column textarea cards. Each card has a header row
   // (icon + title + kebab handle) and a cream textarea field with the
   // dictate icons docked at its bottom-right corner.
+  // 2-column row (50/50): (Complaints, Diagnosis) and (Notes for Patient,
+  // Private Notes). Section-strip styling (vertical padding + thin bottom
+  // line) sits on the row wrapper so the pair shares one divider — not two
+  // stacked borders. Flush left/right with no inset, aligning with Vitals
+  // / History / Rx above.
   noteCardsRow: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
     columnGap: spacing.m,
-    // Match sectionCard's 20px L/R padding so the Complaints column lines
-    // up vertically with the History / Vitals / Rx section content above
-    // it (icon at the same x; right edge flush with the cards above).
-    padding: `0 ${spacing.l}`,
+    padding: `${spacing.m} 0`,
+    borderBottom: `${strokes.xs} solid ${colors.primary300}`,
   },
   noteCard: {
     display: "flex",
@@ -956,8 +1617,8 @@ export const styles: Record<string, CSSProperties> = {
     padding: spacing["2xs"],
     display: "flex",
     flexDirection: "column",
-    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
-    zIndex: 1000,
+    boxShadow: shadows.menu,
+    zIndex: zIndex.popover,
     maxHeight: 240,
     overflowY: "auto" as const,
   },
@@ -1007,8 +1668,8 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: spacing["2xs"],
-    backgroundColor: "#fff8e6",
-    border: "1px solid #f5c842",
+    backgroundColor: colors.yellowAlpha10,
+    border: `1px solid ${colors.yellow200}`,
     borderRadius: radii.m,
     padding: `${spacing.xs} ${spacing.s}`,
   },
@@ -1019,7 +1680,7 @@ export const styles: Record<string, CSSProperties> = {
   },
   rxInteractionIcon: {
     fontSize: fonts.size.s,
-    color: "#b07c00",
+    color: colors.neutral900,
     flexShrink: 0,
     marginTop: 1,
   },
@@ -1068,7 +1729,9 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "row" as const,
     gap: spacing.s,
-    alignItems: "center",
+    // Top-align so a multi-line Notes grows DOWNWARD while the pickers stay on
+    // the first line (not floated to the Notes' vertical centre).
+    alignItems: "flex-start",
   },
   rxDataCell: {
     width: 120,
@@ -1241,6 +1904,7 @@ export const styles: Record<string, CSSProperties> = {
   addMedicineRow: {
     display: "flex",
     alignItems: "center",
+    justifyContent: "flex-end",
     gap: spacing.s,
     padding: `${spacing["2xs"]} 0`,
     borderRadius: radii.xs,
@@ -1391,66 +2055,4 @@ export const styles: Record<string, CSSProperties> = {
     cursor: "pointer",
   },
 
-  // ── Floating bottom action bar + AI summary popover (ported alongside the
-  //    Complete visit / Download / Print / Share / Clear all bar). ──────────
-  aiPopover: {
-    position: "fixed" as const,
-    bottom: 84,
-    right: spacing.xl,
-    width: 320,
-    maxHeight: 360,
-    overflowY: "auto" as const,
-    backgroundColor: colors.neutral100,
-    borderRadius: radii.l,
-    boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
-    padding: spacing.m,
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: spacing.xs,
-    zIndex: 1200,
-  },
-  aiPopoverBackdrop: {
-    position: "fixed" as const,
-    inset: 0,
-    zIndex: 1199,
-  },
-  bottomBar: {
-    position: "fixed" as const,
-    bottom: spacing.l,
-    left: "50%",
-    transform: "translateX(-50%)",
-    display: "flex",
-    alignItems: "center",
-    gap: spacing.s,
-    backgroundColor: colors.neutral100,
-    borderRadius: radii.xl,
-    boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
-    padding: `${spacing["2xs"]} ${spacing.s}`,
-    zIndex: 1090,
-  },
-  barBtn: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: spacing.xs,
-    height: 36,
-    padding: `0 ${spacing.s}`,
-    borderRadius: radii.m,
-    border: "none",
-    backgroundColor: "transparent",
-    color: colors.neutral900,
-    cursor: "pointer",
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.s,
-    lineHeight: fonts.lineHeight.s,
-    whiteSpace: "nowrap" as const,
-  },
-  barBtnDanger: {
-    color: colors.red200,
-  },
-  barDivider: {
-    width: 1,
-    alignSelf: "stretch" as const,
-    backgroundColor: colors.neutral200,
-    margin: `${spacing["2xs"]} ${spacing["2xs"]}`,
-  },
 };

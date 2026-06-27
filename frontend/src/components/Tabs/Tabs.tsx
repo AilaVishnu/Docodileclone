@@ -29,6 +29,14 @@ type TabsProps = {
   // "block"     — pill-shaped rounded blocks, matching the Stats tab strip.
   //               No visual attachment to content; tabs float above.
   variant?: "connected" | "block";
+  // Block-variant size: "md" (the larger "E" tab, compacts below 1440) or
+  // "sm" (the smaller "visit" tab, always compact). Ignored for "connected".
+  size?: "md" | "sm";
+  // Block variant only: shrink the container to its content width instead of
+  // stretching to 100%. Use when two tab groups share one row (e.g. Stats'
+  // section tabs + date-range sit side-by-side). Default false keeps the
+  // full-width strip so the `actions` slot can right-align.
+  inline?: boolean;
 };
 
 export function Tabs({
@@ -38,12 +46,16 @@ export function Tabs({
   actions,
   activeBackgroundColor,
   variant = "connected",
+  size = "md",
+  inline = false,
 }: TabsProps) {
   const isBlock = variant === "block";
 
-  const tabBase    = isBlock ? styles.blockTab            : styles.tab;
+  const tabBase    = isBlock ? (size === "sm" ? styles.blockTabSm : styles.blockTab) : styles.tab;
   const tabActive  = isBlock ? styles.blockTabActive      : styles.activeTab;
-  const container  = isBlock ? styles.blockContainer      : styles.container;
+  const container  = isBlock
+    ? (inline ? { ...styles.blockContainer, width: "auto" as const } : styles.blockContainer)
+    : styles.container;
   const actionsCtr = isBlock ? styles.blockActionsContainer : styles.actionsContainer;
   const actionBtn  = isBlock ? styles.blockActionButton   : styles.actionButton;
 
@@ -51,7 +63,7 @@ export function Tabs({
     <div style={container}>
       {/* Block variant wraps tabs in their own strip so the "+ Add"
           actions slot can flex to the right via marginLeft:auto. */}
-      <div style={isBlock ? styles.blockStrip : { display: "contents" }}>
+      <div role="tablist" style={isBlock ? styles.blockStrip : { display: "contents" }}>
         {items.map((item) => {
           const isActive = item.id === activeId;
           const overrideBg = isActive && activeBackgroundColor
@@ -60,6 +72,8 @@ export function Tabs({
           return (
             <button
               key={item.id}
+              role="tab"
+              aria-selected={isActive}
               onClick={() => onSelect(item.id)}
               onContextMenu={item.onContextMenu}
               style={{

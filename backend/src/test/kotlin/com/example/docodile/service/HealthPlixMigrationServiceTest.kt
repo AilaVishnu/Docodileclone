@@ -1,16 +1,13 @@
 package com.example.docodile.service
 
-import com.example.docodile.domain.ClinicEntity
 import com.example.docodile.domain.MigrationRun
 import com.example.docodile.domain.Patient
 import com.example.docodile.domain.RxRow
 import com.example.docodile.domain.Visit
-import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.MigrationRunRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.repo.RxRowRepository
 import com.example.docodile.repo.VisitRepository
-import com.example.docodile.security.CurrentUser
 import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -27,7 +24,6 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.LocalDate
-import java.util.Optional
 import java.util.UUID
 
 @ExtendWith(MockitoExtension::class)
@@ -37,27 +33,20 @@ class HealthPlixMigrationServiceTest {
     @Mock private lateinit var patientRepository: PatientRepository
     @Mock private lateinit var visitRepository: VisitRepository
     @Mock private lateinit var rxRowRepository: RxRowRepository
-    @Mock private lateinit var clinicEntityRepository: ClinicEntityRepository
     @Mock private lateinit var migrationRunRepository: MigrationRunRepository
-    @Mock private lateinit var currentUser: CurrentUser
     @Mock private lateinit var entityManager: EntityManager
 
     @InjectMocks
     private lateinit var service: HealthPlixMigrationService
-
-    private val clinicId: UUID = UUID.randomUUID()
-    private val clinic = ClinicEntity(id = clinicId, name = "Test Clinic")
 
     private fun baseStubs(
         existingPatients: List<Patient> = emptyList(),
         existingVisits: List<Visit> = emptyList(),
         takenDisplayNos: List<Int> = emptyList(),
     ) {
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-        whenever(clinicEntityRepository.findById(clinicId)).thenReturn(Optional.of(clinic))
-        whenever(patientRepository.findAllByClinicIdAndExternalRefIsNotNull(clinicId)).thenReturn(existingPatients)
-        whenever(visitRepository.findAllByClinicIdAndExternalRefIsNotNull(clinicId)).thenReturn(existingVisits)
-        whenever(patientRepository.findDisplayNosByClinicId(clinicId)).thenReturn(takenDisplayNos)
+        whenever(patientRepository.findAllByExternalRefIsNotNull()).thenReturn(existingPatients)
+        whenever(visitRepository.findAllByExternalRefIsNotNull()).thenReturn(existingVisits)
+        whenever(patientRepository.findAllDisplayNos()).thenReturn(takenDisplayNos)
     }
 
     // ── creation counts ───────────────────────────────────────────────────
@@ -184,7 +173,6 @@ class HealthPlixMigrationServiceTest {
     fun `re-running with same external_ref updates existing patient without inserting`() {
         val existing = Patient(
             id = UUID.randomUUID(),
-            clinic = clinic,
             name = "Old Name",
             externalRef = "T100",
             displayNo = 100,
@@ -208,11 +196,10 @@ class HealthPlixMigrationServiceTest {
     @Test
     fun `re-running with same visit external_ref reuses existing visit and clears its rx`() {
         val existingPatient = Patient(
-            id = UUID.randomUUID(), clinic = clinic, name = "Jane", externalRef = "T100", displayNo = 100,
+            id = UUID.randomUUID(), name = "Jane", externalRef = "T100", displayNo = 100,
         )
         val existingVisit = Visit(
             id = UUID.randomUUID(),
-            clinic = clinic,
             patient = existingPatient,
             visitDate = LocalDate.of(2025, 4, 21),
             externalRef = "T100|2025-04-21",
@@ -296,6 +283,6 @@ class HealthPlixMigrationServiceTest {
         val run = captor.firstValue
         assertEquals("HealthPlix", run.platform)
         assertEquals(2, run.patients)
-        assertNotNull(run.clinic)
+        assertNotNull(run.createdAt)
     }
 }

@@ -26,20 +26,11 @@ class ConsentService(
 
     /**
      * Returns true if the patient has at least one active (non-withdrawn) consent
-     * for the given purpose in the current clinic.
-     *
-     * Fails CLOSED: if the clinic context cannot be resolved from the token
-     * (e.g. an ADMIN token issued without a clinic_id claim), this returns false
-     * — a request with no clinic context has no confirmed consent.
+     * for the given purpose. Schema-scoped: no clinic_id needed.
      */
     fun hasActiveConsent(patientId: UUID, purpose: String): Boolean {
-        val clinicId = runCatching { currentUser.clinicId() }.getOrNull()
-        if (clinicId == null) {
-            log.warn("CONSENT_CHECK: no clinic context in token for patient={} — failing closed", patientId)
-            return false
-        }
         return consentRepository
-            .findAllByPatientIdAndClinicId(patientId, clinicId)
+            .findAllByPatientId(patientId)
             .any { it.purpose == purpose && it.withdrawnAt == null }
     }
 
@@ -75,24 +66,21 @@ class ConsentService(
     }
 
     fun listConsents(patientId: UUID): List<PatientConsent> {
-        val clinicId = currentUser.clinicId()
-        patientRepository.findByIdAndClinicId(patientId, clinicId)
-            ?: throw IllegalArgumentException("Patient not found")
-        return consentRepository.findAllByPatientIdAndClinicId(patientId, clinicId)
+        patientRepository.findById(patientId)
+            .orElseThrow { IllegalArgumentException("Patient not found") }
+        return consentRepository.findAllByPatientId(patientId)
     }
 
     @Transactional
     fun grantConsent(patientId: UUID, purpose: String, version: String): PatientConsent {
-        val clinicId = currentUser.clinicId()
-        patientRepository.findByIdAndClinicId(patientId, clinicId)
-            ?: throw IllegalArgumentException("Patient not found")
+        patientRepository.findById(patientId)
+            .orElseThrow { IllegalArgumentException("Patient not found") }
 
         val ipAddress = (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)
             ?.request?.remoteAddr
 
         val consent = PatientConsent(
             patientId = patientId,
-            clinicId  = clinicId,
             purpose   = purpose,
             version   = version,
             grantedBy = runCatching { currentUser.userId() }.getOrNull(),
@@ -110,9 +98,8 @@ class ConsentService(
 
     @Transactional
     fun withdrawConsent(patientId: UUID, consentId: UUID) {
-        val clinicId = currentUser.clinicId()
         val consent = consentRepository.findById(consentId)
-            .filter { it.patientId == patientId && it.clinicId == clinicId }
+            .filter { it.patientId == patientId }
             .orElseThrow { IllegalArgumentException("Consent record not found") }
 
         if (consent.withdrawnAt != null) {

@@ -1,16 +1,24 @@
 import React, { useState, useRef, useEffect } from "react";
-import { colors, fonts, radii } from "../../../styles/theme";
+import { colors, fonts, radii, shadows, zIndex } from "../../../styles/theme";
+import { ChevronDown } from "../../icons/ChevronDown";
 
-type UnderlineSelectOption = {
-  label: string;
-  value: string;
-};
+// ─────────────────────────────────────────────────────────────────────────────
+// UnderlineSelect — an inline "chip" dropdown: a compact outline pill
+// (primary400 border) with a label + chevron, opening the canonical menu. Used
+// inline inside titles (e.g. the booking header "Book an appointment for […]").
+//
+// Named UnderlineSelect for history; the old serif "underline" variant was
+// removed (it was unused everywhere). Chevron is state-driven + menu items use
+// control text, to stay consistent with Select / SuggestionInput.
+// ─────────────────────────────────────────────────────────────────────────────
+type ChipOption = { label: string; value: string };
 
 type UnderlineSelectProps = {
-  options: (string | UnderlineSelectOption)[];
+  options: (string | ChipOption)[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  /** Trigger label size. Defaults to the control/button size (--btn-fs). */
   fontSize?: string;
 };
 
@@ -19,26 +27,21 @@ export function UnderlineSelect({
   value,
   onChange,
   placeholder = "Select...",
-  fontSize = fonts.size.h4,
+  fontSize = "var(--btn-fs)",
 }: UnderlineSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+    const onDoc = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setIsOpen(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  const normalizedOptions: UnderlineSelectOption[] = options.map((opt) =>
-    typeof opt === "string" ? { label: opt, value: opt } : opt
-  );
-
-  const selectedOption = normalizedOptions.find((opt) => opt.value === value);
+  const opts: ChipOption[] = options.map((o) => (typeof o === "string" ? { label: o, value: o } : o));
+  const selected = opts.find((o) => o.value === value);
 
   return (
     <div ref={containerRef} style={{ position: "relative", display: "inline-block" }}>
@@ -50,90 +53,66 @@ export function UnderlineSelect({
           gap: 6,
           cursor: "pointer",
           userSelect: "none",
+          backgroundColor: "transparent",
+          border: `1px solid ${colors.primary400}`,
+          borderRadius: radii.m,
+          padding: "4px 12px",
         }}
       >
-        <span
-          style={{
-            fontFamily: fonts.family.secondary,
-            fontSize,
-            fontWeight: 400,
-            color: colors.neutral900,
-            textDecoration: "underline",
-            textUnderlineOffset: "4px",
-          }}
-        >
-          {selectedOption ? selectedOption.label : placeholder}
+        <span style={{ fontFamily: fonts.family.primary, fontSize, fontWeight: fonts.weight.semibold, color: colors.neutral900 }}>
+          {selected ? selected.label : placeholder}
         </span>
-        <svg
-          width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.neutral600}
-          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-          style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 160ms", flexShrink: 0 }}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+        <ChevronDown open={isOpen} color={isOpen ? colors.neutral900 : colors.neutral300} />
       </span>
 
       {isOpen && (
         <div
           style={{
+            // Canonical menu surface (shared with Select / SuggestionInput).
             position: "absolute",
             top: "calc(100% + 8px)",
             left: 0,
             backgroundColor: colors.neutral100,
-            border: `1px solid ${colors.neutral200}`,
+            border: `1px solid ${colors.primary300}`,
             borderRadius: radii.m,
-            boxShadow: "2px 2px 12px 0px rgba(0,0,0,0.08)",
-            zIndex: 1000,
+            boxShadow: shadows.menu,
+            zIndex: zIndex.popover,
             minWidth: "200px",
             maxHeight: "260px",
             overflowY: "auto",
-            padding: 4,
+            padding: "12px 8px",
             display: "flex",
             flexDirection: "column",
-            gap: 2,
+            gap: "4px",
           }}
         >
-          {normalizedOptions.map((option) => {
-            const isSelected = option.value === value;
-            return (
-              <div
-                key={option.value}
-                onClick={() => {
-                  onChange(option.value);
-                  setIsOpen(false);
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 8,
-                  padding: "8px 12px",
-                  cursor: "pointer",
-                  borderRadius: radii.s,
-                  fontFamily: fonts.family.primary,
-                  fontSize: fonts.size.m,
-                  color: colors.neutral900,
-                  fontWeight: isSelected ? 600 : 400,
-                  backgroundColor: isSelected ? colors.active.shade100 : "transparent",
-                  transition: "background-color 0.15s",
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSelected) e.currentTarget.style.backgroundColor = colors.neutral150;
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) e.currentTarget.style.backgroundColor = "transparent";
-                }}
-              >
-                <span>{option.label}</span>
-                {isSelected && (
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={colors.active.shade700}
-                    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
-              </div>
-            );
-          })}
+          {opts.map((o) => (
+            <div
+              key={o.value}
+              onClick={() => {
+                onChange(o.value);
+                setIsOpen(false);
+              }}
+              style={{
+                padding: "10px 16px",
+                cursor: "pointer",
+                borderRadius: radii.m,
+                fontFamily: fonts.family.primary,
+                fontSize: fonts.control.sm,
+                color: colors.neutral900,
+                backgroundColor: "transparent",
+                transition: "background-color 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = colors.active.shade100;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+            >
+              {o.label}
+            </div>
+          ))}
         </div>
       )}
     </div>

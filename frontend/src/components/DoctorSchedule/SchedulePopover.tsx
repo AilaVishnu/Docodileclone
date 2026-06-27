@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { colors, fonts, radii, spacing } from "../../styles/theme";
+import { colors, fonts, radii, spacing, zIndex } from "../../styles/theme";
 import { Button } from "../Button";
 import {
   DAY_KEYS,
@@ -157,9 +157,9 @@ export function SchedulePopover({
         position: "fixed",
         top: anchorRect.bottom + 8,
         left: Math.min(anchorRect.left, window.innerWidth - 320),
-        zIndex: 1000,
+        zIndex: zIndex.popover,
       }
-    : { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 1000 };
+    : { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: zIndex.popover };
 
   return (
     <div ref={ref} style={{ ...styles.popover, ...popoverPos }}>

@@ -1,10 +1,10 @@
 package com.example.docodile.service
 
 import com.example.docodile.repo.AppointmentRepository
+import com.example.docodile.tenancy.TenantTaskExecutor
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -21,32 +21,38 @@ import java.time.LocalDateTime
  */
 @Component
 class NoShowSweepJob(
-    private val appointmentRepository: AppointmentRepository
+    private val appointmentRepository: AppointmentRepository,
+    private val perClinic: TenantTaskExecutor,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Scheduled(cron = "0 0 1 * * *", zone = "Asia/Kolkata")
-    @Transactional
     fun sweepNightly() {
-        runSweep("nightly cron")
+        perClinic.forEachActiveClinic("no-show sweep (nightly)") { runSweep("nightly cron") }
     }
 
     // First run on boot so a server restart on the morning after a holiday
     // doesn't leave stale BOOKED rows visible until the next 1am tick.
     @Scheduled(initialDelay = 30_000, fixedDelay = Long.MAX_VALUE)
-    @Transactional
     fun sweepOnBoot() {
-        runSweep("startup")
+        perClinic.forEachActiveClinic("no-show sweep (startup)") { runSweep("startup") }
     }
 
     private fun runSweep(reason: String) {
         // Cutoff = start of today; anything scheduled before that and still
-        // BOOKED was a no-show.
+        // pending is stale.
         val cutoff: LocalDateTime = LocalDate.now().atStartOfDay()
-        val touched = appointmentRepository.markBookedBeforeAsNoShow(cutoff)
-        if (touched > 0) {
-            log.info("NoShowSweep ($reason): marked {} stale BOOKED → NO_SHOW (cutoff {})", touched, cutoff)
+        // Stage 1 — pre-arrival no-shows: BOOKED/SCHEDULED/WAITING → NO_SHOW.
+        val noShow = appointmentRepository.markBookedBeforeAsNoShow(cutoff)
+        if (noShow > 0) {
+            log.info("NoShowSweep ($reason): marked {} stale BOOKED → NO_SHOW (cutoff {})", noShow, cutoff)
+        }
+        // Stage 2 — never-opened consultations: an At-Doc (IN_PROGRESS/AT_DOC)
+        // appointment whose pad was never opened (no started visit) → UNSEEN.
+        val unseen = appointmentRepository.markStaleAtDocAsUnseen(cutoff)
+        if (unseen > 0) {
+            log.info("NoShowSweep ($reason): marked {} stale At-Doc → UNSEEN (cutoff {})", unseen, cutoff)
         }
     }
 }

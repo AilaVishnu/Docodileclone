@@ -19,7 +19,7 @@ class HealthControllerTest @Autowired constructor(
     private lateinit var tokenService: com.example.docodile.security.TokenService
 
     @org.springframework.test.context.bean.override.mockito.MockitoBean
-    private lateinit var revokedTokenRepository: com.example.docodile.repo.RevokedTokenRepository
+    private lateinit var revokedTokenRepository: com.example.docodile.repo.UserSessionRepository
 
     @Test
     fun `health endpoint should return ok`() {

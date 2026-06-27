@@ -1,9 +1,7 @@
 package com.example.docodile.web
 
 import com.example.docodile.domain.AuditAction
-import com.example.docodile.domain.RevokedToken
 import com.example.docodile.domain.UserSession
-import com.example.docodile.repo.RevokedTokenRepository
 import com.example.docodile.repo.UserSessionRepository
 import com.example.docodile.security.CurrentUser
 import com.example.docodile.service.AuditService
@@ -32,7 +30,6 @@ data class SessionDTO(
 @RequestMapping("/account/sessions")
 class AccountController(
     private val userSessionRepository: UserSessionRepository,
-    private val revokedTokenRepository: RevokedTokenRepository,
     private val currentUser: CurrentUser,
     private val auditService: AuditService,
 ) {
@@ -58,12 +55,8 @@ class AccountController(
             throw IllegalArgumentException("Session already revoked")
         }
 
-        val now = Instant.now()
-        session.revokedAt = now
+        session.revokedAt = Instant.now()
         userSessionRepository.save(session)
-        revokedTokenRepository.save(
-            RevokedToken(jti = session.jti, userId = userId, expiresAt = session.expiresAt)
-        )
         auditService.log(
             action     = AuditAction.SESSION_REVOKED,
             entityType = "UserSession",

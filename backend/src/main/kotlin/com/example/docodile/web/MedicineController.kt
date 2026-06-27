@@ -1,7 +1,6 @@
 package com.example.docodile.web
 
 import com.example.docodile.repo.RxRowRepository
-import com.example.docodile.security.CurrentUser
 import com.example.docodile.service.DrugInteractionWarning
 import com.example.docodile.service.EkaCareClient
 import com.example.docodile.service.EkaDrugResult
@@ -16,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController
 class MedicineController(
     private val eka: EkaCareClient,
     private val rxRowRepo: RxRowRepository,
-    private val currentUser: CurrentUser,
 ) {
 
     @GetMapping("/search")
@@ -30,8 +28,7 @@ class MedicineController(
 
     @GetMapping("/frequent")
     fun frequent(@RequestParam(defaultValue = "10") limit: Int): List<EkaDrugResult> {
-        val clinicId = currentUser.clinicIdOrNull() ?: return emptyList()
-        val names = rxRowRepo.findFrequentMedicines(clinicId, PageRequest.of(0, limit.coerceIn(1, 30)))
+        val names = rxRowRepo.findFrequentMedicines(PageRequest.of(0, limit.coerceIn(1, 30)))
         return names.map { name ->
             val hit = eka.searchDrugs(name, limit = 1).firstOrNull()
             EkaDrugResult(name = name, id = hit?.id ?: "", genericName = hit?.genericName ?: "")

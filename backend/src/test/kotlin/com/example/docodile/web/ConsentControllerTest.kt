@@ -25,7 +25,7 @@ class ConsentControllerTest @Autowired constructor(
     private lateinit var tokenService: com.example.docodile.security.TokenService
 
     @MockitoBean
-    private lateinit var revokedTokenRepository: com.example.docodile.repo.RevokedTokenRepository
+    private lateinit var userSessionRepository: com.example.docodile.repo.UserSessionRepository
 
     @MockitoBean
     private lateinit var consentService: ConsentService
@@ -33,7 +33,6 @@ class ConsentControllerTest @Autowired constructor(
     private fun consent(patientId: UUID) = PatientConsent(
         id = UUID.randomUUID(),
         patientId = patientId,
-        clinicId = UUID.randomUUID(),
         purpose = "TREATMENT",
         version = "v1",
     )

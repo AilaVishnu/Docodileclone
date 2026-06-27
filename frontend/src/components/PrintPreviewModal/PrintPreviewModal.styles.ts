@@ -2,26 +2,16 @@ import { CSSProperties } from "react";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.35)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1300,
-    padding: spacing.l,
-    paddingBottom: 96,
-  },
+  // The split-pane card. Backdrop / centering / radius / shadow now come from
+  // the canonical <Modal> (surface={neutral100}, padding={0}); this only keeps
+  // the bespoke split-pane sizing + corner-clipping (matched to Modal's radius).
   shell: {
     display: "flex",
     flexDirection: "row",
     width: "min(1100px, 94vw)",
     height: "min(680px, calc(100vh - 160px))",
-    backgroundColor: colors.neutral100,
-    borderRadius: radii.xl,
+    borderRadius: radii["2xl"],
     overflow: "hidden",
-    boxShadow: "0 16px 48px rgba(0, 0, 0, 0.18)",
   },
 
   previewPane: {

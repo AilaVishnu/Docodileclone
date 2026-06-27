@@ -26,6 +26,17 @@ data class AppointmentDTO(
     val paymentMethod: String?,
     val notes: String?,
     val fee: java.math.BigDecimal?,
+    // The pharmacy (medicines) bucket + any discount, written by the bill. Kept
+    // separate from `fee` (consultation) so finance can split the two. Exposed
+    // here so a re-fetched appointment round-trips what was billed.
+    val pharmacyAmount: java.math.BigDecimal? = null,
+    val discountAmount: java.math.BigDecimal? = null,
+    // The linked patient's running deposit/advance balance — the bill seeds its
+    // Deposit field from this and auto-draws against it on Charge & Bill.
+    val patientDeposit: java.math.BigDecimal? = null,
+    // How many bills the patient already has on this appointment's date — the
+    // queue flips the kebab from "Bill" to "View Bills" once this is > 0.
+    val todayBillCount: Int = 0,
     // True if the linked patient has been archived. The appointment still
     // appears in the queue (so the receptionist can see who's checked in),
     // but the frontend blocks navigation into the prescription pad and

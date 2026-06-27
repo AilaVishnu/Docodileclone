@@ -4,9 +4,9 @@ import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { API_BASE_URL } from "../../apiConfig";
 import AdminBg from "../../assets/admin-illo.svg";
 import StaffBg from "../../assets/staff-illo.svg";
-import { ReactComponent as KeyIcon } from "../../assets/Key.svg";
-import { ReactComponent as EyeIcon } from "../../assets/Eye.svg";
-import { ReactComponent as EyeClosedIcon } from "../../assets/Eye Closed.svg";
+import { Icon } from "../../components/Icon";
+import { Field } from "../../components/Field";
+import { Button } from "../../components/Button";
 
 type Phase = "loading" | "invalid" | "ready" | "success";
 
@@ -23,7 +23,7 @@ const adminTheme: Theme = {
   bgImage: AdminBg,
   card: colors.secondary50,
   button: colors.secondary800,
-  buttonText: "#ffffff",
+  buttonText: colors.neutral100,
 };
 
 const staffTheme: Theme = {
@@ -31,7 +31,7 @@ const staffTheme: Theme = {
   bgImage: StaffBg,
   card: colors.primary100,
   button: colors.primary700,
-  buttonText: "#ffffff",
+  buttonText: colors.neutral100,
 };
 
 export function SetupPasswordPage() {
@@ -75,8 +75,8 @@ export function SetupPasswordPage() {
       });
   }, [token]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     setError("");
 
     if (password.length < 8) {
@@ -124,31 +124,13 @@ export function SetupPasswordPage() {
 
   const card: React.CSSProperties = {
     backgroundColor: theme.card,
-    borderRadius: radii.primary,
+    borderRadius: radii["2xl"],
     padding: spacing["2xl"],
     width: 400,
     display: "flex",
     flexDirection: "column",
     gap: spacing.xl,
     boxShadow: "4px 4px 24px rgba(0,0,0,0.10)",
-  };
-
-  const fieldRow: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: spacing.xs,
-    borderBottom: `1px solid ${colors.neutral300}`,
-    padding: spacing.xs,
-  };
-
-  const input: React.CSSProperties = {
-    flex: 1,
-    border: "none",
-    background: "transparent",
-    outline: "none",
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.control.md,
-    color: colors.neutral900,
   };
 
   const btn: React.CSSProperties = {
@@ -234,48 +216,52 @@ export function SetupPasswordPage() {
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
           {/* New password */}
-          <div style={fieldRow}>
-            <KeyIcon style={{ width: 24, height: 24, opacity: 0.5, flexShrink: 0 }} />
-            <input
-              style={input}
-              type={showPassword ? "text" : "password"}
-              placeholder="Enter new password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-              required
-            />
-            <button type="button" style={eyeBtn} onClick={() => setShowPassword((v) => !v)}>
-              {showPassword ? <EyeClosedIcon style={{ width: 24, height: 24 }} /> : <EyeIcon style={{ width: 24, height: 24 }} />}
-            </button>
-          </div>
+          <Field
+            variant="underline"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={setPassword}
+            placeholder="Enter new password"
+            iconLeft={<Icon name="key" size={24} tone="inherit" />}
+            iconRight={
+              <button type="button" style={eyeBtn} onClick={() => setShowPassword((v) => !v)}>
+                {showPassword ? <Icon name="eye-closed" size={24} tone="inherit" /> : <Icon name="eye" size={24} tone="inherit" />}
+              </button>
+            }
+            onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
+          />
 
           {/* Confirm password */}
-          <div style={fieldRow}>
-            <KeyIcon style={{ width: 24, height: 24, opacity: 0.5, flexShrink: 0 }} />
-            <input
-              style={input}
-              type={showConfirm ? "text" : "password"}
-              placeholder="Confirm password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              autoComplete="new-password"
-              required
-            />
-            <button type="button" style={eyeBtn} onClick={() => setShowConfirm((v) => !v)}>
-              {showConfirm ? <EyeClosedIcon style={{ width: 24, height: 24 }} /> : <EyeIcon style={{ width: 24, height: 24 }} />}
-            </button>
-          </div>
+          <Field
+            variant="underline"
+            type={showConfirm ? "text" : "password"}
+            value={confirm}
+            onChange={setConfirm}
+            placeholder="Confirm password"
+            iconLeft={<Icon name="key" size={24} tone="inherit" />}
+            iconRight={
+              <button type="button" style={eyeBtn} onClick={() => setShowConfirm((v) => !v)}>
+                {showConfirm ? <Icon name="eye-closed" size={24} tone="inherit" /> : <Icon name="eye" size={24} tone="inherit" />}
+              </button>
+            }
+            onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
+          />
 
           {error && (
-            <p style={{ fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: "#e53935", margin: 0 }}>
+            <p style={{ fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.red100, margin: 0 }}>
               {error}
             </p>
           )}
 
-          <button type="submit" style={{ ...btn, marginTop: spacing.xs }} disabled={submitting}>
+          <Button
+            variant={theme === staffTheme ? "primary" : "secondary"}
+            size="md"
+            disabled={submitting}
+            onClick={() => handleSubmit()}
+            style={{ marginTop: spacing.xs, width: "100%" }}
+          >
             {submitting ? "Updating…" : "Update"}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

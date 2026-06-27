@@ -3,20 +3,22 @@ package com.example.docodile.service
 import com.example.docodile.domain.RxRow
 import com.example.docodile.domain.Visit
 import com.example.docodile.repo.AppUserRepository
-import com.example.docodile.repo.ClinicEntityRepository
+import com.example.docodile.repo.AppointmentRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.repo.RxRowRepository
 import com.example.docodile.repo.VisitRepository
-import com.example.docodile.security.CurrentUser
 import com.example.docodile.web.ActiveSessionDTO
 import com.example.docodile.web.PatientContentMatch
 import com.example.docodile.web.RxRowDTO
 import com.example.docodile.web.SaveVisitRequest
 import com.example.docodile.web.VisitDTO
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.server.ResponseStatusException
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 
 @Service
@@ -24,27 +26,35 @@ class VisitService(
     private val visitRepository: VisitRepository,
     private val rxRowRepository: RxRowRepository,
     private val patientRepository: PatientRepository,
-    private val clinicEntityRepository: ClinicEntityRepository,
     private val appUserRepository: AppUserRepository,
-    private val currentUser: CurrentUser
+    private val appointmentRepository: AppointmentRepository,
 ) {
     fun listForPatient(patientId: UUID): List<VisitDTO> {
-        val clinicId = currentUser.clinicId()
-
         // Strictly this patient's own visits. A phone number can be shared
         // across a family, so visit history must never be merged by phone —
         // each patient row owns its own history.
-        return visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAscCreatedAtAsc(clinicId, patientId)
-            .map { it.toDTO(loadRxRows(it.id)) }
+        val visits = visitRepository
+            .findAllByPatientIdOrderByVisitDateAscCreatedAtAsc(patientId)
+        // Batch-resolve each visit's appointment status in one query so the
+        // pad can lock/label tabs from their own completion state.
+        val statusById = appointmentStatuses(visits.mapNotNull { it.appointmentId })
+        return visits.map { it.toDTO(loadRxRows(it.id), statusById[it.appointmentId]) }
+    }
+
+    // appointmentId -> status, for the given ids (clinic-scoped via the visit
+    // query that produced them). Empty input short-circuits to no query.
+    private fun appointmentStatuses(appointmentIds: List<UUID>): Map<UUID, String?> {
+        val ids = appointmentIds.distinct()
+        if (ids.isEmpty()) return emptyMap()
+        return appointmentRepository.findAllById(ids).associate { it.id to it.status }
     }
 
     // In-progress consultations for the live "Active Sessions" indicator —
     // the doctor has opened the pad but not yet completed the visit. Newest
     // first so the most recently started session leads.
     fun listActiveSessions(): List<ActiveSessionDTO> {
-        val clinicId = currentUser.clinicId()
         return visitRepository
-            .findActiveSessions(clinicId)
+            .findActiveSessions()
             .mapNotNull { v ->
                 val p = v.patient ?: return@mapNotNull null
                 val startedAt = v.sessionStartedAt ?: return@mapNotNull null
@@ -66,10 +76,37 @@ class VisitService(
     }
 
     fun get(visitId: UUID): VisitDTO {
-        val clinicId = currentUser.clinicId()
-        val visit = visitRepository.findByIdAndClinicId(visitId, clinicId)
+        val visit = visitRepository.findById(visitId).orElse(null)
             ?: throw IllegalArgumentException("Visit not found")
-        return visit.toDTO(loadRxRows(visit.id))
+        return visit.toDTO(loadRxRows(visit.id), statusFor(visit.appointmentId))
+    }
+
+    // Single-visit appointment status lookup (used on create/update/get).
+    private fun statusFor(appointmentId: UUID?): String? =
+        appointmentId?.let { appointmentRepository.findById(it).orElse(null)?.status }
+
+    // Server-side 24h edit-window guard — mirrors the prescription pad's
+    // `canEditForm`. Defence in depth: the UI already locks the form, but a
+    // direct API call must not amend a visit past its window. The window runs
+    // from when the View Pad was opened (sessionStartedAt); an OPEN (un-ended,
+    // not-completed) consultation stays editable so it can be finished, and a
+    // never-opened visit falls back to its visit date.
+    private fun requireWithinEditWindow(visit: Visit) {
+        val now = Instant.now().toEpochMilli()
+        val dayMs = 24L * 60 * 60 * 1000
+        val completed = statusFor(visit.appointmentId)?.uppercase() == "COMPLETED" ||
+            (visit.appointmentId == null && visit.sessionEndedAt != null)
+        // Open consultation — always editable (so it can be completed).
+        if (visit.sessionStartedAt != null && visit.sessionEndedAt == null && !completed) return
+        val started = visit.sessionStartedAt
+        val refMs = if (started != null) {
+            started.toEpochMilli()                              // 24h from pad-open
+        } else {
+            visit.visitDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() // never opened → visit date
+        }
+        if (now - refMs >= dayMs) {
+            throw ResponseStatusException(HttpStatus.CONFLICT, "This visit's 24-hour edit window has closed")
+        }
     }
 
     // Patient Files "notes / prescriptions" search: match the keyword across
@@ -79,14 +116,13 @@ class VisitService(
     fun contentSearch(query: String): List<PatientContentMatch> {
         val q = query.trim()
         if (q.length < 2) return emptyList()
-        val clinicId = currentUser.clinicId()
         val ql = q.lowercase()
         val like = "%$ql%"
         // Keyed "patientId|type" so each patient shows at most one Rx and one
         // Visit hit; first (most recent, via the queries' ordering) wins.
         val out = LinkedHashMap<String, PatientContentMatch>()
 
-        rxRowRepository.searchContent(clinicId, like).forEach { r ->
+        rxRowRepository.searchContent(like).forEach { r ->
             val p = r.visit?.patient ?: return@forEach
             val text = listOfNotNull(r.medicine, r.dosage, r.notes, r.medicineNote)
                 .joinToString(" ") { it.trim() }
@@ -96,7 +132,7 @@ class VisitService(
                 PatientContentMatch(p.id, p.name, p.gender, p.age, p.displayNo, "Rx", snippet(text, ql)),
             )
         }
-        visitRepository.searchNotes(clinicId, like).forEach { v ->
+        visitRepository.searchNotes(like).forEach { v ->
             val p = v.patient ?: return@forEach
             val field = listOfNotNull(
                 v.complaints, v.diagnosis, v.privateNotes, v.notesForPatient, v.tests, v.reviewNotes,
@@ -125,44 +161,38 @@ class VisitService(
 
     @Transactional
     fun create(patientId: UUID, request: SaveVisitRequest): VisitDTO {
-        val clinicId = currentUser.clinicId()
-        val clinic = clinicEntityRepository.findById(clinicId)
-            .orElseThrow { IllegalArgumentException("Clinic not found") }
         val patient = patientRepository.findById(patientId)
             .orElseThrow { IllegalArgumentException("Patient not found") }
-        require(patient.clinic?.id == clinicId) { "Patient does not belong to current clinic" }
 
         val visit = Visit(
-            clinic = clinic,
             patient = patient,
             visitDate = request.visitDate ?: LocalDate.now(),
             createdAt = Instant.now(),
             updatedAt = Instant.now()
         )
-        applyRequest(visit, request, clinicId)
+        applyRequest(visit, request)
         val saved = visitRepository.save(visit)
         val rxRows = saveRxRows(saved, request.prescriptions)
-        return saved.toDTO(rxRows.map { it.toDTO() })
+        return saved.toDTO(rxRows.map { it.toDTO() }, statusFor(saved.appointmentId))
     }
 
     @Transactional
     fun update(visitId: UUID, request: SaveVisitRequest): VisitDTO {
-        val clinicId = currentUser.clinicId()
-        val visit = visitRepository.findByIdAndClinicId(visitId, clinicId)
+        val visit = visitRepository.findById(visitId).orElse(null)
             ?: throw IllegalArgumentException("Visit not found")
+        requireWithinEditWindow(visit)
         if (request.visitDate != null) visit.visitDate = request.visitDate
-        applyRequest(visit, request, clinicId)
+        applyRequest(visit, request)
         visit.updatedAt = Instant.now()
         val saved = visitRepository.save(visit)
         rxRowRepository.deleteByVisitId(saved.id)
         val rxRows = saveRxRows(saved, request.prescriptions)
-        return saved.toDTO(rxRows.map { it.toDTO() })
+        return saved.toDTO(rxRows.map { it.toDTO() }, statusFor(saved.appointmentId))
     }
 
     @Transactional
     fun delete(visitId: UUID) {
-        val clinicId = currentUser.clinicId()
-        val visit = visitRepository.findByIdAndClinicId(visitId, clinicId)
+        val visit = visitRepository.findById(visitId).orElse(null)
             ?: throw IllegalArgumentException("Visit not found")
         // rx_row ON DELETE CASCADE handles the children.
         visitRepository.delete(visit)
@@ -170,7 +200,7 @@ class VisitService(
 
     // ── helpers ──────────────────────────────────────────────────────────
 
-    private fun applyRequest(visit: Visit, r: SaveVisitRequest, clinicId: UUID) {
+    private fun applyRequest(visit: Visit, r: SaveVisitRequest) {
         // Vitals
         visit.bpSystolic = r.bpSystolic; visit.bpDiastolic = r.bpDiastolic; visit.bpUnit = r.bpUnit
         visit.bmi = r.bmi; visit.bmiUnit = r.bmiUnit
@@ -224,6 +254,14 @@ class VisitService(
             } else {
                 r.sessionDurationSec
             }
+        // "Completed at least once" — STICKY: stamped the first time the visit is
+        // ended, never cleared on a later amend re-open (unlike sessionEndedAt,
+        // which the re-open clears). This is the server-side replacement for the
+        // localStorage visitCompleted flag that drives the footer's permanent
+        // switch from "Complete visit" to "Save changes".
+        if (r.sessionEndedAt != null && visit.completedAt == null) {
+            visit.completedAt = Instant.now()
+        }
         // Tag the visit with its appointment on create; never null it out
         // on a later update that omits the field.
         if (r.appointmentId != null) visit.appointmentId = r.appointmentId
@@ -259,14 +297,47 @@ class VisitService(
         frequency = this.frequency,
         frequencyInterval = this.frequencyInterval,
         duration = this.duration,
-        notes = this.notes
+        notes = this.notes,
+        dispenseQty = computeDispenseQty(this.medicine, this.dosage, this.frequency, this.duration)
     )
 
-    private fun Visit.toDTO(rxRows: List<RxRowDTO>): VisitDTO = VisitDTO(
+    // ── Dispensary-quantity derivation (moved off the frontend so bills /
+    // inventory use one server-side rule). Topical/liquid "per-pack" forms are
+    // one unit; otherwise units/dose × doses/day × days, rounded up. Null when
+    // any piece is missing/non-numeric (SOS, "as directed", …). ──
+    private val PER_PACK_FORM = Regex(
+        "cream|lotion|gel|ointment|\\boil\\b|shampoo|soap|wash|serum|sunscreen|balm|paste|scrub|spray|powder|syrup|suspension|solution|drop|moisturi|conditioner|foam|emulsion|liniment|tincture",
+        RegexOption.IGNORE_CASE,
+    )
+    private fun parseDurationDays(d: String?): Int? {
+        if (d.isNullOrBlank()) return null
+        val m = Regex("(\\d+)\\s*(day|week|month|year|d|w|m|y)?", RegexOption.IGNORE_CASE).find(d) ?: return null
+        val n = m.groupValues[1].toIntOrNull() ?: return null
+        if (n <= 0) return null
+        val unit = m.groupValues[2].ifBlank { "day" }.lowercase()
+        return when {
+            unit.startsWith("w") -> n * 7
+            unit.startsWith("mon") || unit == "m" -> n * 30
+            unit.startsWith("y") -> n * 365
+            else -> n
+        }
+    }
+
+    private fun computeDispenseQty(name: String?, dosage: String?, frequency: String?, duration: String?): Int? {
+        if (name != null && PER_PACK_FORM.containsMatchIn(name)) return 1
+        val unitsPerDose = Regex("([\\d.]+)").find(dosage ?: "")?.groupValues?.get(1)?.toDoubleOrNull() ?: 1.0
+        val dosesPerDay = (frequency ?: "").split(Regex("[-+,/\\s]+")).mapNotNull { it.toIntOrNull() }.sum()
+        val days = parseDurationDays(duration) ?: return null
+        if (dosesPerDay <= 0 || unitsPerDose <= 0) return null
+        return Math.ceil(unitsPerDose * dosesPerDay * days).toInt()
+    }
+
+    private fun Visit.toDTO(rxRows: List<RxRowDTO>, appointmentStatus: String? = null): VisitDTO = VisitDTO(
         id = this.id,
         patientId = this.patient?.id ?: UUID(0, 0),
-        clinicId = this.clinic?.id ?: UUID(0, 0),
+        clinicId = UUID(0, 0),
         createdByDoctorId = this.createdByDoctor?.id,
+        createdByDoctorName = this.createdByDoctor?.name,
         visitDate = this.visitDate,
         bpSystolic = this.bpSystolic, bpDiastolic = this.bpDiastolic, bpUnit = this.bpUnit,
         bmi = this.bmi, bmiUnit = this.bmiUnit,
@@ -293,8 +364,10 @@ class VisitService(
         reviewNotes = this.reviewNotes,
         sessionStartedAt = this.sessionStartedAt,
         sessionEndedAt = this.sessionEndedAt,
+        completedAt = this.completedAt,
         sessionDurationSec = this.sessionDurationSec,
         appointmentId = this.appointmentId,
+        appointmentStatus = appointmentStatus,
         prescriptions = rxRows
     )
 }

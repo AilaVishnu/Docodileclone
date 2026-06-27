@@ -12,7 +12,7 @@ export const styles: Record<string, CSSProperties> = {
     // tab is the same size regardless of content. Ellipsis on overflow.
     width: 180,
     padding: "12px 16px",
-    borderRadius: `${radii.primary}px ${radii.primary}px 0 0`,
+    borderRadius: `${radii["2xl"]}px ${radii["2xl"]}px 0 0`,
     border: `0px solid ${colors.neutral900}`,
     borderBottom: "none",
     backgroundColor: colors.secondary100,

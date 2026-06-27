@@ -2,7 +2,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { colors, fonts, radii, spacing } from "../../../styles/theme";
 import { API_BASE_URL } from "../../../apiConfig";
 import { Toast } from "../../../components/Toast";
+import { resolveToastIcon } from "../../../components/Toast/toastIcon";
 import { Modal } from "../../../components/Modal";
+import { Button } from "../../../components/Button";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Settings → Import data. Self-service migration from another EMR into
@@ -155,7 +157,10 @@ function HealthPlixZipImport({
   };
 
   const handleImport = async () => {
-    if (!file) return;
+    if (!file) {
+      setError("Please choose a file to import.");
+      return;
+    }
     setImporting(true);
     setError(null);
     try {
@@ -191,7 +196,7 @@ function HealthPlixZipImport({
         <div style={{ ...S.actions, justifyContent: "center" }}>
           <button type="button" onClick={onDone} style={S.importBtn}>Done</button>
         </div>
-        <Toast message={toastMsg} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
+        <Toast message={toastMsg} {...resolveToastIcon(toastMsg)} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
       </div>
     );
   }
@@ -228,15 +233,10 @@ function HealthPlixZipImport({
       </div>
       {error && <div style={S.error}>{error}</div>}
       <div style={{ ...S.actions, justifyContent: "center", gap: spacing.s }}>
-        <button type="button" onClick={onBack} style={S.cancelBtn}>Cancel</button>
-        <button
-          type="button"
-          onClick={handleImport}
-          disabled={!file || importing}
-          style={{ ...S.importBtn, ...(!file || importing ? S.importBtnDisabled : null) }}
-        >
+        <Button variant="light" size="sm" onClick={onBack}>Cancel</Button>
+        <Button variant="primary" size="sm" onClick={handleImport} disabled={importing}>
           {importing ? "Importing…" : "Import"}
-        </button>
+        </Button>
       </div>
       <button type="button" onClick={onIndividual} style={S.linkBtn}>
         Or upload the four files individually
@@ -570,7 +570,7 @@ function HealthPlixImport({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      <Toast message={toastMsg} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
+      <Toast message={toastMsg} {...resolveToastIcon(toastMsg)} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
     </div>
   );
 }
@@ -789,16 +789,6 @@ const S: Record<string, React.CSSProperties> = {
     color: colors.primary700,
     fontWeight: fonts.weight.medium,
     wordBreak: "break-all",
-  },
-  cancelBtn: {
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.control.sm,
-    color: colors.neutral700,
-    backgroundColor: "transparent",
-    border: `1px solid ${colors.primary300}`,
-    borderRadius: radii.full,
-    padding: "10px 24px",
-    cursor: "pointer",
   },
   linkBtn: {
     alignSelf: "center",

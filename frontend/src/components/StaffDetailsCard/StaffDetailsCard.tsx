@@ -1,12 +1,10 @@
-import React, { useState } from "react";
+import React from "react";
 import { Card } from "../Card";
-import { TextInput } from "../Input/TextInput";
+import { Field } from "../Field";
+import { RadioGroup } from "../Radio";
 import { styles } from "./StaffDetailsCard.styles";
 
-// SVG icons (replace paths with your actual icons)
-import { ReactComponent as UserIcon } from "../../assets/User Hands.svg";
-import { ReactComponent as MailIcon } from "../../assets/Letter.svg";
-import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
+import { Icon } from "../Icon";
 
 type StaffDetailsCardProps = {
   name: string;
@@ -34,27 +32,30 @@ export function StaffDetailsCard({
 
   return (
     <Card style={styles.card}>
-      <TextInput
+      <Field
+        variant="underline"
         value={name}
         onChange={setName}
         placeholder="Name"
-        iconLeft={<UserIcon />}
+        iconLeft={<Icon name="user-hands" tone="inherit" />}
         error={errors.name}
         errorMessage="Please enter staff name"
       />
 
-      <TextInput
+      <Field
+        variant="underline"
         type="email"
         value={email}
         onChange={setEmail}
         onBlur={() => setEmail(email.trim().toLowerCase())}
         placeholder="hello@example.com"
-        iconLeft={<MailIcon />}
+        iconLeft={<Icon name="mail" tone="inherit" />}
         error={errors.email}
         errorMessage="Please enter a valid email"
       />
 
-      <TextInput
+      <Field
+        variant="underline"
         value={phone}
         onChange={(val) => {
           let digits = val.replace(/\D/g, "");
@@ -77,47 +78,23 @@ export function StaffDetailsCard({
           }
         }}
         placeholder="+91 XXXXX XXXXX"
-        iconLeft={<PhoneIcon />}
+        iconLeft={<Icon name="phone" tone="inherit" />}
         error={errors.phone}
         errorMessage="Please enter a valid phone number"
       />
 
-      <div style={{ ...styles.genderGroup, ...(errors.gender ? { border: "1px solid red", borderRadius: "8px", padding: "4px" } : {}) }}>
-        <label style={styles.radioLabel}>
-          <input
-            type="radio"
-            name="gender"
-            value="male"
-            checked={gender === "male"}
-            onChange={() => setGender("male")}
-            style={styles.radioInput}
-          />
-          Male
-        </label>
-
-        <label style={styles.radioLabel}>
-          <input
-            type="radio"
-            name="gender"
-            value="female"
-            checked={gender === "female"}
-            onChange={() => setGender("female")}
-            style={styles.radioInput}
-          />
-          Female
-        </label>
-
-        <label style={styles.radioLabel}>
-          <input
-            type="radio"
-            name="gender"
-            value="other"
-            checked={gender === "other"}
-            onChange={() => setGender("other")}
-            style={styles.radioInput}
-          />
-          Other
-        </label>
+      <div style={{ marginTop: 4, ...(errors.gender ? { border: "1px solid red", borderRadius: "8px", padding: "4px" } : {}) }}>
+        <RadioGroup
+          name="gender"
+          value={gender}
+          onChange={(v) => setGender(v as "male" | "female" | "other")}
+          gap={24}
+          options={[
+            { label: "Male", value: "male" },
+            { label: "Female", value: "female" },
+            { label: "Other", value: "other" },
+          ]}
+        />
       </div>
 
     </Card>

@@ -1,9 +1,7 @@
 package com.example.docodile.web
 
 import com.example.docodile.domain.Service as ServiceEntity
-import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.ServiceRepository
-import com.example.docodile.security.CurrentUser
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -16,8 +14,6 @@ import java.util.UUID
 @RequestMapping("/api/tenant/services")
 class ServiceController(
     private val serviceRepository: ServiceRepository,
-    private val clinicEntityRepository: ClinicEntityRepository,
-    private val currentUser: CurrentUser
 ) {
     private fun toDto(s: ServiceEntity) = ServiceDTO(
         id = s.id,
@@ -33,7 +29,7 @@ class ServiceController(
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun list(): List<ServiceDTO> =
-        serviceRepository.findAllByClinicIdOrderByCreatedAtAsc(currentUser.clinicId())
+        serviceRepository.findAllByOrderByCreatedAtAsc()
             .map(::toDto)
 
     private fun validate(request: ServiceRequest, existingId: UUID?) {
@@ -51,8 +47,7 @@ class ServiceController(
         }
         // Enforce per-clinic uniqueness of (name, code) — two services with
         // the same short form would be ambiguous on the printed bill.
-        val clinicId = currentUser.clinicId()
-        val all = serviceRepository.findAllByClinicIdOrderByCreatedAtAsc(clinicId)
+        val all = serviceRepository.findAllByOrderByCreatedAtAsc()
         val nameClash = all.any { it.id != existingId && it.name.equals(request.name.trim(), ignoreCase = true) }
         if (nameClash) throw IllegalArgumentException("A service with this name already exists")
         val codeClash = all.any { it.id != existingId && it.code.equals(request.code.trim(), ignoreCase = true) }
@@ -64,11 +59,7 @@ class ServiceController(
     @Transactional
     fun create(@RequestBody request: ServiceRequest): ResponseEntity<ServiceDTO> {
         validate(request, existingId = null)
-        val clinicId = currentUser.clinicId()
-        val clinic = clinicEntityRepository.findById(clinicId)
-            .orElseThrow { IllegalArgumentException("Clinic not found") }
         val saved = serviceRepository.save(ServiceEntity(
-            clinic = clinic,
             name = request.name.trim(),
             code = request.code.trim(),
             price = request.price,
@@ -88,8 +79,7 @@ class ServiceController(
         @PathVariable id: UUID,
         @RequestBody request: ServiceRequest
     ): ResponseEntity<ServiceDTO> {
-        val clinicId = currentUser.clinicId()
-        val existing = serviceRepository.findByIdAndClinicId(id, clinicId)
+        val existing = serviceRepository.findById(id).orElse(null)
             ?: return ResponseEntity.notFound().build()
         validate(request, existingId = id)
         existing.apply {
@@ -108,8 +98,7 @@ class ServiceController(
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Transactional
     fun delete(@PathVariable id: UUID): ResponseEntity<Void> {
-        val clinicId = currentUser.clinicId()
-        val existing = serviceRepository.findByIdAndClinicId(id, clinicId)
+        val existing = serviceRepository.findById(id).orElse(null)
             ?: return ResponseEntity.notFound().build()
         serviceRepository.delete(existing)
         return ResponseEntity.noContent().build()

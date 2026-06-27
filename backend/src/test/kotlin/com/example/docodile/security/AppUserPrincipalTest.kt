@@ -14,8 +14,7 @@ class AppUserPrincipalTest {
         accountLocked: Boolean = false,
     ) = AppUserPrincipal(
         userId = UUID.randomUUID(),
-        tenantId = UUID.randomUUID(),
-        clinicId = UUID.randomUUID(),
+        schema = "tskin",
         role = role,
         email = "user@example.com",
         passwordHash = "",

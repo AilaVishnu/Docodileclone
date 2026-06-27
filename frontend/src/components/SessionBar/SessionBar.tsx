@@ -1,13 +1,7 @@
 import React, { CSSProperties } from "react";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
-import { ReactComponent as PlayCircleIcon } from "../../assets/icons/play-circle.svg";
-import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
-import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg";
-import { ReactComponent as ShareIcon } from "../../assets/icons/share.svg";
-import { ReactComponent as RestartIcon } from "../../assets/icons/restart.svg";
-import { ReactComponent as StopCircleIcon } from "../../assets/icons/stop-circle.svg";
-import { Button } from "../Button";
-import { confirmStyles } from "../AddStaffModal/AddStaffModal.styles";
+import { Icon } from "../Icon";
+import { ConfirmDialog } from "../ConfirmDialog";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Floating session toolbar — Figma nodes 2255:10871 (idle) and 2036:5233
@@ -72,6 +66,12 @@ type SessionBarProps = {
    * this device's localStorage.
    */
   recordedDurationSec?: number | null;
+  /**
+   * Override the bar's distance from the viewport bottom (px). Defaults to
+   * the standard 20px. The prescription page raises this so the bar floats
+   * ABOVE the new bottom nav/actions bar instead of colliding with it.
+   */
+  bottomOffset?: number;
   /**
    * Wall-clock ms timestamp of when this visit's session was ended on
    * the DB row. Used by both the readOnly branch (Resume gate for
@@ -141,8 +141,12 @@ export function SessionBar({
   storageKey,
   readOnly = false,
   recordedDurationSec = null,
+  bottomOffset,
   recordedEndedAtMs = null,
 }: SessionBarProps) {
+  // Optional bottom override so the host can lift the bar above other
+  // floating UI (e.g. the prescription page's bottom nav/actions bar).
+  const barPos = bottomOffset != null ? { bottom: bottomOffset } : null;
   // Restore previous state if the visit had one — covers Pause + navigate
   // away + come back, plus reopening a visit that ended earlier. Skipped
   // entirely in readOnly mode so historic-visit tabs don't pull stale
@@ -266,11 +270,6 @@ export function SessionBar({
     onEnd?.(finalSeconds);
   };
 
-  // Resume is only offered while we're inside the 24h buffer window. Once
-  // the window expires (or the recorded endedAt is unknown — legacy state)
-  // the visit is considered closed and the Resume button is suppressed.
-  const interactiveCanResume =
-    endedAtMs != null && Date.now() - endedAtMs < RESUME_BUFFER_MS;
   // Use the combined endedAtMs (DB sessionEndedAt, falling back to the
   // locally-persisted end time) rather than the DB prop alone — otherwise a
   // session ended on this device but not yet synced to the DB column shows
@@ -290,7 +289,7 @@ export function SessionBar({
   // - If session is older than 24h: hide timer, show only "Session Ended" (closed session)
   if (readOnly) {
     return (
-      <div style={{ ...styles.bar, ...styles.barIdle }}>
+      <div style={{ ...styles.bar, ...styles.barIdle, ...barPos }}>
         {/* Historic visits always show their recorded (static) duration —
             this is the final session length, not a running timer. */}
         <span style={{ ...styles.timer, color: colors.primary100 }}>
@@ -311,15 +310,21 @@ export function SessionBar({
               Resume
             </button>
           )}
-          <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
-            <PrinterIcon width={24} height={24} />
-          </button>
-          <button type="button" style={styles.iconBtn} onClick={onDownload} aria-label="Download">
-            <DownloadIcon width={24} height={24} />
-          </button>
-          <button type="button" style={styles.iconBtn} onClick={onShare} aria-label="Share">
-            <ShareIcon width={24} height={24} />
-          </button>
+          {onPrint && (
+            <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
+              <Icon name="printer" size={24} tone="inherit" />
+            </button>
+          )}
+          {onDownload && (
+            <button type="button" style={styles.iconBtn} onClick={onDownload} aria-label="Download">
+              <Icon name="download" size={24} tone="inherit" />
+            </button>
+          )}
+          {onShare && (
+            <button type="button" style={styles.iconBtn} onClick={onShare} aria-label="Share">
+              <Icon name="share" size={24} tone="inherit" />
+            </button>
+          )}
         </div>
       </div>
     );
@@ -327,7 +332,7 @@ export function SessionBar({
 
   return (
     <>
-    <div style={{ ...styles.bar, ...styles.barIdle }}>
+    <div style={{ ...styles.bar, ...styles.barIdle, ...barPos }}>
       {/* Hide timer if session ended more than 24 hours ago (beyond resume window) */}
       {!(ended && endedAtMs && Date.now() - endedAtMs >= RESUME_BUFFER_MS) && (
         <span
@@ -364,15 +369,21 @@ export function SessionBar({
                 Resume
               </button>
             )}
-            <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
-              <PrinterIcon width={24} height={24} />
-            </button>
-            <button type="button" style={styles.iconBtn} onClick={onDownload} aria-label="Download">
-              <DownloadIcon width={24} height={24} />
-            </button>
-            <button type="button" style={styles.iconBtn} onClick={onShare} aria-label="Share">
-              <ShareIcon width={24} height={24} />
-            </button>
+            {onPrint && (
+              <button type="button" style={styles.iconBtn} onClick={onPrint} aria-label="Print">
+                <Icon name="printer" size={24} tone="inherit" />
+              </button>
+            )}
+            {onDownload && (
+              <button type="button" style={styles.iconBtn} onClick={onDownload} aria-label="Download">
+                <Icon name="download" size={24} tone="inherit" />
+              </button>
+            )}
+            {onShare && (
+              <button type="button" style={styles.iconBtn} onClick={onShare} aria-label="Share">
+                <Icon name="share" size={24} tone="inherit" />
+              </button>
+            )}
           </div>
         </>
       ) : running || paused ? (
@@ -397,7 +408,7 @@ export function SessionBar({
             onClick={() => setShowRestartConfirm(true)}
             aria-label="Restart session timer"
           >
-            <RestartIcon width={18} height={18} />
+            <Icon name="restart" size={18} tone="inherit" />
           </button>
           <button
             type="button"
@@ -405,95 +416,44 @@ export function SessionBar({
             onClick={() => setShowEndConfirm(true)}
             aria-label="End session"
           >
-            <StopCircleIcon width={18} height={18} />
+            <Icon name="stop-circle" size={18} tone="inherit" />
           </button>
         </div>
       ) : (
         // Idle — only the green Start Session button, no other icons.
         <button type="button" style={styles.startBtn} onClick={handleStart} aria-label="Start session">
-          <PlayCircleIcon style={styles.startIcon} width={24} height={24} />
+          <Icon name="play-circle" size={24} tone="inherit" style={styles.startIcon} />
           <span>Start Session</span>
         </button>
       )}
     </div>
 
-    {/* Rendered as a sibling of the bar (NOT inside it) — the bar uses
-        transform: translateX(-50%) which creates a new containing block,
-        which would otherwise clip this overlay to the bar's bounds. */}
-    {showEndConfirm && (
-      <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>
-        <div style={confirmStyles.dialog}>
-          <h4 style={confirmStyles.title}>Are you sure?</h4>
-          <p
-            style={{
-              margin: 0,
-              fontSize: fonts.size.s,
-              color: colors.neutral600,
-              textAlign: "center",
-            }}
-          >
-            This will close the visit. You can hit Restart later to
-            resume editing if the patient comes back.
-          </p>
-          <div style={confirmStyles.actions}>
-            <Button
-              variant="dangerLight"
-              size="sm"
-              onClick={() => setShowEndConfirm(false)}
-            >
-              Nope
-            </Button>
-            <Button
-              variant="dark"
-              size="sm"
-              onClick={() => {
-                setShowEndConfirm(false);
-                handleEnd();
-              }}
-            >
-              Yes, end
-            </Button>
-          </div>
-        </div>
-      </div>
-    )}
+    <ConfirmDialog
+      isOpen={showEndConfirm}
+      title="Are you sure?"
+      message="This will close the visit. You can hit Restart later to resume editing if the patient comes back."
+      confirmLabel="Yes, end"
+      cancelLabel="Nope"
+      destructive
+      onConfirm={() => {
+        setShowEndConfirm(false);
+        handleEnd();
+      }}
+      onCancel={() => setShowEndConfirm(false)}
+    />
 
-    {showRestartConfirm && (
-      <div style={{ ...confirmStyles.overlay, zIndex: 9999 }}>
-        <div style={confirmStyles.dialog}>
-          <h4 style={confirmStyles.title}>Reset timer?</h4>
-          <p
-            style={{
-              margin: 0,
-              fontSize: fonts.size.s,
-              color: colors.neutral600,
-              textAlign: "center",
-            }}
-          >
-            It will reset the time and will start from the beginning.
-          </p>
-          <div style={confirmStyles.actions}>
-            <Button
-              variant="dangerLight"
-              size="sm"
-              onClick={() => setShowRestartConfirm(false)}
-            >
-              Nope
-            </Button>
-            <Button
-              variant="dark"
-              size="sm"
-              onClick={() => {
-                setShowRestartConfirm(false);
-                handleRestart();
-              }}
-            >
-              Yes, reset
-            </Button>
-          </div>
-        </div>
-      </div>
-    )}
+    <ConfirmDialog
+      isOpen={showRestartConfirm}
+      title="Reset timer?"
+      message="It will reset the time and will start from the beginning."
+      confirmLabel="Yes, reset"
+      cancelLabel="Nope"
+      onConfirm={() => {
+        setShowRestartConfirm(false);
+        handleRestart();
+      }}
+      onCancel={() => setShowRestartConfirm(false)}
+    />
     </>
   );
 }

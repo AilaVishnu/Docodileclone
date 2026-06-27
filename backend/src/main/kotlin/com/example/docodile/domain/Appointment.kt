@@ -2,17 +2,12 @@ package com.example.docodile.domain
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.EntityListeners
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import org.hibernate.annotations.SQLRestriction
-import org.springframework.data.annotation.CreatedBy
-import org.springframework.data.annotation.LastModifiedBy
-import org.springframework.data.annotation.LastModifiedDate
-import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDateTime
@@ -21,14 +16,9 @@ import java.util.UUID
 @Entity
 @Table(name = "appointment")
 @SQLRestriction("deleted_at IS NULL")
-@EntityListeners(AuditingEntityListener::class)
 class Appointment(
     @Id
     var id: UUID = UUID.randomUUID(),
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "clinic_id", nullable = false)
-    var clinic: ClinicEntity? = null,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_id", nullable = false)
@@ -58,17 +48,9 @@ class Appointment(
 
     var fee: BigDecimal? = null,
 
-    // Latest pharmacy bill total for this visit. Set by the Bill
-    // Medicines flow; null when the patient hasn't been billed for meds
-    // yet. Kept separate from `fee` so the Finance dashboard can split
-    // consultation vs dispensary revenue.
     @Column(name = "pharmacy_amount")
     var pharmacyAmount: BigDecimal? = null,
 
-    // Rupee discount applied at payment time (Pay Due / waiver). The
-    // booking `fee` stays as the original quoted amount; collected
-    // revenue is (fee + pharmacy_amount - discount_amount) for PAID
-    // rows. Null when no discount was applied.
     @Column(name = "discount_amount")
     var discountAmount: BigDecimal? = null,
 
@@ -77,18 +59,9 @@ class Appointment(
     @Column(name = "created_at")
     var createdAt: Instant? = null,
 
-    @CreatedBy
-    @Column(name = "created_by") var createdBy: UUID? = null,
-
-    @LastModifiedDate
-    @Column(name = "updated_at") var updatedAt: Instant? = null,
-
-    @LastModifiedBy
-    @Column(name = "updated_by") var updatedBy: UUID? = null,
+    @Column(name = "updated_at")
+    var updatedAt: Instant? = null,
 
     @Column(name = "deleted_at")
     var deletedAt: Instant? = null,
-
-    @Column(name = "deleted_by")
-    var deletedBy: UUID? = null,
 )

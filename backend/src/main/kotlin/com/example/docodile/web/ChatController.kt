@@ -3,9 +3,9 @@ package com.example.docodile.web
 import com.example.docodile.domain.ChatLastSeen
 import com.example.docodile.domain.ChatLastSeenId
 import com.example.docodile.domain.ChatMessage
+import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.repo.ChatLastSeenRepository
 import com.example.docodile.repo.ChatMessageRepository
-import com.example.docodile.repo.ClinicStaffRepository
 import com.example.docodile.security.AppUserPrincipal
 import com.example.docodile.security.CurrentUser
 import org.springframework.messaging.handler.annotation.MessageMapping
@@ -54,7 +54,7 @@ fun ChatMessage.toDTO() = ChatMessageDTO(
 class ChatController(
     private val chatMessageRepository: ChatMessageRepository,
     private val chatLastSeenRepository: ChatLastSeenRepository,
-    private val clinicStaffRepository: ClinicStaffRepository,
+    private val appUserRepository: AppUserRepository,
     private val currentUser: CurrentUser,
     private val messagingTemplate: SimpMessagingTemplate,
 ) {
@@ -63,20 +63,24 @@ class ChatController(
         ((p as UsernamePasswordAuthenticationToken).principal as AppUserPrincipal)
 
     // ── WebSocket: send to group ──────────────────────────────────────────
+    // Chat is now per-clinic-schema, so a single group topic per schema (the
+    // WS session is already scoped to the connected user's clinic).
 
     @MessageMapping("/group")
     fun groupMessage(@Payload payload: ChatPayload, principal: Principal) {
         val user = principal(principal)
-        val clinicId = user.clinicId ?: return
         val msg = ChatMessage(
-            clinicId = clinicId,
             senderId = user.userId,
-            senderName = user.username, // overridden by name lookup below if available
+            senderName = user.username,
             senderRole = user.authorities.firstOrNull()?.authority?.removePrefix("ROLE_"),
             content = payload.content.trim(),
         )
         val saved = chatMessageRepository.save(msg)
-        messagingTemplate.convertAndSend("/topic/clinic/$clinicId", saved.toDTO())
+        // Per-schema topic: the STOMP in-memory broker isolates only by topic NAME (not by DB
+        // schema), so the tenant's schema MUST be in the destination or group chat leaks across
+        // clinics. Subscribe-side enforcement (rejecting a SUBSCRIBE to another schema's topic)
+        // lives in TenantChannelInterceptor.
+        messagingTemplate.convertAndSend("/topic/clinic/${user.schema}", saved.toDTO())
     }
 
     // ── WebSocket: send direct message ───────────────────────────────────
@@ -84,10 +88,8 @@ class ChatController(
     @MessageMapping("/direct")
     fun directMessage(@Payload payload: ChatPayload, principal: Principal) {
         val user = principal(principal)
-        val clinicId = user.clinicId ?: return
         val recipientId = payload.recipientId?.let { runCatching { UUID.fromString(it) }.getOrNull() } ?: return
         val msg = ChatMessage(
-            clinicId = clinicId,
             senderId = user.userId,
             senderName = user.username,
             senderRole = user.authorities.firstOrNull()?.authority?.removePrefix("ROLE_"),
@@ -106,9 +108,8 @@ class ChatController(
     @GetMapping("/api/chat/messages/group")
     @PreAuthorize("isAuthenticated()")
     fun groupHistory(): List<ChatMessageDTO> {
-        val clinicId = currentUser.clinicId()
         return chatMessageRepository
-            .findTop50ByClinicIdAndRecipientIdIsNullOrderByCreatedAtAsc(clinicId)
+            .findTop50ByRecipientIdIsNullOrderByCreatedAtAsc()
             .map { it.toDTO() }
     }
 
@@ -117,9 +118,8 @@ class ChatController(
     @GetMapping("/api/chat/messages/dm/{recipientId}")
     @PreAuthorize("isAuthenticated()")
     fun dmHistory(@PathVariable recipientId: UUID): List<ChatMessageDTO> {
-        val clinicId = currentUser.clinicId()
         val me = currentUser.userId()
-        return chatMessageRepository.findDmHistory(clinicId, me, recipientId).map { it.toDTO() }
+        return chatMessageRepository.findDmHistory(me, recipientId).map { it.toDTO() }
     }
 
     // ── REST: staff list for DM picker ───────────────────────────────────
@@ -127,10 +127,8 @@ class ChatController(
     @GetMapping("/api/chat/staff")
     @PreAuthorize("isAuthenticated()")
     fun staffList(): List<StaffSummaryDTO> {
-        val clinicId = currentUser.clinicId()
         val me = currentUser.userId()
-        return clinicStaffRepository.findByClinicId(clinicId)
-            .mapNotNull { it.staff }
+        return appUserRepository.findAll()
             .filter { it.id != me && it.active }
             .map { StaffSummaryDTO(it.id.toString(), it.name ?: it.email, it.role.name) }
     }
@@ -153,7 +151,6 @@ class ChatController(
     @GetMapping("/api/chat/unread")
     @PreAuthorize("isAuthenticated()")
     fun unreadCounts(): Map<String, Int> {
-        val clinicId = currentUser.clinicId()
         val me = currentUser.userId()
         val seenMap = chatLastSeenRepository.findAllByIdUserId(me)
             .associate { it.id.conversationKey to it.seenAt }
@@ -164,17 +161,16 @@ class ChatController(
         // Group unread
         val groupSince = seenMap["group"] ?: epoch
         result["group"] = chatMessageRepository
-            .countByClinicIdAndRecipientIdIsNullAndCreatedAtAfter(clinicId, groupSince)
+            .countByRecipientIdIsNullAndCreatedAtAfter(groupSince)
 
-        // DM unread — count per partner
-        clinicStaffRepository.findByClinicId(clinicId)
-            .mapNotNull { it.staff }
+        // DM unread — count per partner (clinic-local staff)
+        appUserRepository.findAll()
             .filter { it.id != me && it.active }
             .forEach { staff ->
-                val staffId = staff.id ?: return@forEach
+                val staffId = staff.id
                 val dmKey = dmConversationKey(me, staffId)
                 val dmSince = seenMap[dmKey] ?: epoch
-                val count = chatMessageRepository.countDmAfter(clinicId, me, staffId, dmSince)
+                val count = chatMessageRepository.countDmAfter(me, staffId, dmSince)
                 if (count > 0) result[dmKey] = count
             }
 

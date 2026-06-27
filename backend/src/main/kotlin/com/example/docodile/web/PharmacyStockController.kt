@@ -1,11 +1,8 @@
 package com.example.docodile.web
 
-import com.example.docodile.domain.AuditAction
 import com.example.docodile.domain.PharmacyStock
-import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.PharmacyStockRepository
 import com.example.docodile.security.CurrentUser
-import com.example.docodile.service.AuditService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -19,9 +16,7 @@ import java.util.UUID
 @RequestMapping("/api/tenant/pharmacy-stock")
 class PharmacyStockController(
     private val repo: PharmacyStockRepository,
-    private val clinicEntityRepository: ClinicEntityRepository,
     private val currentUser: CurrentUser,
-    private val auditService: AuditService,
 ) {
 
     private fun toDto(s: PharmacyStock) = PharmacyStockDTO(
@@ -61,20 +56,15 @@ class PharmacyStockController(
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun list(): List<PharmacyStockDTO> =
-        repo.findAllByClinicIdOrderByNameAsc(currentUser.clinicId()).map(::toDto)
+        repo.findAllByOrderByNameAsc().map(::toDto)
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','PHARMACY')")
     @Transactional
     fun create(@RequestBody request: PharmacyStockRequest): ResponseEntity<PharmacyStockDTO> {
         if (request.name.isBlank()) throw IllegalArgumentException("Medicine name is required")
-        val clinicId = currentUser.clinicId()
-        val clinic = clinicEntityRepository.findById(clinicId)
-            .orElseThrow { IllegalArgumentException("Clinic not found") }
-        val row = PharmacyStock(clinic = clinic).also { applyRequest(it, request) }
+        val row = PharmacyStock().also { applyRequest(it, request) }
         val saved = repo.save(row)
-        auditService.log(AuditAction.INVENTORY_CREATED, entityType = "PharmacyStock", entityId = saved.id,
-            metadata = mapOf("name" to saved.name))
         return ResponseEntity.status(HttpStatus.CREATED).body(toDto(saved))
     }
 
@@ -89,9 +79,6 @@ class PharmacyStockController(
     @PreAuthorize("hasAnyRole('ADMIN','PHARMACY')")
     @Transactional
     fun bulkCreate(@RequestBody requests: List<PharmacyStockRequest>): BulkResult {
-        val clinicId = currentUser.clinicId()
-        val clinic = clinicEntityRepository.findById(clinicId)
-            .orElseThrow { IllegalArgumentException("Clinic not found") }
         val now = Instant.now()
 
         // Build a lookup keyed by (name|batch|invoice) so each request row
@@ -100,7 +87,7 @@ class PharmacyStockController(
         fun key(name: String, batch: String?, invoice: String?) =
             "${name.trim().lowercase()}|${(batch ?: "").trim().lowercase()}|${(invoice ?: "").trim().lowercase()}"
 
-        val existing = repo.findAllByClinicIdOrderByNameAsc(clinicId)
+        val existing = repo.findAllByOrderByNameAsc()
         val existingByKey = existing.associateBy { key(it.name, it.batch, it.invoiceNo) }
 
         var created = 0
@@ -115,7 +102,7 @@ class PharmacyStockController(
                 repo.save(match)
                 updated++
             } else {
-                val row = PharmacyStock(clinic = clinic, createdAt = now, updatedAt = now)
+                val row = PharmacyStock(createdAt = now, updatedAt = now)
                 applyRequest(row, req)
                 repo.save(row)
                 created++
@@ -128,12 +115,9 @@ class PharmacyStockController(
     @PreAuthorize("hasAnyRole('ADMIN','PHARMACY')")
     @Transactional
     fun update(@PathVariable id: UUID, @RequestBody request: PharmacyStockRequest): ResponseEntity<PharmacyStockDTO> {
-        val clinicId = currentUser.clinicId()
-        val existing = repo.findByIdAndClinicId(id, clinicId) ?: return ResponseEntity.notFound().build()
+        val existing = repo.findById(id).orElse(null) ?: return ResponseEntity.notFound().build()
         applyRequest(existing, request)
         val saved = repo.save(existing)
-        auditService.log(AuditAction.INVENTORY_UPDATED, entityType = "PharmacyStock", entityId = id,
-            metadata = mapOf("name" to saved.name))
         return ResponseEntity.ok(toDto(saved))
     }
 
@@ -141,10 +125,7 @@ class PharmacyStockController(
     @PreAuthorize("hasAnyRole('ADMIN','PHARMACY')")
     @Transactional
     fun delete(@PathVariable id: UUID): ResponseEntity<Void> {
-        val clinicId = currentUser.clinicId()
-        val existing = repo.findByIdAndClinicId(id, clinicId) ?: return ResponseEntity.notFound().build()
-        auditService.log(AuditAction.INVENTORY_DELETED, entityType = "PharmacyStock", entityId = id,
-            metadata = mapOf("name" to existing.name))
+        val existing = repo.findById(id).orElse(null) ?: return ResponseEntity.notFound().build()
         repo.delete(existing)
         return ResponseEntity.noContent().build()
     }
@@ -161,8 +142,7 @@ class PharmacyStockController(
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     @Transactional
     fun deduct(@RequestBody items: List<DeductItem>): DeductResult {
-        val clinicId = currentUser.clinicId()
-        val all = repo.findAllByClinicIdOrderByNameAsc(clinicId)
+        val all = repo.findAllByOrderByNameAsc()
         // Group by lowercase name so multiple batches of the same med are
         // bundled. Earliest-expiry-first dispensing rotates stock naturally
         // and avoids leaving short-dated batches behind.
@@ -188,8 +168,6 @@ class PharmacyStockController(
             }
             applied += DeductedItem(name = it.name, requested = it.qty, deducted = deducted)
         }
-        auditService.log(AuditAction.INVENTORY_DEDUCTED,
-            metadata = mapOf("items" to items.size, "missing" to missing))
         return DeductResult(applied = applied, missing = missing)
     }
 

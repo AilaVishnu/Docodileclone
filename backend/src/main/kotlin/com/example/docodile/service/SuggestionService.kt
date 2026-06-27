@@ -1,9 +1,8 @@
 package com.example.docodile.service
 
 import com.example.docodile.domain.Suggestion
-import com.example.docodile.repo.ClinicEntityRepository
+import com.example.docodile.repo.ClinicSettingsRepository
 import com.example.docodile.repo.SuggestionRepository
-import com.example.docodile.security.CurrentUser
 import com.example.docodile.web.SuggestionDTO
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
@@ -13,8 +12,7 @@ import java.time.Instant
 @Service
 class SuggestionService(
     private val suggestionRepository: SuggestionRepository,
-    private val clinicEntityRepository: ClinicEntityRepository,
-    private val currentUser: CurrentUser
+    private val clinicSettingsRepository: ClinicSettingsRepository,
 ) {
     /**
      * Top-N suggestions for `field`, scoped to the caller's clinic
@@ -87,17 +85,15 @@ class SuggestionService(
         }
     }
 
-    // Server-side lookup of the caller clinic's specialties. Splits the
-    // comma-separated `clinic.speciality` column (set via the BuildYourClinic
+    // Server-side lookup of the clinic's specialties from ClinicSettings
+    // (the single-row settings entity for this schema). Splits the
+    // comma-separated `speciality` column (set via the BuildYourClinic
     // multi-tag picker) and normalizes each entry to lowercase + trimmed so
     // case/whitespace differences ("Dermatology" vs "dermatology" vs
     // "Dermatology ") all map to the same pool. Clients never send the
     // specialty directly.
     private fun resolveSpecialities(): List<String> {
-        val clinicId = currentUser.clinicId()
-        val clinic = clinicEntityRepository.findById(clinicId)
-            .orElseThrow { IllegalStateException("Clinic not found for current user") }
-        val raw = clinic.speciality?.trim().orEmpty()
+        val raw = clinicSettingsRepository.findAll().firstOrNull()?.speciality?.trim().orEmpty()
         if (raw.isEmpty()) return emptyList()
         return raw.split(",")
             .map { it.trim().lowercase() }

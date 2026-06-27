@@ -4,9 +4,7 @@ import com.example.docodile.domain.AppUser
 import com.example.docodile.domain.PasswordResetToken
 import com.example.docodile.domain.Role
 import com.example.docodile.repo.AppUserRepository
-import com.example.docodile.repo.ClinicEntityRepository
-import com.example.docodile.repo.ClinicStaffRepository
-import com.example.docodile.security.CurrentUser
+import com.example.docodile.repo.ClinicSettingsRepository
 import com.example.docodile.service.EmailService
 import com.example.docodile.service.PasswordTokenService
 import com.example.docodile.service.TokenInvalidException
@@ -37,7 +35,7 @@ class PasswordSetupControllerTest @Autowired constructor(
     private lateinit var tokenService: com.example.docodile.security.TokenService
 
     @MockitoBean
-    private lateinit var revokedTokenRepository: com.example.docodile.repo.RevokedTokenRepository
+    private lateinit var userSessionRepository: com.example.docodile.repo.UserSessionRepository
 
     @MockitoBean
     private lateinit var passwordTokenService: PasswordTokenService
@@ -46,19 +44,13 @@ class PasswordSetupControllerTest @Autowired constructor(
     private lateinit var appUserRepository: AppUserRepository
 
     @MockitoBean
-    private lateinit var clinicEntityRepository: ClinicEntityRepository
-
-    @MockitoBean
-    private lateinit var clinicStaffRepository: ClinicStaffRepository
+    private lateinit var clinicSettingsRepository: ClinicSettingsRepository
 
     @MockitoBean
     private lateinit var passwordEncoder: PasswordEncoder
 
     @MockitoBean
     private lateinit var emailService: EmailService
-
-    @MockitoBean
-    private lateinit var currentUser: CurrentUser
 
     private val mapper = ObjectMapper()
 
@@ -140,7 +132,7 @@ class PasswordSetupControllerTest @Autowired constructor(
         whenever(passwordTokenService.generateToken(u.id)).thenReturn("raw")
         whenever(passwordTokenService.buildSetupLink("raw")).thenReturn("http://link")
 
-        val req = ForgotPasswordRequest(email = "jane@example.com", domain = null)
+        val req = ForgotPasswordRequest(email = "jane@example.com")
         mockMvc.perform(post("/auth/forgot-password")
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
@@ -153,7 +145,7 @@ class PasswordSetupControllerTest @Autowired constructor(
     fun `forgotPassword returns 404 when email does not exist`() {
         whenever(appUserRepository.findByEmail("nobody@example.com")).thenReturn(Optional.empty())
 
-        val req = ForgotPasswordRequest(email = "nobody@example.com", domain = null)
+        val req = ForgotPasswordRequest(email = "nobody@example.com")
         mockMvc.perform(post("/auth/forgot-password")
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
@@ -162,19 +154,8 @@ class PasswordSetupControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.error").value("Email ID does not exist"))
     }
 
-    @Test
-    fun `forgotPassword returns 404 in admin flow when user is not admin`() {
-        val u = user(role = Role.DOCTOR)
-        whenever(appUserRepository.findByEmail("jane@example.com")).thenReturn(Optional.of(u))
-
-        val req = ForgotPasswordRequest(email = "jane@example.com", domain = null)
-        mockMvc.perform(post("/auth/forgot-password")
-            .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(mapper.writeValueAsString(req)))
-            .andExpect(status().isNotFound)
-            .andExpect(jsonPath("$.error").value("Email ID does not exist"))
-    }
+    // (Removed: forgot-password is no longer admin-only — any active clinic user may
+    //  reset, since the clinic is resolved from the subdomain. Covered by the 200 case above.)
 
     // --- validate-token (public) ---
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { styles } from "./TimePicker.styles";
+import { Button } from "../Button";
 
 type TimePickerProps = {
   initialTime: string; // "HH:MM AM/PM" or "HH:MM"
@@ -210,18 +211,9 @@ export function TimePicker({ initialTime, onSelect, onClose, style, selectedDate
 
         <div style={styles.actionsRow}>
           {onWalkin && (
-            <button type="button" style={styles.nowButton} onClick={handleWalkin}>
-              Walk-in
-            </button>
+            <Button variant="light" size="sm" onClick={handleWalkin} style={{ flex: 1 }}>Walk-in</Button>
           )}
-          <button
-            type="button"
-            style={{ ...styles.doneButton, ...(selectionPast ? disabledCell : {}) }}
-            onClick={handleDone}
-            disabled={selectionPast}
-          >
-            Done
-          </button>
+          <Button variant="dark" size="sm" onClick={handleDone} disabled={selectionPast} style={{ flex: 1 }}>Done</Button>
         </div>
         </div>
       </div>

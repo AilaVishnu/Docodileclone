@@ -1,6 +1,6 @@
 package com.example.docodile.web
 
-import com.example.docodile.domain.ClinicEntity
+import com.example.docodile.domain.ClinicSettings
 import com.example.docodile.service.AppointmentService
 import com.example.docodile.service.ClinicStatusService
 import com.example.docodile.service.DuplicateAppointmentException
@@ -19,7 +19,8 @@ import com.example.docodile.web.ClinicDetailsRequest
 @RequestMapping("/api/tenant")
 class ClinicStatusController(
     private val clinicStatusService: ClinicStatusService,
-    private val appointmentService: AppointmentService
+    private val appointmentService: AppointmentService,
+    private val chargeService: com.example.docodile.service.ChargeService
 ) {
     @GetMapping("/status")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST')")
@@ -27,57 +28,36 @@ class ClinicStatusController(
         return mapOf("complete" to clinicStatusService.isClinicComplete())
     }
 
-    @GetMapping("/config")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun config(): Map<String, Any> {
-        return clinicStatusService.getTenantLimits()
-    }
-
     @PostMapping("/clinic")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun saveClinic(@RequestBody request: ClinicDetailsRequest): ResponseEntity<ClinicEntity> {
+    fun saveClinic(@RequestBody request: ClinicDetailsRequest): ResponseEntity<ClinicSettings> {
         val saved = clinicStatusService.saveClinicDetails(request)
         return ResponseEntity.ok(saved)
     }
 
-    @GetMapping("/clinics")
+    @GetMapping("/staff")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun listClinics(): List<ClinicEntity> {
-        return clinicStatusService.getClinicsForTenant()
+    fun listStaff(): List<AppUser> {
+        return clinicStatusService.getStaff()
     }
 
-    @GetMapping("/clinics/{clinicId}/staff")
+    @PostMapping("/staff")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun listStaff(@PathVariable clinicId: UUID): List<AppUser> {
-        return clinicStatusService.getStaffForClinic(clinicId)
+    fun saveStaff(@RequestBody request: StaffRequest): AppUser {
+        return clinicStatusService.saveStaff(request)
     }
 
-    @PostMapping("/clinics/{clinicId}/staff")
+    @DeleteMapping("/staff/{staffId}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun saveStaff(
-        @PathVariable clinicId: UUID,
-        @RequestBody request: StaffRequest
-    ): AppUser {
-        return clinicStatusService.saveStaff(clinicId, request)
-    }
-
-    @DeleteMapping("/clinics/{clinicId}/staff/{staffId}")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun deleteStaff(
-        @PathVariable clinicId: UUID,
-        @PathVariable staffId: UUID
-    ): ResponseEntity<Void> {
-        clinicStatusService.deleteStaff(clinicId, staffId)
+    fun deleteStaff(@PathVariable staffId: UUID): ResponseEntity<Void> {
+        clinicStatusService.deactivateStaff(staffId)
         return ResponseEntity.noContent().build()
     }
 
-    @PatchMapping("/clinics/{clinicId}/staff/{staffId}/reactivate")
+    @PatchMapping("/staff/{staffId}/reactivate")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun reactivateStaff(
-        @PathVariable clinicId: UUID,
-        @PathVariable staffId: UUID
-    ): ResponseEntity<Void> {
-        clinicStatusService.reactivateStaff(clinicId, staffId)
+    fun reactivateStaff(@PathVariable staffId: UUID): ResponseEntity<Void> {
+        clinicStatusService.reactivateStaff(staffId)
         return ResponseEntity.noContent().build()
     }
 
@@ -160,16 +140,28 @@ class ClinicStatusController(
             }
             val pharmacyAmount = parseMoney("pharmacyAmount")
             val discountAmount = parseMoney("discountAmount")
-            ResponseEntity.ok(appointmentService.updatePayment(appointmentId, payStatus, paymentMethod, pharmacyAmount, discountAmount))
+            val fee = parseMoney("fee")
+            ResponseEntity.ok(appointmentService.updatePayment(appointmentId, payStatus, paymentMethod, pharmacyAmount, discountAmount, fee))
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
         }
     }
 
-    @GetMapping("/domain/check")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun checkDomain(@RequestParam domain: String): Map<String, Boolean> {
-        return mapOf("available" to clinicStatusService.isDomainAvailable(domain))
+    // Charge & Bill in ONE atomic transaction: recompute totals from the line
+    // items, write the payment, create the invoice, auto-cover from the deposit
+    // and deduct stock — replacing the three separate client calls so they can
+    // never drift apart.
+    @PostMapping("/appointments/{appointmentId}/charge")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
+    fun chargeAppointment(
+        @PathVariable appointmentId: UUID,
+        @RequestBody request: com.example.docodile.web.ChargeRequest,
+    ): ResponseEntity<Any> {
+        return try {
+            ResponseEntity.ok(chargeService.charge(appointmentId, request))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
+        }
     }
 
     @ExceptionHandler(IllegalArgumentException::class)

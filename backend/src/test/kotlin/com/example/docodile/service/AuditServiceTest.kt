@@ -42,8 +42,6 @@ class AuditServiceTest {
     @Test
     fun `log saves an AuditLog with the action name and default SUCCESS outcome`() {
         `when`(currentUser.userId()).thenReturn(UUID.randomUUID())
-        `when`(currentUser.tenantId()).thenReturn(UUID.randomUUID())
-        `when`(currentUser.clinicIdOrNull()).thenReturn(UUID.randomUUID())
 
         service.log(AuditAction.LOGIN_SUCCESS)
 
@@ -53,29 +51,21 @@ class AuditServiceTest {
     }
 
     @Test
-    fun `log uses explicit actorId, tenantId and clinicId on the saved entity`() {
+    fun `log uses explicit actorId on the saved entity`() {
         val actorId = UUID.randomUUID()
-        val tenantId = UUID.randomUUID()
-        val clinicId = UUID.randomUUID()
 
         service.log(
             AuditAction.PATIENT_ACCESS,
             actorId = actorId,
-            tenantId = tenantId,
-            clinicId = clinicId,
         )
 
         verify(auditLogRepository).save(auditCaptor.capture())
         assertEquals(actorId, auditCaptor.value.actorId)
-        assertEquals(tenantId, auditCaptor.value.tenantId)
-        assertEquals(clinicId, auditCaptor.value.clinicId)
     }
 
     @Test
     fun `log serializes a non-empty metadata map to a JSON string`() {
         `when`(currentUser.userId()).thenReturn(UUID.randomUUID())
-        `when`(currentUser.tenantId()).thenReturn(UUID.randomUUID())
-        `when`(currentUser.clinicIdOrNull()).thenReturn(UUID.randomUUID())
 
         service.log(AuditAction.CONFIG_CHANGED, metadata = mapOf("key" to "value"))
 
@@ -89,8 +79,6 @@ class AuditServiceTest {
     @Test
     fun `log leaves metadata null for an empty map`() {
         `when`(currentUser.userId()).thenReturn(UUID.randomUUID())
-        `when`(currentUser.tenantId()).thenReturn(UUID.randomUUID())
-        `when`(currentUser.clinicIdOrNull()).thenReturn(UUID.randomUUID())
 
         service.log(AuditAction.CONFIG_CHANGED, metadata = emptyMap())
 
@@ -99,17 +87,13 @@ class AuditServiceTest {
     }
 
     @Test
-    fun `log falls back to currentUser values when actorId and tenantId are not passed`() {
+    fun `log falls back to currentUser userId when actorId is not passed`() {
         val fallbackActor = UUID.randomUUID()
-        val fallbackTenant = UUID.randomUUID()
         `when`(currentUser.userId()).thenReturn(fallbackActor)
-        `when`(currentUser.tenantId()).thenReturn(fallbackTenant)
-        `when`(currentUser.clinicIdOrNull()).thenReturn(null)
 
         service.log(AuditAction.PATIENT_UPDATED)
 
         verify(auditLogRepository).save(auditCaptor.capture())
         assertEquals(fallbackActor, auditCaptor.value.actorId)
-        assertEquals(fallbackTenant, auditCaptor.value.tenantId)
     }
 }

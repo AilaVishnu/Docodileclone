@@ -5,7 +5,6 @@ import com.example.docodile.repo.AppointmentRepository
 import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.repo.VisitRepository
-import com.example.docodile.security.CurrentUser
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -30,19 +29,14 @@ class PatientServiceTest {
     @Mock
     private lateinit var appUserRepository: AppUserRepository
 
-    @Mock
-    private lateinit var currentUser: CurrentUser
-
     @InjectMocks
     private lateinit var patientService: PatientService
 
     @Test
-    fun `should list patients for the current clinic`() {
-        val clinicId = UUID.randomUUID()
+    fun `should list active patients`() {
         val patients = listOf(Patient(id = UUID.randomUUID(), name = "Alice"))
 
-        `when`(currentUser.clinicId()).thenReturn(clinicId)
-        `when`(patientRepository.findAllByClinicIdAndDeletedAtIsNull(clinicId)).thenReturn(patients)
+        `when`(patientRepository.findAllByDeletedAtIsNull()).thenReturn(patients)
 
         val result = patientService.listPatients()
 

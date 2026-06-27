@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts } from "../../styles/theme";
+import { colors, fonts, spacing } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   wrapper: {
@@ -14,7 +14,7 @@ export const styles: Record<string, CSSProperties> = {
     gap: "12px",
     padding: "24px",
     backgroundColor: colors.neutral100,
-    borderRadius: "16px 16px 0 0",
+    borderRadius: "8px 8px 0 0", // top-only (torn zigzag below); 8 to match the other cards on Book Appointment (radii.m)
     flex: 1,
   },
 
@@ -114,10 +114,11 @@ export const styles: Record<string, CSSProperties> = {
 
   totalRow: {
     display: "flex",
-    alignItems: "baseline",
+    alignItems: "center",
     justifyContent: "space-between",
     padding: "8px 12px",
-    backgroundColor: colors.primary100,
+    backgroundColor: colors.neutral150,
+    borderRadius: "4px", // match the service line-item rows above
   },
 
   totalLabel: {
@@ -139,24 +140,17 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   methodRow: {
-    display: "flex",
-    gap: "16px",
+    // 2×2 grid (Cash | Card / UPI | Waive). `auto auto` lets each column size
+    // to its widest label, then centers the pair within the card. Since every
+    // label puts the radio first, the two radios in each column line up
+    // vertically across rows.
+    display: "grid",
+    gridTemplateColumns: "auto auto",
+    columnGap: "32px",
+    rowGap: "8px",
     justifyContent: "center",
-  },
-
-  radioLabel: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    fontSize: fonts.size.m,
-    fontFamily: fonts.family.primary,
-    cursor: "pointer",
-    color: colors.neutral900,
-  },
-
-  radioInput: {
-    margin: 0,
-    cursor: "pointer",
+    // Breathing room between the Total row above and the payment options.
+    marginTop: spacing.s,
   },
 
   noteInput: {
@@ -182,8 +176,10 @@ export const styles: Record<string, CSSProperties> = {
   toggleActive: {
     padding: "4px 10px",
     border: "none",
-    backgroundColor: colors.active.shade100,
-    color: colors.neutral900,
+    // Active: the themed primary orange (matches the +New Appointment button)
+    // with white text so the selected mode pops.
+    backgroundColor: colors.active.shade700,
+    color: colors.neutral100,
     fontSize: fonts.size.s,
     fontWeight: 600,
     cursor: "pointer",

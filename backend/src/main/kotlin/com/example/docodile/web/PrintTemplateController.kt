@@ -1,9 +1,7 @@
 package com.example.docodile.web
 
 import com.example.docodile.domain.PrintTemplate
-import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.PrintTemplateRepository
-import com.example.docodile.security.CurrentUser
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -32,8 +30,6 @@ data class PrintTemplateRequest(
 @RequestMapping("/api/tenant/print-templates")
 class PrintTemplateController(
     private val repo: PrintTemplateRepository,
-    private val clinicEntityRepository: ClinicEntityRepository,
-    private val currentUser: CurrentUser
 ) {
     private fun toDto(t: PrintTemplate) = PrintTemplateDTO(
         id = t.id,
@@ -45,25 +41,21 @@ class PrintTemplateController(
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun list(): List<PrintTemplateDTO> =
-        repo.findAllByClinicIdOrderByCreatedAtAsc(currentUser.clinicId()).map(::toDto)
+        repo.findAllByOrderByCreatedAtAsc().map(::toDto)
 
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Transactional
     fun create(@RequestBody request: PrintTemplateRequest): ResponseEntity<PrintTemplateDTO> {
-        val clinicId = currentUser.clinicId()
-        val clinic = clinicEntityRepository.findById(clinicId)
-            .orElseThrow { IllegalArgumentException("Clinic not found") }
         // Enforce the single-default invariant — if the new template is being
         // marked default, flip every other one off first.
         if (request.isDefault) {
-            repo.findAllByClinicIdOrderByCreatedAtAsc(clinicId).forEach {
+            repo.findAllByOrderByCreatedAtAsc().forEach {
                 if (it.isDefault) { it.isDefault = false; repo.save(it) }
             }
         }
         val now = Instant.now()
         val saved = repo.save(PrintTemplate(
-            clinic = clinic,
             name = request.name.trim().ifEmpty { "New template" },
             isDefault = request.isDefault,
             config = request.config,
@@ -80,12 +72,11 @@ class PrintTemplateController(
         @PathVariable id: UUID,
         @RequestBody request: PrintTemplateRequest
     ): ResponseEntity<PrintTemplateDTO> {
-        val clinicId = currentUser.clinicId()
-        val existing = repo.findByIdAndClinicId(id, clinicId)
+        val existing = repo.findById(id).orElse(null)
             ?: return ResponseEntity.notFound().build()
         if (request.isDefault && !existing.isDefault) {
             // Flip the previous default off so the partial-unique index is satisfied.
-            repo.findAllByClinicIdOrderByCreatedAtAsc(clinicId).forEach {
+            repo.findAllByOrderByCreatedAtAsc().forEach {
                 if (it.isDefault && it.id != id) { it.isDefault = false; repo.save(it) }
             }
         }
@@ -102,14 +93,13 @@ class PrintTemplateController(
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Transactional
     fun delete(@PathVariable id: UUID): ResponseEntity<Void> {
-        val clinicId = currentUser.clinicId()
-        val existing = repo.findByIdAndClinicId(id, clinicId) ?: return ResponseEntity.notFound().build()
+        val existing = repo.findById(id).orElse(null) ?: return ResponseEntity.notFound().build()
         val wasDefault = existing.isDefault
         repo.delete(existing)
         // Promote the next-oldest template to default so the clinic always
         // has a default print template available.
         if (wasDefault) {
-            repo.findAllByClinicIdOrderByCreatedAtAsc(clinicId).firstOrNull()?.let {
+            repo.findAllByOrderByCreatedAtAsc().firstOrNull()?.let {
                 it.isDefault = true
                 repo.save(it)
             }

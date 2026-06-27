@@ -47,6 +47,8 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
+	testImplementation 'org.testcontainers:postgresql:1.20.4'
+	testImplementation 'org.testcontainers:junit-jupiter:1.20.4'
 	// Null-safe Mockito matchers/stubbing for Kotlin (any()/whenever() that respect
 	// non-null parameter types). Avoids the NPEs plain Mockito any() causes in Kotlin.
 	testImplementation 'org.mockito.kotlin:mockito-kotlin:5.4.0'

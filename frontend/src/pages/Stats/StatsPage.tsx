@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "../../apiConfig";
 import { fetchStatsHighlights } from "../../api/ai";
-import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
+import { colors, fonts, spacing, radii, strokes, fluidSpacing } from "../../styles/theme";
+import { tableHeadCell, tableDivider } from "../../styles/tableStyles";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
+import { DateRangeDropdown } from "../../components/DateRangeDropdown/DateRangeDropdown";
 import {
-  AgePyramid,
   AreaTrend,
   CategoryRows,
   InsetLabelBar,
@@ -13,9 +15,10 @@ import {
   ThemedHorizontalBar,
   ThemedVerticalBar,
 } from "../../components/charts";
+import { Tabs } from "../../components/Tabs";
 
 type TabId = "overview" | "health" | "patients" | "doctors" | "clinical" | "operations" | "finance";
-type RangeId = "today" | "week" | "month" | "year" | "custom";
+type RangeId = "today" | "yesterday" | "last7" | "last30" | "thisMonth" | "custom";
 type Tone = "up" | "down" | "flat";
 
 const TABS: { id: TabId; label: string }[] = [
@@ -30,10 +33,11 @@ const TABS: { id: TabId; label: string }[] = [
 
 const RANGES: { id: RangeId; label: string }[] = [
   { id: "today", label: "Today" },
-  { id: "week", label: "7 days" },
-  { id: "month", label: "30 days" },
-  { id: "year", label: "12 months" },
-  { id: "custom", label: "Custom" },
+  { id: "yesterday", label: "Yesterday" },
+  { id: "last7", label: "Last 7 days" },
+  { id: "last30", label: "Last 30 days" },
+  { id: "thisMonth", label: "This month" },
+  { id: "custom", label: "Custom range" },
 ];
 
 // ── Shared types ─────────────────────────────────────────────────────────────
@@ -44,12 +48,15 @@ type DailyCount = { date: string; count: number };
 // ── Date range helpers ────────────────────────────────────────────────────────
 
 function buildDateRange(range: RangeId, customStart: string, customEnd: string) {
-  const today = new Date().toISOString().slice(0, 10);
-  const weekAgo  = new Date(Date.now() - 6  * 86400000).toISOString().slice(0, 10);
-  const monthAgo = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
-  const yearAgo  = new Date(Date.now() - 364 * 86400000).toISOString().slice(0, 10);
-  const starts: Record<RangeId, string> = { today, week: weekAgo, month: monthAgo, year: yearAgo, custom: customStart };
-  const ends:   Record<RangeId, string> = { today, week: today,   month: today,    year: today,   custom: customEnd  };
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const now = new Date();
+  const today = iso(now);
+  const yesterday  = iso(new Date(Date.now() - 1  * 86400000));
+  const sevenAgo   = iso(new Date(Date.now() - 6  * 86400000));
+  const thirtyAgo  = iso(new Date(Date.now() - 29 * 86400000));
+  const monthStart = iso(new Date(now.getFullYear(), now.getMonth(), 1));
+  const starts: Record<RangeId, string> = { today, yesterday, last7: sevenAgo, last30: thirtyAgo, thisMonth: monthStart, custom: customStart };
+  const ends:   Record<RangeId, string> = { today, yesterday, last7: today,    last30: today,     thisMonth: today,       custom: customEnd  };
   return { start: starts[range], end: ends[range] };
 }
 
@@ -357,61 +364,45 @@ export function StatsPage() {
 
   return (
     <div style={styles.page}>
-      <h1 style={styles.title}>Stats</h1>
+      <PageHeader
+        title={
+          <>
+            <DateRangeDropdown
+              presets={RANGES}
+              valueId={range}
+              customStart={customStart}
+              customEnd={customEnd}
+              onSelectPreset={(id) => setRange(id as RangeId)}
+              onSelectCustom={(start, end) => { setCustomStart(start); setCustomEnd(end); setRange("custom"); }}
+            />{" "}
+            Stats
+          </>
+        }
+      />
 
-      <div style={styles.controlsRow}>
-        <div style={styles.tabStrip} role="tablist">
-          {TABS.map((t) => {
-            const active = t.id === tab;
-            return (
-              <button
-                key={t.id}
-                role="tab"
-                aria-selected={active}
-                style={{ ...styles.tab, ...(active ? styles.tabActive : null) }}
-                onClick={() => setTab(t.id)}
-              >
-                {t.label}
-              </button>
-            );
-          })}
+      <div style={styles.content}>
+        <div style={styles.controlsRow}>
+          <Tabs
+            variant="block"
+            inline
+            items={TABS}
+            activeId={tab}
+            onSelect={(id) => setTab(id as TabId)}
+          />
         </div>
 
-        <div style={styles.rangeControl}>
-          {RANGES.map((r) => {
-            const active = r.id === range;
-            return (
-              <button
-                key={r.id}
-                style={{ ...styles.rangePill, ...(active ? styles.rangePillActive : null) }}
-                onClick={() => setRange(r.id)}
-              >
-                {r.label}
-              </button>
-            );
-          })}
-        </div>
+        {tab === "overview"   && <OverviewTab range={range} customStart={customStart} customEnd={customEnd} />}
+        {tab === "health"     && <HealthTab range={range} />}
+        {tab === "patients"   && <PatientsTab range={range} customStart={customStart} customEnd={customEnd} />}
+        {tab === "doctors"    && <DoctorsTab range={range} customStart={customStart} customEnd={customEnd} />}
+        {tab === "clinical"   && <ClinicalTab range={range} customStart={customStart} customEnd={customEnd} />}
+        {tab === "operations" && <OperationsTab range={range} customStart={customStart} customEnd={customEnd} />}
+        {tab === "finance"    && <FinanceTab range={range} customStart={customStart} customEnd={customEnd} />}
       </div>
-
-      {range === "custom" && (
-        <div style={styles.customRangeRow}>
-          <label style={styles.customRangeLabel}>From</label>
-          <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} style={styles.dateInput} />
-          <label style={styles.customRangeLabel}>To</label>
-          <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} style={styles.dateInput} />
-        </div>
-      )}
-
-      {tab === "overview"   && <OverviewTab range={range} customStart={customStart} customEnd={customEnd} />}
-      {tab === "health"     && <HealthTab range={range} />}
-      {tab === "patients"   && <PatientsTab range={range} customStart={customStart} customEnd={customEnd} />}
-      {tab === "doctors"    && <DoctorsTab range={range} customStart={customStart} customEnd={customEnd} />}
-      {tab === "clinical"   && <ClinicalTab range={range} customStart={customStart} customEnd={customEnd} />}
-      {tab === "operations" && <OperationsTab range={range} customStart={customStart} customEnd={customEnd} />}
-      {tab === "finance"    && <FinanceTab range={range} customStart={customStart} customEnd={customEnd} />}
     </div>
   );
 }
+
 
 // ── Overview tab ─────────────────────────────────────────────────────────────
 
@@ -779,14 +770,7 @@ function useDoctorStats(range: RangeId, customStart: string, customEnd: string) 
 
   useEffect(() => {
     const token = localStorage.getItem("docodile_token") ?? "";
-    const today = new Date().toISOString().slice(0, 10);
-    const weekAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
-    const monthAgo = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
-    const yearAgo = new Date(Date.now() - 364 * 86400000).toISOString().slice(0, 10);
-    const startMap: Record<RangeId, string> = { today, week: weekAgo, month: monthAgo, year: yearAgo, custom: customStart };
-    const endMap: Record<RangeId, string>   = { today, week: today,   month: today,    year: today,    custom: customEnd  };
-    const start = startMap[range];
-    const end   = endMap[range];
+    const { start, end } = buildDateRange(range, customStart, customEnd);
     if (!start || !end) { setDoctors([]); setLoading(false); return; }
     setLoading(true);
     fetch(`${API_BASE_URL}/api/stats/doctors?startDate=${start}&endDate=${end}`, {
@@ -1414,7 +1398,7 @@ function FootfallTrendCard({ hourly, daily, range, loading }: {
   const chartData = isToday
     ? hourly.map((d) => ({ label: `${d.hour % 12 || 12}${d.hour < 12 ? "a" : "p"}`, value: d.count }))
     : daily.map((d) => ({ label: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }), value: d.count }));
-  const title = isToday ? "Footfall by hour" : range === "week" ? "Footfall this week" : range === "month" ? "Footfall last 30 days" : range === "year" ? "Footfall last 12 months" : "Footfall — custom range";
+  const title = isToday ? "Footfall by hour" : range === "yesterday" ? "Footfall yesterday" : range === "last7" ? "Footfall last 7 days" : range === "last30" ? "Footfall last 30 days" : range === "thisMonth" ? "Footfall this month" : "Footfall — custom range";
 
   return (
     <section style={styles.card}>
@@ -1495,41 +1479,36 @@ function HighlightsCard({
 
 function subFor(range: RangeId): string {
   switch (range) {
-    case "today":  return "today";
-    case "week":   return "last 7 days";
-    case "month":  return "last 30 days";
-    case "year":   return "last 12 months";
-    case "custom": return "selected range";
+    case "today":     return "today";
+    case "yesterday": return "yesterday";
+    case "last7":     return "last 7 days";
+    case "last30":    return "last 30 days";
+    case "thisMonth": return "this month";
+    case "custom":    return "selected range";
   }
 }
 
 // ── Styles ──────────────────────────────────────────────────────────────────
 
 const styles: Record<string, React.CSSProperties> = {
-  page: { display: "flex", flexDirection: "column", gap: spacing.l, minWidth: 0 },
+  page: {
+    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+    display: "flex", flexDirection: "column",
+    padding: `0 ${fluidSpacing.outerX} ${fluidSpacing.outerY}`,
+    overflowY: "auto", overflowX: "hidden", minWidth: 0,
+  },
+  content: {
+    width: "100%", minWidth: 0, marginTop: "var(--main-gap, 24px)",
+    display: "flex", flexDirection: "column", gap: spacing.l,
+  },
+  // (The header date-range control is the shared <DateRangeDropdown>.)
   title: {
     margin: 0, textAlign: "center", fontFamily: fonts.family.secondary,
     fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.regular, color: colors.neutral900,
   },
 
   controlsRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: spacing.m, flexWrap: "wrap" },
-  tabStrip: { display: "inline-flex", alignItems: "center", gap: spacing.xs },
-  tab: {
-    height: 40,
-    padding: `${spacing.xs} ${spacing.m}`,
-    borderRadius: radii.xl,
-    border: "none",
-    backgroundColor: colors.alphaBlack0,
-    color: colors.alphaBlack3,
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.m,
-    lineHeight: fonts.lineHeight.m,
-    cursor: "pointer",
-  },
-  tabActive: { backgroundColor: colors.neutral100, color: colors.neutral900 },
-  rangeControl: { display: "flex", gap: 4, backgroundColor: colors.neutral100, padding: 4, borderRadius: radii.full },
-  rangePill: { border: "none", background: "transparent", color: colors.neutral700, padding: "6px 12px", borderRadius: radii.full, cursor: "pointer", fontSize: fonts.size.xs, fontWeight: 500, fontFamily: "inherit" },
-  rangePillActive: { backgroundColor: colors.active.shade700, color: colors.neutral100 },
+  // (Section tabs + date-range now use the shared <Tabs variant="block"> component.)
   customRangeRow: { display: "flex", alignItems: "center", gap: spacing.s, padding: `${spacing.s} ${spacing.m}`, backgroundColor: colors.neutral100, borderRadius: radii.m, alignSelf: "flex-end" },
   customRangeLabel: { fontSize: fonts.size.s, color: colors.neutral700, fontWeight: 500 },
   dateInput: { border: `${strokes.xs} solid ${colors.neutral300}`, borderRadius: 8, padding: "6px 10px", fontFamily: "inherit", fontSize: fonts.size.s, color: colors.neutral900, outline: "none", backgroundColor: colors.neutral100 },
@@ -1538,7 +1517,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   // KPIs
   kpiGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: spacing.m },
-  kpiCard: { backgroundColor: colors.neutral100, borderRadius: radii.m, padding: spacing.m, display: "flex", flexDirection: "column", gap: 6, minHeight: 110 },
+  kpiCard: { backgroundColor: colors.neutral100, borderRadius: radii["2xl"], padding: spacing.m, display: "flex", flexDirection: "column", gap: 6, minHeight: 110 }, // radii.m(8) → 16 to match cards
   kpiLabel: { fontSize: fonts.size.s, color: colors.neutral500, fontWeight: 500, display: "flex", alignItems: "center", gap: 6 },
   kpiValue: { fontFamily: fonts.family.secondary, fontSize: fonts.size.h4, color: colors.neutral900, lineHeight: 1.1 },
   kpiFooter: { display: "flex", alignItems: "baseline", gap: 8, marginTop: "auto" },
@@ -1616,8 +1595,8 @@ const styles: Record<string, React.CSSProperties> = {
 
   // Table (overdue / dues)
   table: { width: "100%", borderCollapse: "collapse", fontSize: fonts.size.s },
-  th: { textAlign: "left", padding: "8px", borderBottom: `${strokes.xs} solid ${colors.primary300}`, color: colors.neutral500, fontWeight: 500, whiteSpace: "nowrap" },
-  td: { padding: "10px 8px", color: colors.neutral900, borderBottom: `${strokes.xs} solid ${colors.primary300}`, fontWeight: 400 },
+  th: { ...tableHeadCell, padding: "8px", whiteSpace: "nowrap" }, // was neutral500 / 500 — the lone outlier, now matches the others
+  td: { padding: "10px 8px", color: colors.neutral900, borderBottom: tableDivider, fontWeight: 400 },
 
   // Schedule density grid
   densityGrid: { display: "grid", gridTemplateColumns: "80px repeat(7, 1fr)", gap: 4 },

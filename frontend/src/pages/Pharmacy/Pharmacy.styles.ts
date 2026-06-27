@@ -1,13 +1,30 @@
 import { CSSProperties } from "react";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes, fluidSpacing } from "../../styles/theme";
+import { tableHeadCell, tableDivider } from "../../styles/tableStyles";
 
 export const styles: Record<string, CSSProperties> = {
+  // Own scroll container filling <main> so the shared sticky <PageHeader> hugs
+  // the top, like the Appointments / Rx Pad / Patient Files modules.
   page: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    display: "flex",
+    flexDirection: "column",
+    padding: `0 ${fluidSpacing.outerX} ${fluidSpacing.outerY}`,
+    overflowY: "auto",
+    overflowX: "hidden",
+    minWidth: 0,
+  },
+  content: {
+    width: "100%",
+    minWidth: 0,
+    marginTop: "var(--main-gap, 24px)",
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,
-    width: "100%",
-    minWidth: 0,
   },
 
   // Centered serif title with primary CTA pinned to the right — 3-col grid
@@ -57,15 +74,15 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing.s,
     width: "100%",
     maxWidth: 360,
-    height: 40,
+    height: "var(--search-h)",
     padding: `0 ${spacing.m}`,
     backgroundColor: colors.neutral100,
     borderRadius: 55,
     boxSizing: "border-box",
   },
   searchIcon: {
-    width: 20,
-    height: 20,
+    width: "var(--search-icon)",
+    height: "var(--search-icon)",
     color: colors.neutral400,
     flexShrink: 0,
   },
@@ -76,16 +93,16 @@ export const styles: Record<string, CSSProperties> = {
     outline: "none",
     background: "transparent",
     fontFamily: fonts.family.primary,
-    fontSize: fonts.control.md,
+    fontSize: "var(--search-fs)",
     color: colors.neutral900,
   },
   // Binary filter pill — matches PrescriptionQueue tab convention:
   // inactive = subtle alphaBlack0 bg w/ muted text, active = white pill w/
   // dark text. Never solid black (that's reserved for the primary CTA).
   togglePill: {
-    height: 36,
+    height: "var(--tab-md-h, 40px)",
     padding: `0 ${spacing.m}`,
-    borderRadius: radii.full,
+    borderRadius: "var(--tab-md-r, 12px)",
     border: "none",
     backgroundColor: colors.alphaBlack0,
     fontFamily: fonts.family.primary,
@@ -94,33 +111,13 @@ export const styles: Record<string, CSSProperties> = {
     cursor: "pointer",
     whiteSpace: "nowrap",
   },
+  // White pill (matches the canonical Tabs) — was an inverted dark pill, which
+  // contradicted this block's own comment. Now neutral100 bg / neutral900 text.
   togglePillActive: {
-    backgroundColor: colors.neutral900,
-    color: colors.neutral100,
-  },
-  sortGroup: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: spacing["3xs"],
     backgroundColor: colors.neutral100,
-    borderRadius: radii.full,
-    padding: spacing["3xs"],
+    color: colors.neutral900,
   },
-  sortChip: {
-    height: 28,
-    padding: `0 ${spacing.s}`,
-    borderRadius: radii.full,
-    border: "none",
-    backgroundColor: "transparent",
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.control.sm,
-    color: colors.neutral700,
-    cursor: "pointer",
-  },
-  sortChipActive: {
-    backgroundColor: colors.neutral900,
-    color: colors.neutral100,
-  },
+  // (Sort chips now use the shared <Tabs variant="block"> component.)
 
   // View toggle: gap-only group, matches PrescriptionQueue pattern.
   viewToggle: {
@@ -167,19 +164,16 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: "transparent",
   },
   th: {
-    textAlign: "left",
+    ...tableHeadCell, // shared: alphaBlack3 / 400 / primary300 divider
     padding: `${spacing.s} ${spacing.m}`,
     fontSize: fonts.control.xs,
-    color: colors.alphaBlack3,
-    fontWeight: fonts.weight.regular,
     whiteSpace: "nowrap",
-    borderBottom: `${strokes.xs} solid ${colors.primary300}`,
   },
   thNumeric: {
     textAlign: "right",
   },
   tr: {
-    borderBottom: `${strokes.xs} solid ${colors.primary300}`,
+    borderBottom: tableDivider,
   },
   trAlt: {
     backgroundColor: "transparent",
@@ -196,13 +190,19 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.primary700,
     textDecoration: "none",
     cursor: "pointer",
+    fontSize: "var(--meds-list-fs)",
   },
+  // Secondary info (batch) — same size as the rest of the row (the tier-stepping
+  // --meds-list-fs token) so every cell matches the invoice column.
+  secondaryCell: { fontSize: "var(--meds-list-fs)" },
+  // Vertical 3-dot (kebab) trigger for the row-actions menu.
+  kebab: { fontSize: fonts.size.l, lineHeight: 1, color: colors.neutral600 },
   actionBtn: {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
     background: "transparent",
     border: "none",
     cursor: "pointer",
@@ -253,7 +253,6 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing.m,
     overflowX: "auto",
     overflowY: "hidden",
-    paddingBottom: spacing.xs,
     scrollSnapType: "x mandatory",
   },
   // wooden plank base under the row
@@ -262,7 +261,7 @@ export const styles: Record<string, CSSProperties> = {
     left: spacing.s,
     right: spacing.s,
     bottom: spacing["3xs"],
-    height: 4,
+    height: 8,
     borderRadius: radii.xs,
     backgroundColor: colors.primary400,
     opacity: 0.6,
@@ -272,7 +271,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: spacing["2xs"],
+    gap: spacing.xs,
     cursor: "pointer",
     background: "transparent",
     border: "none",
@@ -280,6 +279,13 @@ export const styles: Record<string, CSSProperties> = {
     width: 120,
     flexShrink: 0,
     scrollSnapAlign: "start",
+  },
+  tileLabel: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: spacing["3xs"],
+    width: "100%",
   },
   tileIllustration: {
     width: 64,

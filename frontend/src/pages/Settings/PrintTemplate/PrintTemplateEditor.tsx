@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { colors, fonts, radii, spacing, strokes } from "../../../styles/theme";
 import { Button } from "../../../components/Button";
 import { Toast } from "../../../components/Toast";
-import { TextInput } from "../../../components/Input/TextInput/TextInput";
+import { resolveToastIcon } from "../../../components/Toast/toastIcon";
+import { Field as TextField } from "../../../components/Field";
 import { Select } from "../../../components/Input/Select/Select";
 import { Switch } from "../../../components/Switch";
 import { Tabs, TabItem } from "../../../components/Tabs";
@@ -11,7 +12,6 @@ import {
   createTemplate,
   deleteTemplate,
   ensureSeed,
-  loadTemplates,
   updateTemplate,
 } from "./storage";
 import { buildPrintHtml, openPrintWindow, PrintVisitData } from "./buildPrintHtml";
@@ -256,7 +256,7 @@ export function PrintTemplateEditor() {
         );
       })()}
 
-      <Toast message={toast.message} isVisible={toast.visible} onClose={() => setToast({ visible: false, message: "" })} />
+      <Toast message={toast.message} {...resolveToastIcon(toast.message)} isVisible={toast.visible} onClose={() => setToast({ visible: false, message: "" })} />
     </div>
   );
 }
@@ -308,7 +308,7 @@ function EditorForm({
       <Section title="Template">
         <Row>
           <Field label="Template name" wide>
-            <TextInput value={template.name} onChange={(v) => set("name", v)} />
+            <TextField variant="underline" value={template.name} onChange={(v) => set("name", v)} />
           </Field>
           <Field label="Make default">
             <Switch
@@ -406,7 +406,8 @@ function EditorForm({
         </Row>
         <Row>
           <Field label="Signature text" wide hint="Printed below the signature image. e.g. doctor's name and credentials.">
-            <TextInput
+            <TextField
+              variant="underline"
               value={template.signatureText ?? ""}
               onChange={(v) => set("signatureText", v)}
               multiline

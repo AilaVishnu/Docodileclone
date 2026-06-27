@@ -1,20 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { styles } from "./AddServiceModal.styles";
 import { Service, DiscountMode } from "./types";
-
-const NO_SPINNER_CLASS = "no-spinner";
-
-if (typeof document !== "undefined" && !document.getElementById("services-modal-style")) {
-  const el = document.createElement("style");
-  el.id = "services-modal-style";
-  el.textContent = `
-    .${NO_SPINNER_CLASS}::-webkit-outer-spin-button,
-    .${NO_SPINNER_CLASS}::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-    .${NO_SPINNER_CLASS} { -moz-appearance: textfield; }
-  `;
-  document.head.appendChild(el);
-}
+import { Modal } from "../../components/Modal";
+import { ModalHeader } from "../../components/ModalHeader";
+import { Button } from "../../components/Button";
+import { Field } from "../../components/Field";
+import { MeasureField } from "../../components/MeasureField";
+import { colors, spacing } from "../../styles/theme";
 
 type Props = {
   isOpen: boolean;
@@ -93,81 +85,51 @@ export function AddServiceModal({ isOpen, onClose, onSave, initial }: Props) {
     }
   };
 
-  if (!isOpen) return null;
-
-  return createPortal(
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.card} onClick={(e) => e.stopPropagation()}>
-        <div style={styles.header}>
-          <h3 style={styles.title}>{initial ? "Edit Service" : "Add Service"}</h3>
-          <button style={styles.closeBtn} onClick={onClose} aria-label="Close">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
-        </div>
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} surface={colors.neutral100} width={440} padding={spacing.xl}>
+      <div style={styles.cardBody}>
+        <ModalHeader title={initial ? "Edit Service" : "Add Service"} onClose={onClose} />
 
         <div style={styles.form}>
           <div style={{ ...styles.row, gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)" }}>
             <div style={styles.field}>
               <label style={styles.label}>Name<span style={styles.required}>*</span></label>
-              <div style={{ ...styles.inputWrap, ...(touched && nameError ? styles.inputWrapError : {}) }}>
-                <input
-                  style={styles.input}
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="e.g. Consultation"
-                  autoFocus
-                />
-              </div>
-              {touched && nameError && <div style={styles.errorText}>Name is required</div>}
+              <Field
+                variant="box"
+                value={form.name}
+                onChange={(v) => setForm({ ...form, name: v })}
+                placeholder="e.g. Consultation"
+                autoFocus
+                error={touched && nameError}
+                errorMessage="Name is required"
+              />
             </div>
 
             <div style={styles.field}>
               <label style={styles.label}>Short Form<span style={styles.required}>*</span></label>
-              <div style={{ ...styles.inputWrap, ...(touched && codeError ? styles.inputWrapError : {}) }}>
-                <input
-                  style={{ ...styles.input, textTransform: "uppercase", letterSpacing: "0.04em" }}
-                  value={form.code}
-                  onChange={(e) => setForm({ ...form, code: e.target.value.replace(/\s+/g, "").slice(0, 4) })}
-                  placeholder="GC"
-                  maxLength={4}
-                />
-              </div>
-              {touched && codeError && <div style={styles.errorText}>Short form is required</div>}
+              <Field
+                variant="box"
+                value={form.code}
+                onChange={(v) => setForm({ ...form, code: v.replace(/\s+/g, "").slice(0, 4) })}
+                placeholder="GC"
+                maxLength={4}
+                error={touched && codeError}
+                errorMessage="Short form is required"
+                inputStyle={{ textTransform: "uppercase", letterSpacing: "0.04em" }}
+              />
             </div>
           </div>
 
           <div style={styles.row}>
             <div style={styles.field}>
               <label style={styles.label}>Price<span style={styles.required}>*</span></label>
-              <div style={{ ...styles.inputWrap, ...(touched && priceError ? styles.inputWrapError : {}) }}>
-                <span style={styles.prefix}>₹</span>
-                <input
-                  style={styles.input}
-                  type="number"
-                  className={NO_SPINNER_CLASS}
-                  min={0}
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
-                  placeholder="0"
-                />
-              </div>
+              <MeasureField box prefix="₹" value={form.price} onChange={(v) => setForm({ ...form, price: v })} inputMode="decimal" placeholder="0" invalid={touched && !!priceError} />
               {touched && priceError && <div style={styles.errorText}>Enter a valid price</div>}
             </div>
 
             <div style={styles.field}>
               <label style={styles.label}>Duration</label>
-              <div style={{ ...styles.inputWrap, ...(touched && durationError ? styles.inputWrapError : {}) }}>
-                <input
-                  style={styles.input}
-                  type="number"
-                  className={NO_SPINNER_CLASS}
-                  min={0}
-                  value={form.duration}
-                  onChange={(e) => setForm({ ...form, duration: e.target.value })}
-                  placeholder="15"
-                />
-                <span style={styles.suffix}>min</span>
-              </div>
+              <MeasureField box unit="min" value={form.duration} onChange={(v) => setForm({ ...form, duration: v })} inputMode="decimal" placeholder="15" invalid={touched && durationError} />
               {touched && durationError && <div style={styles.errorText}>Invalid duration</div>}
             </div>
           </div>
@@ -175,68 +137,38 @@ export function AddServiceModal({ isOpen, onClose, onSave, initial }: Props) {
           <div style={styles.row}>
             <div style={styles.field}>
               <label style={styles.label}>Discount</label>
-              <div style={styles.inputWrap}>
-                <input
-                  style={styles.input}
-                  type="number"
-                  className={NO_SPINNER_CLASS}
-                  min={0}
-                  value={form.discount}
-                  onChange={(e) => setForm({ ...form, discount: e.target.value })}
-                  placeholder="0"
-                />
-                <div style={styles.modeToggle}>
-                  {(["%", "₹"] as DiscountMode[]).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      style={{ ...styles.modeBtn, ...(form.discountMode === mode ? styles.modeBtnActive : {}) }}
-                      onClick={() => setForm({ ...form, discountMode: mode })}
-                    >
-                      {mode}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <MeasureField
+                box
+                unitFilled
+                value={form.discount}
+                onChange={(v) => setForm({ ...form, discount: v })}
+                unit={form.discountMode}
+                onToggleUnit={() => setForm({ ...form, discountMode: form.discountMode === "%" ? "₹" : "%" })}
+                inputMode="decimal"
+                placeholder="0"
+              />
             </div>
 
             <div style={styles.field}>
               <label style={styles.label}>GST</label>
-              <div style={styles.inputWrap}>
-                <input
-                  style={styles.input}
-                  type="number"
-                  className={NO_SPINNER_CLASS}
-                  min={0}
-                  max={100}
-                  value={form.gst}
-                  onChange={(e) => setForm({ ...form, gst: e.target.value })}
-                  placeholder="0"
-                />
-                <span style={styles.suffix}>%</span>
-              </div>
+              <MeasureField box unit="%" value={form.gst} onChange={(v) => setForm({ ...form, gst: v })} inputMode="decimal" placeholder="0" />
             </div>
           </div>
         </div>
 
         {saveError && (
-          <div style={{ padding: "0 24px", color: "#b54040", fontSize: 13 }}>
+          <div style={{ padding: "0 24px", color: colors.red200, fontSize: 13 }}>
             {saveError}
           </div>
         )}
 
         <div style={styles.footer}>
-          <button style={styles.cancelBtn} onClick={onClose} disabled={saving}>Cancel</button>
-          <button
-            style={{ ...styles.saveBtn, ...(canSave && !saving ? {} : styles.saveBtnDisabled) }}
-            onClick={handleSave}
-            disabled={saving}
-          >
+          <Button variant="light" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
             {saving ? "Saving…" : initial ? "Save Changes" : "Add Service"}
-          </button>
+          </Button>
         </div>
       </div>
-    </div>,
-    document.body
+    </Modal>
   );
 }

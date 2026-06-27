@@ -2,7 +2,6 @@ package com.example.docodile.web
 
 import com.example.docodile.domain.RxRow
 import com.example.docodile.repo.RxRowRepository
-import com.example.docodile.security.CurrentUser
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
@@ -15,7 +14,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
-import java.util.UUID
 
 @WebMvcTest(RxHistoryController::class)
 @org.springframework.context.annotation.Import(com.example.docodile.security.JwtAuthenticationFilter::class)
@@ -27,20 +25,14 @@ class RxHistoryControllerTest @Autowired constructor(
     private lateinit var tokenService: com.example.docodile.security.TokenService
 
     @MockitoBean
-    private lateinit var revokedTokenRepository: com.example.docodile.repo.RevokedTokenRepository
+    private lateinit var userSessionRepository: com.example.docodile.repo.UserSessionRepository
 
     @MockitoBean
     private lateinit var rxRowRepository: RxRowRepository
 
-    @MockitoBean
-    private lateinit var currentUser: CurrentUser
-
-    private val clinicId = UUID.randomUUID()
-
     @Test
     @WithMockUser(roles = ["DOCTOR"])
     fun `latest returns 200 with most recent prescription row`() {
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
         val row = RxRow(
             medicine = "Paracetamol",
             medicineNote = "after food",
@@ -51,7 +43,7 @@ class RxHistoryControllerTest @Autowired constructor(
             duration = "5 days",
             notes = "n",
         )
-        whenever(rxRowRepository.findLatestByClinicAndMedicine(eq(clinicId), eq("Paracetamol"), anyOrNull(), any()))
+        whenever(rxRowRepository.findLatestByMedicine(eq("Paracetamol"), anyOrNull(), any()))
             .thenReturn(listOf(row))
 
         mockMvc.perform(get("/api/tenant/rx-history/latest").param("medicine", "Paracetamol"))
@@ -64,8 +56,7 @@ class RxHistoryControllerTest @Autowired constructor(
     @Test
     @WithMockUser(roles = ["DOCTOR"])
     fun `latest returns 204 when no past prescription exists`() {
-        whenever(currentUser.clinicId()).thenReturn(clinicId)
-        whenever(rxRowRepository.findLatestByClinicAndMedicine(eq(clinicId), eq("Unknown"), anyOrNull(), any()))
+        whenever(rxRowRepository.findLatestByMedicine(eq("Unknown"), anyOrNull(), any()))
             .thenReturn(emptyList())
 
         mockMvc.perform(get("/api/tenant/rx-history/latest").param("medicine", "Unknown"))

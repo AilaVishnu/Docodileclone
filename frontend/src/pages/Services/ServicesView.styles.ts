@@ -1,12 +1,30 @@
 import { CSSProperties } from "react";
-import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
+import { colors, fonts, spacing, radii, strokes, fluidSpacing } from "../../styles/theme";
+import { tableHeadCell, tableDivider } from "../../styles/tableStyles";
 
 export const styles: Record<string, CSSProperties> = {
+  // Own scroll container filling <main> (like Appointments / Rx Pad / Patient
+  // Files) so the shared sticky <PageHeader> hugs the top. No top padding.
   page: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    display: "flex",
+    flexDirection: "column",
+    padding: `0 ${fluidSpacing.outerX} ${fluidSpacing.outerY}`,
+    overflowY: "auto",
+    overflowX: "hidden",
+  },
+
+  // Content below the sticky header: full width, gapped, header→body gap on top.
+  content: {
+    width: "100%",
+    marginTop: "var(--main-gap, 24px)",
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,
-    width: "100%",
   },
 
   header: {
@@ -38,7 +56,7 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     width: "100%",
     maxWidth: 360,
-    height: 40,
+    height: "var(--search-h)",
     gap: 12,
     padding: "0 16px",
     borderRadius: 55,
@@ -47,8 +65,8 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   searchIcon: {
-    width: 20,
-    height: 20,
+    width: "var(--search-icon)",
+    height: "var(--search-icon)",
     color: colors.neutral400,
     flexShrink: 0,
   },
@@ -60,7 +78,7 @@ export const styles: Record<string, CSSProperties> = {
     outline: "none",
     background: "transparent",
     fontFamily: fonts.family.primary,
-    fontSize: fonts.control.md,
+    fontSize: "var(--search-fs)",
     color: colors.neutral900,
   },
 
@@ -93,12 +111,13 @@ export const styles: Record<string, CSSProperties> = {
     tableLayout: "fixed",
   },
 
+  // Header + cell match the shared queue table (tableStyles look + size-m
+  // density + responsive --queue-cell-padx column padding) so Catalog reads as
+  // the same row family.
   th: {
-    padding: "12px 28px",
-    borderBottom: `1px solid ${colors.primary300}`,
-    color: colors.alphaBlack3,
-    fontWeight: 400,
-    fontSize: fonts.size.s,
+    ...tableHeadCell,
+    padding: "12px var(--queue-cell-padx, 28px)",
+    fontSize: fonts.size.m,
     lineHeight: "20px",
     letterSpacing: 0,
     whiteSpace: "nowrap",
@@ -113,13 +132,13 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   td: {
-    padding: "14px 28px",
-    fontSize: fonts.size.s,
+    padding: "10px var(--queue-cell-padx, 28px)",
+    fontSize: fonts.size.m,
     color: colors.neutral900,
     verticalAlign: "middle",
     fontWeight: 400,
     whiteSpace: "nowrap",
-    borderBottom: `1px solid ${colors.primary300}`,
+    borderBottom: tableDivider,
   },
 
   tdName: {
@@ -136,7 +155,7 @@ export const styles: Record<string, CSSProperties> = {
 
   codeBadge: {
     display: "inline-block",
-    fontSize: fonts.size.xs,
+    fontSize: fonts.size.s,
     fontWeight: fonts.weight.semibold,
     color: colors.neutral700,
     backgroundColor: colors.neutral100,
@@ -149,7 +168,7 @@ export const styles: Record<string, CSSProperties> = {
 
   actions: {
     display: "flex",
-    justifyContent: "flex-end",
+    justifyContent: "center",
     gap: spacing.xs,
   },
 
@@ -163,7 +182,7 @@ export const styles: Record<string, CSSProperties> = {
     backgroundColor: "transparent",
     borderRadius: radii.full,
     cursor: "pointer",
-    color: colors.neutral700,
+    color: colors.neutral900,
   },
 
   iconBtnDanger: {

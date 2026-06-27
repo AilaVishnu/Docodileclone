@@ -1,5 +1,6 @@
-import React, { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import React, { CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { colors, fonts, radii, spacing, strokes, zIndex } from "../../styles/theme";
 import { API_BASE_URL } from "../../apiConfig";
 import { listPharmacyStock } from "../../api/pharmacy";
 
@@ -17,10 +18,29 @@ type MedicineAutocompleteProps = {
   onSelect?: (name: string, genericName: string) => void;
   placeholder?: string;
   inputStyle?: CSSProperties;
+  /** Render the dropdown in a portal (position: fixed over the page) instead of
+   *  absolutely inside the input's wrapper. Use inside a scrolling/clipping
+   *  container (e.g. the bill modal) so the dropdown doesn't grow or get clipped
+   *  by an `overflow` ancestor. Off by default — the Rx pad keeps inline. */
+  dropdownPortal?: boolean;
+  /** Suggest ONLY the clinic's pharmacy inventory — skip the frequent-meds and
+   *  drug-DB ("eka care") fetches entirely. Used by the medicines bill, which
+   *  must only bill what's actually stocked. */
+  inventoryOnly?: boolean;
+  /** Clinic services to offer in a separate "Services" section above the
+   *  medicines (e.g. Consultation, Dressing). Used by the bill so the desk can
+   *  add a service line as well as medicines. */
+  services?: { name: string; price: number }[];
+  /** Called when a service (not a medicine) is picked from the Services section
+   *  — the host adds it as a service-kind line at the given price. */
+  onPickService?: (name: string, price: number) => void;
 };
 
-export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, inputStyle }: MedicineAutocompleteProps) {
+export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, inputStyle, dropdownPortal, inventoryOnly, services, onPickService }: MedicineAutocompleteProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuRect, setMenuRect] = useState<{ top: number; left: number; width: number } | null>(null);
   const [open, setOpen] = useState(false);
   const [drugs, setDrugs] = useState<Drug[]>([]);
   const [frequent, setFrequent] = useState<Drug[]>([]);
@@ -30,8 +50,10 @@ export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, i
   // a few hundred SKUs at most.
   const [stock, setStock] = useState<StockSuggestion[]>([]);
 
-  // Load frequently used medicines once on mount.
+  // Load frequently used medicines once on mount. Skipped in inventory-only
+  // mode — that picker shows pharmacy stock exclusively.
   useEffect(() => {
+    if (inventoryOnly) return;
     const token = localStorage.getItem("docodile_token") ?? "";
     fetch(`${API_BASE_URL}/api/medicines/frequent?limit=10`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -41,7 +63,7 @@ export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, i
         setFrequent(data.map((d) => ({ id: d.id, name: d.name, genericName: d.genericName ?? d.generic_name ?? "" })))
       )
       .catch(() => {});
-  }, []);
+  }, [inventoryOnly]);
 
   // Pull this clinic's pharmacy inventory once and roll multiple batches
   // of the same medicine into a single total — surfaced ABOVE the generic
@@ -80,8 +102,24 @@ export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, i
       .slice(0, 8);
   }, [stock, value]);
 
-  // Search when value changes.
+  // Inventory-only "just focused" list — the clinic's stock A→Z (no query yet).
+  const inventoryEmpty = useMemo<StockSuggestion[]>(() => {
+    if (!inventoryOnly || value.trim()) return [];
+    return stock.slice().sort((a, b) => a.name.localeCompare(b.name)).slice(0, 20);
+  }, [inventoryOnly, value, stock]);
+
+  // Clinic services — filtered by the typed query (all when just focused).
+  const serviceMatches = useMemo<{ name: string; price: number }[]>(() => {
+    const list = services ?? [];
+    const q = value.trim().toLowerCase();
+    const filtered = q ? list.filter((s) => s.name.toLowerCase().includes(q)) : list;
+    return filtered.slice(0, 8);
+  }, [services, value]);
+
+  // Search the drug DB ("eka care") when value changes. Skipped in
+  // inventory-only mode so the bill never suggests un-stocked medicines.
   useEffect(() => {
+    if (inventoryOnly) { setDrugs([]); return; }
     if (!value.trim()) { setDrugs([]); return; }
     const timer = setTimeout(() => {
       setLoading(true);
@@ -97,17 +135,38 @@ export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, i
         .catch(() => { setDrugs([]); setLoading(false); });
     }, 300);
     return () => clearTimeout(timer);
-  }, [value]);
+  }, [value, inventoryOnly]);
 
-  // Close on outside click.
+  // Close on outside click — but NOT when clicking inside the (possibly
+  // portaled) menu, which lives outside wrapRef when dropdownPortal is on.
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      const inWrap = wrapRef.current?.contains(t);
+      const inMenu = menuRef.current?.contains(t);
+      if (!inWrap && !inMenu) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
+
+  // When portaling, track the input's viewport rect so the fixed-position menu
+  // sits right under it and follows scroll/resize while open.
+  useLayoutEffect(() => {
+    if (!dropdownPortal || !open) return;
+    const update = () => {
+      const r = inputRef.current?.getBoundingClientRect();
+      if (r) setMenuRect({ top: r.bottom + 4, left: r.left, width: r.width });
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [dropdownPortal, open, value]);
 
   const handleSelect = (d: Drug) => {
     onChange(d.name);
@@ -123,6 +182,11 @@ export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, i
     setOpen(false);
   };
 
+  const handleSelectService = (s: { name: string; price: number }) => {
+    onPickService?.(s.name, s.price);
+    setOpen(false);
+  };
+
   // Stock colour reflects what's actually safe to prescribe today —
   // mirrors the pharmacy "Attention" thresholds.
   const stockColor = (units: number): string => {
@@ -131,8 +195,13 @@ export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, i
     return colors.green200;
   };
 
-  const showFrequent = open && !value.trim() && frequent.length > 0;
-  const showSearch = open && value.trim().length > 0;
+  // Inventory-only mode shows pharmacy stock exclusively (no frequent / drug-DB).
+  const inventoryItems = inventoryOnly ? (value.trim() ? stockMatches : inventoryEmpty) : [];
+  const showInventory = inventoryOnly && open;
+  const showFrequent = !inventoryOnly && open && !value.trim() && frequent.length > 0;
+  const showSearch = !inventoryOnly && open && value.trim().length > 0;
+  // Services section — its own group above the medicines (when any are passed).
+  const showServices = open && serviceMatches.length > 0;
 
   const DrugButton = ({ d }: { d: Drug }) => (
     <button
@@ -148,9 +217,84 @@ export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, i
     </button>
   );
 
+  const StockButton = ({ s }: { s: StockSuggestion }) => (
+    <button
+      key={`stock-${s.name}`}
+      type="button"
+      style={styles.stockItem}
+      onMouseDown={(e) => { e.preventDefault(); handleSelectStock(s); }}
+      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.active.shade100)}
+      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+    >
+      <span style={styles.drugName}>{s.name}</span>
+      <span style={{ ...styles.stockCount, color: stockColor(s.totalUnits) }}>{s.totalUnits}</span>
+    </button>
+  );
+
+  const ServiceButton = ({ s }: { s: { name: string; price: number } }) => (
+    <button
+      key={`svc-${s.name}`}
+      type="button"
+      style={styles.stockItem}
+      onMouseDown={(e) => { e.preventDefault(); handleSelectService(s); }}
+      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.active.shade100)}
+      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+    >
+      <span style={styles.drugName}>{s.name}</span>
+      <span style={{ ...styles.stockCount, color: colors.neutral600 }}>₹{s.price}</span>
+    </button>
+  );
+
+  const menuOpen = showServices || showFrequent || showSearch || showInventory;
+  // Portaled menus position: fixed under the input; inline menus stay absolute
+  // inside the wrap (original Rx-pad behaviour).
+  const menuStyle: CSSProperties = dropdownPortal && menuRect
+    ? { ...styles.menu, position: "fixed", top: menuRect.top, left: menuRect.left, width: menuRect.width, minWidth: undefined }
+    : styles.menu;
+  const menuEl = menuOpen ? (
+    <div ref={menuRef} style={menuStyle}>
+      {showServices && (
+        <>
+          <p style={styles.sectionLabel}>Services</p>
+          {serviceMatches.map((s) => <ServiceButton key={`svc-${s.name}`} s={s} />)}
+        </>
+      )}
+      {showInventory && (
+        <>
+          <p style={styles.sectionLabel}>In Stock</p>
+          {inventoryItems.map((s) => <StockButton key={`stock-${s.name}`} s={s} />)}
+          {inventoryItems.length === 0 && (
+            <div style={styles.hint}>{value.trim() ? "No inventory match" : "No medicines in inventory"}</div>
+          )}
+        </>
+      )}
+      {showFrequent && (
+        <>
+          <p style={styles.sectionLabel}>Frequently Used</p>
+          {frequent.map((d) => <DrugButton key={d.id || d.name} d={d} />)}
+        </>
+      )}
+      {showSearch && (
+        <>
+          {stockMatches.length > 0 && (
+            <>
+              <p style={styles.sectionLabel}>In Stock</p>
+              {stockMatches.map((s) => <StockButton key={`stock-${s.name}`} s={s} />)}
+            </>
+          )}
+          {drugs.length > 0 && stockMatches.length > 0 && <p style={styles.sectionLabel}>Other matches</p>}
+          {loading && <div style={styles.hint}>Searching…</div>}
+          {!loading && drugs.length === 0 && stockMatches.length === 0 && <div style={styles.hint}>No matches</div>}
+          {drugs.map((d) => <DrugButton key={d.id} d={d} />)}
+        </>
+      )}
+    </div>
+  ) : null;
+
   return (
     <div ref={wrapRef} style={styles.wrap}>
       <input
+        ref={inputRef}
         style={{ ...styles.input, ...inputStyle }}
         value={value}
         placeholder={placeholder}
@@ -159,40 +303,7 @@ export function MedicineAutocomplete({ value, onChange, onSelect, placeholder, i
         aria-autocomplete="list"
         aria-expanded={open}
       />
-
-      {showFrequent && (
-        <div style={styles.menu}>
-          <p style={styles.sectionLabel}>Frequently Used</p>
-          {frequent.map((d) => <DrugButton key={d.id || d.name} d={d} />)}
-        </div>
-      )}
-
-      {showSearch && (
-        <div style={styles.menu}>
-          {stockMatches.length > 0 && (
-            <>
-              <p style={styles.sectionLabel}>In Stock</p>
-              {stockMatches.map((s) => (
-                <button
-                  key={`stock-${s.name}`}
-                  type="button"
-                  style={styles.stockItem}
-                  onMouseDown={(e) => { e.preventDefault(); handleSelectStock(s); }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.active.shade100)}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                >
-                  <span style={styles.drugName}>{s.name}</span>
-                  <span style={{ ...styles.stockCount, color: stockColor(s.totalUnits) }}>{s.totalUnits}</span>
-                </button>
-              ))}
-            </>
-          )}
-          {drugs.length > 0 && stockMatches.length > 0 && <p style={styles.sectionLabel}>Other matches</p>}
-          {loading && <div style={styles.hint}>Searching…</div>}
-          {!loading && drugs.length === 0 && stockMatches.length === 0 && <div style={styles.hint}>No matches</div>}
-          {drugs.map((d) => <DrugButton key={d.id} d={d} />)}
-        </div>
-      )}
+      {dropdownPortal ? (menuEl && createPortal(menuEl, document.body)) : menuEl}
     </div>
   );
 }
@@ -210,7 +321,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: radii.m,
     padding: spacing["2xs"],
     boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
-    zIndex: 1200,
+    zIndex: zIndex.popover,
     maxHeight: "min(40vh, 320px)",
     overflowY: "auto",
   },

@@ -2,12 +2,14 @@ import React, { useEffect, useState, useCallback } from "react";
 import { colors, fonts, radii, spacing } from "../../../styles/theme";
 import { API_BASE_URL } from "../../../apiConfig";
 import { Toast } from "../../../components/Toast";
+import { resolveToastIcon } from "../../../components/Toast/toastIcon";
+import { DataGrid, type GridColumn } from "../../../components/DataGrid/DataGrid";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Settings → Archived patients. Lists every patient in this clinic where
 // archived=true and offers a one-click "Restore" that flips the flag back
 // (POST /api/patients/{id}/unarchive). Patient data is preserved on archive
-// so restore is non-destructive.
+// so restore is non-destructive. Table = the shared DataGrid.
 // ─────────────────────────────────────────────────────────────────────────────
 
 type ArchivedPatient = {
@@ -63,14 +65,35 @@ export function ArchivedPatientsList() {
     }
   };
 
+  const columns: GridColumn<ArchivedPatient>[] = [
+    { key: "name", header: "Name", align: "left", render: (p) => p.name },
+    { key: "phone", header: "Phone", align: "left", render: (p) => p.phone ?? "—" },
+    { key: "gender", header: "Gender", align: "left", render: (p) => p.gender ?? "—" },
+    {
+      key: "archivedAt", header: "Archived on", align: "left",
+      render: (p) => (p.archivedAt ? new Date(p.archivedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"),
+    },
+    {
+      key: "actions", header: "Actions", align: "right", width: 130,
+      render: (p) => (
+        <button
+          type="button"
+          onClick={() => handleRestore(p)}
+          disabled={restoring === p.id}
+          style={{ ...S.restoreBtn, ...(restoring === p.id ? { opacity: 0.45, cursor: "not-allowed" } : null) }}
+        >
+          {restoring === p.id ? "Restoring…" : "Restore"}
+        </button>
+      ),
+    },
+  ];
+
   if (loading) {
     return <div style={S.state}>Loading archived patients…</div>;
   }
-
   if (error) {
     return <div style={S.state}>Couldn't load archived patients ({error}).</div>;
   }
-
   if (rows.length === 0) {
     return (
       <div style={S.state}>
@@ -82,45 +105,14 @@ export function ArchivedPatientsList() {
 
   return (
     <div style={S.card}>
-      <table style={S.table}>
-        <thead>
-          <tr>
-            <th style={S.th}>Name</th>
-            <th style={S.th}>Phone</th>
-            <th style={S.th}>Gender</th>
-            <th style={S.th}>Archived on</th>
-            <th style={{ ...S.th, textAlign: "right" }}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((p) => (
-            <tr key={p.id}>
-              <td style={S.td}>{p.name}</td>
-              <td style={S.td}>{p.phone ?? "—"}</td>
-              <td style={S.td}>{p.gender ?? "—"}</td>
-              <td style={S.td}>{p.archivedAt ? new Date(p.archivedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</td>
-              <td style={{ ...S.td, textAlign: "right" }}>
-                <button
-                  type="button"
-                  onClick={() => handleRestore(p)}
-                  disabled={restoring === p.id}
-                  style={{ ...S.restoreBtn, ...(restoring === p.id ? { opacity: 0.45, cursor: "not-allowed" } : null) }}
-                >
-                  {restoring === p.id ? "Restoring…" : "Restore"}
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <Toast message={toastMsg} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
+      <DataGrid columns={columns} rows={rows} rowKey={(p) => p.id} />
+      <Toast message={toastMsg} {...resolveToastIcon(toastMsg)} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
     </div>
   );
 }
 
 const S: Record<string, React.CSSProperties> = {
-  // Empty / loading / error states share the same cream surface as the
-  // table card so the page rhythm doesn't change when the list is empty.
+  // Empty / loading / error states share the same cream surface as the table.
   state: {
     backgroundColor: colors.primary100,
     borderRadius: radii["2xl"],
@@ -137,27 +129,6 @@ const S: Record<string, React.CSSProperties> = {
     borderRadius: radii["2xl"],
     padding: spacing.xl,
     overflow: "hidden",
-  },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.control.sm,
-    color: colors.neutral900,
-  },
-  th: {
-    textAlign: "left",
-    padding: `${spacing.s} ${spacing.m}`,
-    fontSize: fonts.control.xs,
-    fontWeight: fonts.weight.regular,
-    color: colors.alphaBlack3,
-    borderBottom: `1px solid ${colors.primary300}`,
-    whiteSpace: "nowrap",
-  },
-  td: {
-    padding: `${spacing.s} ${spacing.m}`,
-    borderBottom: `1px solid ${colors.primary300}`,
-    whiteSpace: "nowrap",
   },
   restoreBtn: {
     fontFamily: fonts.family.primary,

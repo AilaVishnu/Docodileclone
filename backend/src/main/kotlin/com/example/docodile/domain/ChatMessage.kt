@@ -13,9 +13,6 @@ class ChatMessage(
     @Id
     var id: UUID = UUID.randomUUID(),
 
-    @Column(name = "clinic_id", nullable = false)
-    var clinicId: UUID,
-
     @Column(name = "sender_id", nullable = false)
     var senderId: UUID,
 

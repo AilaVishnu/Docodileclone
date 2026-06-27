@@ -61,10 +61,13 @@ class SecurityConfig(
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val config = CorsConfiguration()
-        val allowedOrigins = System.getenv("ALLOWED_ORIGINS")?.split(",") ?: listOf("http://localhost:3000", "http://localhost:3001")
-        config.allowedOrigins = allowedOrigins
+        // Each clinic is its own subdomain origin, so allow wildcard patterns (origin patterns,
+        // not fixed origins — required alongside allowCredentials=true). Override via ALLOWED_ORIGINS.
+        val patterns = System.getenv("ALLOWED_ORIGINS")?.split(",")
+            ?: listOf("http://localhost:3000", "http://localhost:3001", "https://*.docodile.app", "http://*.lvh.me:3000")
+        config.allowedOriginPatterns = patterns
         config.allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-        config.allowedHeaders = listOf("Authorization", "Content-Type", "X-Requested-With")
+        config.allowedHeaders = listOf("Authorization", "Content-Type", "X-Requested-With", "X-Tenant")
         config.allowCredentials = true
 
         val source = UrlBasedCorsConfigurationSource()

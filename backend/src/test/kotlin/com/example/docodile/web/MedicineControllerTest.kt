@@ -1,7 +1,6 @@
 package com.example.docodile.web
 
 import com.example.docodile.repo.RxRowRepository
-import com.example.docodile.security.CurrentUser
 import com.example.docodile.service.DrugInteractionWarning
 import com.example.docodile.service.EkaCareClient
 import com.example.docodile.service.EkaDrugResult
@@ -16,7 +15,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
-import java.util.UUID
 
 @WebMvcTest(MedicineController::class)
 @org.springframework.context.annotation.Import(com.example.docodile.security.JwtAuthenticationFilter::class)
@@ -28,16 +26,13 @@ class MedicineControllerTest @Autowired constructor(
     private lateinit var tokenService: com.example.docodile.security.TokenService
 
     @MockitoBean
-    private lateinit var revokedTokenRepository: com.example.docodile.repo.RevokedTokenRepository
+    private lateinit var userSessionRepository: com.example.docodile.repo.UserSessionRepository
 
     @MockitoBean
     private lateinit var eka: EkaCareClient
 
     @MockitoBean
     private lateinit var rxRowRepo: RxRowRepository
-
-    @MockitoBean
-    private lateinit var currentUser: CurrentUser
 
     @Test
     @WithMockUser(roles = ["DOCTOR"])
@@ -60,10 +55,8 @@ class MedicineControllerTest @Autowired constructor(
 
     @Test
     @WithMockUser(roles = ["DOCTOR"])
-    fun `frequent returns 200 with results for clinic`() {
-        val clinicId = UUID.randomUUID()
-        whenever(currentUser.clinicIdOrNull()).thenReturn(clinicId)
-        whenever(rxRowRepo.findFrequentMedicines(eq(clinicId), any())).thenReturn(listOf("Paracetamol"))
+    fun `frequent returns 200 with results`() {
+        whenever(rxRowRepo.findFrequentMedicines(any())).thenReturn(listOf("Paracetamol"))
         whenever(eka.searchDrugs(eq("Paracetamol"), any()))
             .thenReturn(listOf(EkaDrugResult(name = "Paracetamol", id = "1", genericName = "Acetaminophen")))
 
@@ -74,8 +67,8 @@ class MedicineControllerTest @Autowired constructor(
 
     @Test
     @WithMockUser(roles = ["DOCTOR"])
-    fun `frequent returns 200 empty when no clinic`() {
-        whenever(currentUser.clinicIdOrNull()).thenReturn(null)
+    fun `frequent returns 200 empty when no frequent medicines`() {
+        whenever(rxRowRepo.findFrequentMedicines(any())).thenReturn(emptyList())
 
         mockMvc.perform(get("/api/medicines/frequent"))
             .andExpect(status().isOk)

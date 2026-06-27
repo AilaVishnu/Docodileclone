@@ -1,20 +1,26 @@
 import { CSSProperties } from "react";
-import { colors, radii, fonts, spacing } from "../../styles/theme";
+import { colors, fonts, zIndex } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   backdrop: {
     position: "fixed",
     inset: 0,
-    backgroundColor: "transparent",
-    zIndex: 1050,
+    // Dim the page like the time picker so date selection has the same
+    // modal weight + obvious dismiss target.
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    // Above modals (4000/4100) so a date picker opened from inside a modal
+    // isn't hidden behind it.
+    zIndex: zIndex.popover,
   },
 
   overlay: {
-    position: "absolute",
+    // Center on the viewport (was anchored to the parent chip, which could
+    // push the popup off-screen on narrower viewports like 1024).
+    position: "fixed",
     top: "50%",
-    left: "calc(100% + 12px)",
-    transform: "translateY(-50%)",
-    zIndex: 1100,
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    zIndex: zIndex.popover + 1,
   },
 
   container: {
@@ -27,6 +33,10 @@ export const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     gap: "16px",
     fontFamily: fonts.family.primary,
+    // Pin the weight so day cells never inherit a bold weight from the host
+    // (the sticky-header renders this inside an <h2> at 600). The month title
+    // sets its own 600 below.
+    fontWeight: fonts.weight.regular,
     color: colors.neutral900,
   },
 
@@ -68,7 +78,7 @@ export const styles: Record<string, CSSProperties> = {
   daysGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(7, 1fr)",
-    gap: "4px",
+    gap: "6px", // +2px breathing room between dates
   },
 
   dayCell: {
@@ -77,7 +87,9 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: fonts.size.xs,
+    fontSize: fonts.size.s,
+    fontWeight: fonts.weight.semibold,
+    color: colors.neutral900,
     cursor: "pointer",
     borderRadius: "8px",
     transition: "background-color 0.2s",
@@ -99,7 +111,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   disabledDay: {
-    color: colors.neutral300,
+    color: colors.neutral200,
     cursor: "not-allowed",
   },
 

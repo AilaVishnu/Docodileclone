@@ -1,42 +1,16 @@
 import React from "react";
 import { styles } from "./PrescriptionPage.styles";
 import { pickAvatar } from "../../utils/avatar";
-// Action-list icons exported from Figma node 2059:6764 (currentColor-normalized)
-import { ReactComponent as VisitsIcon } from "../../assets/icons/visits.svg";
-import { ReactComponent as PulseIcon } from "../../assets/icons/pulse.svg";
-import { ReactComponent as FileIcon } from "../../assets/icons/file.svg";
-import { ReactComponent as HistoryIcon } from "../../assets/icons/history.svg";
-import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check-small.svg";
-import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
-import { ReactComponent as ShareIcon } from "../../assets/icons/share.svg";
-// Contact-card icons exported from Figma node 2073:3264 (currentColor-normalized)
-import { ReactComponent as LetterIcon } from "../../assets/icons/letter.svg";
-import { ReactComponent as VideocameraIcon } from "../../assets/icons/videocamera.svg";
-import { ReactComponent as PenIcon } from "../../assets/icons/pen.svg";
-// Main content section icons exported from Figma node 2057:6283
-import { ReactComponent as HeartPulseIcon } from "../../assets/icons/heart-pulse.svg";
-import { ReactComponent as HourglassIcon } from "../../assets/icons/hourglass-line.svg";
-import { ReactComponent as ChatSquareCallIcon } from "../../assets/icons/chat-square-call.svg";
-import { ReactComponent as MagniferBugIcon } from "../../assets/icons/magnifer-bug.svg";
-import { ReactComponent as PillsIcon } from "../../assets/icons/pills.svg";
-import { ReactComponent as DocumentIcon } from "../../assets/icons/document-school.svg";
-import { ReactComponent as UsersIcon } from "../../assets/icons/users-group-rounded.svg";
-import { ReactComponent as RestartIcon } from "../../assets/icons/restart-24.svg";
-import { ReactComponent as ChevronIcon } from "../../assets/icons/chevron-up.svg";
-import { ReactComponent as MicIcon } from "../../assets/icons/microphone.svg";
-import { ReactComponent as RewindIcon } from "../../assets/icons/rewind-back-circle.svg";
-import { ReactComponent as ArrowLeftIcon } from "../../assets/icons/arrow-left.svg";
-import { ReactComponent as CalendarIcon } from "../../assets/icons/calendar.svg";
-import { ReactComponent as ReorderIcon } from "../../assets/icons/reorder.svg";
-import { ReactComponent as TuningIcon } from "../../assets/icons/tuning.svg";
-import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg";
-import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
-import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
-import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
+import { Icon } from "../../components/Icon";
+import { VisitTabs } from "../../components/VisitTabs";
+import { Card } from "../../components/Card";
+import { IconButton } from "../../components/IconButton";
+import { MeasureField } from "../../components/MeasureField";
+import { Field } from "../../components/Field";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 import { Toast } from "../../components/Toast";
-import { Autocomplete } from "../../components/Autocomplete/Autocomplete";
+import { resolveToastIcon } from "../../components/Toast/toastIcon";
 import { MedicineAutocomplete } from "../../components/MedicineAutocomplete/MedicineAutocomplete";
 import { FrequencyPicker } from "../../components/FrequencyPicker/FrequencyPicker";
 import { WhenPicker } from "../../components/WhenPicker/WhenPicker";
@@ -45,6 +19,13 @@ import { DurationPicker } from "../../components/DurationPicker/DurationPicker";
 import { AutocompleteTags } from "../../components/Autocomplete/AutocompleteTags";
 import { useDoctors } from "../../hooks/useDoctors";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
+import {
+  fetchPatientSummary,
+  generatePatientSummary,
+  parsePatientSummary,
+  getAIHealth,
+  type PatientSummary,
+} from "../../api/ai";
 import { PrescriptionQueue } from "./PrescriptionQueue";
 import { Patient } from "../../hooks/usePatients";
 import {
@@ -52,8 +33,9 @@ import {
   type PendingSessionNav,
 } from "../../components/TopNav/SessionTrayButton";
 import { markStarted, unmarkStarted } from "../../utils/sessionStarted";
+import { markVisitCompleted, wasVisitCompleted } from "../../utils/visitCompleted";
 import { useVisits } from "../../hooks/useVisits";
-import { createVisit, updateVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
+import { createVisit, updateVisit, deleteVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
 import { listRxTemplates, saveRxTemplate, deleteRxTemplate } from "../../api/rxTemplates";
 import { fetchLatestRxForMedicine, RxLatestDTO } from "../../api/rxHistory";
 import { API_BASE_URL } from "../../apiConfig";
@@ -62,6 +44,12 @@ import { FileViewer } from "./FileViewer";
 import { EditPatientModal } from "./EditPatientModal";
 import { buildPrintHtml, openPrintWindow, downloadAsPdf, getDefaultTemplate, loadTemplates, PrintVisitData } from "../Settings";
 import { Modal } from "../../components/Modal/Modal";
+import { Button } from "../../components/Button";
+import { Select } from "../../components/Input/Select/Select";
+import { ViewToggle } from "../../components/ViewToggle";
+import { PatientRecordHeader, RecordSection } from "../../components/PatientRecordHeader";
+import { Tabs } from "../../components/Tabs";
+import { DataGrid } from "../../components/DataGrid/DataGrid";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
@@ -113,10 +101,46 @@ const VITAL_COLUMNS: VitalCell[][] = [
   [
     { label: "SPO2", unit: "%", unitWidth: 44 },
   ],
-  [
-    { label: "Hip", unit: "cm", unitWidth: 44 },
-  ],
 ];
+
+// Flattened, render-order list of the 10 vital cells. Keeps the original
+// `${columnIndex}-${rowIndex}` key so vitalState (built from VITAL_COLUMNS)
+// still resolves — only the layout changed (column-pairs → one responsive
+// grid). Row-major order reads BP·BMI / Height·Weight / … pairing related
+// vitals next to each other.
+const VITAL_CELLS: { cell: VitalCell; cellKey: string }[] = VITAL_COLUMNS.flatMap(
+  (col, ci) => col.map((cell, ri) => ({ cell, cellKey: `${ci}-${ri}` })),
+);
+
+// `${ci}-${ri}` cell key for each (uniquely-labelled) vital — used to wire the
+// BMI auto-calc to its Height + Weight inputs.
+const VITAL_KEY_BY_LABEL: Record<string, string> = {};
+VITAL_COLUMNS.forEach((col, ci) =>
+  col.forEach((v, ri) => { VITAL_KEY_BY_LABEL[v.label] = `${ci}-${ri}`; }),
+);
+const BMI_KEY = VITAL_KEY_BY_LABEL["BMI"];
+const HEIGHT_KEY = VITAL_KEY_BY_LABEL["Height"];
+const WEIGHT_KEY = VITAL_KEY_BY_LABEL["Weight"];
+
+// BMI = weight(kg) / height(m)². Height/Weight may be entered in imperial
+// units, so normalise to metric first (cm/in → m, kg/lb → kg). Returns "" when
+// either input is missing or non-positive, so the locked BMI field simply
+// blanks until both are present. BMI is always reported in kg/m².
+const computeBmi = (
+  height: VitalCellState | undefined,
+  weight: VitalCellState | undefined,
+): string => {
+  if (!height || !weight) return "";
+  const h = parseFloat(height.value);
+  const w = parseFloat(weight.value);
+  if (!Number.isFinite(h) || !Number.isFinite(w) || h <= 0 || w <= 0) return "";
+  const heightM = height.unit === "in" ? h * 0.0254 : h / 100; // cm is the default
+  const weightKg = weight.unit === "lb" ? w * 0.453592 : w;    // kg is the default
+  if (heightM <= 0) return "";
+  const bmi = weightKg / (heightM * heightM);
+  if (!Number.isFinite(bmi) || bmi <= 0) return "";
+  return bmi.toFixed(1);
+};
 
 // Figma node 2073:3030 — History section. 2×2 grid of cream-filled fields.
 // Each row carries the `field` key for the suggestion API
@@ -282,6 +306,17 @@ const blankRxRow = (position: number): RxRowDraft => ({
   thenRows: [],
 });
 
+// Services-style trailing row: keep every filled row (a medicine entered) in
+// order, followed by exactly one empty row to type the next medicine into.
+// Typing into the trailing empty fills it and a fresh empty re-appears. The
+// trailing empty carries no medicine, so the save path (which drops rows with
+// no medicine) already ignores it.
+const withTrailingRx = (rows: RxRowDraft[]): RxRowDraft[] => {
+  const filled = rows.filter((r) => r.medicine.trim() !== "");
+  const empty = rows.find((r) => r.medicine.trim() === "");
+  return [...filled, empty ?? blankRxRow(0)].map((r, i) => ({ ...r, position: i + 1 }));
+};
+
 const fromRxDTO = (dto: RxRowDTO): RxRowDraft => ({
   id: dto.id ?? null,
   position: dto.position,
@@ -319,7 +354,6 @@ const tplStyles: Record<string, React.CSSProperties> = {
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: spacing.s },
   title: { margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.regular, color: colors.neutral900 },
   subtitle: { margin: "4px 0 0", fontSize: fonts.size.s, color: colors.neutral500 },
-  close: { background: "transparent", border: "none", fontSize: 18, color: colors.neutral500, cursor: "pointer", lineHeight: 1, padding: 0 },
   saveRow: { display: "flex", gap: spacing.s, alignItems: "center" },
   input: { flex: 1, height: 40, boxSizing: "border-box", padding: `0 ${spacing.s}`, border: `1px solid ${colors.neutral300}`, borderRadius: radii.m, backgroundColor: colors.neutral150, fontFamily: fonts.family.primary, fontSize: fonts.control.md, color: colors.neutral900, outline: "none" },
   saveBtn: { flexShrink: 0, height: 40, padding: "0 20px", border: "none", borderRadius: radii.full, backgroundColor: colors.primary700, color: colors.neutral100, fontFamily: fonts.family.primary, fontSize: fonts.control.md, cursor: "pointer" },
@@ -330,15 +364,15 @@ const tplStyles: Record<string, React.CSSProperties> = {
   itemDelete: { flexShrink: 0, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", color: colors.red100, cursor: "pointer", fontSize: 14, borderRadius: radii.s },
 };
 
-const rewindBtnStyle = (_disabled: boolean): React.CSSProperties => ({
-  background: "none",
-  border: "none",
-  padding: 0,
-  display: "flex",
-  alignItems: "center",
-  cursor: "pointer",
-  color: "inherit",
-});
+// Move-to-today confirmation dialog. Mirrors tplStyles' tokens so it reads as
+// part of the same modal family.
+const moveStyles: Record<string, React.CSSProperties> = {
+  container: { display: "flex", flexDirection: "column", gap: spacing.s, width: 420, maxWidth: "92vw" },
+  title: { margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.regular, color: colors.neutral900 },
+  body: { margin: 0, fontFamily: fonts.family.primary, fontSize: fonts.size.s, lineHeight: fonts.lineHeight.s, color: colors.neutral700 },
+  bodyMuted: { margin: `${spacing.xs} 0 0`, fontFamily: fonts.family.primary, fontSize: fonts.size.s, color: colors.neutral500 },
+  actions: { display: "flex", justifyContent: "flex-end", gap: spacing.s, marginTop: spacing.s },
+};
 
 // Format a yyyy-MM-dd date as "DD MMM" (or "Today" if it's today's date).
 const formatVisitLabel = (iso: string): string => {
@@ -430,29 +464,6 @@ const computeRxTotal = (medicine?: string | null, dosage?: string | null, freque
   return Math.ceil(unitsPerDose * dosesPerDay * days);
 };
 
-// Format the secondary line of the patient identity card. Shape:
-// "(M|25)  9876543210" — gender shortened to M/F if needed; phone trailing.
-// Falls back gracefully when fields are missing.
-const formatPatientMeta = (
-  p: { gender: string | null; age: number | null; phone: string | null } | null
-): string => {
-  if (!p) return "";
-  const genderShort = (() => {
-    if (!p.gender) return "";
-    const g = p.gender.trim().toLowerCase();
-    if (g.startsWith("m")) return "M";
-    if (g.startsWith("f")) return "F";
-    return p.gender;
-  })();
-  // patient.age is stored in MONTHS — show whole years, or "Nm" for an
-  // infant under a year so it never reads as a bare "0".
-  const ageStr = p.age != null
-    ? (p.age < 12 ? `${p.age}m` : String(Math.floor(p.age / 12)))
-    : "";
-  const head = genderShort || ageStr ? `(${[genderShort, ageStr].filter(Boolean).join("|")})` : "";
-  return [head, p.phone ?? ""].filter(Boolean).join("  ");
-};
-
 // Figma node 2059:6764 — patient-context action list.
 // "Visits" renders active by default; count badges are circular.
 // Icons are the exact Linear set from the Figma design, normalized to
@@ -461,31 +472,28 @@ const formatPatientMeta = (
 // inside the component from real data sources, not hardcoded here.
 type ActionMeta = { icon: React.ReactNode; label: string };
 const ACTION_META: ActionMeta[] = [
-  { icon: <VisitsIcon style={styles.actionIcon} />, label: "Visits" },
+  { icon: <Icon name="visits" tone="inherit" style={styles.actionIcon} />, label: "Visits" },
   // Reports + Files merged into a single "Files" tab — category is now a
   // first-class metadata field on each upload (Reports / Prescriptions /
   // Observations / Admin / Other), with chip filtering below.
-  { icon: <FileIcon style={styles.actionIcon} />, label: "Files" },
-  { icon: <HistoryIcon style={styles.actionIcon} />, label: "Timeline" },
-  { icon: <BillCheckIcon style={styles.actionIcon} />, label: "Bills" },
+  { icon: <Icon name="file" tone="inherit" style={styles.actionIcon} />, label: "Files" },
+  { icon: <Icon name="history" tone="inherit" style={styles.actionIcon} />, label: "Timeline" },
+  { icon: <Icon name="bill-check" tone="inherit" style={styles.actionIcon} />, label: "Bills" },
+  // Info appended at the END so the other action indices (Visits 0 … Bills 3)
+  // are untouched; the nav just RENDERS it first (see NAV_ORDER).
+  { icon: <Icon name="user-hands" tone="inherit" style={styles.actionIcon} />, label: "Info" },
 ];
 
-// Figma node 2073:3264 — contact/edit card. Three rows, no active state.
-const CONTACT_ACTIONS: { icon: React.ReactNode; label: string }[] = [
-  { icon: <LetterIcon style={styles.actionIcon} />, label: "Email Patient" },
-  { icon: <VideocameraIcon style={styles.actionIcon} />, label: "Video Call Patient" },
-  { icon: <PenIcon style={styles.actionIcon} />, label: "Edit Patient Info" },
-];
+// Display order for the section nav — Info (index 4) shows first, before Visits.
+const NAV_ORDER = [4, 0, 1, 2, 3];
+const INFO_ACTION = 4;
 
-// Figma node 2143:10730 — Reports view, swapped in when "Reports" is active.
-// AI Summary copy comes from the backend per-patient — left blank until wired.
-// TODO(backend): replace with `useAiSummary(patientId).text`.
-const AI_SUMMARY_TEXT = "";
 
 // List-view config — single "Files" entry at action 1. Tabs are semantic
 // categories (not file formats) — the chip the user picks at upload time
-// drives both the table and these filter chips.
-// TODO(backend): replace empty `rows` with `useFiles(patientId).data`.
+// drives both the table and these filter chips. NOTE: the Files tab's rows
+// come from `serverFiles` (fetched from the backend); `rows` here is only the
+// static config scaffold, not the live data.
 type ListViewConfig = {
   title: string;
   subtitle: string;
@@ -510,67 +518,8 @@ const LIST_VIEWS: Record<number, ListViewConfig> = {
   },
 };
 
-// Two-input BP cell: systolic + fixed `/` + diastolic. Auto-advances focus
-// to the diastolic input once the systolic input has 3 digits, or when the
-// user explicitly types `/`. Validation styling is driven by parent state.
-function BpInput({
-  valid, sysValid, diaValid,
-  sys, dia,
-  onSysChange, onDiaChange, onEnter,
-}: {
-  valid: boolean;
-  sysValid: boolean;
-  diaValid: boolean;
-  sys: string;
-  dia: string;
-  onSysChange: (v: string) => void;
-  onDiaChange: (v: string) => void;
-  onEnter: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-}) {
-  const diaRef = React.useRef<HTMLInputElement>(null);
-  const handleSysChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const next = e.target.value;
-    onSysChange(next);
-    if (next.length >= 3) diaRef.current?.focus();
-  };
-  const handleSysKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "/") {
-      e.preventDefault();
-      diaRef.current?.focus();
-      return;
-    }
-    onEnter(e);
-  };
-  return (
-    <div
-      style={{
-        ...styles.bpSplitInput,
-        ...(!valid ? styles.vitalInputValueInvalid : {}),
-      }}
-    >
-      <input
-        style={{ ...styles.bpHalfInput, ...(!sysValid ? styles.vitalInputInvalidText : {}) }}
-        value={sys}
-        onChange={handleSysChange}
-        onKeyDown={handleSysKeyDown}
-        inputMode="numeric"
-        aria-label="Systolic"
-        aria-invalid={!sysValid}
-      />
-      <span style={styles.bpSeparator}>/</span>
-      <input
-        ref={diaRef}
-        style={{ ...styles.bpHalfInput, ...(!diaValid ? styles.vitalInputInvalidText : {}) }}
-        value={dia}
-        onChange={(e) => onDiaChange(e.target.value)}
-        onKeyDown={onEnter}
-        inputMode="numeric"
-        aria-label="Diastolic"
-        aria-invalid={!diaValid}
-      />
-    </div>
-  );
-}
+// (BpInput removed — the BP cell now uses the shared <MeasureField bp> with its
+// own auto-advance systolic→diastolic logic.)
 
 // Renders an image thumbnail for files — handles both local blob URLs and
 // auth-protected API download URLs by fetching with the JWT when needed.
@@ -652,7 +601,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // opened from another screen (Patient Files, the session tray, etc.).
   // Falls back to clearing selection so the prescription home picker
   // reappears, matching the original behavior.
-  const [returnTab, setReturnTab] = React.useState<import("../../components/SideNav").NavTab | null>(
+  const [, setReturnTab] = React.useState<import("../../components/SideNav").NavTab | null>(
     initialNav?.returnTab ?? null,
   );
   React.useEffect(() => {
@@ -674,6 +623,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   const { visits, loading: visitsLoading, loadedFor: visitsLoadedFor, refetch: refetchVisits } = useVisits(selectedPatientId);
   const [activeTab, setActiveTab] = React.useState(0);
   const [activeAction, setActiveAction] = React.useState(initialNav?.initialAction ?? 0);
+  // Prescription output language (drives the printed/shared Rx language). UI
+  // selector lives on the floating bar; wiring the actual translation is TBD.
+  const [language, setLanguage] = React.useState("English");
   const activeVisit: VisitDTO | undefined = visits[activeTab];
   // Visit immediately before the currently-viewed tab — used by the rewind
   // buttons to pull the previous prescription's data into the current form.
@@ -685,14 +637,31 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // doctor actually edits. Set on form input + rx mutations, cleared on save
   // and on visit change.
   const [dirty, setDirty] = React.useState<boolean>(false);
+  // On an ALREADY-COMPLETED visit, "Save changes" shows only while there's a
+  // pending edit: set on edit, KEPT through the silent blur auto-save (so it
+  // stays available for a manual save), cleared only when the visit is saved /
+  // completed (explicit) or on tab switch. State so clearing re-renders it away.
+  const [pendingSave, setPendingSave] = React.useState<boolean>(false);
+  // Load-settling guard. When a visit's saved data is poured into the controlled
+  // form, a stray change event can bubble to the form-wrapper onChange (or a
+  // controlled child can re-emit) and look like a doctor edit — which would wrongly
+  // surface "Save changes" the instant the pad opens. We mark a short settling
+  // window on every (re)populate and ignore dirty-flagging during it; a real edit
+  // can't happen in the few ms before the first paint. flagDirty() is the single
+  // choke point every "this was a user edit" path goes through.
+  const loadSettlingRef = React.useRef<boolean>(true);
+  const flagDirty = React.useCallback(() => {
+    if (loadSettlingRef.current) return;
+    setDirty(true);
+  }, []);
   const [rxRows, _setRxRows] = React.useState<RxRowDraft[]>([]);
   // Every USER rx mutation (add / delete row, picker change, etc.) flags
   // dirty. The visit-load populate and the async generic-name enrichment use
   // the raw `_setRxRows` so loading a visit never looks like an edit.
   const setRxRows = React.useCallback((value: React.SetStateAction<RxRowDraft[]>) => {
     _setRxRows(value);
-    setDirty(true);
-  }, []);
+    flagDirty();
+  }, [flagDirty]);
   const [rxInteractions, setRxInteractions] = React.useState<Array<{ drug: string; interactsWith: string; comment: string }>>([]);
 
   // Per-medicine autofill: index this patient's PAST prescriptions by medicine
@@ -783,26 +752,39 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // `_set*` versions so loading a visit is never treated as an edit.
   const setHistoryValues = React.useCallback((value: React.SetStateAction<Record<string, string>>) => {
     _setHistoryValues(value);
-    setDirty(true);
-  }, []);
+    flagDirty();
+  }, [flagDirty]);
   const setDiagnosisValue = React.useCallback((value: React.SetStateAction<string>) => {
     _setDiagnosisValue(value);
-    setDirty(true);
-  }, []);
+    flagDirty();
+  }, [flagDirty]);
   const setComplaintsValue = React.useCallback((value: React.SetStateAction<string>) => {
     _setComplaintsValue(value);
-    setDirty(true);
-  }, []);
+    flagDirty();
+  }, [flagDirty]);
   const setTestsValue = React.useCallback((value: React.SetStateAction<string>) => {
     _setTestsValue(value);
-    setDirty(true);
-  }, []);
+    flagDirty();
+  }, [flagDirty]);
   // Notes-for-Patient + Private Notes + Review-Notes are now controlled too
   // so we can serialize them on Save.
   const [notesForPatientValue, setNotesForPatientValue] = React.useState<string>("");
   const [privateNotesValue, setPrivateNotesValue] = React.useState<string>("");
   const [reviewNotesValue, setReviewNotesValue] = React.useState<string>("");
   const [saving, setSaving] = React.useState<boolean>(false);
+  // Dedicated flag for the "+ New Visit" action ONLY. The shared `saving` flag
+  // flips on every silent blur/debounce auto-save, which made the New Visit
+  // button flicker between "New Visit"/"Creating…" (and enabled/disabled) while
+  // the doctor typed. This tracks just the add-visit op so the button is stable.
+  const [addingVisit, setAddingVisit] = React.useState<boolean>(false);
+  // When completing an OLD, never-finished consultation, we don't complete it
+  // on its stale date — we move its data to a fresh visit dated today and drop
+  // the old one. This holds the original visit's date label while the
+  // confirmation dialog is open (null = closed).
+  const [moveToTodayDate, setMoveToTodayDate] = React.useState<string | null>(null);
+  // Bumped to force the visit form to reload its saved data (used to discard
+  // an edit when the move-to-today dialog is cancelled).
+  const [revertNonce, setRevertNonce] = React.useState(0);
   // The visit id whose data the form currently holds. Updated (in state, so
   // it flips atomically with the form fields) every time the form populates
   // from a visit. handleSave refuses to write unless this matches the active
@@ -816,55 +798,64 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // session hasn't been ended. Once the doctor ends the session the visit
   // is locked permanently (read-only history). This intentionally covers
   // past visits the doctor left open — they stay editable until ended.
-  const isLatestVisit = visits.length === 0 || activeTab === visits.length - 1;
-  // A visit stays editable for the full 24h Resume window. Once End is
-  // clicked the session is "ended" but the form remains writable so the
-  // doctor can hit Resume and continue updating fields for up to a day.
-  // After 24h elapses past the recorded sessionEndedAt (or, if that
-  // wasn't persisted, past the visitDate), the visit hard-locks into a
-  // historic record.
+  // Editability runs on a 24h timer that STARTS when the View Pad is opened
+  // (sessionStartedAt) — NOT the visit date, and NOT the end of the
+  // consultation. While the session is open (un-ended) the pad stays editable
+  // regardless of age so the doctor can finish it; once ended/completed it
+  // stays editable for 24h FROM THE OPEN, then hard-locks. A visit that was
+  // never opened (no session start) falls back to its visit date so today's
+  // fresh visits are still editable.
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-  const endedAtMs = activeVisit?.sessionEndedAt ? new Date(activeVisit.sessionEndedAt).getTime() : null;
   const visitMs = activeVisit?.visitDate ? new Date(activeVisit.visitDate).getTime() : null;
-  // A session "happened" if it was ended or accumulated any recorded time.
-  // A visit with neither was never worked on — it should stay editable and
-  // show the idle "Start Session" state, never a bogus "Session Ended".
-  const hadSession =
-    activeVisit?.sessionEndedAt != null || (activeVisit?.sessionDurationSec ?? 0) > 0;
+  const sessionStartMs = activeVisit?.sessionStartedAt ? new Date(activeVisit.sessionStartedAt).getTime() : null;
+  // Whether THIS visit is finished. For an appointment-linked visit that's the
+  // appointment's own status (read from the visit DTO, not the appointment the
+  // chart was opened through). A visit with NO appointment (e.g. a manually
+  // added "+ New Visit") has no status to flip, so we treat it as complete once
+  // its session has been ended — that's what "Complete visit" stamps.
+  const activeCompleted =
+    (activeVisit?.appointmentStatus ?? "").toUpperCase() === "COMPLETED" ||
+    (activeVisit != null && activeVisit.appointmentId == null && activeVisit.sessionEndedAt != null);
   // An OPEN consultation: the pad was opened (session started) but the visit
-  // was never completed (no end). It must stay editable no matter how old the
-  // visit is — otherwise once it crosses the 24h mark it hard-locks with NO
-  // way to click "Complete visit", leaving the appointment stuck IN_PROGRESS
-  // and a ghost entry in Active Sessions forever.
+  // was never completed (no end) AND its appointment isn't already Completed.
+  // It must stay editable no matter how old the visit is — otherwise once it
+  // crosses the 24h mark it hard-locks with NO way to finish it, leaving the
+  // appointment stuck IN_PROGRESS forever. The !activeCompleted guard stops a
+  // finished visit whose end-time was never stamped (legacy/inconsistent data)
+  // from masquerading as an open session.
   const hasOpenSession =
-    activeVisit?.sessionStartedAt != null && activeVisit?.sessionEndedAt == null;
+    activeVisit?.sessionStartedAt != null &&
+    activeVisit?.sessionEndedAt == null &&
+    !activeCompleted;
   const isWithinBuffer = (() => {
+    // Open consultation (pad opened, not yet ended) — always editable so it can
+    // be finished, regardless of age.
     if (hasOpenSession) return true;
-    if (endedAtMs != null && !Number.isNaN(endedAtMs)) {
-      // Ended with a real timestamp → resumable for 24h from that moment.
-      return Date.now() - endedAtMs < ONE_DAY_MS;
+    // Ended/completed → editable for 24h counted FROM when the pad was opened.
+    if (sessionStartMs != null && !Number.isNaN(sessionStartMs)) {
+      return Date.now() - sessionStartMs < ONE_DAY_MS;
     }
-    if (!hadSession) {
-      // Never started/ended → startable only while the visit date is still
-      // within 24h (i.e. today's / a just-created visit). Older visits —
-      // including imported historic records — stay read-only and never offer
-      // a "Start Session"; a new consultation should create a new visit.
-      return visitMs != null && !Number.isNaN(visitMs) && Date.now() - visitMs < ONE_DAY_MS;
-    }
-    // Has a recorded duration but no end timestamp (legacy data) → fall
-    // back to the visit date for the 24h lock.
-    if (visitMs != null && !Number.isNaN(visitMs)) {
-      return Date.now() - visitMs < ONE_DAY_MS;
-    }
-    return true;
+    // Never opened (no session start) → fall back to the visit date so a fresh
+    // today visit is editable until its date passes 24h.
+    return visitMs != null && !Number.isNaN(visitMs) && Date.now() - visitMs < ONE_DAY_MS;
   })();
   const isEditable = isWithinBuffer;
 
   // Edit flag used by every gate below. The form is editable whenever the
-  // visit is within its edit window (today's / within 24h) — no longer gated
-  // behind starting a session. (Session timer is being retired; editing a
-  // current visit shouldn't require an explicit "Start Session" click.)
+  // visit is within its edit window (today's / within 24h, or an open
+  // in-progress session) — no longer gated behind starting a session.
   const canEditForm = isEditable;
+
+  // An editable visit that is OLDER than 24h and still in progress (never
+  // completed). Editing one of these shouldn't quietly amend a stale-dated
+  // record — instead we prompt to relocate it to today (see the move-to-today
+  // dialog). For such a visit to be editable at all it must be an open session
+  // (a never-started old visit is already locked), so this is precisely the
+  // "abandoned consultation the doctor is reopening days later" case.
+  const visitOlderThan24h =
+    visitMs != null && !Number.isNaN(visitMs) && Date.now() - visitMs > ONE_DAY_MS;
+  const isOldPending = canEditForm && !activeCompleted && visitOlderThan24h;
+
   // On initial open of a patient, jump to the latest (today's) visit
   // tab. Without this the tabs default to index 0, which is the OLDEST
   // visit — confusing when the doctor expects to land on today.
@@ -925,7 +916,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     setReviewDate(d);
     setReviewDays(String(Math.max(0, daysFromToday(d))));
     setShowReviewDatePicker(false);
-    setDirty(true);
+    flagDirty();
   };
   const changeReviewDays = (raw: string) => {
     const cleaned = raw.replace(/\D/g, "");
@@ -937,6 +928,12 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // Uncontrolled inputs are remounted via the `key` on the visits wrapper
   // below so they pick up new defaultValues automatically.
   React.useEffect(() => {
+    // Open the load-settling window: any change events that fire while we pour
+    // this visit's data into the controlled form below must NOT be treated as
+    // doctor edits. Cleared after the first paint (rAF) — by then a real edit is
+    // the only thing that can flag dirty.
+    loadSettlingRef.current = true;
+    const raf = requestAnimationFrame(() => { loadSettlingRef.current = false; });
     // Mark that the form now holds THIS visit's data (set in the same state
     // batch as the fields below, so handleSave's guard sees them in sync).
     setLoadedVisitId(activeVisit?.id ?? null);
@@ -947,10 +944,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     // Build the new rows first so we can also resolve genericNames against
     // the same list — if we called setRxRows and then read rxRows in a
     // separate effect the second effect would still see the old state.
-    const newRows =
+    const newRows = withTrailingRx(
       activeVisit?.prescriptions && activeVisit.prescriptions.length > 0
         ? activeVisit.prescriptions.map(fromRxDTO)
-        : Array.from({ length: 5 }, (_, i) => blankRxRow(i + 1));
+        : [],
+    );
     _setRxRows(newRows); // load — not a user edit, don't flag dirty
 
     // Resolve genericName for every row that has a medicine but no cached
@@ -990,8 +988,15 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     setPrivateNotesValue(activeVisit?.privateNotes ?? "");
     setReferDoctorId(activeVisit?.referDoctorId ?? null);
     setReferOpen(false);
+    // Loading a visit is not an edit — clear any pending-edit state in the same
+    // effect that pours the data in, so the footer button reads "Complete visit"
+    // (not "Save changes") the instant a pre-filled pad opens. (editedSinceLoadRef
+    // is cleared by the visit-change reset effect / cancelMoveToToday.)
+    setDirty(false);
+    setPendingSave(false);
+    return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, activeVisit?.id]);
+  }, [activeTab, activeVisit?.id, revertNonce]);
 
   // Debounced auto-save whenever rxRows changes while a session is active.
   // Pickers (WhenPicker, FrequencyPicker) are div/button elements — they
@@ -1000,7 +1005,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // The ref holds the latest save function so the closure is never stale.
   const latestSaveRef = React.useRef<() => void>(() => {});
   latestSaveRef.current = () => {
-    if (canEditForm && activeVisit) void handleSave({ silent: true });
+    // Suppressed while the move-to-today dialog is open so a debounced Rx edit
+    // can't slip onto the stale-dated visit before the doctor decides.
+    if (canEditForm && activeVisit && moveToTodayDate == null) void handleSave({ silent: true });
   };
   React.useEffect(() => {
     if (!canEditForm) return;
@@ -1202,7 +1209,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
 
   const setVitalValue = (key: string, value: string) => {
     setVitalState((prev) => ({ ...prev, [key]: { ...prev[key], value } }));
-    setDirty(true);
+    flagDirty();
   };
   const validateVitalOnEnter = (
     e: React.KeyboardEvent<HTMLInputElement>,
@@ -1230,8 +1237,45 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       if (!toggle) return prev;
       return { ...prev, [key]: { value: toggle.convert(cell.value), unit: toggle.altUnit } };
     });
-    setDirty(true);
+    flagDirty();
   };
+
+  // BMI auto-calc, one half of the Height/Weight ⇄ BMI mutual exclusion. When
+  // Height or Weight is present, BMI is DERIVED from them (and locked). We only
+  // overwrite BMI while at least one of Height/Weight is filled — so a BMI typed
+  // DIRECTLY (with Height/Weight empty) is never wiped by this effect. A derived
+  // BMI is non-empty only when BOTH inputs are filled, so clearing either one
+  // blanks it via computeBmi → there's no stale value left to mislead the lock.
+  // Uses the raw setVitalState — recomputing BMI is never itself a doctor edit,
+  // so it must not flag dirty (the Height/Weight change that triggered it
+  // already did). buildSaveRequest reads BMI straight from vitalState, so the
+  // persisted value follows automatically.
+  const heightCellValue = vitalState[HEIGHT_KEY]?.value;
+  const heightCellUnit = vitalState[HEIGHT_KEY]?.unit;
+  const weightCellValue = vitalState[WEIGHT_KEY]?.value;
+  const weightCellUnit = vitalState[WEIGHT_KEY]?.unit;
+  React.useEffect(() => {
+    const hwFilled =
+      (heightCellValue ?? "").trim() !== "" || (weightCellValue ?? "").trim() !== "";
+    if (!hwFilled) return; // BMI is free for manual entry — don't overwrite it
+    const next = computeBmi(vitalState[HEIGHT_KEY], vitalState[WEIGHT_KEY]);
+    setVitalState((prev) =>
+      prev[BMI_KEY]?.value === next
+        ? prev
+        : { ...prev, [BMI_KEY]: { value: next, unit: prev[BMI_KEY]?.unit ?? "kg/m²" } },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heightCellValue, heightCellUnit, weightCellValue, weightCellUnit]);
+
+  // The mutual-exclusion lock state, derived from current values:
+  //  • Height/Weight present → BMI is locked (shows the auto-calculated value).
+  //  • BMI present with NO Height/Weight → Height + Weight are locked.
+  //  • everything empty → nothing locked (pick either method).
+  const vitalsHaveHeightWeight =
+    (heightCellValue ?? "").trim() !== "" || (weightCellValue ?? "").trim() !== "";
+  const vitalsHaveBmi = (vitalState[BMI_KEY]?.value ?? "").trim() !== "";
+  const lockBmiField = vitalsHaveHeightWeight;
+  const lockHeightWeightFields = vitalsHaveBmi && !vitalsHaveHeightWeight;
 
   // List-view tab state — shared across Reports / Files. Defaults to the
   // first tab ("All Reports" / "All Files").
@@ -1277,7 +1321,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       case "rx": {
         const rows = Array.isArray(c.rxRows) ? (c.rxRows as RxRowDraft[]) : [];
         // Reset ids/positions so loaded rows save as fresh Rx rows on this visit.
-        setRxRows(rows.map((r, i) => ({ ...r, id: null, position: i + 1, thenRows: r.thenRows ?? [] })));
+        setRxRows(withTrailingRx(rows.map((r, i) => ({ ...r, id: null, position: i + 1, thenRows: r.thenRows ?? [] }))));
         break;
       }
     }
@@ -1323,31 +1367,57 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       .finally(() => setTemplatesBusy(false));
   };
 
-  // Tuning button dropdown items — open/close + outside-click handling lives
-  // inside <PopoverMenu>, so we just declare the actions here.
-  const tuningMenuItems = [
-    {
-      label: "+ New Visit",
-      onClick: () => void handleAddVisit(),
-    },
-    {
-      label: "Clear all",
-      onClick: () => {
-        setVitalState(buildVitalState(undefined));
-        setReviewDate(null);
-        setReviewDays("");
-        setReviewNotesValue("");
-        setRxRows(Array.from({ length: 5 }, (_, i) => blankRxRow(i + 1)));
-        setHistoryValues({
-          family_history: "", allergies: "", personal_history: "", past_medical_history: "",
-        });
-        setDiagnosisValue("");
-        setComplaintsValue("");
-        setTestsValue("");
-        setNotesForPatientValue("");
-        setPrivateNotesValue("");
-      },
-    },
+  // Clear all — wipes every field on the current prescription back to blank.
+  // Relocated out of the old "tuning" dropdown into the section action bar
+  // (it acts on the active prescription, same scope as Print / Download /
+  // Share). Constructive "+ New Visit" deliberately lives elsewhere (the visit
+  // tab strip) so a mis-click can never swap create-a-visit for wipe-the-form.
+  const handleClearAll = () => {
+    setVitalState(buildVitalState(undefined));
+    setReviewDate(null);
+    setReviewDays("");
+    setReviewNotesValue("");
+    setRxRows([blankRxRow(1)]);
+    setHistoryValues({
+      family_history: "", allergies: "", personal_history: "", past_medical_history: "",
+    });
+    setDiagnosisValue("");
+    setComplaintsValue("");
+    setTestsValue("");
+    setNotesForPatientValue("");
+    setPrivateNotesValue("");
+  };
+
+  // Download every file in the patient's Files tab (best-effort: triggers a
+  // browser download per file that has a URL).
+  const handleDownloadAllFiles = () => {
+    const downloadable = serverFiles.filter((f) => f.fileUrl);
+    if (!downloadable.length) {
+      showToast("No files to download");
+      return;
+    }
+    downloadable.forEach((f) => {
+      const a = document.createElement("a");
+      a.href = f.fileUrl as string;
+      a.download = f.name || "";
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+    showToast(`Downloading ${downloadable.length} file${downloadable.length === 1 ? "" : "s"}…`);
+  };
+
+  // Contact / patient actions — collapsed into the header "⋯" kebab so the
+  // sticky header carries the stable patient-level actions (call / email /
+  // video / edit) without crowding the section nav beside it.
+  const contactMenuItems = [
+    ...(selectedPatient?.phone
+      ? [{ icon: <Icon name="phone" tone="inherit" style={styles.kebabItemIcon} />, label: "Call patient", onClick: () => { window.location.href = `tel:${selectedPatient.phone}`; } }]
+      : []),
+    { icon: <Icon name="mail" tone="inherit" style={styles.kebabItemIcon} />, label: "Email patient", onClick: () => {} },
+    { icon: <Icon name="videocamera" tone="inherit" style={styles.kebabItemIcon} />, label: "Video call", onClick: () => {} },
+    { icon: <Icon name="pen" tone="inherit" style={styles.kebabItemIcon} />, label: "Edit patient info", onClick: () => setShowEditPatient(true) },
   ];
 
   // ── Header + right-area content driven by which left-rail action is active.
@@ -1395,6 +1465,53 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
 
   const [showAddModal, setShowAddModal] = React.useState(false);
   const [showEditPatient, setShowEditPatient] = React.useState(false);
+  // AI Summary popover (opened from the ✨ button in the slim icon rail).
+  const [showAiSummary, setShowAiSummary] = React.useState(false);
+  // AI patient summary — fetched (cached, free) on patient change and shown in
+  // the ✨ card + popover; the popover's Generate button calls the paid POST.
+  const [aiSummary, setAiSummary] = React.useState<PatientSummary | null>(null);
+  const [aiStale, setAiStale] = React.useState(false);       // backend says new visits invalidated the cache
+  const [aiConfigured, setAiConfigured] = React.useState<boolean | null>(null);
+  const [aiGenerating, setAiGenerating] = React.useState(false);
+  const [aiError, setAiError] = React.useState<string | null>(null);
+
+  // Load the CACHED summary whenever the patient changes (never calls OpenAI).
+  React.useEffect(() => {
+    if (!selectedPatientId) { setAiSummary(null); setAiStale(false); setAiError(null); return; }
+    let cancelled = false;
+    setAiError(null);
+    (async () => {
+      try {
+        const health = await getAIHealth();
+        if (cancelled) return;
+        setAiConfigured(health.configured);
+        if (!health.configured) { setAiSummary(null); return; }
+        const resp = await fetchPatientSummary(selectedPatientId);
+        if (cancelled) return;
+        setAiStale(!resp.generated);
+        setAiSummary(resp.content ? parsePatientSummary(resp.content) : null);
+      } catch (e) {
+        if (!cancelled) setAiError((e as Error).message || "Couldn't load summary");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedPatientId]);
+
+  // Explicit (paid) generation — wired to the popover's Generate/Regenerate.
+  const handleGenerateSummary = async () => {
+    if (!selectedPatientId || aiGenerating) return;
+    setAiGenerating(true);
+    setAiError(null);
+    try {
+      const resp = await generatePatientSummary(selectedPatientId);
+      setAiStale(!resp.generated);
+      setAiSummary(resp.content ? parsePatientSummary(resp.content) : null);
+    } catch (e) {
+      setAiError((e as Error).message || "Couldn't generate summary");
+    } finally {
+      setAiGenerating(false);
+    }
+  };
   // The currently-open file row. null = list view.
   const [viewerOpen, setViewerOpen] = React.useState<ListRow | null>(null);
   const handleAddRows = (rows: AddReportRow[]) => {
@@ -1414,7 +1531,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     ]);
   };
   const removeRxRow = (rowIdx: number) =>
-    setRxRows((prev) => prev.filter((_, ri) => ri !== rowIdx));
+    setRxRows((prev) => withTrailingRx(prev.filter((_, ri) => ri !== rowIdx)));
   const addThenRow = (rowIdx: number) =>
     setRxRows((prev) => prev.map((r, ri) => ri !== rowIdx ? r : { ...r, thenRows: [...r.thenRows, blankThenRow()] }));
   const removeThenRow = (rowIdx: number, thenIdx: number) =>
@@ -1444,18 +1561,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   };
   // Action indices after the Reports/Files merge:
   //   0 = Visits   1 = Files   2 = Timeline   3 = Bills
-  const comingSoonLabel = activeAction === 2 ? "Timeline" : activeAction === 3 ? "Bills" : null;
-  const headerTitle =
-    listViewConfig?.title ?? comingSoonLabel ?? "Visits";
-  // Subtitle is derived from the displayed row count for list views (backend
-  // data + client uploads), defaults to a placeholder for Coming Soon, and
-  // stays static for the default Visits view.
-  const fileCount = activeAction === 1 ? serverFiles.length : (listViewConfig?.rows.length ?? 0);
-  const headerSubtitle = listViewConfig
-    ? `${fileCount} ${listViewConfig.title.toLowerCase()} on file`
-    : comingSoonLabel
-      ? "Coming soon"
-      : "Patient visit history and prescription";
+  // Header label per section. Timeline (2) is implemented (a visit feed);
+  // only Bills (3) is still a "coming soon" placeholder.
+  const comingSoonLabel = activeAction === 3 ? "Bills" : null;
 
   // Each collapsible section starts expanded; clicking the header chevron toggles.
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({
@@ -1522,9 +1630,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       // so an in-progress timer survives auto-save round-trips. The
       // bar-driven handlers below also overwrite these explicitly on
       // Start / End.
-      sessionStartedAt: activeVisit?.sessionStartedAt ?? null,
-      sessionEndedAt: activeVisit?.sessionEndedAt ?? null,
-      sessionDurationSec: activeVisit?.sessionDurationSec ?? null,
+      // Re-opening a completed visit (reopenStartRef set) restarts the session:
+      // fresh start, cleared end/duration — so the queue timer runs again.
+      sessionStartedAt: reopenStartRef.current ?? activeVisit?.sessionStartedAt ?? null,
+      sessionEndedAt: reopenStartRef.current ? null : (activeVisit?.sessionEndedAt ?? null),
+      sessionDurationSec: reopenStartRef.current ? null : (activeVisit?.sessionDurationSec ?? null),
       prescriptions: rxRows
         .filter((r) =>
           r.medicine || r.medicineNote || r.dosage || r.whenToTake ||
@@ -1545,6 +1655,26 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     };
   };
 
+  // Vitals that fall outside their valid clinical range (mirrors the per-field
+  // validation rendered in the vitals grid). We never persist or complete a
+  // visit with clinically-impossible measurements — saving/completing is
+  // blocked and the offending fields are highlighted with a toast.
+  const invalidVitalLabels = VITAL_CELLS.filter(({ cell: v, cellKey }) => {
+    const cell = vitalState[cellKey];
+    // BMI: when DERIVED (Height/Weight present) it's locked, not typed — never
+    // block save on it; its inputs carry their own validation. When entered
+    // MANUALLY (no Height/Weight) it's a normal editable field, so range-check it.
+    if (v.label === "BMI") {
+      return !lockBmiField && !isVitalValid("BMI", cell.value, cell.unit);
+    }
+    if (v.label === "BP") {
+      const [sys = "", dia = ""] = cell.value.split("/");
+      return !(isVitalValid("BP_sys", sys, cell.unit) && isVitalValid("BP_dia", dia, cell.unit));
+    }
+    return !isVitalValid(v.label, cell.value, cell.unit);
+  }).map(({ cell: v }) => v.label);
+  const hasInvalidVitals = invalidVitalLabels.length > 0;
+
   const handleSave = async (opts?: { silent?: boolean }) => {
     if (!activeVisit || !selectedPatientId) return;
     // Never write the form to a visit it wasn't loaded from. During a visit
@@ -1552,6 +1682,12 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     // saving in that gap would copy the old visit's data onto the new one (and
     // blank the old). Skip until the form has caught up to the active visit.
     if (loadedVisitId !== activeVisit.id) return;
+    // Block saving invalid vitals. The fields are already highlighted inline;
+    // an explicit Save click also gets a toast (auto-saves stay silent).
+    if (hasInvalidVitals) {
+      if (!opts?.silent) showToast("Enter valid vitals before saving");
+      return;
+    }
     setSaving(true);
     try {
       await updateVisit(activeVisit.id, buildSaveRequest());
@@ -1562,6 +1698,8 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       // re-fetches and reflects those edits.
       clinicWideRxCacheRef.current.clear();
       // Auto-saves stay silent; only explicit actions toast.
+      // Explicit (non-silent) save dismisses the "Save changes" button; the
+      // silent blur auto-save leaves it up so a manual save stays available.
       if (!opts?.silent) showToast("Visit saved");
     } catch (e) {
       // Auto-saves stay quiet on success but should still surface
@@ -1584,6 +1722,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // from when the session started, dropping every edit made after that.
   const handleFormBlur = () => {
     if (!canEditForm || !activeVisit) return;
+    // Don't persist while the move-to-today dialog is deciding the fate of an
+    // edit — the change must not leak onto the stale-dated visit.
+    if (moveToTodayDate != null) return;
     // Auto-save on blur works for every visit, including completed ones — a
     // post-completion edit is persisted without reopening the appointment
     // (handleSave changes no status). handleSave also clears the dirty flag,
@@ -1591,10 +1732,62 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     void handleSave({ silent: true });
   };
 
+  // "Was this visit edited since the doctor opened its tab?" — survives the
+  // silent blur auto-save (which clears `dirty` the moment focus leaves a
+  // field). We need a flag that DOESN'T reset on save so that completing an
+  // old, pending visit can tell "you changed something → move it to today"
+  // from "untouched → just end the consultation in place".
+  const editedSinceLoadRef = React.useRef(false);
+  // Flip-to-IN_PROGRESS guard — fires at most once per appointment so we don't
+  // re-patch the status on every dirty toggle.
+  const startedInProgressRef = React.useRef<string | null>(null);
+  // When the doctor edits an already-COMPLETED ("Done") visit we re-open it;
+  // this holds the fresh session start so buildSaveRequest restarts the timer.
+  const reopenStartRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!dirty) return;
+    editedSinceLoadRef.current = true;
+    setPendingSave(true);
+    // Editing flips the appointment back to IN_PROGRESS (Ongoing) so the queue
+    // and the prescription card show a live consultation again — from AT_DOC
+    // (just sent to the doctor) and from COMPLETED (re-opening a "Done" visit).
+    // Re-opening a completed visit also RESTARTS its session timer (stamped into
+    // buildSaveRequest, persisted by the next auto-save). Once per appointment.
+    const apptId = activeVisit?.appointmentId;
+    const apptStatus = (activeVisit?.appointmentStatus ?? "").toUpperCase();
+    if (apptId &&
+        (apptStatus === "AT_DOC" || apptStatus === "COMPLETED") &&
+        startedInProgressRef.current !== apptId) {
+      startedInProgressRef.current = apptId;
+      if (apptId === selectedAppointmentId) setSelectedAppointmentStatus("IN_PROGRESS");
+      if (apptStatus === "COMPLETED") {
+        reopenStartRef.current = new Date().toISOString();
+        if (selectedPatient) markStarted(selectedPatient.id);
+        // Persist the restarted session NOW (not only on the next blur) so the
+        // queue's live timer appears promptly instead of after a delay.
+        void updateVisit(activeVisit.id, buildSaveRequest());
+      }
+      void patchAppointmentStatus(apptId, "IN_PROGRESS").then(() => refetchVisits());
+    }
+    // Editing an OLD, still-in-progress visit → ask to move it to today
+    // BEFORE the change settles onto the stale date. The blur/debounce
+    // auto-saves are blocked while this dialog is open (see handleFormBlur /
+    // latestSaveRef), so nothing lands on the old visit until the doctor
+    // decides. Cancel discards the edit; Continue relocates to today.
+    if (isOldPending && moveToTodayDate == null && activeVisit) {
+      setMoveToTodayDate(activeVisit.visitDate);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty]);
+
   // A fresh visit (tab switch / patient change) starts clean — drop any
   // unsaved-edit flag left from the previous visit.
   React.useEffect(() => {
     setDirty(false);
+    setPendingSave(false);
+    editedSinceLoadRef.current = false;
+    startedInProgressRef.current = null;
+    reopenStartRef.current = null;
   }, [activeVisit?.id]);
 
 
@@ -1621,78 +1814,139 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     }
   };
 
-  // AI summary popover toggle (bottom-bar summary). Currently has no trigger.
-  const [showAiSummary, setShowAiSummary] = React.useState(false);
-
-  // Clear all — wipe the editable prescription form back to blanks.
-  const handleClearAll = () => {
-    setVitalState(buildVitalState(undefined));
-    setReviewDate(null);
-    setReviewDays("");
-    setReviewNotesValue("");
-    setRxRows(Array.from({ length: 5 }, (_, i) => blankRxRow(i + 1)));
-    setHistoryValues({
-      family_history: "", allergies: "", personal_history: "", past_medical_history: "",
-    });
-    setDiagnosisValue("");
-    setComplaintsValue("");
-    setTestsValue("");
-    setNotesForPatientValue("");
-    setPrivateNotesValue("");
-  };
-
-  // Download every file in the patient's Files tab (best-effort: triggers a
-  // browser download per file that has a URL).
-  const handleDownloadAllFiles = () => {
-    const downloadable = serverFiles.filter((f) => f.fileUrl);
-    if (!downloadable.length) {
-      showToast("No files to download");
-      return;
-    }
-    downloadable.forEach((f) => {
-      const a = document.createElement("a");
-      a.href = f.fileUrl as string;
-      a.download = f.name || "";
-      a.target = "_blank";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    });
-    showToast(`Downloading ${downloadable.length} file${downloadable.length === 1 ? "" : "s"}…`);
-  };
-
   // Explicitly finish a consultation: save the current form and mark the
   // linked appointment COMPLETED. This replaces "End Session" as the path to
   // COMPLETED now that the session timer is being retired — without it, an
   // appointment could never leave IN_PROGRESS and the queue/stats would stall.
+  // Footer "Complete visit" / "Save changes" → finish the active consultation
+  // in place. An old pending visit that the doctor edited has ALREADY been
+  // relocated to today at edit-time (see the move-to-today dialog), so by the
+  // time Complete is clicked there's never a stale date to worry about. An
+  // untouched old pending visit completes on its own date without fuss.
   const handleCompleteVisit = async () => {
-    const alreadyCompleted = (selectedAppointmentStatus ?? "").toUpperCase() === "COMPLETED";
+    if (!activeVisit) return;
+    // Don't let a visit be completed/saved with out-of-range vitals — toast and
+    // highlight the offending fields instead of persisting bad data.
+    if (hasInvalidVitals) {
+      showToast("Enter valid vitals before completing");
+      return;
+    }
+    await completeVisitInPlace();
+  };
+
+  // Finish the active consultation on its own visit row: stamp the end time,
+  // persist the form, and flip its OWN appointment to COMPLETED (first time
+  // only). A visit with no appointment of its own is finished purely by the
+  // end-stamp — we never touch the entry appointment, which belongs to a
+  // different visit.
+  const completeVisitInPlace = async () => {
+    if (!activeVisit) return;
+    const apptId = activeVisit.appointmentId;
+    // currentlyCompleted gates the status patch (only flip → COMPLETED when the
+    // live status isn't already there). everCompleted is for the toast/label —
+    // true even on an amend re-open (live status back to IN_PROGRESS).
+    const currentlyCompleted = activeCompleted;
+    // Re-completing after an amend re-open (reopenStartRef set) → "Changes
+    // saved" rather than "Visit marked complete".
+    const everCompleted = currentlyCompleted || reopenStartRef.current != null;
     // Stop the consultation timer and persist the form. The backend computes
     // the duration from sessionStartedAt (set when the doctor opened the pad)
     // to sessionEndedAt. On the FIRST completion we stamp the end time now;
     // re-saving an already-completed visit preserves the original end time so
     // the recorded duration isn't inflated.
-    if (activeVisit) {
-      const endIso = activeVisit.sessionEndedAt ?? new Date().toISOString();
-      const req: SaveVisitRequest = {
-        ...buildSaveRequest(),
-        sessionEndedAt: endIso,
-      };
-      await updateVisit(activeVisit.id, req);
-      await refetchVisits();
-      setDirty(false);
-    }
-    if (selectedAppointmentId && !alreadyCompleted) {
-      // Flip status only on the first completion. A later re-save keeps the
-      // visit Completed — it never goes back to In Progress.
-      await patchAppointmentStatus(selectedAppointmentId, "COMPLETED");
+    // Fresh end time when re-completing a re-opened visit (reopenStartRef set);
+    // otherwise preserve the original end so re-saving doesn't inflate duration.
+    const endIso = (reopenStartRef.current ? null : activeVisit.sessionEndedAt) ?? new Date().toISOString();
+    const req: SaveVisitRequest = {
+      ...buildSaveRequest(),
+      sessionEndedAt: endIso,
+    };
+    await updateVisit(activeVisit.id, req);
+    // Mark this visit completed-at-least-once so the footer button switches to
+    // "Save changes" from now on (the live status flips back to IN_PROGRESS on
+    // a later amend re-open, so the button can't rely on status alone).
+    markVisitCompleted(activeVisit.id);
+    if (apptId && !currentlyCompleted) {
+      // Flip status to COMPLETED whenever it isn't already (first completion OR
+      // re-completing after an amend re-opened it to IN_PROGRESS).
+      await patchAppointmentStatus(apptId, "COMPLETED");
       // Clear the "Ongoing" flag so the completed card shows Completed.
       if (selectedPatient) unmarkStarted(selectedPatient.id);
     }
-    // Reflect completion locally so the open-pad effects don't re-mark this
-    // patient as Ongoing, and the button switches to its "save" mode.
-    setSelectedAppointmentStatus("COMPLETED");
-    showToast(alreadyCompleted ? "Changes saved" : "Visit marked complete");
+    // Refetch AFTER the status patch so the visit DTO carries the new
+    // appointmentStatus — the footer keys its label off the active visit.
+    await refetchVisits();
+    // Reflect completion locally too so the open-pad effect doesn't re-mark
+    // the patient Ongoing (it keys off selectedAppointmentStatus). Only when
+    // the visit we completed IS the entry appointment.
+    if (apptId && apptId === selectedAppointmentId) setSelectedAppointmentStatus("COMPLETED");
+    setDirty(false);
+    setPendingSave(false);
+    editedSinceLoadRef.current = false;
+    // Clear the re-open guards so a later edit re-opens it (timer + Ongoing)
+    // again. The footer label now keys off the completed-marker set above, so it
+    // stays "Save changes" even after the re-open flips status back to
+    // IN_PROGRESS.
+    startedInProgressRef.current = null;
+    reopenStartRef.current = null;
+    showToast(everCompleted ? "Changes saved" : "Visit marked complete");
+  };
+
+  // Confirm action for the "move to today" dialog (triggered the moment the
+  // doctor edits an OLD pending visit): clone the in-form data — including the
+  // edit that triggered this — into a fresh visit dated today, delete the
+  // stale pending visit, and land the doctor on the new today tab to keep
+  // working. The visit stays IN PROGRESS (no end stamp); the doctor completes
+  // it later like any other today visit.
+  const moveToToday = async () => {
+    if (!activeVisit || !selectedPatientId) { setMoveToTodayDate(null); return; }
+    // Same guard as save/complete — never relocate a visit carrying invalid
+    // vitals; keep the dialog open so the doctor can fix the highlighted fields.
+    if (hasInvalidVitals) { showToast("Enter valid vitals first"); return; }
+    setSaving(true);
+    const oldId = activeVisit.id;
+    const apptId = activeVisit.appointmentId;
+    const startedAt = activeVisit.sessionStartedAt;
+    const prevLen = visits.length; // net unchanged (one deleted, one created)
+    try {
+      const base = buildSaveRequest();
+      const draft: SaveVisitRequest = {
+        ...base,
+        visitDate: todayIso(),
+        // Carry the appointment link so the moved visit stays tied to the same
+        // booking; preserve the original start so the duration is honest.
+        appointmentId: apptId ?? undefined,
+        sessionStartedAt: startedAt ?? new Date().toISOString(),
+        sessionEndedAt: null,
+        sessionDurationSec: null,
+        prescriptions: base.prescriptions.map((p, i) => ({ ...p, id: null, position: i + 1 })),
+      };
+      await createVisit(selectedPatientId, draft);
+      await deleteVisit(oldId);
+      await refetchVisits();
+      setDirty(false);
+      editedSinceLoadRef.current = false;
+      // The new today visit sorts last; land the doctor on it to keep editing.
+      setActiveTab(Math.max(0, prevLen - 1));
+      showToast("Visit moved to today");
+    } catch (e) {
+      showToast(`Move failed: ${(e as Error).message}`);
+    } finally {
+      setSaving(false);
+      setMoveToTodayDate(null);
+    }
+  };
+
+  // Cancel the move: discard the edit that triggered the dialog and restore
+  // the old pending visit's saved data, leaving it untouched on its own date.
+  // Bumping the nonce remounts the visit subtree (uncontrolled inputs reset to
+  // their defaultValues) and re-runs the populate effect (controlled state).
+  const cancelMoveToToday = () => {
+    setMoveToTodayDate(null);
+    setDirty(false);
+    setPendingSave(false);
+    editedSinceLoadRef.current = false;
+    setRevertNonce((n) => n + 1);
   };
 
   // Opening the pad for an At Doc / In Progress patient flips the queue card
@@ -1707,11 +1961,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     }
   }, [selectedPatient, selectedAppointmentId, selectedAppointmentStatus]);
 
-  // Start the consultation timer the moment the doctor opens the pad for an
-  // appointment that's with them (At Doc / In Progress): stamp
-  // sessionStartedAt once. Server-persisted; the backend computes the elapsed
-  // duration up to "Complete visit". Guarded so it fires once per visit and
-  // never overwrites a start time that's already set.
+  // Opening the pad STARTS the consultation: the moment the doctor opens an
+  // appointment that's with them (At Doc), flip it to IN_PROGRESS (Ongoing) and
+  // stamp sessionStartedAt — no edit required. So the queue + card show Ongoing
+  // and the live timer runs from pad-open. Guarded to fire once per visit and
+  // never overwrite an existing start time.
   const timerStartedForVisitRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (!activeVisit || !selectedAppointmentId) return;
@@ -1721,6 +1975,12 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     const apptStatus = (selectedAppointmentStatus ?? "").toUpperCase();
     if (apptStatus !== "AT_DOC" && apptStatus !== "IN_PROGRESS") return;
     timerStartedForVisitRef.current = activeVisit.id;
+    // Flip AT_DOC → IN_PROGRESS right on open (not just on edit) so the queue
+    // reflects the live consultation immediately.
+    if (apptStatus === "AT_DOC") {
+      setSelectedAppointmentStatus("IN_PROGRESS");
+      void patchAppointmentStatus(selectedAppointmentId, "IN_PROGRESS");
+    }
     const req: SaveVisitRequest = {
       ...buildSaveRequest(),
       sessionStartedAt: new Date().toISOString(),
@@ -1732,6 +1992,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   const handleAddVisit = async () => {
     if (!selectedPatientId) return;
     setSaving(true);
+    setAddingVisit(true);
     try {
       // Persist any unsaved edits on the CURRENT visit before switching to the
       // new one, so adding a visit can never appear to drop the previous one's
@@ -1774,6 +2035,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       showToast(`Add visit failed: ${(e as Error).message}`);
     } finally {
       setSaving(false);
+      setAddingVisit(false);
     }
   };
 
@@ -1798,7 +2060,8 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       });
     if (meds.length === 0) { showToast("Add a medicine before sharing"); return; }
 
-    const clinicName = localStorage.getItem("docodile_clinic_name") || "Clinic";
+    // TODO(plan-3): source clinic name from a settings endpoint
+    const clinicName = "";
     const lines = [
       `*${clinicName}*`,
       `Prescription for ${selectedPatient.name}`,
@@ -1870,7 +2133,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       visitDate: activeVisit.visitDate,
       visitTime: new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }),
       referredBy: referDoctorName || null,
-      doctorName: doctors.find((d) => d.id === activeVisit.createdByDoctorId)?.name ?? null,
+      // Prefer the server-resolved name (works even when the prescriber isn't in
+      // the caller's scoped doctors list); fall back to the loaded list.
+      doctorName: activeVisit.createdByDoctorName ?? doctors.find((d) => d.id === activeVisit.createdByDoctorId)?.name ?? null,
       doctorCredentials: null,
       complaints: complaintsValue,
       diagnosis: diagnosisValue,
@@ -1939,7 +2204,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     // misleading screen on its way to the actual chart.
     if (selectedPatientId !== null) {
       return (
-        <div ref={pageRootRef} style={{ padding: 40, textAlign: "center", color: "#888", fontFamily: "'Inter', sans-serif", fontSize: 14 }}>
+        <div ref={pageRootRef} style={{ padding: 40, textAlign: "center", color: colors.neutral500, fontFamily: "'Inter', sans-serif", fontSize: 14 }}>
           Loading patient file…
         </div>
       );
@@ -1961,136 +2226,38 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
 
   return (
     <div ref={pageRootRef} style={styles.page}>
-      {/* Header — title + subtitle swap based on which left-rail action is
-          active. Reports view also surfaces an "+ Add Report" pill on the
-          right (Figma node 2143:11171). */}
-      <header style={styles.header}>
-        <div style={styles.headerLeft}>
-          <button
-            type="button"
-            style={styles.backButton}
-            aria-label="Back to patients"
-            onClick={() => {
-              setSelectedPatient(null);
-              setSelectedAppointmentId(null);
-              // If the doctor jumped in from another tab (e.g. Patient
-              // Files), route them straight back. Otherwise stay on
-              // Prescription and surface the picker.
-              if (returnTab && onNavigate) {
-                const tab = returnTab;
-                setReturnTab(null);
-                onNavigate(tab);
-              }
-            }}
-          >
-            <ArrowLeftIcon width={24} height={24} />
-          </button>
-        </div>
-        <div style={styles.headerRight}>
-          <div style={styles.headerTitleGroup}>
-            <h2 style={styles.title}>{headerTitle}</h2>
-            <p style={styles.subtitle}>{headerSubtitle}</p>
-          </div>
-          {listViewConfig && (
-            <button
-              type="button"
-              style={{
-                ...styles.addReportButton,
-                ...(canEditForm ? null : { opacity: 0.55, cursor: "not-allowed" }),
-              }}
-              onClick={() => setShowAddModal(true)}
-              disabled={!canEditForm}
-              title={!canEditForm ? (isLatestVisit ? "Start a session to upload" : "Past visits are read-only") : undefined}
-            >
-              <span style={styles.addReportPlus}>+</span>
-              <span>{listViewConfig.addLabel}</span>
-            </button>
-          )}
-          {/* Save button removed — saves are now auto-triggered every 30s
-              while a session is running, plus on End Session. */}
-        </div>
-      </header>
+      {/* Sticky record header — back · patient name · section nav (Info first
+          via NAV_ORDER) · contact "⋯" kebab. Now the shared, reusable
+          <PatientRecordHeader> (Patterns) rather than hand-built markup. */}
+      <PatientRecordHeader
+        title={selectedPatient?.name ?? ""}
+        onBack={() => {
+          setSelectedPatient(null);
+          setSelectedAppointmentId(null);
+        }}
+        backLabel="Back to patients"
+        navLabel="Patient record sections"
+        sections={NAV_ORDER.map(
+          (i): RecordSection => ({
+            id: String(i),
+            label: ACTION_META[i].label,
+            icon: ACTION_META[i].icon,
+            badge: countFor(i),
+          })
+        )}
+        activeId={String(activeAction)}
+        onSelect={(id) => setActiveAction(Number(id))}
+        actions={
+          <PopoverMenu
+            trigger={<span style={styles.kebabTrigger} aria-hidden="true">⋯</span>}
+            items={contactMenuItems}
+            ariaLabel="Patient contact and actions"
+          />
+        }
+      />
 
       <div style={styles.body}>
-        {/* ─── Left column ──────────────────────────────────────────── */}
-        <aside style={styles.leftColumn}>
-          <div style={styles.patientWrapper}>
-            <div style={styles.avatar}>
-              <img
-                src={pickAvatar({
-                  gender: selectedPatient?.gender,
-                  // backend stores age in months; the picker buckets in years
-                  ageYears:
-                    selectedPatient?.age != null
-                      ? Math.floor(selectedPatient.age / 12)
-                      : null,
-                })}
-                alt=""
-                width={72}
-                height={72}
-                style={{ display: "block", objectFit: "contain" }}
-              />
-            </div>
-            <div style={styles.patientCard}>
-              <p style={styles.patientPrimary}>{selectedPatient?.name ?? ""}</p>
-              <p style={styles.patientSecondary}>
-                {formatPatientMeta(selectedPatient)}
-              </p>
-            </div>
-          </div>
-
-          <div style={styles.actionList}>
-            {ACTION_META.map((a, i) => {
-              const isActive = activeAction === i;
-              return (
-                <div
-                  key={a.label}
-                  style={{
-                    ...styles.actionRow,
-                    ...(isActive ? styles.actionRowActive : {}),
-                  }}
-                  onClick={() => setActiveAction(i)}
-                >
-                  {a.icon}
-                  <span style={styles.actionLabel}>{a.label}</span>
-                  <span
-                    style={{
-                      ...styles.actionBadge,
-                      ...(isActive ? styles.actionBadgeActive : {}),
-                    }}
-                  >
-                    {countFor(i)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* AI Summary card — Figma node 2143:11160. Static cream tile with
-              a serif heading and a paragraph-s body summarizing the patient. */}
-          <div style={styles.aiSummaryCard}>
-            <h4 style={styles.aiSummaryTitle}>AI Summary</h4>
-            <p style={styles.aiSummaryBody}>{AI_SUMMARY_TEXT}</p>
-          </div>
-
-          <div style={styles.shareCard}>
-            {CONTACT_ACTIONS.map((a) => (
-              <div
-                key={a.label}
-                style={{ ...styles.actionRow, cursor: a.label === "Edit Patient Info" ? "pointer" : "default" }}
-                onClick={a.label === "Edit Patient Info" ? () => setShowEditPatient(true) : undefined}
-                role={a.label === "Edit Patient Info" ? "button" : undefined}
-                tabIndex={a.label === "Edit Patient Info" ? 0 : undefined}
-                onKeyDown={a.label === "Edit Patient Info" ? (e) => { if (e.key === "Enter" || e.key === " ") setShowEditPatient(true); } : undefined}
-              >
-                {a.icon}
-                <span style={styles.actionLabel}>{a.label}</span>
-              </div>
-            ))}
-          </div>
-        </aside>
-
-        {/* ─── Right area — content swapped via activeAction. Locked
+        {/* ─── Form area — content swapped via activeAction. Locked
               behind the session: until the user clicks Start on the
               SessionBar, pointer-events are blocked and the content fades
               very slightly so the form reads as "frozen". */}
@@ -2115,104 +2282,145 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
           // Any descendant input/textarea/select change bubbles here — flag
           // unsaved edits so the "Save changes" button surfaces on an
           // already-completed visit only after the doctor actually edits.
-          onChange={() => { if (canEditForm) setDirty(true); }}
+          // flagDirty() ignores the stray change events that fire while a
+          // visit's data is loading into the controlled form (load-settling
+          // guard), so opening a pre-filled pad never looks pre-edited.
+          onChange={() => { if (canEditForm) flagDirty(); }}
           // Save-on-blur: any descendant input / textarea / select that
           // loses focus triggers a silent save. React.onBlur surfaces the
           // bubbled focusout, so a single handler at the form root covers
           // every field below without needing to wire each one.
           onBlur={handleFormBlur}>
 
-          {comingSoonLabel ? (
+          {activeAction === INFO_ACTION ? (
+            // Info — reuses the New Appointment cards: ID/avatar card, a
+            // read-only basic-info card, and an AI summary card (in the Bill
+            // card's slot).
+            <div style={styles.infoGrid}>
+              <Card style={styles.infoIdCard}>
+                <img
+                  src={pickAvatar({
+                    gender: selectedPatient?.gender,
+                    ageYears: selectedPatient?.age != null ? Math.floor(selectedPatient.age / 12) : null,
+                  })}
+                  alt=""
+                  style={styles.infoAvatar}
+                />
+                <h1 style={styles.infoIdText}>
+                  {selectedPatient?.displayNo != null ? `T${selectedPatient.displayNo}` : "T---"}
+                </h1>
+              </Card>
+
+              <Card style={styles.infoFieldsCard}>
+                {[
+                  { icon: <Icon name="user" tone="inherit" style={styles.infoRowIcon} />, label: "Name", value: selectedPatient?.name },
+                  { icon: <Icon name="mail" tone="inherit" style={styles.infoRowIcon} />, label: "Email", value: selectedPatient?.email },
+                  { icon: <Icon name="phone" tone="inherit" style={styles.infoRowIcon} />, label: "Phone", value: selectedPatient?.phone },
+                  { icon: <Icon name="calendar" tone="inherit" style={styles.infoRowIcon} />, label: "Age", value: selectedPatient?.age != null ? `${Math.floor(selectedPatient.age / 12)} yrs` : null },
+                  { icon: <Icon name="user" tone="inherit" style={styles.infoRowIcon} />, label: "Gender", value: selectedPatient?.gender },
+                ].map((f) => (
+                  <div key={f.label} style={styles.infoRow}>
+                    {f.icon}
+                    <div style={styles.infoValue}>{f.value || "—"}</div>
+                  </div>
+                ))}
+              </Card>
+
+              <Card style={styles.infoAiCard}>
+                <div style={styles.infoAiHead}>
+                  <span style={styles.infoAiSparkle} aria-hidden="true">✨</span>
+                  <span style={styles.infoAiTitle}>AI summary</span>
+                </div>
+                <p style={styles.infoAiBody}>
+                  {aiConfigured === false
+                    ? "AI is not configured for this clinic."
+                    : aiSummary?.summary
+                      ? aiSummary.summary
+                      : "No summary yet — open AI Summary to generate one."}
+                </p>
+              </Card>
+            </div>
+          ) : activeAction === 2 ? (
+            // Timeline — chronological feed of the patient's visits (newest
+            // first), each with a short synopsis (complaints → diagnosis).
+            // File / Rx events interleave here once an activity feed exists.
+            <div style={styles.timeline}>
+              {visits.length === 0 ? (
+                <p style={styles.comingSoonBody}>No visits yet.</p>
+              ) : (
+                <div style={styles.timelineList}>
+                  <div style={styles.timelineLine} aria-hidden />
+                  {visits.map((v, i) => ({ v, n: i + 1 })).reverse().map(({ v, n }) => {
+                    const parts: string[] = [];
+                    if (v.complaints) parts.push(v.complaints);
+                    if (v.diagnosis) parts.push(`Dx: ${v.diagnosis}`);
+                    const synopsis = parts.join(" · ");
+                    return (
+                      <div key={v.id} style={styles.timelineItem}>
+                        <span style={styles.timelineDot}><Icon name="visits" tone="inherit" style={styles.timelineDotIcon} /></span>
+                        <div style={styles.timelineContent}>
+                          <div style={styles.timelineHead}>
+                            <span style={styles.timelineTitle}>{`Visit ${n}`}</span>
+                            <span style={styles.timelineDate}>{formatVisitLabel(v.visitDate)}</span>
+                          </div>
+                          <p style={styles.timelineSynopsis}>{synopsis || "Consultation"}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : comingSoonLabel ? (
             <div style={styles.comingSoon}>
-              <h3 style={styles.comingSoonTitle}>{comingSoonLabel}</h3>
+              {/* Section title moved into the sticky <PageHeader/>; only the
+                  "Coming soon" body remains here. */}
               <p style={styles.comingSoonBody}>Coming soon</p>
             </div>
           ) : listViewConfig ? (
             <>
-              {/* List-view tabs — same pill style as the visit tabs but with
-                the category filters from the active config. */}
+              {/* List-view tabs — styled to match the Rx Pad home page
+                filter pills (View all / At Doc / …) with tier-responsive
+                horizontal padding. */}
               <div style={styles.tabsBar}>
-                {listViewConfig.tabs.map((label, i) => (
-                  <div
-                    key={label}
-                    style={{ ...styles.tab, ...(activeListTab === i ? styles.tabActive : styles.tabInactive) }}
-                    onClick={() => setActiveListTab(i)}
-                  >
-                    <span style={styles.tabLabel}>{label}</span>
-                  </div>
-                ))}
-                <div style={styles.reportViewToggle}>
-                  <button
-                    type="button"
-                    style={{
-                      ...styles.reportViewToggleButton,
-                      ...(viewMode === "list" ? styles.reportViewToggleButtonActive : {}),
-                    }}
-                    onClick={() => setViewMode("list")}
-                    aria-label="List view"
-                    aria-pressed={viewMode === "list"}
-                  >
-                    <ListSortIcon width={24} height={24} />
-                  </button>
-                  <button
-                    type="button"
-                    style={{
-                      ...styles.reportViewToggleButton,
-                      ...(viewMode === "grid" ? styles.reportViewToggleButtonActive : {}),
-                    }}
-                    onClick={() => setViewMode("grid")}
-                    aria-label="Grid view"
-                    aria-pressed={viewMode === "grid"}
-                  >
-                    <WidgetIcon width={24} height={24} />
-                  </button>
-                </div>
+                <Tabs
+                  variant="block"
+                  size="sm"
+                  inline
+                  items={listViewConfig.tabs.map((label, i) => ({ id: String(i), label }))}
+                  activeId={String(activeListTab)}
+                  onSelect={(id) => setActiveListTab(Number(id))}
+                />
+                <ViewToggle value={viewMode} onChange={setViewMode} style={{ marginLeft: "auto" }} />
               </div>
 
               {viewMode === "list" ? (
-                /* List table — header row of column captions + data rows. */
-                <div style={styles.reportsTable}>
-                  <div style={styles.reportsHeaderRow}>
-                    <span style={{ textAlign: "center" }}>#</span>
-                    <span></span>
-                    <span>{listViewConfig.nameColumn}</span>
-                    <span style={{ textAlign: "center" }}>Category</span>
-                    <span style={{ textAlign: "center" }}>{listViewConfig.dateColumn}</span>
-                    <span style={{ textAlign: "center" }}>Actions</span>
-                  </div>
-                  {displayRows.map((r, i) => (
-                    <div
-                      key={r.id ?? i}
-                      style={{ ...styles.reportRow, cursor: "pointer" }}
-                      onClick={() => setViewerOpen(r)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          setViewerOpen(r);
-                        }
-                      }}
-                    >
-                      <span style={styles.reportSerial}>{i + 1}</span>
-                      <div style={styles.reportMicChip}>
-                        <MicIcon width={24} height={24} />
+                /* List table — the shared DataGrid (Catalog-styled). Whole row
+                   opens the file in the viewer. */
+                <DataGrid
+                  rows={displayRows}
+                  rowKey={(r, i) => r.id ?? i}
+                  onRowClick={(r) => setViewerOpen(r)}
+                  columns={[
+                    { key: "n", header: "#", width: 40, align: "center", render: (_r, i) => i + 1 },
+                    { key: "mic", header: "", width: 48, align: "center", render: () => <Icon name="microphone" size={24} tone="inherit" /> },
+                    { key: "name", header: listViewConfig.nameColumn, align: "left", render: (r) => r.name },
+                    { key: "cat", header: "Category", width: 140, render: (r) => r.category },
+                    { key: "date", header: listViewConfig.dateColumn, width: 140, render: (r) => r.date },
+                    { key: "act", header: "Actions", width: 110, render: () => (
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: spacing.s }}>
+                        <Icon name="download" size={24} tone="inherit" />
+                        <Icon name="menu" size={20} tone="inherit" />
                       </div>
-                      <span style={styles.reportName}>{r.name}</span>
-                      <span style={styles.reportCell}>{r.category}</span>
-                      <span style={styles.reportCell}>{r.date}</span>
-                      <div style={styles.reportActions}>
-                        <DownloadIcon width={24} height={24} />
-                        <ReorderIcon width={20} height={20} style={styles.reorderHandle} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ) },
+                  ]}
+                />
               ) : (
                 /* Grid view — Figma node 2143:11610. Cream cards with a white
                    inner tile (file thumbnail placeholder + mic chip) and
                    name + date + size below. Kebab handle in top-right. */
                 <div style={styles.reportsGrid}>
+                  {/* Add-file affordance lives in the floating action bar now. */}
                   {displayRows.map((r, i) => (
                     <div
                       key={r.id ?? i}
@@ -2233,13 +2441,13 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                           mimeType={r.mimeType}
                           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
                         />
-                        {!(r.mimeType ?? "").startsWith("image/") && <FileIcon style={styles.reportCardThumbIcon} />}
+                        {!(r.mimeType ?? "").startsWith("image/") && <Icon name="file" tone="inherit" style={styles.reportCardThumbIcon} />}
                         <span style={styles.reportCardMic}>
-                          <MicIcon width={20} height={20} />
+                          <Icon name="microphone" size={20} tone="inherit" />
                         </span>
                       </div>
                       <div style={styles.reportCardKebab}>
-                        <ReorderIcon width={20} height={20} />
+                        <Icon name="menu" size={20} tone="inherit" />
                       </div>
                       <div style={styles.reportCardFooter}>
                         <span style={styles.reportCardName}>{r.name}</span>
@@ -2265,7 +2473,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
             // than dropping straight into a blank session form.
             <section style={styles.rightColumn}>
               <div style={styles.noVisits}>
-                <VisitsIcon width={40} height={40} style={styles.noVisitsIcon} />
+                <Icon name="visits" size={40} tone="inherit" style={styles.noVisitsIcon} />
                 <h3 style={styles.noVisitsTitle}>No visits yet</h3>
                 <p style={styles.noVisitsText}>
                   This patient has no recorded visits. Create one to start
@@ -2283,46 +2491,31 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
             </section>
           ) : (
             <>
-              {/* Visit tabs — sit OUTSIDE the cream sheet, above it. The tuning
-              button (Figma node 2133:9927) is pushed to the far right of the
-              row to filter / reconfigure the current visit's view. Each tab
+              {/* Visit tabs — sit OUTSIDE the cream sheet, above it. Each tab
               loads that visit's prescription data into the form below.
               `pointerEvents: auto` is forced on so the tabs remain clickable
-              even when the form below has `pointer-events: none` (locked
-              past visit / pre-Start state) — the doctor must always be
-              able to navigate back to today to start the session. */}
-              <div style={{ ...styles.tabsBar, pointerEvents: "auto" }}>
-                {visits.map((v, i) => (
-                  <div
-                    key={v.id}
-                    style={{ ...styles.tab, ...(activeTab === i ? styles.tabActive : styles.tabInactive) }}
-                    onClick={() => setActiveTab(i)}
-                  >
-                    <span style={styles.tabCaption}>{`visit ${i + 1}`}</span>
-                    <span style={styles.tabLabel}>{formatVisitLabel(v.visitDate)}</span>
-                  </div>
-                ))}
-                {/* "+ New Visit" lives inside the tuning dropdown now —
-                    see tuningMenuItems above. */}
-                <div style={styles.tuningWrap}>
-                  <PopoverMenu
-                    trigger={<TuningIcon width={24} height={24} />}
-                    items={tuningMenuItems}
-                    ariaLabel="Visit settings"
-                  />
-                </div>
-              </div>
+              even when the form below has `pointer-events: none` (locked past
+              visit / pre-Start state) — the doctor must always be able to
+              navigate back to today to start the session. */}
+              <VisitTabs
+                style={{ ...styles.tabsBar, pointerEvents: "auto" }}
+                tabs={visits.map((v) => ({ id: v.id, label: formatVisitLabel(v.visitDate) }))}
+                activeIndex={activeTab}
+                onSelect={setActiveTab}
+                onAddVisit={handleAddVisit}
+                addingVisit={addingVisit}
+              />
 
               {/* Cream sheet wrapping all visit-content sections. Keyed by the
               active tab so React unmounts/remounts the subtree on switch,
               giving uncontrolled inputs fresh defaultValues for that visit. */}
-              <section key={`visit-${activeTab}`} style={styles.rightColumn}>
+              <section key={`visit-${activeTab}-${revertNonce}`} style={styles.rightColumn}>
 
                 {/* Vitals */}
                 <div style={styles.sectionCard}>
                   <div style={styles.sectionHeader}>
                     <div style={styles.sectionTitleWrap}>
-                      <HeartPulseIcon style={styles.sectionIcon} />
+                      <Icon name="heart-pulse" tone="inherit" style={styles.sectionIcon} />
                       <h3 style={styles.sectionTitle}>Vitals</h3>
                     </div>
                     <button
@@ -2331,7 +2524,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                       onClick={() => toggleSection("vitals")}
                       aria-label={openSections.vitals ? "Collapse Vitals" : "Expand Vitals"}
                     >
-                      <ChevronIcon
+                      <Icon
+                        name="chevron-up"
+                        tone="inherit"
                         style={{
                           ...styles.sectionIcon,
                           transform: openSections.vitals ? "rotate(0deg)" : "rotate(180deg)",
@@ -2342,69 +2537,58 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   </div>
                   {openSections.vitals && (
                     <div style={styles.vitalsGrid}>
-                      {VITAL_COLUMNS.map((col, ci) => (
-                        <div key={ci} style={styles.vitalColumn}>
-                          {col.map((v, ri) => {
-                            const cellKey = `${ci}-${ri}`;
+                      {VITAL_CELLS.map(({ cell: v, cellKey }) => {
                             const cell = vitalState[cellKey];
                             const canToggle = !!UNIT_TOGGLES[cell.unit];
                             // BP is rendered as two inputs separated by a fixed `/`.
                             // The combined "sys/dia" string still lives in vitalState
                             // so unit conversion (mmHg↔kPa) keeps working.
                             const isBp = v.label === "BP";
+                            // Height/Weight ⇄ BMI mutual exclusion: BMI is locked
+                            // while Height/Weight carry a value (it auto-calculates);
+                            // Height + Weight are locked while a BMI was typed
+                            // directly. A locked cell is read-only, can't toggle its
+                            // unit, and its edit handler is a no-op.
+                            const isBmi = v.label === "BMI";
+                            const isHeightOrWeight = v.label === "Height" || v.label === "Weight";
+                            const cellLocked =
+                              (isBmi && lockBmiField) || (isHeightOrWeight && lockHeightWeightFields);
                             const [bpSys = "", bpDia = ""] = isBp ? cell.value.split("/") : [];
                             const setBpPart = (sys: string, dia: string) =>
                               setVitalValue(cellKey, `${sys}/${dia}`);
                             // Range validation per (label, unit). Out-of-range values
-                            // get a soft red tint; empty values stay neutral.
+                            // get a soft red tint; empty values stay neutral. A
+                            // locked (derived) BMI never shows an error — its inputs do.
                             const sysValid = isBp ? isVitalValid("BP_sys", bpSys, cell.unit) : true;
                             const diaValid = isBp ? isVitalValid("BP_dia", bpDia, cell.unit) : true;
-                            const valueValid = isBp ? sysValid && diaValid : isVitalValid(v.label, cell.value, cell.unit);
+                            const valueValid = isBmi && lockBmiField
+                              ? true
+                              : isBp ? sysValid && diaValid : isVitalValid(v.label, cell.value, cell.unit);
                             const rangeForLabel = isBp ? VITAL_RANGES.BP_sys?.[cell.unit] : VITAL_RANGES[v.label]?.[cell.unit];
                             const rangeHint = rangeForLabel
                               ? `Valid: ${rangeForLabel.min}–${rangeForLabel.max} ${cell.unit}`
                               : undefined;
                             return (
-                              <div key={ri} style={styles.vitalCell}>
+                              <div key={cellKey} style={styles.vitalCell}>
                                 <span style={styles.vitalLabel}>{v.label}</span>
                                 <div style={styles.vitalInputRow} title={!valueValid ? rangeHint : undefined}>
-                                  {isBp ? (
-                                    <BpInput
-                                      valid={valueValid}
-                                      sysValid={sysValid}
-                                      diaValid={diaValid}
-                                      sys={bpSys}
-                                      dia={bpDia}
-                                      onSysChange={(v2) => setBpPart(v2, bpDia)}
-                                      onDiaChange={(v2) => setBpPart(bpSys, v2)}
-                                      onEnter={(e) => validateVitalOnEnter(e, v.label, cell.value, cell.unit, true)}
-                                    />
-                                  ) : (
-                                    <input
-                                      style={{
-                                        ...styles.vitalInputValue,
-                                        ...(!valueValid ? styles.vitalInputValueInvalid : {}),
-                                      }}
-                                      placeholder={v.placeholder ?? ""}
-                                      value={cell.value}
-                                      onChange={(e) => setVitalValue(cellKey, e.target.value)}
-                                      onKeyDown={(e) => validateVitalOnEnter(e, v.label, cell.value, cell.unit)}
-                                      aria-invalid={!valueValid}
-                                    />
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={canToggle ? () => toggleVitalUnit(cellKey) : undefined}
-                                    style={{
-                                      ...styles.vitalUnit,
-                                      width: v.unitWidth ?? 44,
-                                      cursor: canToggle ? "pointer" : "default",
-                                      ...(!valueValid ? styles.vitalUnitInvalid : {}),
-                                    }}
-                                    title={canToggle ? `Switch to ${UNIT_TOGGLES[cell.unit].altUnit}` : undefined}
-                                  >
-                                    {cell.unit}
-                                  </button>
+                                  <MeasureField
+                                    bp={isBp}
+                                    value={isBp ? bpSys : cell.value}
+                                    readOnly={cellLocked}
+                                    onChange={isBp ? (val) => setBpPart(val, bpDia) : cellLocked ? () => {} : (val) => setVitalValue(cellKey, val)}
+                                    value2={isBp ? bpDia : undefined}
+                                    onChange2={isBp ? (val) => setBpPart(bpSys, val) : undefined}
+                                    unit={cell.unit}
+                                    unitWidth={v.unitWidth}
+                                    onToggleUnit={canToggle && !cellLocked ? () => toggleVitalUnit(cellKey) : undefined}
+                                    invalid={!valueValid}
+                                    dense
+                                    placeholder={v.placeholder ?? ""}
+                                    onKeyDown={(e) => validateVitalOnEnter(e, v.label, cell.value, cell.unit, isBp)}
+                                    ariaLabel={isBp ? "Systolic" : v.label}
+                                    ariaLabel2={isBp ? "Diastolic" : undefined}
+                                  />
                                 </div>
                                 {!valueValid && (
                                   <span style={styles.vitalErrorMessage}>
@@ -2415,9 +2599,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                 )}
                               </div>
                             );
-                          })}
-                        </div>
-                      ))}
+                      })}
                     </div>
                   )}
                 </div>
@@ -2426,7 +2608,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                 <div style={styles.sectionCard}>
                   <div style={styles.sectionHeader}>
                     <div style={styles.sectionTitleWrap}>
-                      <HourglassIcon style={styles.sectionIcon} />
+                      <Icon name="hourglass-line" tone="inherit" style={styles.sectionIcon} />
                       <h3 style={styles.sectionTitle}>History</h3>
                     </div>
                     <button
@@ -2435,7 +2617,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                       onClick={() => toggleSection("history")}
                       aria-label={openSections.history ? "Collapse History" : "Expand History"}
                     >
-                      <ChevronIcon
+                      <Icon
+                        name="chevron-up"
+                        tone="inherit"
                         style={{
                           ...styles.sectionIcon,
                           transform: openSections.history ? "rotate(0deg)" : "rotate(180deg)",
@@ -2483,11 +2667,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   <div style={styles.noteCard}>
                     <div style={styles.noteCardHeader}>
                       <div style={styles.sectionTitleWrap}>
-                        <ChatSquareCallIcon style={styles.sectionIcon} />
+                        <Icon name="chat-dots" tone="inherit" style={styles.sectionIcon} />
                         <h3 style={styles.sectionTitle}>Complaints</h3>
                       </div>
                       <PopoverMenu
-                        trigger={<ReorderIcon style={styles.reorderHandle} width={24} height={24} />}
+                        trigger={<Icon name="menu" size={24} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "complaints") }]}
                         ariaLabel="Template options"
                       />
@@ -2502,29 +2686,28 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                         containerStyle={NOTE_CARD_TAGBOX_STYLE}
                       />
                       <span style={styles.noteCardDictate}>
-                        <button
-                          type="button"
-                          title="Copy complaints from previous visit"
+                        <IconButton
+                          ariaLabel="Copy complaints from previous visit"
+                          size={28}
                           disabled={!prevVisit?.complaints || !canEditForm}
                           onClick={() => prevVisit?.complaints && setComplaintsValue(prevVisit.complaints)}
-                          style={rewindBtnStyle(!prevVisit?.complaints || !canEditForm)}
                         >
-                          <RewindIcon width={20} height={20} />
-                        </button>
-                        <button type="button" title="Load template" onClick={() => openTemplates("load", "complaints")} style={rewindBtnStyle(false)}>
-                          <MicIcon width={20} height={20} />
-                        </button>
+                          <Icon name="rewind-back-circle" size={20} tone="inherit" />
+                        </IconButton>
+                        <IconButton ariaLabel="Load template" size={28} onClick={() => openTemplates("load", "complaints")}>
+                          <Icon name="microphone" size={20} tone="inherit" />
+                        </IconButton>
                                               </span>
                     </div>
                   </div>
                   <div style={styles.noteCard}>
                     <div style={styles.noteCardHeader}>
                       <div style={styles.sectionTitleWrap}>
-                        <MagniferBugIcon style={styles.sectionIcon} />
+                        <Icon name="magnifer-bug" tone="inherit" style={styles.sectionIcon} />
                         <h3 style={styles.sectionTitle}>Diagnosis</h3>
                       </div>
                       <PopoverMenu
-                        trigger={<ReorderIcon style={styles.reorderHandle} width={24} height={24} />}
+                        trigger={<Icon name="menu" size={24} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "diagnosis") }]}
                         ariaLabel="Template options"
                       />
@@ -2539,18 +2722,17 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                         containerStyle={NOTE_CARD_TAGBOX_STYLE}
                       />
                       <span style={styles.noteCardDictate}>
-                        <button
-                          type="button"
-                          title="Copy diagnosis from previous visit"
+                        <IconButton
+                          ariaLabel="Copy diagnosis from previous visit"
+                          size={28}
                           disabled={!prevVisit?.diagnosis || !canEditForm}
                           onClick={() => prevVisit?.diagnosis && setDiagnosisValue(prevVisit.diagnosis)}
-                          style={rewindBtnStyle(!prevVisit?.diagnosis || !canEditForm)}
                         >
-                          <RewindIcon width={20} height={20} />
-                        </button>
-                        <button type="button" title="Load template" onClick={() => openTemplates("load", "diagnosis")} style={rewindBtnStyle(false)}>
-                          <MicIcon width={20} height={20} />
-                        </button>
+                          <Icon name="rewind-back-circle" size={20} tone="inherit" />
+                        </IconButton>
+                        <IconButton ariaLabel="Load template" size={28} onClick={() => openTemplates("load", "diagnosis")}>
+                          <Icon name="microphone" size={20} tone="inherit" />
+                        </IconButton>
                                               </span>
                     </div>
                   </div>
@@ -2560,7 +2742,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                 <div style={styles.sectionCard}>
                   <div style={styles.sectionHeader}>
                     <div style={styles.sectionTitleWrap}>
-                      <PillsIcon style={styles.sectionIcon} />
+                      <Icon name="pills" tone="inherit" style={styles.sectionIcon} />
                       <h3 style={styles.sectionTitle}>Rx</h3>
                     </div>
                     <button
@@ -2569,7 +2751,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                       onClick={() => toggleSection("rx")}
                       aria-label={openSections.rx ? "Collapse Rx" : "Expand Rx"}
                     >
-                      <ChevronIcon
+                      <Icon
+                        name="chevron-up"
+                        tone="inherit"
                         style={{
                           ...styles.sectionIcon,
                           transform: openSections.rx ? "rotate(0deg)" : "rotate(180deg)",
@@ -2609,8 +2793,8 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                     inputStyle={styles.rxMedicineInput}
                                     placeholder="Medicine"
                                     value={row.medicine}
-                                    onChange={(v) => { setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: v, genericName: "" } : r)); autofillRxFromHistory(i, v); }}
-                                    onSelect={(name, genericName) => { setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, medicine: name, genericName } : r)); autofillRxFromHistory(i, name); }}
+                                    onChange={(v) => { setRxRows((prev) => withTrailingRx(prev.map((r, ix) => ix === i ? { ...r, medicine: v, genericName: "" } : r))); autofillRxFromHistory(i, v); }}
+                                    onSelect={(name, genericName) => { setRxRows((prev) => withTrailingRx(prev.map((r, ix) => ix === i ? { ...r, medicine: name, genericName } : r))); autofillRxFromHistory(i, name); }}
                                   />
                                 </div>
                                 {row.medicine.trim() && (
@@ -2651,10 +2835,14 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                 <div style={styles.rxDataCell}><WhenPicker value={row.whenToTake} onChange={(v) => updateField("whenToTake", v)} /></div>
                                 <div style={styles.rxDataCell}><FrequencyIntervalPicker value={row.frequencyInterval} onChange={(v) => updateField("frequencyInterval", v)} /></div>
                                 <div style={styles.rxDataCell}><DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} /></div>
-                                <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={row.notes} onChange={(e) => updateField("notes", e.target.value)} />
-                                <button type="button" style={styles.rxDeleteBtn} onClick={() => removeRxRow(i)} title="Remove medicine">
-                                  <TrashIcon style={{ width: 16, height: 16 }} />
-                                </button>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <Field multiline variant="box" fill="filled" placeholder="Notes" value={row.notes} onChange={(v) => updateField("notes", v)} style={{ minHeight: 40, padding: `${spacing.xs} ${spacing.s}` }} inputStyle={{ fontSize: fonts.control.sm }} />
+                                </div>
+                                {row.medicine.trim() && (
+                                  <button type="button" style={styles.rxDeleteBtn} onClick={() => removeRxRow(i)} title="Remove medicine">
+                                    <Icon name="trash" size={16} tone="inherit" />
+                                  </button>
+                                )}
                               </div>
                               {row.thenRows.map((thenRow, ti) => (
                                 <div key={`then-${i}-${ti}`} style={styles.rxDataRow}>
@@ -2662,9 +2850,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                   <div style={styles.rxDataCell}><WhenPicker value={thenRow.whenToTake} onChange={(v) => updateThenField(i, ti, "whenToTake", v)} /></div>
                                   <div style={styles.rxDataCell}><FrequencyIntervalPicker value={thenRow.frequencyInterval} onChange={(v) => updateThenField(i, ti, "frequencyInterval", v)} /></div>
                                   <div style={styles.rxDataCell}><DurationPicker value={thenRow.duration} onChange={(v) => updateThenField(i, ti, "duration", v)} /></div>
-                                  <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={thenRow.notes} onChange={(e) => updateThenField(i, ti, "notes", e.target.value)} />
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <Field multiline variant="box" fill="filled" placeholder="Notes" value={thenRow.notes} onChange={(v) => updateThenField(i, ti, "notes", v)} style={{ minHeight: 40, padding: `${spacing.xs} ${spacing.s}` }} inputStyle={{ fontSize: fonts.control.sm }} />
+                                  </div>
                                   <button type="button" style={styles.rxDeleteBtn} onClick={() => removeThenRow(i, ti)} title="Remove tapering row">
-                                    <TrashIcon style={{ width: 16, height: 16 }} />
+                                    <Icon name="trash" size={16} tone="inherit" />
                                   </button>
                                 </div>
                               ))}
@@ -2672,48 +2862,29 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                           </div>
                         );
                       })}
-                      {/* Figma node 2143:10552 — "Add Medicine" footer row (white, with
-                  dictate icons + drag handle). Clicking "+" or the label
-                  appends one more empty row to the Rx table. */}
+                      {/* Rx-level actions row — copy from previous visit, load /
+                          save template. (Adding a row is now the trailing empty
+                          row: type a medicine and the next empty appears.) */}
                       <div style={styles.addMedicineRow}>
-                        <button
-                          type="button"
-                          style={styles.addMedicinePlus}
-                          onClick={() => setRxRows((rows) => [...rows, blankRxRow(rows.length + 1)])}
-                          aria-label="Add medicine row"
-                        >
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                            <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          style={styles.addMedicineText}
-                          onClick={() => setRxRows((rows) => [...rows, blankRxRow(rows.length + 1)])}
-                        >
-                          Add Medicine
-                        </button>
                         <span style={styles.dictateIcons}>
-                          <button
-                            type="button"
-                            title="Copy Rx from previous visit"
+                          <IconButton
+                            ariaLabel="Copy Rx from previous visit"
+                            size={28}
                             disabled={!prevVisit?.prescriptions?.length || !canEditForm}
                             onClick={() => {
                               if (prevVisit?.prescriptions?.length) {
-                                setRxRows(prevVisit.prescriptions.map((dto, i) => ({ ...fromRxDTO(dto), id: null, position: i + 1 })));
+                                setRxRows(withTrailingRx(prevVisit.prescriptions.map((dto, i) => ({ ...fromRxDTO(dto), id: null, position: i + 1 }))));
                               }
                             }}
-                            style={rewindBtnStyle(!prevVisit?.prescriptions?.length || !canEditForm)}
                           >
-                            <RewindIcon width={20} height={20} />
-                          </button>
-                          <button type="button" title="Load template" onClick={() => openTemplates("load", "rx")} style={rewindBtnStyle(false)}>
-                            <MicIcon width={20} height={20} />
-                          </button>
+                            <Icon name="rewind-back-circle" size={20} tone="inherit" />
+                          </IconButton>
+                          <IconButton ariaLabel="Load template" size={28} onClick={() => openTemplates("load", "rx")}>
+                            <Icon name="microphone" size={20} tone="inherit" />
+                          </IconButton>
                                                   </span>
                         <PopoverMenu
-                        trigger={<ReorderIcon style={styles.reorderHandle} width={20} height={20} />}
+                        trigger={<Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "rx") }]}
                         ariaLabel="Template options"
                       />
@@ -2729,11 +2900,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   <div style={styles.noteCard}>
                     <div style={styles.noteCardHeader}>
                       <div style={styles.sectionTitleWrap}>
-                        <DocumentIcon style={styles.sectionIcon} />
+                        <Icon name="document-school" tone="inherit" style={styles.sectionIcon} />
                         <h3 style={styles.sectionTitle}>Notes for Patient</h3>
                       </div>
                       <PopoverMenu
-                        trigger={<ReorderIcon style={styles.reorderHandle} width={20} height={20} />}
+                        trigger={<Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "notes_for_patient") }]}
                         ariaLabel="Template options"
                       />
@@ -2746,29 +2917,28 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                         onChange={(e) => setNotesForPatientValue(e.target.value)}
                       />
                       <span style={styles.noteCardDictate}>
-                        <button
-                          type="button"
-                          title="Copy notes from previous visit"
+                        <IconButton
+                          ariaLabel="Copy notes from previous visit"
+                          size={28}
                           disabled={!prevVisit?.notesForPatient || !canEditForm}
                           onClick={() => prevVisit?.notesForPatient && setNotesForPatientValue(prevVisit.notesForPatient)}
-                          style={rewindBtnStyle(!prevVisit?.notesForPatient || !canEditForm)}
                         >
-                          <RewindIcon width={20} height={20} />
-                        </button>
-                        <button type="button" title="Load template" onClick={() => openTemplates("load", "notes_for_patient")} style={rewindBtnStyle(false)}>
-                          <MicIcon width={20} height={20} />
-                        </button>
+                          <Icon name="rewind-back-circle" size={20} tone="inherit" />
+                        </IconButton>
+                        <IconButton ariaLabel="Load template" size={28} onClick={() => openTemplates("load", "notes_for_patient")}>
+                          <Icon name="microphone" size={20} tone="inherit" />
+                        </IconButton>
                                               </span>
                     </div>
                   </div>
                   <div style={{ ...styles.noteCard, ...styles.noteCardPrivate }}>
                     <div style={styles.noteCardHeader}>
                       <div style={styles.sectionTitleWrap}>
-                        <UsersIcon style={styles.sectionIcon} />
+                        <Icon name="users-group-rounded" tone="inherit" style={styles.sectionIcon} />
                         <h3 style={styles.sectionTitle}>Private Notes</h3>
                       </div>
                       <PopoverMenu
-                        trigger={<ReorderIcon style={styles.reorderHandle} width={20} height={20} />}
+                        trigger={<Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "private_notes") }]}
                         ariaLabel="Template options"
                       />
@@ -2789,7 +2959,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   {/* Tests — dictatable with mic/rewind */}
                   <div style={styles.noteRow}>
                     <div style={styles.noteLabel}>
-                      <DocumentIcon style={styles.sectionIcon} />
+                      <Icon name="document-school" tone="inherit" style={styles.sectionIcon} />
                       <span style={styles.noteLabelText}>Tests</span>
                     </div>
                     <div style={styles.noteFieldWrap}>
@@ -2802,22 +2972,21 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                         containerStyle={TESTS_TAGBOX_STYLE}
                       />
                       <span style={styles.dictateIcons}>
-                        <button
-                          type="button"
-                          title="Copy tests from previous visit"
+                        <IconButton
+                          ariaLabel="Copy tests from previous visit"
+                          size={28}
                           disabled={!prevVisit?.tests || !canEditForm}
                           onClick={() => prevVisit?.tests && setTestsValue(prevVisit.tests)}
-                          style={rewindBtnStyle(!prevVisit?.tests || !canEditForm)}
                         >
-                          <RewindIcon width={20} height={20} />
-                        </button>
-                        <button type="button" title="Load template" onClick={() => openTemplates("load", "tests")} style={rewindBtnStyle(false)}>
-                          <MicIcon width={20} height={20} />
-                        </button>
+                          <Icon name="rewind-back-circle" size={20} tone="inherit" />
+                        </IconButton>
+                        <IconButton ariaLabel="Load template" size={28} onClick={() => openTemplates("load", "tests")}>
+                          <Icon name="microphone" size={20} tone="inherit" />
+                        </IconButton>
                                               </span>
                     </div>
                     <PopoverMenu
-                        trigger={<ReorderIcon style={styles.reorderHandle} width={20} height={20} />}
+                        trigger={<Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "tests") }]}
                         ariaLabel="Template options"
                       />
@@ -2828,7 +2997,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                 doctor sets referDoctorId and closes the menu. */}
                   <div style={styles.noteRow}>
                     <div style={styles.noteLabel}>
-                      <UsersIcon style={styles.sectionIcon} />
+                      <Icon name="users-group-rounded" tone="inherit" style={styles.sectionIcon} />
                       <span style={styles.noteLabelText}>Refer to</span>
                     </div>
                     <div ref={referWrapRef} style={{ position: "relative" }}>
@@ -2848,9 +3017,10 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                           {referDoctorName || "Select doctor"}
                         </span>
                         <span style={styles.referChevron}>
-                          <ChevronIcon
-                            width={16}
-                            height={16}
+                          <Icon
+                            name="chevron-up"
+                            size={16}
+                            tone="inherit"
                             style={{ transform: referOpen ? "rotate(0deg)" : "rotate(180deg)" }}
                           />
                         </span>
@@ -2873,7 +3043,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                     e.preventDefault();
                                     setReferDoctorId(d.id);
                                     setReferOpen(false);
-                                    setDirty(true);
+                                    flagDirty();
                                   }}
                                 >
                                   <span style={styles.referMenuItemName}>{d.name}</span>
@@ -2891,7 +3061,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   {/* Next Review — date picker + "or ___ days" + notes field */}
                   <div style={styles.noteRow}>
                     <div style={styles.noteLabel}>
-                      <RestartIcon style={styles.sectionIcon} />
+                      <Icon name="restart" tone="inherit" style={styles.sectionIcon} />
                       <span style={styles.noteLabelText}>Review</span>
                     </div>
                     <div style={styles.reviewRow}>
@@ -2900,7 +3070,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                           style={styles.reviewDate}
                           onClick={() => setShowReviewDatePicker((v) => !v)}
                         >
-                          <CalendarIcon width={24} height={24} style={{ color: "currentColor" }} />
+                          <Icon name="calendar" size={24} tone="inherit" />
                           <span
                             style={{
                               ...styles.reviewDateText,
@@ -2944,7 +3114,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
           )}
         </div>
       </div>
-      <Toast message={toast.message} isVisible={toast.visible} onClose={closeToast} />
+      <Toast message={toast.message} {...resolveToastIcon(toast.message)} isVisible={toast.visible} onClose={closeToast} />
 
       {/* Prescription templates — save the current Rx + clinical fields under a
           name, or load a saved one to auto-fill. Clinic-shared (backend). */}
@@ -2961,7 +3131,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   : "Pick a saved template to auto-fill the prescription."}
               </p>
             </div>
-            <button type="button" onClick={() => setShowTemplates(false)} aria-label="Close" style={tplStyles.close}>✕</button>
+            <IconButton ariaLabel="Close" onClick={() => setShowTemplates(false)} />
           </header>
 
           {templatesMode === "save" ? (
@@ -2999,6 +3169,32 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
         </div>
       </Modal>
 
+      {/* Move-to-today confirmation — fires when the doctor edits an OLD,
+          still-in-progress visit. Continuing relocates the visit's data to a
+          fresh visit dated today and removes the stale one; cancelling
+          discards the edit and leaves the old visit untouched. */}
+      <Modal isOpen={moveToTodayDate != null} onClose={cancelMoveToToday}>
+        <div style={moveStyles.container}>
+          <h2 style={moveStyles.title}>Move this visit to today?</h2>
+          <p style={moveStyles.body}>
+            Visit data of <strong>{moveToTodayDate ? formatVisitLabel(moveToTodayDate) : ""}</strong>{" "}
+            will be moved to today&rsquo;s date.
+          </p>
+          <p style={moveStyles.body}>
+            The {moveToTodayDate ? formatVisitLabel(moveToTodayDate) : ""} visit entry will be removed.
+          </p>
+          <p style={moveStyles.bodyMuted}>Do you want to continue?</p>
+          <div style={moveStyles.actions}>
+            <Button variant="light" size="sm" onClick={cancelMoveToToday} disabled={saving}>
+              Cancel
+            </Button>
+            <Button variant="secondary" size="sm" onClick={moveToToday} disabled={saving}>
+              {saving ? "Moving…" : "Continue"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* ─── Floating bottom bar — the ACTIVE SECTION'S actions. Section nav
           + contact actions moved up to the sticky header; this bar now adapts
           to which section is open. Output actions (Download / Print / Share)
@@ -3008,51 +3204,87 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
         <div style={styles.bottomBar}>
           {activeAction === 0 ? (
             <>
-              {/* Complete visit / Save changes — only on the current editable
-                  visit with an appointment (canEditForm is false for past
-                  historic visits). Before completion: "Complete visit" (stamps
-                  the end time + marks the appointment Completed). After
-                  completion: shown as "Save changes" ONLY while there are
-                  unsaved edits, and it persists them WITHOUT reopening the
-                  appointment (status stays Completed). Auto-save still runs on
-                  blur and clears the dirty flag, so the button hides again. */}
-              {canEditForm && selectedAppointmentId && (() => {
-                const completed = (selectedAppointmentStatus ?? "").toUpperCase() === "COMPLETED";
-                if (completed && !dirty) return null;
+              {/* Complete visit / Save changes — on any EDITABLE visit (today /
+                  within 24h, or an open in-progress session). canEditForm
+                  hard-locks visits past their 24h window, so a historic visit
+                  shows no button. The label + visibility key off whether THIS VISIT
+                  has ever been completed (persisted: COMPLETED status, or the
+                  localStorage marker set on first completion — both survive
+                  navigation), NOT the live IN_PROGRESS status:
+                    • NEVER completed (fresh At-Doc, OR a session left running in
+                      progress) → "Complete visit", ALWAYS visible — even while
+                      editing, and even when re-opened later — so the doctor can
+                      always end the consultation. It never flips to "Save" before
+                      the first completion.
+                    • Completed at least once → amend mode: "Save changes" shown
+                      while there's a pending edit OR while a re-opened session is
+                      still RUNNING (so the doctor can always end a live timer),
+                      hidden only once the session is ended AND nothing is pending.
+                  Both labels run the SAME action — save the form + end/(re)complete
+                  the visit. Clear all stays throughout the 24h window. */}
+              {canEditForm
+                && (() => {
+                // "Completed at least once" — server-owned Visit.completedAt is
+                // the source of truth (survives amend re-opens, follows the
+                // patient across devices); the localStorage flag is a fallback
+                // for visits saved before the field existed / pre-restart.
+                const everCompleted =
+                  activeCompleted
+                  || activeVisit?.completedAt != null
+                  || (activeVisit ? wasVisitCompleted(activeVisit.id) : false);
+                // A live (running) session — the timer is going (started, not yet
+                // ended). The doctor may have stepped out mid-treatment leaving it
+                // running on purpose, so the button must stay available to END it
+                // even with no pending edit.
+                const liveSession =
+                  activeVisit?.sessionStartedAt != null && activeVisit?.sessionEndedAt == null;
+                // Completed → amend mode: hidden only when the session is already
+                // ended AND there's nothing pending. A re-opened completed visit
+                // whose timer is still running keeps the button (to end it). The
+                // load-settling guard keeps a freshly-opened completed pad from
+                // phantom-dirtying itself into "Save changes".
+                if (everCompleted && !liveSession && !dirty && !pendingSave) return null;
                 return (
                   <button
                     type="button"
-                    style={{ ...styles.barBtn, backgroundColor: colors.secondary400, color: colors.neutral900 }}
-                    // onMouseDown + preventDefault so the handler runs BEFORE the
-                    // focused field blurs — otherwise the blur fires a silent
-                    // auto-save that clears the dirty flag and hides this button
-                    // before the click lands (the "no toast" bug).
+                    style={{ ...styles.barBtn, backgroundColor: colors.red100, color: colors.neutral100 }}
+                    // onMouseDown + preventDefault so it runs before the focused
+                    // field blurs (the blur's silent auto-save would otherwise
+                    // race the click).
                     onMouseDown={(e) => { e.preventDefault(); void handleCompleteVisit(); }}
                   >
-                    <BillCheckIcon width={18} height={18} />
-                    <span>{completed ? "Save changes" : "Complete visit"}</span>
+                    <Icon name="check" size={18} tone="inherit" />
+                    <span>{everCompleted ? "Save changes" : "Complete visit"}</span>
                   </button>
                 );
               })()}
+              {/* Language selector — picks the printed/shared prescription
+                  language. Compact Select sized to match the bar buttons. */}
+              <div style={{ width: 128, "--input-h": "36px" } as React.CSSProperties}>
+                <Select options={["English", "Hindi", "Telugu", "Tamil", "Kannada"]} value={language} onChange={setLanguage} />
+              </div>
               <button type="button" style={styles.barBtn} onClick={() => handlePrintPrescription("download")}>
-                <DownloadIcon width={18} height={18} />
+                <Icon name="download" size={18} tone="inherit" />
                 <span>Download</span>
               </button>
               <button type="button" style={styles.barBtn} onClick={() => handlePrintPrescription("print")}>
-                <PrinterIcon width={18} height={18} />
+                <Icon name="printer" size={18} tone="inherit" />
                 <span>Print</span>
               </button>
               <button type="button" style={styles.barBtn} onClick={handleShareWhatsApp}>
-                <ShareIcon width={18} height={18} />
+                <Icon name="share" size={18} tone="inherit" />
                 <span>Share</span>
               </button>
-              {/* Clear all wipes the prescription — destructive, so only on the
-                  current editable visit. Past/historic visits are read-only. */}
+              {/* Clear all wipes the prescription — available the whole time a
+                  visit is editable (today / within its 24h window), whether or
+                  not it's been completed. It disappears only when the visit
+                  hard-locks (date past 24h). The green Complete/Save button is
+                  what toggles with completion; Clear all stays put. */}
               {canEditForm && (
                 <>
                   <div style={styles.barDivider} aria-hidden />
                   <button type="button" style={{ ...styles.barBtn, ...styles.barBtnDanger }} onClick={handleClearAll}>
-                    <TrashIcon width={18} height={18} />
+                    <Icon name="trash" size={18} tone="inherit" />
                     <span>Clear all</span>
                   </button>
                 </>
@@ -3061,11 +3293,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
           ) : (
             <>
               <button type="button" style={styles.barBtn} onClick={() => setShowAddModal(true)}>
-                <FileIcon style={{ width: 18, height: 18 }} />
+                <Icon name="file" size={18} tone="inherit" />
                 <span>Add file</span>
               </button>
               <button type="button" style={styles.barBtn} onClick={handleDownloadAllFiles}>
-                <DownloadIcon width={18} height={18} />
+                <Icon name="download" size={18} tone="inherit" />
                 <span>Download all</span>
               </button>
             </>
@@ -3078,7 +3310,37 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
           <div style={styles.aiPopoverBackdrop} onClick={() => setShowAiSummary(false)} />
           <div style={styles.aiPopover} role="dialog" aria-label="AI Summary">
             <h4 style={styles.aiSummaryTitle}>AI Summary</h4>
-            <p style={styles.aiSummaryBody}>{AI_SUMMARY_TEXT}</p>
+            {aiConfigured === false ? (
+              <p style={styles.aiSummaryBody}>AI is not configured for this clinic.</p>
+            ) : aiError ? (
+              <p style={styles.aiSummaryBody}>{aiError}</p>
+            ) : aiGenerating && !aiSummary ? (
+              <p style={styles.aiSummaryBody}>Generating…</p>
+            ) : aiSummary?.summary ? (
+              <>
+                <p style={styles.aiSummaryBody}>{aiSummary.summary}</p>
+                {aiSummary.activeConditions.length > 0 && (
+                  <p style={styles.aiSummaryBody}><strong>Active conditions:</strong> {aiSummary.activeConditions.join(", ")}</p>
+                )}
+                {aiSummary.allergies.length > 0 && (
+                  <p style={styles.aiSummaryBody}><strong>Allergies:</strong> {aiSummary.allergies.join(", ")}</p>
+                )}
+                {aiSummary.riskFlags.length > 0 && (
+                  <p style={styles.aiSummaryBody}><strong>Risk flags:</strong> {aiSummary.riskFlags.join(", ")}</p>
+                )}
+                {aiSummary.lastVisitGist && (
+                  <p style={styles.aiSummaryBody}><strong>Last visit:</strong> {aiSummary.lastVisitGist}</p>
+                )}
+                {aiStale && <p style={styles.aiSummaryStale}>New visits since this summary — regenerate for the latest.</p>}
+              </>
+            ) : (
+              <p style={styles.aiSummaryBody}>No summary yet for this patient.</p>
+            )}
+            {aiConfigured !== false && (
+              <button type="button" style={styles.aiGenerateBtn} onClick={handleGenerateSummary} disabled={aiGenerating}>
+                {aiGenerating ? "Generating…" : aiSummary?.summary ? "Regenerate" : "Generate"}
+              </button>
+            )}
           </div>
         </>
       )}
@@ -3116,7 +3378,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
           Shows the file with the annotation toolbar; close × dismisses.
           For server-only files (fileUrl null, fileId set) the viewer shows
           a download button; FileViewer fetches bytes lazily if needed. */}
-      <Modal isOpen={viewerOpen !== null} onClose={() => setViewerOpen(null)}>
+      <Modal isOpen={viewerOpen !== null} onClose={() => setViewerOpen(null)} surface="transparent" padding={0} shadow="none">
         {viewerOpen && (
           <FileViewer
             file={{
@@ -3136,29 +3398,32 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
 
       {/* Slot picker — patient has 2+ appointments today and was opened
           without a specific one. Asks which slot this consultation is for. */}
-      {slotOptions && (
-        <div style={slotPickerStyles.overlay}>
-          <div style={slotPickerStyles.card}>
-            <h3 style={slotPickerStyles.title}>Choose an appointment slot</h3>
-            <p style={slotPickerStyles.sub}>
-              {selectedPatient?.name ?? "This patient"} has more than one appointment
-              today. Pick the slot you're starting this consultation for.
-            </p>
-            <div style={slotPickerStyles.slots}>
-              {slotOptions.map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  style={slotPickerStyles.slotBtn}
-                  onClick={() => chooseSlot(a)}
-                >
-                  {formatSlot(a.scheduledTime)}
-                </button>
-              ))}
-            </div>
+      <Modal
+        isOpen={!!slotOptions}
+        onClose={() => setSlotOptions(null)}
+        surface={colors.primary100}
+        width={460}
+      >
+        <div style={slotPickerStyles.card}>
+          <h3 style={slotPickerStyles.title}>Choose an appointment slot</h3>
+          <p style={slotPickerStyles.sub}>
+            {selectedPatient?.name ?? "This patient"} has more than one appointment
+            today. Pick the slot you're starting this consultation for.
+          </p>
+          <div style={slotPickerStyles.slots}>
+            {(slotOptions ?? []).map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                style={slotPickerStyles.slotBtn}
+                onClick={() => chooseSlot(a)}
+              >
+                {formatSlot(a.scheduledTime)}
+              </button>
+            ))}
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }
@@ -3174,26 +3439,11 @@ function formatSlot(iso: string | null): string {
 }
 
 const slotPickerStyles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1100,
-  },
   card: {
-    backgroundColor: colors.primary100,
-    borderRadius: radii["2xl"],
-    padding: spacing["2xl"],
-    minWidth: 360,
-    maxWidth: 460,
     display: "flex",
     flexDirection: "column",
     gap: spacing.s,
     textAlign: "center",
-    boxShadow: "0 12px 40px rgba(0,0,0,0.18)",
   },
   title: {
     margin: 0,
@@ -3228,3 +3478,4 @@ const slotPickerStyles: Record<string, React.CSSProperties> = {
     whiteSpace: "nowrap",
   },
 };
+

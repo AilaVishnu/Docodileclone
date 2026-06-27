@@ -1,7 +1,6 @@
 package com.example.docodile.web
 
 import com.example.docodile.service.AuthService
-import com.example.docodile.web.StaffLoginRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -24,11 +23,6 @@ class AuthenticationController(private val authService: AuthService) {
         return ResponseEntity.ok(authService.login(request))
     }
 
-    @PostMapping("/staff/login")
-    fun staffLogin(@RequestBody request: StaffLoginRequest): ResponseEntity<LoginResponse> {
-        return ResponseEntity.ok(authService.loginStaff(request))
-    }
-
     @PostMapping("/logout")
     @PreAuthorize("isAuthenticated()")
     fun logout(
@@ -43,12 +37,6 @@ class AuthenticationController(private val authService: AuthService) {
     fun logoutAll(): ResponseEntity<Void> {
         authService.logoutAll()
         return ResponseEntity.noContent().build()
-    }
-
-    @PostMapping("/switch-clinic")
-    @PreAuthorize("hasRole('ADMIN')")
-    fun switchClinic(@RequestBody request: SwitchClinicRequest): ResponseEntity<LoginResponse> {
-        return ResponseEntity.ok(authService.switchClinic(request.clinicId))
     }
 
     @PostMapping("/admin/users/{userId}/unlock")

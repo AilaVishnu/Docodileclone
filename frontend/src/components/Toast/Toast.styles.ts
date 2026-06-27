@@ -13,11 +13,24 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing.s,
     backgroundColor: colors.neutral100,
     border: `1px solid ${colors.neutral200}`,
-    borderRadius: radii.xxl,
+    borderRadius: radii["2xl"],
     padding: `${spacing.s} ${spacing.m}`,
     boxShadow: "0 4px 16px rgba(0, 0, 0, 0.1)",
     zIndex: 4000,
     animation: "slideIn 0.3s ease-out",
+  },
+
+  // Same chip, but in normal document flow (no fixed overlay / z-index /
+  // slide-in) — used by the `inline` prop for catalogs and stories.
+  containerInline: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: spacing.s,
+    backgroundColor: colors.neutral100,
+    border: `1px solid ${colors.neutral200}`,
+    borderRadius: radii["2xl"],
+    padding: `${spacing.s} ${spacing.m}`,
+    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.1)",
   },
 
   icon: {

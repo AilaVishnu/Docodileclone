@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, radii, fonts, spacing, strokes } from "../../../styles/theme";
+import { colors, radii, fonts, spacing, strokes, shadows } from "../../../styles/theme";
 
 // Matches Figma dropdown-m (node 312:1441).
 //
@@ -19,10 +19,15 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     gap: spacing.xs,
     padding: `0 ${spacing.xs}`,
-    border: `${strokes.xs} solid ${colors.neutral300}`,
+    // Longhand (not the `border` shorthand) so the hover/open/error states below
+    // can override just `borderColor` without React warning about mixing
+    // shorthand + non-shorthand border properties across re-renders.
+    borderWidth: strokes.xs,
+    borderStyle: "solid",
+    borderColor: colors.neutral300,
     borderRadius: radii.m,
     backgroundColor: colors.neutral100,
-    height: 40,
+    height: "var(--input-h, 40px)",
     width: "100%",
     position: "relative",
     cursor: "pointer",
@@ -56,6 +61,7 @@ export const styles: Record<string, CSSProperties> = {
 
   select: {
     flex: 1,
+    minWidth: 0,
     height: "100%",
     display: "flex",
     alignItems: "center",
@@ -71,6 +77,16 @@ export const styles: Record<string, CSSProperties> = {
     padding: 0,
     backgroundColor: "transparent",
     cursor: "inherit",
+  },
+
+  // Selected value (and placeholder) — one line, ellipsis on overflow; never wraps.
+  value: {
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    textAlign: "left",
   },
 
   // Placeholder text (shown when no value selected) stays neutral400
@@ -109,8 +125,9 @@ export const styles: Record<string, CSSProperties> = {
     left: 0,
     right: 0,
     backgroundColor: colors.neutral100,
+    border: `${strokes.xs} solid ${colors.primary300}`,
     borderRadius: radii.m,
-    boxShadow: "2px 2px 12px rgba(0,0,0,0.08)",
+    boxShadow: shadows.menu,
     zIndex: 100,
     maxHeight: "220px",
     overflowY: "auto" as const,
@@ -135,10 +152,11 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   menuItemHovered: {
-    backgroundColor: colors.neutral150,
+    backgroundColor: colors.active.shade100,
   },
 
   menuItemSelected: {
-    backgroundColor: colors.neutral200,
+    backgroundColor: colors.primary100,
+    color: colors.primary700,
   },
 };

@@ -1,32 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { styles } from "./BookAppointment.styles";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
-import { DatePicker } from "../DatePicker/DatePicker";
-import { TimePicker } from "./TimePicker";
-import {
-  StethoscopeIcon,
-  PulseIcon,
-  UserHandsIcon,
-  LetterIcon,
-  PhoneIcon,
-  CalendarIcon,
-  HashtagIcon,
-  ClockIcon,
-  PlusIcon
-} from "../../iconsUtil";
+import { colors, fonts, spacing } from "../../styles/theme";
+import { Icon } from "../Icon";
 import { Card } from "../Card/Card";
+import { PageHeader } from "../PageHeader/PageHeader";
+import { Switch } from "../Switch/Switch";
 import { BillCard } from "../BillCard/BillCard";
 import { UnderlineSelect } from "../Input/UnderlineSelect/UnderlineSelect";
 import { Select } from "../Input/Select/Select";
 import { Toast } from "../Toast";
-import { Button } from "../Button";
-import { confirmStyles } from "../AddStaffModal/AddStaffModal.styles";
+import { resolveToastIcon } from "../Toast/toastIcon";
+import { ConfirmDialog } from "../ConfirmDialog";
+import { RadioGroup } from "../Radio";
+import { PatientDetailsForm } from "../PatientDetailsForm";
+import { DateField } from "../DateField";
+import { TimeField } from "../TimeField";
 import { API_BASE_URL } from "../../apiConfig";
 import { listServices, ServiceDTO } from "../../api/services";
-import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
-import { ReactComponent as EditPencilIcon } from "../../assets/icons/edit-pencil.svg";
-import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check.svg";
-import { ReactComponent as ArrowIcon } from "../../assets/Arrow Right.svg";
 import { pickAvatar } from "../../utils/avatar";
 
 type Doctor = {
@@ -157,9 +147,6 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     discount: 0.0,
   });
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [showDobPicker, setShowDobPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [dobDigits, setDobDigits] = useState("");
   const [toastMessage, setToastMessage] = useState("");
@@ -171,11 +158,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   >(null);
   const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
   const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
+  // "Advanced" toggle in the page header — reveals extra fields. Wiring the
+  // extra fields is deferred; for now this state is set but unused.
+  const [isAdvanced, setIsAdvanced] = useState(false);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
-  const monthInputRef = React.useRef<HTMLInputElement>(null);
   const [allPatients, setAllPatients] = useState<any[]>([]);
-  const [showNameSugg, setShowNameSugg] = useState(false);
-  const [showPhoneSugg, setShowPhoneSugg] = useState(false);
   // When the user picks an existing patient from the search dropdown (or is
   // editing an existing appointment), the patient identity fields lock so
   // staff can't accidentally rewrite a patient's name/phone/dob. The user
@@ -228,17 +215,13 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.discount, discountMode, form.services]);
 
-  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const hasDob = dobDigits.length > 0;
-  const hasManualAge = !hasDob && form.age.replace(/[^0-9]/g, "").length > 0;
-
   const formatDob = (digits: string): string => {
     const dd = digits.slice(0, 2);
     const mm = digits.slice(2, 4);
     const yyyy = digits.slice(4, 8);
     if (digits.length <= 2) return dd;
-    if (digits.length <= 4) return `${dd} ${mm}`;
-    return `${dd} ${mm} ${yyyy}`;
+    if (digits.length <= 4) return `${dd}-${mm}`;
+    return `${dd}-${mm}-${yyyy}`;
   };
 
   const calcAge = (digits: string): string => {
@@ -266,13 +249,6 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       .catch(() => {});
   }, []);
 
-  const nameSuggestions: any[] = form.name.trim().length >= 1
-    ? allPatients.filter((p) => p.name.toLowerCase().includes(form.name.toLowerCase())).slice(0, 6)
-    : [];
-  const phoneSuggestions: any[] = form.phone.replace(/\D/g, "").length >= 6
-    ? allPatients.filter((p) => (p.phone ?? "").replace(/\D/g, "").includes(form.phone.replace(/\D/g, ""))).slice(0, 6)
-    : [];
-
   const fillFromPatient = (p: any) => {
     const clean = (p.phone ?? "").replace(/\D/g, "").slice(-10);
     const formattedPhone = clean.length === 10
@@ -296,8 +272,6 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       age: newDobDigits ? calcAge(newDobDigits) : (p.age ? `${Math.floor(p.age / 12)} / ${p.age % 12}` : prev.age),
     }));
     if (newDobDigits) setDobDigits(newDobDigits);
-    setShowNameSugg(false);
-    setShowPhoneSugg(false);
     // Lock identity fields so the staff can't drift this picked patient's
     // saved data through accidental keystrokes.
     setLockedPatientId(p.id);
@@ -554,30 +528,35 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
   return (
     <div style={styles.overlay}>
-      <header style={styles.header}>
-        <button style={styles.backButton} onClick={() => onBack()} title="Back to Appointments">
-          <ArrowIcon style={{ width: 16, height: 16, transform: "rotate(180deg)" }} />
-        </button>
-
-        <div style={styles.titleContainer}>
-          <h2 style={styles.title}>
-            {editingAppointment ? (
-              "Edit Appointment"
-            ) : (
-              <>
-                Book an appointment for{" "}
-                <UnderlineSelect
-                  options={doctors.map(d => ({ label: d.name, value: d.id }))}
-                  value={selectedDoctorId}
-                  onChange={(val) => setSelectedDoctorId(val)}
-                  placeholder="Select Doctor"
-                  fontSize={fonts.size.h5}
-                />
-              </>
-            )}
-          </h2>
-        </div>
-      </header>
+      <PageHeader
+        onBack={() => onBack()}
+        backLabel="Back to Appointments"
+        // Span the full bar (no content cap) and use TopNav's right padding
+        // (spacing.xl = 24px) so the Advanced toggle right-aligns with the
+        // avatar at any viewport.
+        innerStyle={{ maxWidth: "none", paddingRight: spacing.xl }}
+        title={
+          editingAppointment ? (
+            "Edit Appointment"
+          ) : (
+            <>
+              Book an appointment for{" "}
+              <UnderlineSelect
+                options={doctors.map(d => ({ label: d.name, value: d.id }))}
+                value={selectedDoctorId}
+                onChange={(val) => setSelectedDoctorId(val)}
+                placeholder="Select Doctor"
+              />
+            </>
+          )
+        }
+        actions={
+          <label style={{ display: "inline-flex", alignItems: "center", gap: spacing.xs, cursor: "pointer", fontSize: fonts.size.s, color: colors.neutral900, fontFamily: fonts.family.primary, userSelect: "none" }}>
+            Advanced
+            <Switch checked={isAdvanced} onChange={setIsAdvanced} size="sm" ariaLabel="Advanced booking mode" />
+          </label>
+        }
+      />
 
       {editingAppointment?.readOnly && (
         <div style={{
@@ -626,263 +605,19 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         </Card>
 
         {/* Patient Details Card */}
-        <Card style={{ ...styles.card, ...styles.formCard }}>
-          {patientFieldsLocked && lockedPatientId !== "editing" && (
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
-              <button
-                type="button"
-                onClick={clearSelectedPatient}
-                style={{ background: "none", border: "none", color: colors.secondary700, cursor: "pointer", fontSize: fonts.size.xs, textDecoration: "underline", padding: 0 }}
-              >
-                Clear & enter new patient
-              </button>
-            </div>
-          )}
-          <div style={{ position: "relative" }}>
-            <div style={{ ...styles.iconField, ...(errors.name ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}), ...(patientFieldsLocked ? { opacity: 0.65 } : {}) }}>
-              <UserHandsIcon style={styles.iconFieldIcon} />
-              <input
-                style={styles.iconFieldInput}
-                placeholder="Name"
-                value={form.name}
-                onChange={(e) => { setForm({ ...form, name: e.target.value }); setShowNameSugg(true); }}
-                onFocus={() => setShowNameSugg(true)}
-                onBlur={() => setTimeout(() => setShowNameSugg(false), 150)}
-                disabled={patientFieldsLocked}
-              />
-            </div>
-            {showNameSugg && nameSuggestions.length > 0 && (
-              <div style={patientSuggStyle}>
-                {nameSuggestions.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    style={patientSuggItem}
-                    onMouseDown={() => fillFromPatient(p)}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.primary100; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-                  >
-                    <span style={{ fontWeight: 500 }}>{p.name}</span>
-                    <span style={{ color: colors.neutral500, fontSize: fonts.size.xs }}>{p.phone ?? ""}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {errors.name && (
-              <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
-                Please enter patient name
-              </div>
-            )}
-          </div>
-
-          <div style={styles.row}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ ...styles.iconField, ...(errors.email ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}), ...(patientFieldsLocked ? { opacity: 0.65 } : {}) }}>
-                <LetterIcon style={styles.iconFieldIcon} />
-                <input
-                  style={styles.iconFieldInput}
-                  type="text"
-                  placeholder="hello@example.com"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  onBlur={() => setForm((prev) => ({ ...prev, email: prev.email.trim().toLowerCase() }))}
-                  disabled={patientFieldsLocked}
-                />
-              </div>
-              {errors.email && (
-                <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
-                  Please enter a valid email
-                </div>
-              )}
-            </div>
-            <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
-            <div style={{ ...styles.iconField, ...(errors.phone ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}), ...(patientFieldsLocked ? { opacity: 0.65 } : {}) }}>
-              <PhoneIcon style={styles.iconFieldIcon} />
-              <input
-                style={styles.iconFieldInput}
-                placeholder="+91 XXXXX XXXXX"
-                value={form.phone}
-                disabled={patientFieldsLocked}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9+ ]/g, "");
-                  let digits = val.replace(/\D/g, "");
-                  if (digits.startsWith("91") && digits.length > 10) digits = digits.substring(2);
-                  if (digits.length > 10) return;
-                  setForm({ ...form, phone: val });
-                  setShowPhoneSugg(true);
-                }}
-                onFocus={() => setShowPhoneSugg(true)}
-                onBlur={() => {
-                  setTimeout(() => setShowPhoneSugg(false), 150);
-                  let clean = form.phone.replace(/\D/g, "");
-                  if (clean.startsWith("91") && clean.length > 10) clean = clean.substring(2);
-                  clean = clean.substring(0, 10);
-                  if (clean.length === 0) { setForm((prev) => ({ ...prev, phone: "" })); return; }
-                  if (clean.length > 5) {
-                    setForm((prev) => ({ ...prev, phone: `+91 ${clean.substring(0, 5)} ${clean.substring(5)}` }));
-                  } else {
-                    setForm((prev) => ({ ...prev, phone: `+91 ${clean}` }));
-                  }
-                }}
-              />
-            </div>
-            {showPhoneSugg && phoneSuggestions.length > 0 && (
-              <div style={patientSuggStyle}>
-                {phoneSuggestions.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    style={patientSuggItem}
-                    onMouseDown={() => fillFromPatient(p)}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.primary100; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-                  >
-                    <span style={{ fontWeight: 500 }}>{p.name}</span>
-                    <span style={{ color: colors.neutral500, fontSize: fonts.size.xs }}>{p.phone ?? ""}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-              {errors.phone && (
-                <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
-                  Please enter a valid phone number
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div style={styles.row}>
-            <div style={{ ...styles.iconField, position: "relative", flex: 1, minWidth: 0, ...(errors.dob ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}), ...(patientFieldsLocked ? { opacity: 0.65, pointerEvents: "none" as const } : {}) }}>
-              <span
-                onClick={() => {
-                  if (patientFieldsLocked) return;
-                  if (hasManualAge) setForm((prev) => ({ ...prev, age: "", dob: "" }));
-                  setShowDobPicker(true);
-                }}
-                style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: spacing.xs, opacity: hasManualAge ? 0.4 : 1 }}
-              >
-                <CalendarIcon style={styles.iconFieldIcon} />
-                <span style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>DOB</span>
-              </span>
-              <input
-                style={{ ...styles.iconFieldInput, opacity: hasManualAge ? 0.4 : 1 }}
-                type="text"
-                placeholder="dd mm yyyy"
-                disabled={patientFieldsLocked}
-                onFocus={() => { if (hasManualAge) setForm((prev) => ({ ...prev, age: "", dob: "" })); }}
-                value={formatDob(dobDigits)}
-                onKeyDown={(e) => {
-                  if (e.key === "Backspace") {
-                    e.preventDefault();
-                    const next = dobDigits.slice(0, -1);
-                    setDobDigits(next);
-                    setForm((prev) => ({ ...prev, dob: formatDob(next), age: next.length === 8 ? calcAge(next) : "" }));
-                  } else if (/^[0-9]$/.test(e.key) && dobDigits.length < 8) {
-                    e.preventDefault();
-                    const next = dobDigits + e.key;
-                    setDobDigits(next);
-                    setForm((prev) => ({ ...prev, dob: formatDob(next), age: calcAge(next) }));
-                  }
-                }}
-                onChange={() => { }}
-              />
-              {showDobPicker && (
-                <DatePicker
-                  selectedDate={new Date()}
-                  onSelect={(date: Date) => {
-                    const dd = String(date.getDate()).padStart(2, "0");
-                    const mm = String(date.getMonth() + 1).padStart(2, "0");
-                    const yyyy = String(date.getFullYear());
-                    const digits = dd + mm + yyyy;
-                    setDobDigits(digits);
-                    setForm((prev) => ({ ...prev, dob: formatDob(digits), age: calcAge(digits) }));
-                    setShowDobPicker(false);
-                  }}
-                  onClose={() => setShowDobPicker(false)}
-                />
-              )}
-            </div>
-            <div style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>or</div>
-            <div
-              style={{
-                ...styles.iconField,
-                flex: 1,
-                minWidth: 0,
-                gap: spacing.xs,
-                justifyContent: "flex-start",
-                ...(errors.dob ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}),
-                ...(patientFieldsLocked ? { opacity: 0.65, pointerEvents: "none" as const } : {}),
-              }}
-            >
-              <span style={{ fontSize: fonts.size.m, color: colors.neutral900, opacity: hasDob ? 0.4 : 1 }}>Age</span>
-              <input
-                className="text-input-field"
-                style={{ ...styles.iconFieldInput, width: 32, flex: "0 0 auto", borderBottom: "none", textAlign: "center", MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
-                type="number"
-                min="0"
-                max="150"
-                placeholder="-"
-                disabled={patientFieldsLocked}
-                onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
-                value={form.age.split("/")[0]?.trim() || ""}
-                onChange={(e) => {
-                  const y = e.target.value;
-                  const m = form.age.split("/")[1]?.trim() || "";
-                  setDobDigits("");
-                  setForm({ ...form, age: (y || m) ? `${y || "0"} / ${m || "0"}` : "", dob: "" });
-                  if (y.length >= 2) monthInputRef.current?.focus();
-                }}
-              />
-              <style>{`
-                input[type=number]::-webkit-outer-spin-button,
-                input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-                input[type=number] { -moz-appearance: textfield; }
-              `}</style>
-              <span style={{ fontSize: fonts.size.m, color: colors.neutral400, opacity: hasDob ? 0.4 : 1 }}>yrs</span>
-              <input
-                ref={monthInputRef}
-                className="text-input-field"
-                style={{ ...styles.iconFieldInput, width: 32, flex: "0 0 auto", borderBottom: "none", textAlign: "center", MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
-                type="number"
-                min="0"
-                max="11"
-                placeholder="-"
-                disabled={patientFieldsLocked}
-                onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
-                value={form.age.split("/")[1]?.trim() || ""}
-                onChange={(e) => {
-                  let m = e.target.value;
-                  const n = parseInt(m, 10);
-                  if (m !== "" && (isNaN(n) || n < 0 || n > 11)) return;
-                  const y = form.age.split("/")[0]?.trim() || "";
-                  setDobDigits("");
-                  setForm({ ...form, age: (y || m) ? `${y || "0"} / ${m || "0"}` : "", dob: "" });
-                }}
-              />
-              <span style={{ fontSize: fonts.size.m, color: colors.neutral400, opacity: hasDob ? 0.4 : 1 }}>mos</span>
-            </div>
-          </div>
-          {errors.dob && (
-            <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
-              Please enter date of birth or age
-            </div>
-          )}
-
-          <div style={{ ...styles.radioGroup, marginTop: "8px", ...(patientFieldsLocked ? { opacity: 0.65, pointerEvents: "none" as const } : {}) }}>
-            {["Male", "Female", "Other"].map((g) => (
-              <label key={g} style={styles.radioLabel}>
-                <input
-                  type="radio"
-                  name="gender"
-                  checked={form.gender === g}
-                  disabled={patientFieldsLocked}
-                  onChange={() => setForm({ ...form, gender: g })}
-                />
-                {g}
-              </label>
-            ))}
-          </div>
-        </Card>
+        <PatientDetailsForm
+          style={{ gridColumn: "2", gridRow: "1" }}
+          value={{ name: form.name, email: form.email, phone: form.phone, dob: form.dob, age: form.age, gender: form.gender }}
+          onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
+          errors={{ name: errors.name, email: errors.email, phone: errors.phone, dob: errors.dob }}
+          dobDigits={dobDigits}
+          setDobDigits={setDobDigits}
+          patients={allPatients}
+          onSelectExisting={fillFromPatient}
+          locked={patientFieldsLocked}
+          showClearLink={patientFieldsLocked && lockedPatientId !== "editing"}
+          onClearLocked={clearSelectedPatient}
+        />
 
         {/* Billing Card */}
         <div style={{ gridColumn: "3", gridRow: "1 / span 2", alignSelf: "stretch" }}>
@@ -919,93 +654,33 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         <div style={styles.scheduleColumn}>
           {/* Schedule Mini Cards Stack */}
           <Card style={{ ...styles.card, ...styles.scheduleMiniCard }}>
-            <div style={styles.radioGroup}>
-              {["New", "Review"].map((t) => (
-                <label key={t} style={styles.radioLabel}>
-                  <input
-                    type="radio"
-                    name="type"
-                    checked={form.type === t}
-                    onChange={() => setForm({ ...form, type: t })}
-                  />
-                  {t}
-                </label>
-              ))}
-            </div>
+            <RadioGroup
+              name="type"
+              value={form.type}
+              onChange={(t) => setForm({ ...form, type: t })}
+              options={["New", "Review"]}
+            />
           </Card>
 
-          {(() => {
-            // Walk-in date is the day the patient arrived — a historical
-            // fact, locked on edit alongside the time. New booking flow
-            // stays interactive.
-            const dateLocked = !!editingAppointment && form.isWalkin;
-            return (
-            <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative" }}>
-              <div
-                style={{ ...styles.iconField, borderBottom: "none", cursor: dateLocked ? "not-allowed" : "pointer", padding: 0, opacity: dateLocked ? 0.65 : 1 }}
-                onClick={() => { if (!dateLocked) setShowDatePicker(true); }}
-                title={dateLocked ? "Walk-in date can't be edited" : undefined}
-              >
-                <CalendarIcon style={styles.iconFieldIcon} />
-                <span style={{ fontSize: fonts.size.m, color: form.date ? colors.neutral900 : colors.neutral400 }}>
-                  {formatDate(form.date) || "Select Date"}
-                </span>
-              </div>
-              {showDatePicker && (
-                <DatePicker
-                  selectedDate={form.date}
-                  onSelect={(date: Date) => {
-                    setForm({ ...form, date });
-                    setShowDatePicker(false);
-                  }}
-                  onClose={() => setShowDatePicker(false)}
-                  disablePast
-                />
-              )}
-            </Card>
-            );
-          })()}
+          <DateField
+            value={form.date}
+            onChange={(date) => setForm({ ...form, date })}
+            format={formatDate}
+            disablePast
+            disabled={!!editingAppointment && form.isWalkin}
+            disabledTitle="Walk-in date can't be edited"
+          />
 
-          {(() => {
-            // A walk-in time is the moment the patient arrived — a historical
-            // fact, not a schedulable slot. Lock the time field on edit so
-            // the receptionist can't rewrite it (the rest of the appointment
-            // stays editable). New-booking flow is unaffected.
-            const timeLocked = !!editingAppointment && form.isWalkin;
-            return (
-            <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative", ...(errors.time ? { borderColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
-            <div
-              style={{ ...styles.iconField, borderBottom: "none", cursor: timeLocked ? "not-allowed" : "pointer", padding: 0, opacity: timeLocked ? 0.65 : 1 }}
-              onClick={() => { if (!timeLocked) setShowTimePicker(true); }}
-              title={timeLocked ? "Walk-in time can't be edited" : undefined}
-            >
-              <ClockIcon style={styles.iconFieldIcon} />
-              <span style={{ fontSize: fonts.size.m, color: form.time || form.isWalkin ? colors.neutral900 : colors.neutral400 }}>
-                {form.isWalkin ? "Walk-in" : (form.time || "Select Time")}
-              </span>
-            </div>
-            {showTimePicker && (
-              <TimePicker
-                initialTime={form.time}
-                selectedDate={form.date}
-                onSelect={(time: string) => {
-                  // Manually picking a time clears the walk-in flag — the
-                  // intent is now a specific scheduled appointment.
-                  setForm({ ...form, time, isWalkin: false });
-                  setShowTimePicker(false);
-                }}
-                onWalkin={(time: string) => {
-                  // Same scheduled time as Now, but flag the appointment so
-                  // the queue / bill flow treat it as a walk-in.
-                  setForm({ ...form, time, isWalkin: true });
-                  setShowTimePicker(false);
-                }}
-                onClose={() => setShowTimePicker(false)}
-              />
-            )}
-          </Card>
-            );
-          })()}
+          <TimeField
+            value={form.time}
+            onChange={(time) => setForm({ ...form, time, isWalkin: false })}
+            onWalkin={(time) => setForm({ ...form, time, isWalkin: true })}
+            selectedDate={form.date}
+            isWalkin={form.isWalkin}
+            invalid={!!errors.time}
+            disabled={!!editingAppointment && form.isWalkin}
+            disabledTitle="Walk-in time can't be edited"
+          />
           {errors.time && (
             <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginLeft: 4 }}>
               Please select a time
@@ -1029,7 +704,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             return (
               <div style={styles.appointmentRow}>
                 <div style={styles.appointmentLabelGroup}>
-                  <StethoscopeIcon style={styles.appointmentIcon} />
+                  <Icon name="stethoscope" tone="inherit" style={styles.appointmentIcon} />
                   <label style={styles.fieldLabel}>Doctor</label>
                 </div>
                 <div style={{ flex: 1, pointerEvents: doctorLocked ? "none" : "auto", opacity: rowOpacity }}>
@@ -1056,7 +731,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               {form.services.map((svc, i) => (
                 <div key={i} style={styles.appointmentRow}>
                   <div style={styles.appointmentLabelGroup}>
-                    <PulseIcon style={styles.appointmentIcon} />
+                    <Icon name="pulse" tone="inherit" style={styles.appointmentIcon} />
                     <label style={styles.fieldLabel}>Service</label>
                   </div>
                   <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", pointerEvents: servicesLocked ? "none" : "auto", opacity: rowOpacity }}>
@@ -1073,37 +748,33 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                         disabled={servicesLocked}
                       />
                     </div>
-                    {!servicesLocked ? (() => {
-                      // Block removing the last remaining service so every
-                      // appointment always carries at least one — the queue,
-                      // bill and dispense paths all assume a priced service.
-                      const isLast = form.services.length <= 1;
-                      return (
-                        <button
-                          onClick={() => {
-                            if (isLast) return;
-                            const removed = form.services[i];
-                            const updated = form.services.filter((_, idx) => idx !== i);
-                            setForm({ ...form, services: updated });
-                            setToastMessage(`${removed} removed`);
-                          }}
-                          disabled={isLast}
-                          title={isLast ? "At least one service is required" : "Remove service"}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            cursor: isLast ? "not-allowed" : "pointer",
-                            opacity: isLast ? 0.35 : 1,
-                            padding: "4px",
-                            display: "flex",
-                            alignItems: "center",
-                            flexShrink: 0,
-                          }}
-                        >
-                          <TrashIcon width={20} height={20} />
-                        </button>
-                      );
-                    })() : (
+                    {!servicesLocked ? (
+                      // Any service — including the last one — can be removed;
+                      // the user can re-pick via "Add Service". Booking stays
+                      // gated on having at least one service (submit validation),
+                      // so clearing the only row just blocks Book until re-added.
+                      <button
+                        onClick={() => {
+                          const removed = form.services[i];
+                          const updated = form.services.filter((_, idx) => idx !== i);
+                          setForm({ ...form, services: updated });
+                          setToastMessage(`${removed} removed`);
+                        }}
+                        title="Remove service"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          opacity: 1,
+                          padding: "4px",
+                          display: "flex",
+                          alignItems: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Icon name="trash" size={20} tone="inherit" />
+                      </button>
+                    ) : (
                       <div style={{ width: "28px", flexShrink: 0 }} />
                     )}
                   </div>
@@ -1112,7 +783,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               {!servicesLocked && (
                 <div style={styles.appointmentRow}>
                   <div style={styles.appointmentLabelGroup}>
-                    <PulseIcon style={styles.appointmentIcon} />
+                    <Icon name="pulse" tone="inherit" style={styles.appointmentIcon} />
                     <label style={styles.fieldLabel}>Service</label>
                   </div>
                   <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px" }}>
@@ -1139,7 +810,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             <>
               {!editingAppointment.readOnly && isDirty && (
                 <button style={styles.pillButtonPrimary} onClick={() => handleBook(editingAppointment.payStatus || "Unpaid")} disabled={submitting}>
-                  <EditPencilIcon width={18} height={18} style={{ color: colors.neutral100 }} />
+                  <Icon name="edit-pencil" size={18} tone="inverse" />
                   {submitting ? "Saving..." : "Save Edits"}
                 </button>
               )}
@@ -1158,11 +829,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                 onClick={() => handleBook("Unpaid")}
                 disabled={submitting || form.paymentMethod === "Waive"}
               >
-                <PlusIcon style={{ width: "20px", height: "20px" }} />
+                <Icon name="calendar" size={20} tone="inherit" />
                 {submitting ? "Booking..." : "Book Now Pay Later"}
               </button>
               <button style={styles.pillButtonPrimary} onClick={() => handleBook("Paid")} disabled={submitting}>
-                <CalendarIcon style={{ width: "20px", height: "20px", color: colors.neutral100 }} />
+                <Icon name="verified-badge" size={20} tone="inverse" />
                 {submitting ? "Booking..." : "Pay & Book"}
               </button>
             </>
@@ -1172,72 +843,25 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
       <Toast
         message={toastMessage}
+        {...resolveToastIcon(toastMessage)}
         isVisible={!!toastMessage}
         onClose={() => setToastMessage("")}
       />
 
-      {pendingDupe && (
-        <div style={confirmStyles.overlay}>
-          <div style={confirmStyles.dialog}>
-            <h4 style={confirmStyles.title}>Are you sure?</h4>
-            <p style={{
-              margin: 0,
-              fontFamily: fonts.family.primary,
-              fontSize: fonts.control.sm,
-              color: colors.neutral600,
-              textAlign: "center",
-              lineHeight: 1.5,
-            }}>
-              {pendingDupe.message}
-            </p>
-            <div style={confirmStyles.actions}>
-              <Button variant="dangerLight" size="sm" onClick={() => setPendingDupe(null)}>
-                Nope
-              </Button>
-              <Button variant="dark" size="sm" onClick={() => {
-                const p = pendingDupe;
-                setPendingDupe(null);
-                if (p) void handleBook(p.payStatus, p.successMessage, true);
-              }}>
-                Yes, add anyway
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={!!pendingDupe}
+        title="Are you sure?"
+        message={pendingDupe?.message}
+        confirmLabel="Yes, add anyway"
+        cancelLabel="Nope"
+        onConfirm={() => {
+          const p = pendingDupe;
+          setPendingDupe(null);
+          if (p) void handleBook(p.payStatus, p.successMessage, true);
+        }}
+        onCancel={() => setPendingDupe(null)}
+      />
     </div>
   );
 }
 
-const patientSuggStyle: React.CSSProperties = {
-  position: "absolute",
-  top: "100%",
-  left: 0,
-  right: 0,
-  zIndex: 2000,
-  backgroundColor: colors.neutral100,
-  border: `${strokes.xs} solid ${colors.primary300}`,
-  borderRadius: radii.m,
-  boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
-  display: "flex",
-  flexDirection: "column",
-  overflow: "hidden",
-  marginTop: 4,
-  padding: spacing["2xs"],
-};
-
-const patientSuggItem: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  padding: `${spacing.xs} ${spacing.s}`,
-  background: "transparent",
-  border: "none",
-  borderRadius: radii.xs,
-  cursor: "pointer",
-  textAlign: "left",
-  gap: spacing.s,
-  fontFamily: fonts.family.primary,
-  fontSize: fonts.size.s,
-  color: colors.neutral900,
-};

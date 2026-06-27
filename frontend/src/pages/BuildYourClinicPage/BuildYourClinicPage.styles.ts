@@ -4,16 +4,17 @@ import { colors, fonts, spacing } from "../../styles/theme";
 export const styles: Record<string, CSSProperties> = {
   page: {
     width: "100%",
-    minHeight: "100vh",
-    // Vertical padding scales with viewport — creates equal breathing room
-    // above the heading and below the CTAs at larger screens.
-    // Horizontal stays static.
-    padding: "clamp(12px, 1.56vw, 48px) 24px",
+    // Fill the viewport exactly and DON'T scroll — the workspace below flexes
+    // to fit, absorbing height changes in its top/bottom padding.
+    height: "100%",
+    overflow: "hidden",
+    // Fixed padding (no viewport scaling, per the app-wide no-scaling rule).
+    padding: "24px",
     backgroundColor: colors.primary100,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: "center", // centers everything vertically — top space = bottom space
+    justifyContent: "safe center",
     boxSizing: "border-box",
   },
 
@@ -31,6 +32,9 @@ export const styles: Record<string, CSSProperties> = {
     transition: "max-width 0.3s ease",
     display: "flex",
     flexDirection: "column",
+    // Fill the vertical space between the title and footer so the workspace
+    // can flex to the viewport height (no page scroll).
+    flex: 1,
     minHeight: 0,
   },
 
@@ -40,14 +44,13 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     gap: 0,
-    height: "100%",
     paddingLeft: "2%",
   },
 
   footer: {
     marginTop: spacing.l,
     display: "flex",
-    gap: spacing.xxl,
+    gap: spacing["2xl"],
     justifyContent: "center",
     flexShrink: 0,
   },

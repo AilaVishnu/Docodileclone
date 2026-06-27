@@ -1,13 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { styles } from "./PrintPreviewModal.styles";
+import { Modal } from "../Modal";
 import { Button } from "../Button";
 import { colors } from "../../styles/theme";
-import { ReactComponent as ChevronIcon } from "../../assets/icons/chevron-up.svg";
-import { ReactComponent as PrinterIcon } from "../../assets/icons/printer.svg";
-import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg";
-import { ReactComponent as ShareIcon } from "../../assets/icons/share.svg";
-import { ReactComponent as TuningIcon } from "../../assets/icons/tuning.svg";
+import { Icon } from "../Icon";
 
 type Destination = "pdf" | "print";
 
@@ -52,15 +48,6 @@ export function PrintPreviewModal({
   }, [isOpen, html]);
 
   useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [isOpen, onClose]);
-
-  useEffect(() => {
     if (!destOpen) return;
     const onClick = (e: MouseEvent) => {
       if (destWrapRef.current && !destWrapRef.current.contains(e.target as Node)) setDestOpen(false);
@@ -75,13 +62,13 @@ export function PrintPreviewModal({
   const isPrint = destination === "print";
   const ctaLabel = isPrint ? "Print" : "Download";
   const ctaIcon = isPrint
-    ? <PrinterIcon width={16} height={16} />
-    : <DownloadIcon width={16} height={16} />;
+    ? <Icon name="printer" size={16} tone="inherit" />
+    : <Icon name="download" size={16} tone="inherit" />;
   const onCta = isPrint ? (onPrint ?? onClose) : (onSave ?? onClose);
 
-  return createPortal(
-    <div style={styles.overlay} onMouseDown={onClose}>
-      <div style={styles.shell} onMouseDown={(e) => e.stopPropagation()}>
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} surface={colors.neutral100} padding={0}>
+      <div style={styles.shell}>
         <div style={styles.previewPane}>
           <iframe
             ref={iframeRef}
@@ -102,7 +89,7 @@ export function PrintPreviewModal({
                 title="Configure print template"
                 aria-label="Configure print template"
               >
-                <TuningIcon width={18} height={18} />
+                <Icon name="tuning" size={18} tone="inherit" />
               </button>
             </div>
           </div>
@@ -120,9 +107,10 @@ export function PrintPreviewModal({
                 >
                   <span>{destLabel}</span>
                   <span style={styles.selectIconWrap}>
-                    <ChevronIcon
-                      width={16}
-                      height={16}
+                    <Icon
+                      name="chevron-up"
+                      size={16}
+                      tone="inherit"
                       style={{ transform: destOpen ? "rotate(0deg)" : "rotate(180deg)" }}
                     />
                   </span>
@@ -159,13 +147,12 @@ export function PrintPreviewModal({
               title="Share"
               aria-label="Share"
             >
-              <ShareIcon width={24} height={24} />
+              <Icon name="share" size={24} tone="inherit" />
             </button>
           </div>
         </div>
       </div>
-    </div>,
-    document.body
+    </Modal>
   );
 }
 
@@ -207,9 +194,10 @@ function Field({ label, value }: { label: string; value: string }) {
       <div style={styles.select}>
         <span>{value}</span>
         <span style={styles.selectIconWrap}>
-          <ChevronIcon
-            width={16}
-            height={16}
+          <Icon
+            name="chevron-up"
+            size={16}
+            tone="inherit"
             style={{ transform: "rotate(180deg)" }}
           />
         </span>

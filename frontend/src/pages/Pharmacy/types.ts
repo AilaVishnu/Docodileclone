@@ -15,7 +15,9 @@ export type MedCategory =
   | "Tablets"
   | "Serums & boosters";
 
-export type GroupBy = "alpha" | "form" | "attention";
+// Grid/shelf grouping axes. Sorting in the list view is handled by the column
+// headers, and "needs attention" is now a filter — neither is a grouping.
+export type GroupBy = "form" | "category" | "none";
 
 export type Med = {
   id: string;

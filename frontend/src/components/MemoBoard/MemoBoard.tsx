@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { Toast } from "../Toast";
+import { resolveToastIcon } from "../Toast/toastIcon";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MemoBoard — free-floating sticky notes on a dotted board.
@@ -202,10 +203,25 @@ export function MemoBoard() {
   useEffect(() => {
     if (!dragging) return;
     const onMove = (e: MouseEvent) => {
-      const rect = boardRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const x = clamp(e.clientX - rect.left - dragging.offX, 0, rect.width - NOTE_W);
-      const y = clamp(e.clientY - rect.top - dragging.offY, 0, rect.height - NOTE_H);
+      const el = boardRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      // The memoSlot may have a transform: scale() at 1024, which makes
+      // getBoundingClientRect return scaled (visual) dimensions while
+      // memo x/y are stored in unscaled CSS pixels. Convert the visual
+      // mouse delta back into unscaled units, and clamp against the
+      // board's unscaled layout box (offsetWidth/Height).
+      const scale = rect.width / (el.offsetWidth || 1);
+      const x = clamp(
+        (e.clientX - rect.left) / scale - dragging.offX,
+        0,
+        el.offsetWidth - NOTE_W
+      );
+      const y = clamp(
+        (e.clientY - rect.top) / scale - dragging.offY,
+        0,
+        el.offsetHeight - NOTE_H
+      );
       setMemos((prev) => prev.map((m) => (m.id === dragging.id ? { ...m, x, y } : m)));
     };
     const onUp = () => setDragging(null);
@@ -228,17 +244,21 @@ export function MemoBoard() {
     if ((e.target as HTMLElement).closest("[data-no-drag]")) return;
     const noteEl = e.currentTarget as HTMLElement;
     const noteRect = noteEl.getBoundingClientRect();
+    // Convert mouse-within-note offset to unscaled units so it matches
+    // memo x/y (which are stored in unscaled CSS coords).
+    const scale = noteRect.width / (noteEl.offsetWidth || 1);
     bringToFront(memo.id);
     setDragging({
       id: memo.id,
-      offX: e.clientX - noteRect.left,
-      offY: e.clientY - noteRect.top,
+      offX: (e.clientX - noteRect.left) / scale,
+      offY: (e.clientY - noteRect.top) / scale,
     });
   };
 
   const handleAdd = () => {
-    const rect = boardRef.current?.getBoundingClientRect();
-    const w = rect?.width ?? 600;
+    // Use offsetWidth (unscaled layout) not getBoundingClientRect (visual)
+    // so newly-placed memos sit at the correct CSS coords under a transform.
+    const w = boardRef.current?.offsetWidth ?? 600;
     const idx = memos.length;
     const maxZ = memos.reduce((m, n) => Math.max(m, n.z), 0);
     const next: Memo = {
@@ -366,6 +386,7 @@ export function MemoBoard() {
 
       <Toast
         message="Memo deleted"
+        {...resolveToastIcon("Memo deleted")}
         isVisible={!!recentlyDeleted}
         onClose={() => setRecentlyDeleted(null)}
         actionLabel="Undo"
@@ -384,6 +405,8 @@ function clamp(n: number, min: number, max: number): number {
 const styles: Record<string, React.CSSProperties> = {
   wrapper: {
     width: "100%",
+    height: "100%",
+    minHeight: 0,
     display: "flex",
     flexDirection: "column",
     gap: spacing.s,
@@ -402,7 +425,9 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 50,
+    // Above any reasonable memo z. Memos' z grows on every add/drag, so a
+    // small value like 50 gets covered after a dozen interactions.
+    zIndex: 9999,
     transition: "background-color 0.15s, transform 0.05s",
   },
   fabPlus: {
@@ -416,7 +441,9 @@ const styles: Record<string, React.CSSProperties> = {
   board: {
     position: "relative",
     width: "100%",
-    height: `${BOARD_HEIGHT}px`,
+    // Fills its column so the board height matches the calendar (grid stretch).
+    flex: 1,
+    minHeight: 0,
     borderRadius: radii.l,
     border: `8px solid ${colors.primary400}`,
     backgroundColor: colors.neutral100,

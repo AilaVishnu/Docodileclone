@@ -1,9 +1,10 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { colors, fonts, spacing, radii } from "../../styles/theme";
+import { BillLayout } from "../BillLayout";
 import { Button } from "../Button";
 import { Select } from "../Input/Select/Select";
-import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
+import { RadioGroup } from "../Radio";
+import { Icon } from "../Icon";
 
 type Medicine = {
   id: string;
@@ -119,16 +120,20 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
     setItems((prev) => prev.filter((m) => m.id !== id));
   };
 
-  if (!isOpen) return null;
-
-  return createPortal(
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.body} onClick={(e) => e.stopPropagation()}>
-        {/* ── Left card: medicines list ─────────────────────────────── */}
-        <div style={styles.leftCard}>
+  // Shares BillModal's frame via BillLayout — a line-item list on the left, a
+  // bill summary + total band and a payment card on the right. Only the
+  // medicines-specific content (table, catalog add, stock pricing, GST,
+  // single-payment radios, Charge/Waive) lives here.
+  return (
+    <BillLayout
+      isOpen={isOpen}
+      onClose={onClose}
+      header={<span style={{ fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 }}>{patientName}</span>}
+      total={inr(total)}
+      left={
+        <>
           <div style={styles.leftHeader}>
             <h3 style={styles.title}>Medicines</h3>
-            <div style={styles.subtitle}>For {patientName}</div>
           </div>
 
           <div style={styles.tableContainer}>
@@ -211,7 +216,7 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
                           aria-label={`Remove ${m.name}`}
                           title="Remove from bill"
                         >
-                          <TrashIcon width={16} height={16} />
+                          <Icon name="trash" size={16} tone="inherit" />
                         </button>
                       </td>
                     </tr>
@@ -249,153 +254,96 @@ export function BillMedicinesModal({ isOpen, onClose, onBilled, patientName, med
           >
             + Add medicine
           </button>
-        </div>
+        </>
+      }
+      summary={
+        <div style={styles.fieldsContainer}>
+          <div style={styles.fieldRow}>
+            <label style={styles.label}>Subtotal</label>
+            <div style={styles.fieldValueReadOnly}>{inr(subtotal)}</div>
+          </div>
 
-        {/* ── Right side: receipt with zigzag tear ──────────────────── */}
-        <div style={styles.rightWrap}>
-          <div style={styles.rightCard}>
-            <div style={styles.rightHeader}>
-              <h3 style={styles.billTitle}>Bill</h3>
-              <button style={styles.closeBtn} onClick={onClose} aria-label="Close">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-              </button>
-            </div>
-
-            <div style={styles.fieldsContainer}>
-              <div style={styles.fieldRow}>
-                <label style={styles.label}>Subtotal</label>
-                <div style={styles.fieldValueReadOnly}>{inr(subtotal)}</div>
-              </div>
-
-              {due > 0 && (
-                <div style={styles.fieldRow}>
-                  <label style={styles.label}>Pending</label>
-                  <div style={styles.fieldValueReadOnly}>
-                    <span style={styles.duePill}>{pendingDueLabel}</span>
-                    <span style={styles.dueAmount}>{inr(due)}</span>
-                  </div>
-                </div>
-              )}
-
-              <div style={styles.fieldRow}>
-                <label style={styles.label}>Discount</label>
-                <div style={{ ...styles.fieldValue, ...(isWaived ? { opacity: 0.5 } : null) }}>
-                  <input
-                    style={{ ...styles.input, textAlign: "right", cursor: isWaived ? "not-allowed" : "text" }}
-                    type="number"
-                    min={0}
-                    placeholder="0"
-                    value={isWaived ? 100 : (discount || "")}
-                    disabled={isWaived}
-                    onChange={(e) => setDiscount(Number(e.target.value))}
-                  />
-                  <div style={styles.toggleGroup}>
-                    <button style={discountMode === "%" ? styles.toggleActive : styles.toggleInactive} disabled={isWaived} onClick={() => setDiscountMode("%")}>%</button>
-                    <button style={discountMode === "₹" ? styles.toggleActive : styles.toggleInactive} disabled={isWaived} onClick={() => setDiscountMode("₹")}>₹</button>
-                  </div>
-                </div>
-              </div>
-
-              <div style={styles.fieldRow}>
-                <label style={styles.label}>GST</label>
-                <div style={{ ...styles.fieldValue, ...(isWaived ? { opacity: 0.5 } : null) }}>
-                  <input
-                    style={{ ...styles.input, textAlign: "right", cursor: isWaived ? "not-allowed" : "text" }}
-                    type="number"
-                    min={0}
-                    max={100}
-                    placeholder="0"
-                    value={isWaived ? 0 : (gst || "")}
-                    disabled={isWaived}
-                    onChange={(e) => setGst(Number(e.target.value))}
-                  />
-                  <span style={styles.fieldSuffix}>%</span>
-                </div>
+          {due > 0 && (
+            <div style={styles.fieldRow}>
+              <label style={styles.label}>Pending</label>
+              <div style={styles.fieldValueReadOnly}>
+                <span style={styles.duePill}>{pendingDueLabel}</span>
+                <span style={styles.dueAmount}>{inr(due)}</span>
               </div>
             </div>
+          )}
 
-            <div style={styles.totalRow}>
-              <span style={styles.totalLabel}>Total</span>
-              <span style={styles.totalValue}>{inr(total)}</span>
-            </div>
-
-            <div style={styles.methodRow}>
-              {["Cash", "Card", "UPI", "Waive"].map((m) => (
-                <label key={m} style={{ ...styles.radioLabel, color: m === "Waive" ? colors.red200 : colors.neutral900 }}>
-                  <input
-                    type="radio"
-                    name="medBillPayment"
-                    checked={paymentMethod === m}
-                    onChange={() => setPaymentMethod(m)}
-                    style={styles.radioInput}
-                  />
-                  {m}
-                </label>
-              ))}
-            </div>
-
-            <div style={styles.footer}>
-              <Button
-                variant="dark"
-                size="sm"
-                style={{ height: "40px", fontSize: fonts.size.s, padding: "0 20px" }}
-                disabled={items.length === 0 || (!isWaived && total <= 0)}
-                onClick={() => {
-                  const billedItems = items
-                    .filter((m) => m.qty > 0)
-                    .map((m) => ({ name: m.name, qty: m.qty, inStock: m.inStock !== false }));
-                  onBilled?.(paymentMethod, total, billedItems);
-                  onClose();
-                }}
-              >
-                {paymentMethod === "Waive" ? "Mark Waived" : "Charge & Bill"}
-              </Button>
+          <div style={styles.fieldRow}>
+            <label style={styles.label}>Discount</label>
+            <div style={{ ...styles.fieldValue, ...(isWaived ? { opacity: 0.5 } : null) }}>
+              <input
+                style={{ ...styles.input, textAlign: "right", cursor: isWaived ? "not-allowed" : "text" }}
+                type="number"
+                min={0}
+                placeholder="0"
+                value={isWaived ? 100 : (discount || "")}
+                disabled={isWaived}
+                onChange={(e) => setDiscount(Number(e.target.value))}
+              />
+              <div style={styles.toggleGroup}>
+                <button style={discountMode === "%" ? styles.toggleActive : styles.toggleInactive} disabled={isWaived} onClick={() => setDiscountMode("%")}>%</button>
+                <button style={discountMode === "₹" ? styles.toggleActive : styles.toggleInactive} disabled={isWaived} onClick={() => setDiscountMode("₹")}>₹</button>
+              </div>
             </div>
           </div>
 
-          <div style={styles.zigzag} />
+          <div style={styles.fieldRow}>
+            <label style={styles.label}>GST</label>
+            <div style={{ ...styles.fieldValue, ...(isWaived ? { opacity: 0.5 } : null) }}>
+              <input
+                style={{ ...styles.input, textAlign: "right", cursor: isWaived ? "not-allowed" : "text" }}
+                type="number"
+                min={0}
+                max={100}
+                placeholder="0"
+                value={isWaived ? 0 : (gst || "")}
+                disabled={isWaived}
+                onChange={(e) => setGst(Number(e.target.value))}
+              />
+              <span style={styles.fieldSuffix}>%</span>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>,
-    document.body
+      }
+      payment={
+        <div style={styles.methodRow}>
+          <RadioGroup
+            name="medBillPayment"
+            value={paymentMethod}
+            onChange={setPaymentMethod}
+            options={["Cash", "Card", "UPI", { label: "Waive", value: "Waive", color: colors.red200 }]}
+          />
+        </div>
+      }
+      action={
+        <Button
+          variant="dark"
+          size="sm"
+          style={{ width: "100%", height: "40px", fontSize: fonts.size.s }}
+          disabled={items.length === 0 || (!isWaived && total <= 0)}
+          onClick={() => {
+            const billedItems = items
+              .filter((m) => m.qty > 0)
+              .map((m) => ({ name: m.name, qty: m.qty, inStock: m.inStock !== false }));
+            onBilled?.(paymentMethod, total, billedItems);
+            onClose();
+          }}
+        >
+          {paymentMethod === "Waive" ? "Mark Waived" : "Charge & Bill"}
+        </Button>
+      }
+    />
   );
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────
-const CARD_RADIUS = 16;
-
 const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1500,
-    padding: spacing.m,
-  },
-  body: {
-    width: "min(1000px, calc(100vw - 32px))",
-    maxHeight: "calc(100vh - 64px)",
-    display: "flex",
-    alignItems: "stretch",
-    gap: 20,
-    fontFamily: fonts.family.primary,
-  },
-
   // ─── Left card (medicines) ────────────────────────────────────────────
-  leftCard: {
-    flex: 1,
-    minWidth: 0,
-    backgroundColor: colors.neutral100,
-    borderRadius: CARD_RADIUS,
-    padding: "20px 24px",
-    display: "flex",
-    flexDirection: "column",
-    gap: spacing.m,
-    overflowY: "auto",
-  },
   leftHeader: {
     display: "flex",
     flexDirection: "column",
@@ -412,15 +360,6 @@ const styles: Record<string, React.CSSProperties> = {
   subtitle: {
     fontSize: fonts.size.xs,
     color: colors.neutral500,
-  },
-
-  empty: {
-    padding: spacing.xl,
-    textAlign: "center",
-    fontSize: fonts.size.s,
-    color: colors.neutral500,
-    border: `1px dashed ${colors.neutral200}`,
-    borderRadius: radii.m,
   },
 
   tableContainer: {
@@ -450,11 +389,6 @@ const styles: Record<string, React.CSSProperties> = {
     verticalAlign: "middle",
     fontWeight: 400,
     borderBottom: `1px solid ${colors.primary300}`,
-  },
-  tdMeta: {
-    fontSize: fonts.size.xs,
-    color: colors.neutral500,
-    marginTop: 2,
   },
   notInStockBadge: {
     display: "inline-block",
@@ -520,18 +454,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 500,
   },
 
-  catalogSelect: {
-    width: "100%",
-    padding: "6px 10px",
-    borderRadius: 8,
-    border: `1px solid ${colors.primary300}`,
-    background: colors.neutral100,
-    fontSize: fonts.size.s,
-    color: colors.neutral900,
-    fontFamily: "inherit",
-    cursor: "pointer",
-    outline: "none",
-  },
   addMedicineBtn: {
     alignSelf: "flex-start",
     border: `1px dashed ${colors.neutral300}`,
@@ -545,57 +467,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "inherit",
   },
 
-  // ─── Right side: receipt + zigzag ────────────────────────────────────
-  rightWrap: {
-    width: 360,
-    flexShrink: 0,
-    display: "flex",
-    flexDirection: "column",
-  },
-  rightCard: {
-    backgroundColor: colors.neutral100,
-    borderRadius: `${CARD_RADIUS}px ${CARD_RADIUS}px 0 0`,
-    padding: "20px 24px",
-    display: "flex",
-    flexDirection: "column",
-    gap: spacing.s,
-  },
-  rightHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  billTitle: {
-    margin: 0,
-    fontSize: fonts.size.h5,
-    fontWeight: fonts.weight.regular,
-    fontFamily: fonts.family.secondary,
-    color: colors.neutral900,
-    lineHeight: fonts.lineHeight.h5,
-  },
-  closeBtn: {
-    border: "none",
-    background: "transparent",
-    cursor: "pointer",
-    color: colors.neutral500,
-    padding: 0,
-    width: 28,
-    height: 28,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  zigzag: {
-    width: "100%",
-    height: 20,
-    flexShrink: 0,
-    backgroundImage: `linear-gradient(135deg, ${colors.neutral100} 50%, transparent 50%), linear-gradient(225deg, ${colors.neutral100} 50%, transparent 50%)`,
-    backgroundSize: "20px 20px",
-    backgroundRepeat: "repeat-x",
-  },
-
-  // ─── Bill fields ─────────────────────────────────────────────────────
+  // ─── Bill summary fields ─────────────────────────────────────────────
   fieldsContainer: {
     display: "flex",
     flexDirection: "column",
@@ -674,46 +546,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "inherit",
   },
 
-  totalRow: {
-    display: "flex",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-    padding: "8px 12px",
-    backgroundColor: colors.primary100,
-    borderRadius: 8,
-  },
-  totalLabel: {
-    fontSize: fonts.size.m,
-    fontWeight: 600,
-    color: colors.neutral900,
-    lineHeight: 1,
-  },
-  totalValue: {
-    fontSize: fonts.size.h4,
-    fontWeight: fonts.weight.regular,
-    fontFamily: fonts.family.secondary,
-    color: colors.neutral900,
-    lineHeight: 1,
-  },
-
+  // ─── Payment ─────────────────────────────────────────────────────────
   methodRow: {
     display: "flex",
     gap: 12,
     justifyContent: "center",
     flexWrap: "wrap",
   },
-  radioLabel: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    fontSize: fonts.size.s,
-    cursor: "pointer",
-  },
-  radioInput: {
-    margin: 0,
-    cursor: "pointer",
-  },
-
   toggleGroup: {
     display: "flex",
     border: `1px solid ${colors.neutral300}`,
@@ -738,12 +577,5 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: fonts.size.s,
     fontWeight: 500,
     cursor: "pointer",
-  },
-
-  footer: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: spacing.xs,
   },
 };

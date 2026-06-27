@@ -1,13 +1,9 @@
 import React, { useState, useEffect, useRef, KeyboardEvent } from "react";
-import { Button } from "../Button";
 import { Tag } from "../Tag";
 import { styles } from "./ClinicInfoCard.styles";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
-import { ReactComponent as BuildingIcon } from "../../assets/Buildings.svg";
-import { ReactComponent as PhoneIcon } from "../../assets/Phone.svg";
-import { ReactComponent as LocationIcon } from "../../assets/Map Point.svg";
+import { colors, fonts, radii, spacing, strokes, shadows, zIndex } from "../../styles/theme";
+import { Icon } from "../Icon";
 import { Clinic } from "../ClinicTabs";
-import { API_BASE_URL } from "../../apiConfig";
 
 const DEPARTMENTS = [
   "Cardiology", "Dermatology", "ENT", "Gynecology", "Neurology",
@@ -24,62 +20,12 @@ type ClinicInfoCardProps = {
   onShowToast?: (message: string) => void;
 };
 
-const isUuid = (str: string) =>
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-
-export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCardProps) {
+export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
   const [deptInput, setDeptInput] = useState("");
   const [deptDropdownOpen, setDeptDropdownOpen] = useState(false);
   const deptWrapRef = useRef<HTMLDivElement>(null);
-  const [isSaved, setIsSaved] = useState(isUuid(clinic.id));
-  const [showErrors, setShowErrors] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
 
-  useEffect(() => {
-    setIsSaved(isUuid(clinic.id));
-    setIsEditing(false);
-    setShowErrors(false);
-  }, [clinic.id]);
-
-  const { domain, name: clinicName, phone, departments, address } = clinic;
-
-  const [domainAvailability, setDomainAvailability] = useState<
-    "idle" | "checking" | "available" | "taken"
-  >("idle");
-  const domainCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    const locked = isSaved;
-    if (!domain || domain.trim().length < 2 || locked) {
-      setDomainAvailability("idle");
-      return;
-    }
-    setDomainAvailability("checking");
-    if (domainCheckTimer.current) clearTimeout(domainCheckTimer.current);
-    domainCheckTimer.current = setTimeout(async () => {
-      try {
-        const res = await fetch(
-          `${API_BASE_URL}/api/tenant/domain/check?domain=${encodeURIComponent(domain.trim())}`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
-            },
-          }
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setDomainAvailability(data.available ? "available" : "taken");
-        } else {
-          setDomainAvailability("idle");
-        }
-      } catch {
-        setDomainAvailability("idle");
-      }
-    }, 500);
-    return () => {
-      if (domainCheckTimer.current) clearTimeout(domainCheckTimer.current);
-    };
-  }, [domain, isSaved]);
+  const { name: clinicName, phone, departments, address } = clinic;
 
   const deptExists = (name: string) =>
     departments.some((d) => d.toLowerCase() === name.toLowerCase());
@@ -113,8 +59,6 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
     return unselected.filter((d) => d.toLowerCase().includes(deptInput.toLowerCase()));
   })();
 
-  const displayName = clinicName || domain || "Your Clinic";
-
   const validatePhone = (p: string) => {
     if (!p) return true;
     const regex = /^(\+91)?[6-9]\d{9}$/;
@@ -123,61 +67,11 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
 
   const isPhoneValid = validatePhone(phone);
 
-  // Most fields lock after save and unlock when the user clicks Edit Details.
-  const fieldsLocked = isSaved && !isEditing;
-  // Domain (the subdomain/nick-name) is permanent: once saved it's locked
-  // forever, even in Edit Details mode. Front-end enforcement only — the
-  // back-end still accepts updates but the UI disallows them.
-  const domainLocked = isSaved;
-
-  const handleSave = async () => {
-    const missing = [];
-    if (!clinicName.trim()) missing.push("clinic name");
-    if (!phone.trim()) missing.push("phone number");
-    else if (!isPhoneValid) missing.push("valid phone number");
-    if (!domain.trim()) missing.push("subdomain");
-    if (!address.trim()) missing.push("clinic address");
-
-    if (missing.length > 0) {
-      setShowErrors(true);
-      onShowToast?.(`Please enter ${missing[0]}`);
-      return;
-    }
-    setShowErrors(false);
-
-    try {
-      const clinicId = isUuid(clinic.id) ? clinic.id : null;
-      const response = await fetch(`${API_BASE_URL}/api/tenant/clinic`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
-        },
-        body: JSON.stringify({
-          id: clinicId,
-          name: clinicName,
-          address,
-          phone,
-          domain,
-          speciality: departments.join(","),
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        onShowToast?.(errorData.error || "Failed to save clinic details");
-        return;
-      }
-
-      const savedClinicData = await response.json();
-      onUpdate({ id: savedClinicData.id });
-      setIsSaved(true);
-      setIsEditing(false);
-      onShowToast?.("Clinic details saved successfully!");
-    } catch (error) {
-      onShowToast?.("An error occurred while saving clinic details");
-    }
-  };
+  // The form is ALWAYS editable — no view/lock mode, no Save button. Edits
+  // live in state via onUpdate; persistence happens at the page level via
+  // "Next" (which validates and POSTs every clinic). Kept as a const so the
+  // existing field rows stay simple.
+  const fieldsLocked = false;
 
   const handlePhoneChange = (val: string) => {
     let digits = val.replace(/\D/g, "");
@@ -203,17 +97,14 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
 
   return (
     <div style={styles.card}>
-      <h3 style={styles.clinicName} title={displayName}>{displayName}</h3>
-
       {/* Clinic name */}
       <div
         style={{
           ...styles.fieldRow,
           ...(fieldsLocked ? styles.locked : {}),
-          ...(showErrors && !clinicName.trim() ? styles.fieldError : {}),
         }}
       >
-        <span style={styles.fieldIcon}><BuildingIcon width={20} height={20} /></span>
+        <span style={styles.fieldIcon}><Icon name="buildings" size={20} tone="inherit" /></span>
         <input
           style={styles.fieldInput}
           value={clinicName}
@@ -229,10 +120,10 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
         style={{
           ...styles.fieldRow,
           ...(fieldsLocked ? styles.locked : {}),
-          ...((!isPhoneValid || (showErrors && !phone.trim())) ? styles.fieldError : {}),
+          ...(!isPhoneValid ? styles.fieldError : {}),
         }}
       >
-        <span style={styles.fieldIcon}><PhoneIcon width={20} height={20} /></span>
+        <span style={styles.fieldIcon}><Icon name="phone" size={20} tone="inherit" /></span>
         <input
           style={styles.fieldInput}
           value={phone}
@@ -246,7 +137,7 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
       {/* Departments — icon + tag list + autocomplete dropdown */}
       <div ref={deptWrapRef} style={{ position: "relative" }}>
         <div style={{ ...styles.specialtyRow, ...(fieldsLocked ? styles.locked : {}) }}>
-          <span style={styles.fieldIcon}><BuildingIcon width={20} height={20} /></span>
+          <span style={styles.fieldIcon}><Icon name="buildings" size={20} tone="inherit" /></span>
           <div style={styles.tagRow}>
             {departments.map((s, i) => (
               <Tag
@@ -297,10 +188,9 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
         style={{
           ...styles.fieldRowMultiline,
           ...(fieldsLocked ? styles.locked : {}),
-          ...(showErrors && !address.trim() ? styles.fieldError : {}),
         }}
       >
-        <span style={styles.fieldIcon}><LocationIcon width={20} height={20} /></span>
+        <span style={styles.fieldIcon}><Icon name="map-point" size={20} tone="inherit" /></span>
         <textarea
           style={styles.fieldTextArea}
           value={address}
@@ -311,72 +201,14 @@ export function ClinicInfoCard({ clinic, onUpdate, onShowToast }: ClinicInfoCard
         />
       </div>
 
-      {/* Domain (nick name) — sits at the bottom. Editable only during the
-          initial setup; locked permanently once the clinic is saved. */}
-      <div style={{ ...styles.domainSection, ...(domainLocked ? styles.locked : {}) }}>
-        <label style={styles.domainLabel}>give a nick name to your clinic</label>
-        <div
-          style={{
-            ...styles.domainBox,
-            ...(domainAvailability === "taken"
-              ? { borderColor: colors.red200 }
-              : domainAvailability === "available"
-                ? { borderColor: colors.secondary700 }
-                : {}),
-          }}
-        >
-          <input
-            style={styles.domainInput}
-            value={domain}
-            onChange={(e) => onUpdate({ domain: e.target.value })}
-            placeholder="your-clinic"
-            disabled={domainLocked}
-          />
-          <span
-            style={{
-              ...styles.domainSuffix,
-              ...(domainLocked ? styles.domainSuffixLocked : {}),
-            }}
-          >
-            .docodile.app
-          </span>
+      {/* Subdomain — fixed at provisioning, shown read-only */}
+      <div style={styles.domainSection}>
+        <label style={styles.domainLabel}>your clinic address</label>
+        <div style={{ ...styles.domainBox, ...styles.locked }}>
+          <span style={styles.domainInput}>{window.location.hostname}</span>
         </div>
-        {!domainLocked && domainAvailability !== "idle" && (
-          <div
-            style={{
-              fontSize: fonts.size.xs,
-              fontFamily: fonts.family.primary,
-              color:
-                domainAvailability === "available"
-                  ? colors.secondary700
-                  : domainAvailability === "taken"
-                    ? colors.red200
-                    : colors.neutral700,
-              marginTop: 4,
-              marginLeft: 4,
-            }}
-          >
-            {domainAvailability === "checking"
-              ? "Checking..."
-              : domainAvailability === "available"
-                ? "Available"
-                : "Already taken"}
-          </div>
-        )}
       </div>
 
-      {/* Save / Edit toggle */}
-      <div style={styles.buttonWrapper}>
-        {isSaved && !isEditing ? (
-          <Button size="md" variant="light" onClick={() => setIsEditing(true)} style={{ minWidth: 180 }}>
-            Edit Details
-          </Button>
-        ) : (
-          <Button size="md" variant="dark" onClick={handleSave} style={{ minWidth: 180 }}>
-            Save
-          </Button>
-        )}
-      </div>
     </div>
   );
 }
@@ -393,8 +225,8 @@ const deptMenuStyle: React.CSSProperties = {
   padding: spacing["2xs"],
   display: "flex",
   flexDirection: "column",
-  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
-  zIndex: 1000,
+  boxShadow: shadows.menu,
+  zIndex: zIndex.popover,
   maxHeight: "min(50vh, 480px)",
   overflowY: "auto",
 };

@@ -3,11 +3,15 @@ import { Modal } from "../Modal";
 import { Card } from "../Card";
 import { StaffDetailsCard } from "../StaffDetailsCard";
 import { Button } from "../Button";
-import { styles, confirmStyles } from "./AddStaffModal.styles";
+import { Field } from "../Field";
+import { RadioGroup } from "../Radio";
+import { ModalHeader } from "../ModalHeader";
+import { styles } from "./AddStaffModal.styles";
+import { ConfirmDialog } from "../ConfirmDialog";
 import { AdditionalStaffDetailsCard } from "../AdditionalStaffDetailsCard";
 import { styles as roleStyles } from "../AdditionalStaffDetailsCard/AdditionalStaffDetailsCard.styles";
 import { StaffIllustration } from "./StaffIllustration";
-import { ReactComponent as RoleIcon } from "../../assets/Mask Happly.svg";
+import { Icon } from "../Icon";
 
 // Standard role options that appear as radios. "Other" is a separate entry
 // that reveals a free-text input for custom roles.
@@ -191,69 +195,52 @@ export function AddStaffModal({
   return (
     <>
     <Modal isOpen={isOpen} onClose={onClose}>
-      {/* Header */}
-      <div style={styles.header}>
-        <h3 style={styles.title}>Add staff member</h3>
+      <ModalHeader title="Add staff member" onClose={onClose} />
 
-        <button style={styles.closeButton} onClick={onClose}>
-          ✕
-        </button>
-      </div>
-
-      {/* Role section — first after the heading. Drives everything else. */}
-      <Card style={{ ...roleStyles.card, marginBottom: 16 }}>
-        <div style={roleStyles.section}>
+      {/* Role section — first after the heading. "Role" + icon on the left,
+          options in a 3-col grid on the right. Drives everything else. */}
+      <Card style={{ ...roleStyles.card, marginTop: 16, marginBottom: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 40,
+            ...(errors.role ? { border: "1px solid red", borderRadius: "8px", padding: "8px" } : {}),
+          }}
+        >
           <div style={roleStyles.sectionTitle}>
-            <RoleIcon />
+            <Icon name="mask-happy" tone="inherit" />
             <span>Role</span>
           </div>
 
-          <div
-            style={{
-              ...roleStyles.radioGroup,
-              ...(errors.role ? { border: "1px solid red", borderRadius: "8px", padding: "8px" } : {}),
-            }}
-          >
-            {STANDARD_ROLES.map((r) => (
-              <label key={r} style={roleStyles.radioLabel}>
-                <input
-                  type="radio"
-                  name="role"
-                  checked={!isOtherRole && role === r}
-                  onChange={() => {
-                    setIsOtherRole(false);
-                    setRole(r);
-                  }}
-                  style={roleStyles.radioInput}
-                />
-                {r}
-              </label>
-            ))}
-            <label style={roleStyles.radioLabel}>
-              <input
-                type="radio"
-                name="role"
-                checked={isOtherRole}
-                onChange={() => {
+          <div style={{ flex: 1 }}>
+            <RadioGroup
+              name="role"
+              value={isOtherRole ? "Other" : role}
+              onChange={(r) => {
+                if (r === "Other") {
                   setIsOtherRole(true);
                   setRole(""); // clear so the user can type their custom role
-                }}
-                style={roleStyles.radioInput}
-              />
-              Other
-            </label>
-          </div>
-
-          {isOtherRole && (
-            <input
-              type="text"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              placeholder="Enter role"
-              style={roleStyles.otherRoleInput}
-              autoFocus
+                } else {
+                  setIsOtherRole(false);
+                  setRole(r);
+                }
+              }}
+              options={[...STANDARD_ROLES, "Other"]}
+              columns={3}
             />
-          )}
+            {isOtherRole && (
+              <div style={{ marginTop: 8 }}>
+                <Field
+                  variant="underline"
+                  value={role}
+                  onChange={setRole}
+                  placeholder="Enter role"
+                  autoFocus
+                />
+              </div>
+            )}
+          </div>
         </div>
       </Card>
 
@@ -307,7 +294,7 @@ export function AddStaffModal({
         )}
 
         <div style={styles.footerRight}>
-          <Button variant="dangerLight" size="sm" onClick={onClose}>
+          <Button variant="light" size="sm" onClick={onClose}>
             Cancel
           </Button>
 
@@ -318,28 +305,19 @@ export function AddStaffModal({
       </div>
     </Modal>
 
-    {showDeleteConfirm && (
-      <div style={confirmStyles.overlay}>
-        <div style={confirmStyles.dialog}>
-          <h4 style={confirmStyles.title}>Remove this staff member?</h4>
-          <p style={confirmStyles.message}>
-            They'll be removed from this clinic and can no longer log in or be
-            booked. Their past appointments and prescriptions stay on record.
-          </p>
-          <div style={confirmStyles.actions}>
-            <Button variant="dangerLight" size="sm" onClick={() => setShowDeleteConfirm(false)}>
-              Nope
-            </Button>
-            <Button variant="dark" size="sm" onClick={() => {
-              setShowDeleteConfirm(false);
-              onDelete?.();
-            }}>
-              Yes
-            </Button>
-          </div>
-        </div>
-      </div>
-    )}
+    <ConfirmDialog
+      isOpen={showDeleteConfirm}
+      title="Remove this staff member?"
+      message="They'll be removed from this clinic and can no longer log in or be booked. Their past appointments and prescriptions stay on record."
+      confirmLabel="Yes"
+      cancelLabel="Nope"
+      destructive
+      onConfirm={() => {
+        setShowDeleteConfirm(false);
+        onDelete?.();
+      }}
+      onCancel={() => setShowDeleteConfirm(false)}
+    />
     </>
   );
 }

@@ -1,14 +1,10 @@
 package com.example.docodile.service
 
-import com.example.docodile.domain.*
+import com.example.docodile.domain.AppUser
+import com.example.docodile.domain.ClinicSettings
 import com.example.docodile.repo.AppUserRepository
-import com.example.docodile.repo.ClinicEntityRepository
-import com.example.docodile.repo.ClinicStaffRepository
-import com.example.docodile.repo.TenantRepository
+import com.example.docodile.repo.ClinicSettingsRepository
 import com.example.docodile.security.CurrentUser
-import com.example.docodile.service.AuditService
-import com.example.docodile.service.EmailService
-import com.example.docodile.service.PasswordTokenService
 import com.example.docodile.web.ClinicDetailsRequest
 import com.example.docodile.web.StaffRequest
 import org.junit.jupiter.api.Assertions.*
@@ -24,16 +20,10 @@ import java.util.*
 class ClinicStatusServiceTest {
 
     @Mock
-    private lateinit var clinicEntityRepository: ClinicEntityRepository
-
-    @Mock
-    private lateinit var clinicStaffRepository: ClinicStaffRepository
+    private lateinit var clinicSettingsRepository: ClinicSettingsRepository
 
     @Mock
     private lateinit var appUserRepository: AppUserRepository
-
-    @Mock
-    private lateinit var tenantRepository: TenantRepository
 
     @Mock
     private lateinit var currentUser: CurrentUser
@@ -51,67 +41,66 @@ class ClinicStatusServiceTest {
     private lateinit var clinicStatusService: ClinicStatusService
 
     @Test
-    fun `isClinicComplete should return true when all criteria met`() {
-        val tenantId = UUID.randomUUID()
-        val clinic = ClinicEntity(id = UUID.randomUUID(), name = "Clinic", address = "Address", phone = "123")
-        
-        `when`(currentUser.tenantId()).thenReturn(tenantId)
-        `when`(clinicEntityRepository.findAllByTenantId(tenantId)).thenReturn(listOf(clinic))
-        `when`(clinicStaffRepository.countByIdClinicId(clinic.id)).thenReturn(1L)
+    fun `isClinicComplete returns false when no settings exist`() {
+        `when`(clinicSettingsRepository.findAll()).thenReturn(emptyList())
 
         val result = clinicStatusService.isClinicComplete()
+
+        assertFalse(result)
+    }
+
+    @Test
+    fun `isClinicComplete returns false when settings have blank name`() {
+        val settings = ClinicSettings(name = "", address = "Some Address")
+        `when`(clinicSettingsRepository.findAll()).thenReturn(listOf(settings))
+
+        val result = clinicStatusService.isClinicComplete()
+
+        assertFalse(result)
+    }
+
+    @Test
+    fun `isClinicComplete returns true when settings are complete and active staff exists`() {
+        val settings = ClinicSettings(name = "Clinic", address = "Address")
+        val activeUser = AppUser(active = true)
+        `when`(clinicSettingsRepository.findAll()).thenReturn(listOf(settings))
+        `when`(appUserRepository.findAll()).thenReturn(listOf(activeUser))
+
+        val result = clinicStatusService.isClinicComplete()
+
         assertTrue(result)
     }
 
     @Test
-    fun `saveClinicDetails should throw exception if domain changed after being set`() {
-        val tenantId = UUID.randomUUID()
-        val clinicId = UUID.randomUUID()
-        val existingClinic = ClinicEntity(id = clinicId, domain = "old-domain", tenant = Tenant(id = tenantId))
-        val request = ClinicDetailsRequest(id = clinicId, domain = "new-domain", name = "Clinic", address = null, phone = null, speciality = null)
+    fun `saveClinicDetails saves and returns updated settings`() {
+        val request = ClinicDetailsRequest(id = null, name = "My Clinic", address = "123 St", phone = null, domain = null, speciality = null)
+        `when`(clinicSettingsRepository.findAll()).thenReturn(emptyList())
+        `when`(clinicSettingsRepository.save(any(ClinicSettings::class.java)))
+            .thenAnswer { it.arguments[0] as ClinicSettings }
 
-        `when`(currentUser.tenantId()).thenReturn(tenantId)
-        `when`(clinicEntityRepository.findById(clinicId)).thenReturn(Optional.of(existingClinic))
+        val result = clinicStatusService.saveClinicDetails(request)
 
+        assertEquals("My Clinic", result.name)
+        assertEquals("123 St", result.address)
+    }
+
+    @Test
+    fun `saveStaff throws on invalid email`() {
+        val request = StaffRequest(
+            name = "User", email = "invalid", phone = "1234567890", role = "OTHER", gender = "OTHER"
+        )
         assertThrows(IllegalArgumentException::class.java) {
-            clinicStatusService.saveClinicDetails(request)
+            clinicStatusService.saveStaff(request)
         }
     }
 
     @Test
-    fun `saveClinicDetails should check for domain uniqueness when setting for first time`() {
-        val tenantId = UUID.randomUUID()
-        val clinicId = UUID.randomUUID()
-        val existingClinic = ClinicEntity(id = clinicId, domain = null, tenant = Tenant(id = tenantId))
-        val request = ClinicDetailsRequest(id = clinicId, domain = "taken-domain", name = "Clinic", address = null, phone = null, speciality = null)
-
-        `when`(currentUser.tenantId()).thenReturn(tenantId)
-        `when`(clinicEntityRepository.findById(clinicId)).thenReturn(Optional.of(existingClinic))
-        `when`(clinicEntityRepository.existsByDomainIgnoreCase("taken-domain")).thenReturn(true)
-
-        val exception = assertThrows(IllegalArgumentException::class.java) {
-            clinicStatusService.saveClinicDetails(request)
-        }
-        assertEquals("Domain name already exists in application", exception.message)
-    }
-
-    @Test
-    fun `saveStaff should validate email and phone format`() {
-        val clinicId = UUID.randomUUID()
-        val tenantId = UUID.randomUUID()
-        val clinic = ClinicEntity(id = clinicId, tenant = Tenant(id = tenantId))
-
-        `when`(currentUser.tenantId()).thenReturn(tenantId)
-        `when`(clinicEntityRepository.findById(clinicId)).thenReturn(Optional.of(clinic))
-
-        val invalidEmailRequest = StaffRequest(name = "User", email = "invalid", phone = "1234567890", role = "DOCTOR", gender = "OTHER")
+    fun `saveStaff throws on short phone`() {
+        val request = StaffRequest(
+            name = "User", email = "test@example.com", phone = "123", role = "OTHER", gender = "OTHER"
+        )
         assertThrows(IllegalArgumentException::class.java) {
-            clinicStatusService.saveStaff(clinicId, invalidEmailRequest)
-        }
-
-        val invalidPhoneRequest = StaffRequest(name = "User", email = "test@example.com", phone = "123", role = "DOCTOR", gender = "OTHER")
-        assertThrows(IllegalArgumentException::class.java) {
-            clinicStatusService.saveStaff(clinicId, invalidPhoneRequest)
+            clinicStatusService.saveStaff(request)
         }
     }
 }

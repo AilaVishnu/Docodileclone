@@ -1,10 +1,12 @@
 import React from "react";
 import { Modal } from "../../components/Modal/Modal";
+import { ModalHeader } from "../../components/ModalHeader";
+import { Button } from "../../components/Button";
 import { Patient, usePatients } from "../../hooks/usePatients";
 import { useDoctors } from "../../hooks/useDoctors";
 import { Select } from "../../components/Input/Select/Select";
-import { DatePicker } from "../../components/DatePicker/DatePicker";
-import { CalendarIcon } from "../../iconsUtil";
+import { Field as TextField } from "../../components/Field";
+import { PatientDetailsForm } from "../../components/PatientDetailsForm";
 import { listServices, ServiceDTO } from "../../api/services";
 import { pickAvatar } from "../../utils/avatar";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
@@ -81,19 +83,11 @@ export function NewPrescriptionModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <div style={styles.container}>
-        <header style={styles.header}>
-          <div>
-            <h2 style={styles.title}>
-              {view === "pick" ? "New Prescription" : "Add new patient"}
-            </h2>
-            <p style={styles.subtitle}>
-              {view === "pick"
-                ? "Pick a patient to start a prescription, or add a new one."
-                : "Fill in the patient's basic details."}
-            </p>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Close" style={styles.close}>✕</button>
-        </header>
+        <ModalHeader
+          title={view === "pick" ? "New Prescription" : "Add new patient"}
+          subtitle={view === "pick" ? "Pick a patient to start a prescription, or add a new one." : "Fill in the patient's basic details."}
+          onClose={onClose}
+        />
 
         {view === "pick" ? (
           <PickView
@@ -157,6 +151,16 @@ function PickView({
   // Highlight, not submit — the row click only stages a patient. Start Rx
   // in the footer is the explicit commit so the user can re-pick freely.
   const [selectedPatient, setSelectedPatient] = React.useState<Patient | null>(null);
+  // Start Rx is clickable by default (coloured, not greyed-out) and validates
+  // on click — like a login button that prompts "please fill this in".
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
+
+  const handleStartRx = () => {
+    if (!canSubmit) { setSubmitError("Please assign a doctor first."); return; }
+    if (!selectedPatient) { setSubmitError("Please select a patient first."); return; }
+    setSubmitError(null);
+    onSelect(selectedPatient, service, feeFor(service));
+  };
 
   // Same service-catalog pattern as AddView so the walk-in for an existing
   // patient also carries the right price (otherwise Pay Due shows ₹0.00).
@@ -204,12 +208,11 @@ function PickView({
               quiet ghost button next to Search instead of a primary in the
               footer, so it can't be mistaken for "submit". */}
           <div style={styles.searchRow}>
-            <input
-              type="text"
+            <TextField
+              variant="box"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={setQuery}
               placeholder="Search by name or phone"
-              style={styles.textInput}
             />
             <button type="button" onClick={onAddNew} style={styles.btnGhostCompact}>
               + Add new patient
@@ -237,18 +240,16 @@ function PickView({
       </div>
 
       <footer style={styles.footer}>
-        <button
-          type="button"
-          onClick={() => selectedPatient && onSelect(selectedPatient, service, feeFor(service))}
-          disabled={!selectedPatient || !canSubmit}
-          style={{
-            ...styles.btnPrimary,
-            ...(!selectedPatient || !canSubmit ? { opacity: 0.45, cursor: "not-allowed" as const } : null),
-          }}
-          title={!selectedPatient ? "Pick a patient first" : undefined}
-        >
-          Start Rx
-        </button>
+        {submitError && <span style={styles.footerError}>{submitError}</span>}
+        <span style={{ display: "inline-flex" }}>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleStartRx}
+          >
+            Start Rx
+          </Button>
+        </span>
       </footer>
     </>
   );
@@ -304,7 +305,6 @@ function PatientRow({
 
 // ─── Add view ────────────────────────────────────────────────────────────────
 
-const GENDERS = ["Male", "Female", "Other"];
 
 function AddView({
   doctorPicker,
@@ -341,127 +341,47 @@ function AddView({
     return () => { cancelled = true; };
   }, []);
 
-  const set = (key: keyof NewPatientDraft) => (val: string) =>
-    setDraft((d) => ({ ...d, [key]: val }));
 
   const onServiceChange = (name: string) => {
     const match = serviceCatalog.find((s) => s.name === name);
     setDraft((d) => ({ ...d, service: name, fee: match ? Number(match.price) || 0 : null }));
   };
 
-  // Phone: digits + spaces + "+", capped to 10 digits (after stripping leading 91).
-  const onPhoneChange = (val: string) => {
-    let v = val.replace(/[^0-9+ ]/g, "");
-    let digits = v.replace(/\D/g, "");
-    if (digits.startsWith("91") && digits.length > 10) digits = digits.substring(2);
-    if (digits.length > 10) return;
-    setDraft((d) => ({ ...d, phone: v }));
-  };
-  const onPhoneBlur = () => {
-    let clean = draft.phone.replace(/\D/g, "");
-    if (clean.startsWith("91") && clean.length > 10) clean = clean.substring(2);
-    clean = clean.substring(0, 10);
-    if (clean.length === 0) { setDraft((d) => ({ ...d, phone: "" })); return; }
-    const next = clean.length > 5
-      ? `+91 ${clean.substring(0, 5)} ${clean.substring(5)}`
-      : `+91 ${clean}`;
-    setDraft((d) => ({ ...d, phone: next }));
-  };
   const phoneDigits = draft.phone.replace(/\D/g, "").replace(/^91/, "");
   const phoneValid = phoneDigits.length === 10;
 
-  // Age: "years / months" — two digit-only inputs (yrs max 3, months max 2)
-  // stored as one "y / m" string so months aren't lost (the walk-in combine
-  // does years*12 + months, matching how booking persists age).
-  const ageY = draft.age.split("/")[0]?.trim() ?? "";
-  const ageM = draft.age.split("/")[1]?.trim() ?? "";
-  const setAgeParts = (y: string, m: string) => {
-    const yy = y.replace(/\D/g, "").substring(0, 3);
-    const mm = m.replace(/\D/g, "").substring(0, 2);
-    const combined = (yy || mm) ? `${yy} / ${mm}` : "";
-    setDraft((d) => ({ ...d, age: combined, ...(combined ? { dob: "" } : {}) }));
-  };
-
-  // DOB: calendar popover.
-  const [showDobPicker, setShowDobPicker] = React.useState(false);
-  const onDobSelect = (date: Date) => {
-    const dd = String(date.getDate()).padStart(2, "0");
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const yyyy = String(date.getFullYear());
-    setDraft((d) => ({ ...d, dob: `${dd} ${mm} ${yyyy}`, age: "" }));
-    setShowDobPicker(false);
-  };
+  // Raw DOB digits (ddmmyyyy) — owned here for PatientDetailsForm.
+  const [dobDigits, setDobDigits] = React.useState("");
 
   const hasDobOrAge = draft.dob.trim().length > 0 || draft.age.trim().length > 0;
-  const valid =
-    canSubmit &&
-    draft.name.trim().length > 0 &&
-    phoneValid &&
-    draft.gender.length > 0 &&
-    hasDobOrAge &&
-    draft.service.trim().length > 0;
+
+  // Add & start Rx is clickable by default (coloured, not greyed-out) and
+  // validates on click — surfacing a friendly message instead of a dead button.
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
+
+  const handleSubmit = () => {
+    let message: string | null = null;
+    if (!canSubmit) message = "Please assign a doctor first.";
+    else if (draft.name.trim().length === 0) message = "Please enter the patient's name.";
+    else if (!phoneValid) message = "Please enter a 10-digit phone number.";
+    else if (draft.gender.length === 0) message = "Please select a gender.";
+    else if (!hasDobOrAge) message = "Please enter a date of birth or age.";
+    else if (draft.service.trim().length === 0) message = "Please select a service.";
+    if (message) { setSubmitError(message); return; }
+    setSubmitError(null);
+    onSubmit(draft);
+  };
 
   return (
     <>
       <div style={styles.formCard}>
         {doctorPicker}
-        <Field label="Name" required>
-          <input type="text" value={draft.name} onChange={(e) => set("name")(e.target.value)} placeholder="Patient name" style={styles.textInput} />
-        </Field>
-        <div style={styles.twoCol}>
-          <Field label="Phone" required error={draft.phone.length > 0 && !phoneValid ? "Enter a 10-digit number" : undefined}>
-            <input
-              type="text"
-              value={draft.phone}
-              onChange={(e) => onPhoneChange(e.target.value)}
-              onBlur={onPhoneBlur}
-              placeholder="+91 XXXXX XXXXX"
-              style={styles.textInput}
-            />
-          </Field>
-          <Field label="Email (optional)">
-            <input type="text" value={draft.email} onChange={(e) => set("email")(e.target.value)} placeholder="hello@example.com" style={styles.textInput} />
-          </Field>
-        </div>
-        <div style={styles.dobAgeRow}>
-          <Field label="DOB" required>
-            <div style={{ position: "relative" }}>
-              <button type="button" onClick={() => setShowDobPicker(true)} style={styles.dobTrigger}>
-                <CalendarIcon style={styles.dobTriggerIcon} />
-                <span style={{ ...styles.dobTriggerText, color: draft.dob ? colors.neutral900 : colors.neutral500 }}>
-                  {draft.dob || "dd mm yyyy"}
-                </span>
-              </button>
-              {showDobPicker && (
-                <div style={styles.dobPickerWrap}>
-                  <DatePicker
-                    selectedDate={parseDdMmYyyy(draft.dob) ?? new Date()}
-                    onSelect={onDobSelect}
-                    onClose={() => setShowDobPicker(false)}
-                  />
-                </div>
-              )}
-            </div>
-          </Field>
-          <span style={styles.dobAgeSeparator}>or</span>
-          <Field label="Age (yrs / mo)" required>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <input type="text" value={ageY} onChange={(e) => setAgeParts(e.target.value, ageM)} placeholder="yy" style={styles.textInput} />
-              <span style={{ color: colors.neutral500 }}>/</span>
-              <input type="text" value={ageM} onChange={(e) => setAgeParts(ageY, e.target.value)} placeholder="mm" style={styles.textInput} />
-            </div>
-          </Field>
-        </div>
-        <Field label="Gender" required>
-          <div style={styles.radioRow}>
-            {GENDERS.map((g) => (
-              <label key={g} style={styles.radioLabel}>
-                <input type="radio" name="newrx-gender" checked={draft.gender === g} onChange={() => set("gender")(g)} />
-                {g}
-              </label>
-            ))}
-          </div>
-        </Field>
+        <PatientDetailsForm
+          value={{ name: draft.name, email: draft.email, phone: draft.phone, dob: draft.dob, age: draft.age, gender: draft.gender }}
+          onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
+          dobDigits={dobDigits}
+          setDobDigits={setDobDigits}
+        />
         <Field label="Service" required>
           <Select
             options={services}
@@ -473,44 +393,28 @@ function AddView({
       </div>
 
       <footer style={styles.footer}>
-        <button type="button" onClick={onCancel} style={styles.btnGhost}>Back</button>
-        <button
-          type="button"
-          onClick={() => onSubmit(draft)}
-          disabled={!valid}
-          style={{ ...styles.btnPrimary, ...(valid ? null : { opacity: 0.45, cursor: "not-allowed" }) }}
+        {submitError && <span style={styles.footerError}>{submitError}</span>}
+        <Button variant="light" size="sm" onClick={onCancel}>Back</Button>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={handleSubmit}
         >
           Add & start Rx
-        </button>
+        </Button>
       </footer>
     </>
   );
-}
-
-// "dd mm yyyy" → Date (or null on garbage). Used to seed the calendar.
-function parseDdMmYyyy(s: string): Date | null {
-  const m = s.trim().match(/^(\d{1,2})\s+(\d{1,2})\s+(\d{4})$/);
-  if (!m) return null;
-  const dd = Number(m[1]); const mm = Number(m[2]); const yyyy = Number(m[3]);
-  const d = new Date(yyyy, mm - 1, dd);
-  if (d.getFullYear() !== yyyy || d.getMonth() !== mm - 1 || d.getDate() !== dd) return null;
-  return d;
 }
 
 // ─── Styles — match the Pharmacy Add-stock modal exactly ─────────────────────
 
 const styles: Record<string, React.CSSProperties> = {
   container: { display: "flex", flexDirection: "column", gap: spacing.s, width: 520, maxWidth: "92vw" },
-  header: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.m },
-  title: { margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h6, lineHeight: fonts.lineHeight.h6, fontWeight: fonts.weight.regular, color: colors.neutral900 },
-  subtitle: { margin: "4px 0 0", fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral600 },
-  close: { background: "none", border: "none", color: colors.neutral900, fontFamily: fonts.family.primary, fontSize: fonts.size.m, cursor: "pointer", padding: 0, flexShrink: 0 },
 
-  // White-ish form card containing all fields — same shell as Add Stock.
+  // Fields stack directly on the modal surface (no inner card).
   formCard: {
     display: "flex", flexDirection: "column", gap: spacing.s,
-    backgroundColor: colors.neutral100, borderRadius: radii.xl,
-    border: `1px solid ${colors.neutral200}`, padding: spacing.m,
   },
   twoCol: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing.m },
 
@@ -526,15 +430,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: colors.red200, marginTop: 2,
   },
 
-  // Rounded card-shaped inputs on neutral150 fill — same shape as Add Stock.
-  textInput: {
-    width: "100%", height: 35, boxSizing: "border-box",
-    padding: `0 ${spacing.s}`,
-    border: `1px solid ${colors.neutral300}`, borderRadius: radii.m,
-    backgroundColor: colors.neutral150,
-    fontFamily: fonts.family.primary, fontSize: fonts.control.sm,
-    color: colors.neutral900, outline: "none",
-  },
   // Search input + Add-new-patient ghost button laid out as one row inside
   // the Field, so the add CTA sits next to its "alternative" (Search) and
   // can't be mistaken for a submit action.
@@ -566,24 +461,17 @@ const styles: Record<string, React.CSSProperties> = {
   dobTriggerText: { flex: 1, fontFamily: fonts.family.primary, fontSize: fonts.control.sm },
   dobPickerWrap: { position: "absolute" as const, top: "100%", left: 0, zIndex: 10, marginTop: 4 },
 
-  // Inline-radio gender row — native radios for parity with BookAppointment.
-  radioRow: { display: "flex", gap: spacing.m, alignItems: "center", padding: "4px 0" },
-  radioLabel: {
-    display: "flex", alignItems: "center", gap: spacing["2xs"],
-    fontFamily: fonts.family.primary, fontSize: fonts.control.sm,
-    color: colors.neutral900, cursor: "pointer",
-  },
-
-  // Footer with top rule + ghost/primary buttons — same as Add Stock.
+  // Footer — ghost/primary buttons, no top rule.
   footer: {
-    display: "flex", justifyContent: "flex-end", gap: spacing.s,
-    paddingTop: spacing.s, borderTop: `1px solid ${colors.neutral200}`,
+    display: "flex", alignItems: "center", justifyContent: "flex-end", gap: spacing.s,
+    paddingTop: spacing.s,
   },
-  btnGhost: {
-    fontFamily: fonts.family.primary, fontSize: fonts.control.md,
-    color: colors.neutral900, background: "transparent",
-    border: `1px solid ${colors.primary300}`, borderRadius: radii.full,
-    padding: "10px 20px", cursor: "pointer",
+  // Validate-on-click message — sits to the left of the footer buttons,
+  // same red token/typography as the per-field error.
+  footerError: {
+    marginRight: "auto",
+    fontFamily: fonts.family.primary, fontSize: fonts.control.xs,
+    color: colors.red200, textAlign: "left" as const,
   },
   // Compact ghost variant — height matches the rounded card inputs (35) so
   // it sits flush in the Search row. Same ghost tokens, shorter padding.
@@ -593,11 +481,5 @@ const styles: Record<string, React.CSSProperties> = {
     border: `1px solid ${colors.primary300}`, borderRadius: radii.full,
     padding: `0 ${spacing.m}`, height: 35, cursor: "pointer",
     whiteSpace: "nowrap" as const, flexShrink: 0,
-  },
-  btnPrimary: {
-    fontFamily: fonts.family.primary, fontSize: fonts.control.md,
-    color: colors.neutral100, backgroundColor: colors.primary700,
-    border: "none", borderRadius: radii.full,
-    padding: "10px 20px", cursor: "pointer",
   },
 };

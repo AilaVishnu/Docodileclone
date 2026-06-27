@@ -1,9 +1,7 @@
 package com.example.docodile.web
 
 import com.example.docodile.domain.RxTemplate
-import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.RxTemplateRepository
-import com.example.docodile.security.CurrentUser
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -21,15 +19,13 @@ data class RxTemplateRequest(val name: String = "", val content: String = "", va
 @RequestMapping("/api/tenant/rx-templates")
 class RxTemplateController(
     private val repo: RxTemplateRepository,
-    private val clinicEntityRepository: ClinicEntityRepository,
-    private val currentUser: CurrentUser,
 ) {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun list(@RequestParam kind: String): List<RxTemplateDTO> {
         val k = kind.trim()
         if (k.isBlank()) throw IllegalArgumentException("kind is required")
-        return repo.findAllByClinicIdAndKindOrderByNameAsc(currentUser.clinicId(), k)
+        return repo.findAllByKindOrderByNameAsc(k)
             .map { RxTemplateDTO(it.name, it.content, it.kind) }
     }
 
@@ -43,17 +39,14 @@ class RxTemplateController(
         if (name.length > 160) throw IllegalArgumentException("Template name too long (max 160)")
         if (kind.isBlank()) throw IllegalArgumentException("kind is required")
         if (req.content.isBlank()) throw IllegalArgumentException("Template is empty")
-        val clinicId = currentUser.clinicId()
-        // Upsert by (clinic, kind, name): re-saving the same name in the same
+        // Upsert by (kind, name): re-saving the same name in the same
         // section overwrites; the same name in a different section is a new row.
-        val existing = repo.findByClinicIdAndKindAndName(clinicId, kind, name)
+        val existing = repo.findByKindAndName(kind, name)
         val saved = if (existing != null) {
             existing.content = req.content
             repo.save(existing)
         } else {
-            val clinic = clinicEntityRepository.findById(clinicId)
-                .orElseThrow { IllegalArgumentException("Clinic not found") }
-            repo.save(RxTemplate(clinic = clinic, kind = kind, name = name, content = req.content, createdAt = Instant.now()))
+            repo.save(RxTemplate(kind = kind, name = name, content = req.content, createdAt = Instant.now()))
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(RxTemplateDTO(saved.name, saved.content, saved.kind))
     }
@@ -62,7 +55,7 @@ class RxTemplateController(
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     @Transactional
     fun delete(@RequestParam name: String, @RequestParam kind: String): ResponseEntity<Void> {
-        val existing = repo.findByClinicIdAndKindAndName(currentUser.clinicId(), kind.trim(), name.trim())
+        val existing = repo.findByKindAndName(kind.trim(), name.trim())
             ?: return ResponseEntity.notFound().build()
         repo.delete(existing)
         return ResponseEntity.noContent().build()
