@@ -62,7 +62,9 @@ class ChargeService(
         appointment.paymentMethod = req.method
         appointment.fee = if (isWaived) zero else serviceTotal
         appointment.pharmacyAmount = if (isWaived) zero else pharmacyTotal
-        appointment.discountAmount = (req.discountAmount ?: zero).max(zero)
+        // A waive writes off the whole bill — record it as a 100% discount (the
+        // full amount), mirroring how the bill editor shows it.
+        appointment.discountAmount = if (isWaived) finalAmt else (req.discountAmount ?: zero).max(zero)
         val saved = appointmentRepository.save(appointment)
 
         // 2) Deposit auto-cover (draws the advance down by up to the bill total).
