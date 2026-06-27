@@ -50,14 +50,14 @@ class JwtAuthenticationFilter(
         val userId = (claims["user_id"] as? String)?.let { runCatching { UUID.fromString(it) }.getOrNull() }
         val schema = claims["schema"] as? String
 
-        // Reject a token minted for one clinic when replayed against another clinic's
-        // subdomain (TenantContext is set from the subdomain by TenantResolutionFilter).
+        // Fail CLOSED on tenant isolation: authenticate only when the token's `schema` claim is
+        // present AND equals the request's resolved tenant (set from the subdomain by
+        // TenantResolutionFilter). A token with no schema claim, a request whose tenant could not
+        // be resolved, or a schema≠subdomain mismatch (cross-tenant replay) is left UNauthenticated
+        // — Spring Security then rejects any protected endpoint. Allowlisted non-tenant paths
+        // (/actuator, /api/health, /ws) don't need a principal, so not authenticating them is fine.
         val requestTenant = TenantContext.get()
-        if (schema != null && requestTenant != null && schema != requestTenant) {
-            filterChain.doFilter(request, response); return
-        }
-
-        if (role != null && userId != null && schema != null
+        if (role != null && userId != null && schema != null && schema == requestTenant
             && SecurityContextHolder.getContext().authentication == null
         ) {
             val principal = AppUserPrincipal(
