@@ -35,6 +35,9 @@ class ClinicStatusControllerTest @Autowired constructor(
     @MockitoBean
     private lateinit var appointmentService: com.example.docodile.service.AppointmentService
 
+    @MockitoBean
+    private lateinit var chargeService: com.example.docodile.service.ChargeService
+
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `status should return complete boolean`() {

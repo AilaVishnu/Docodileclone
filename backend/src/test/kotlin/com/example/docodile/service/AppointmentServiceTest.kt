@@ -5,6 +5,7 @@ import com.example.docodile.domain.AppUser
 import com.example.docodile.domain.Patient
 import com.example.docodile.repo.AppointmentRepository
 import com.example.docodile.repo.AppUserRepository
+import com.example.docodile.repo.BillRepository
 import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.security.CurrentUser
@@ -33,6 +34,12 @@ class AppointmentServiceTest {
 
     @Mock
     private lateinit var patientRepository: PatientRepository
+
+    @Mock
+    private lateinit var patientDepositService: PatientDepositService
+
+    @Mock
+    private lateinit var billRepository: BillRepository
 
     @Mock
     private lateinit var currentUser: CurrentUser
