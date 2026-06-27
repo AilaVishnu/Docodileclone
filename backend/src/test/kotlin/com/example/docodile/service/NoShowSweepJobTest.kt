@@ -1,7 +1,9 @@
 package com.example.docodile.service
 
 import com.example.docodile.repo.AppointmentRepository
+import com.example.docodile.tenancy.TenantTaskExecutor
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
@@ -22,8 +24,19 @@ class NoShowSweepJobTest {
     @Mock
     private lateinit var appointmentRepository: AppointmentRepository
 
+    @Mock
+    private lateinit var perClinic: TenantTaskExecutor
+
     @InjectMocks
     private lateinit var noShowSweepJob: NoShowSweepJob
+
+    // Run the per-clinic work block inline so the job's logic is exercised.
+    @BeforeEach
+    fun stubPerClinic() {
+        whenever(perClinic.forEachActiveClinic(any(), any())).thenAnswer {
+            @Suppress("UNCHECKED_CAST") (it.arguments[1] as () -> Unit).invoke(); null
+        }
+    }
 
     @Test
     fun `sweepNightly invokes the bulk no-show update`() {

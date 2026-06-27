@@ -4,11 +4,14 @@ import com.example.docodile.domain.AuditAction
 import com.example.docodile.domain.Patient
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.repo.UserSessionRepository
+import com.example.docodile.tenancy.TenantTaskExecutor
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.isNull
+import org.mockito.kotlin.whenever
 import org.mockito.Mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.times
@@ -29,8 +32,19 @@ class PurgeJobTest {
     @Mock
     private lateinit var auditService: AuditService
 
+    @Mock
+    private lateinit var perClinic: TenantTaskExecutor
+
+    // Run the per-clinic work block inline so the job's logic is exercised.
+    @BeforeEach
+    fun stubPerClinic() {
+        whenever(perClinic.forEachActiveClinic(any(), any())).thenAnswer {
+            @Suppress("UNCHECKED_CAST") (it.arguments[1] as () -> Unit).invoke(); null
+        }
+    }
+
     private fun purgeJob() = PurgeJob(
-        userSessionRepository, patientRepository, auditService,
+        userSessionRepository, patientRepository, auditService, perClinic,
     )
 
     @Test
