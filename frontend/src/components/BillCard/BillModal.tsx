@@ -8,7 +8,6 @@ import { DatePicker } from "../DatePicker/DatePicker";
 import { Field } from "../Field";
 import { MeasureField } from "../MeasureField";
 import { MedicineAutocomplete } from "../MedicineAutocomplete/MedicineAutocomplete";
-import { DepositPanel } from "./DepositPanel";
 import { listServices } from "../../api/services";
 import { getBillFooter, type BillFooter } from "../../api/patientSearch";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
@@ -77,9 +76,8 @@ const BILL_ITEM_INPUT_STYLE: React.CSSProperties = {
 
 export function BillModal({
   isOpen, onClose, patient, initialServices,
-  patientName, medicines, onBilled,
+  patientName, invoiceNo, medicines, onBilled,
   serviceName, serviceFee = 0, catalog, loading = false, patientId,
-  initialDeposit = 0, onDeposit,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -87,6 +85,8 @@ export function BillModal({
   initialServices?: { name: string; price: number }[];
   /** Wired-bill mode: patient label shown in the header. */
   patientName?: string;
+  /** Existing-bill: invoice no, shown muted beside the patient in the header. */
+  invoiceNo?: string;
   /** Wired-bill mode: prescribed medicines seeded as line items. */
   medicines?: BillMedicine[];
   /** Wired-bill mode: called on Charge & Bill / Mark Waived. Buckets stay
@@ -115,12 +115,11 @@ export function BillModal({
   loading?: boolean;
   /** Patient id — used to load the bottom footer (last payment / registered on). */
   patientId?: string;
-  /** The patient's current deposit/advance — seeds the read-only Deposit field
-   *  and is auto-drawn against the bill on Charge & Bill. */
+  /** @deprecated The standalone deposit field was removed — an advance is now
+   *  applied as an "Advance / credit" payment mode. Still accepted so existing
+   *  callers compile; ignored until the credit-mode wiring lands. */
   initialDeposit?: number;
-  /** Persist a deposit/refund on the patient. Given the (non-negative) amount +
-   *  type (+ payment mode + note), returns the new running net deposit. When
-   *  omitted, the drawer adjusts the value locally only (e.g. the unwired mock). */
+  /** @deprecated See `initialDeposit`. */
   onDeposit?: (amount: number, type: "DEPOSIT" | "REFUND", mode?: string, details?: string) => Promise<number>;
 }) {
   const wired = onBilled != null || medicines != null || serviceFee > 0;
@@ -166,26 +165,17 @@ export function BillModal({
   const [showCal, setShowCal] = useState(false);
   // One payment line by default; "+" splits the bill across modes (Cash + UPI…).
   const [payments, setPayments] = useState<{ mode: string; amount: number | "" }[]>([{ mode: "Cash", amount: "" }]);
-  const [deposit, setDeposit] = useState<number | "">("");
   // Once the desk types in / clears the amount themselves, stop auto-filling it.
   const [amountTouched, setAmountTouched] = useState(false);
-  const [depositOpen, setDepositOpen] = useState(false);
-  // Free-text note for this bill's payment (mirrors the Deposit drawer's
-  // "Add Details"). UI-only for now — not persisted.
+  // Free-text note for this bill's payment. UI-only for now — not persisted.
   const [billNote, setBillNote] = useState("");
-  // Monotonic id for deposit PATCHes — only the latest response writes the
-  // displayed net, so two rapid deposits can't let a stale earlier reply
-  // overwrite the fresh one (the persisted value is already correct).
-  const depSeq = React.useRef(0);
 
   // Reset the desk's collection inputs ONLY when the modal opens — never on the
-  // async prescription arrival below — so an in-flight payment / deposit edit
-  // isn't wiped when the medicines load in.
+  // async prescription arrival below — so an in-flight payment edit isn't wiped
+  // when the medicines load in.
   useEffect(() => {
     if (!isOpen) return;
     setPayments([{ mode: "Cash", amount: "" }]);
-    // Seed with the deposit already held against this bill (0 → blank).
-    setDeposit(initialDeposit > 0 ? initialDeposit : "");
     setAmountTouched(false);
     setBillNote("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -266,7 +256,6 @@ export function BillModal({
   const serviceTotal = lines.filter((l) => isService(l) && !isTrailing(l)).reduce((s, l) => s + lineNet(l), 0);
   const pharmacyTotal = lines.filter((l) => !isService(l) && !isTrailing(l)).reduce((s, l) => s + lineNet(l), 0);
   const finalAmt = serviceTotal + pharmacyTotal;
-  const dep = Number(deposit) || 0;
 
   // Payment: the primary line decides Waive (free dispense → ₹0). The recorded
   // method is the distinct modes joined ("Cash", or "Cash + UPI" for a split).
@@ -275,28 +264,24 @@ export function BillModal({
   const methodLabel = isWaived ? "Waive" : Array.from(new Set(payments.map((p) => p.mode))).join(" + ");
 
   const displayFinal = isWaived ? 0 : finalAmt;
-  // The patient's advance auto-covers the bill up to the bill total: only
-  // min(deposit, bill) is applied here, the rest stays as their advance (so a
-  // big advance never shows as a bill "refund"). Explicit refunds are the
-  // drawer's Refund tab, not billing — so the bill refund row is always 0.
-  const applied = isWaived ? 0 : Math.min(dep, finalAmt);
-  const received = applied;
-  const balance = isWaived ? 0 : Math.max(0, finalAmt - applied);
+  // Nothing is pre-received on a fresh bill — the full amount is collected via
+  // the payment lines below. Explicit refunds aren't part of creating a bill.
+  const received = 0;
+  const balance = isWaived ? 0 : finalAmt;
   const refund = 0;
 
-  // Auto-fill the single payment line with what's left to collect (bill total −
-  // deposit), so the desk can Charge & Bill in one click. Stops as soon as they
-  // type/clear the amount, split the payment, or Waive — and tracks the total
-  // as items change until then.
+  // Auto-fill the single payment line with the full amount to collect, so the
+  // desk can Charge & Bill in one click. Stops as soon as they type/clear the
+  // amount, split the payment, or Waive — and tracks the total until then.
   useEffect(() => {
     if (!isOpen || amountTouched || isWaived || payments.length !== 1) return;
-    const target = Math.max(0, Math.round(finalAmt - dep));
+    const target = Math.max(0, Math.round(finalAmt));
     setPayments((ps) => {
       const next: number | "" = target > 0 ? target : "";
       return ps[0]?.amount === next ? ps : [{ ...ps[0], amount: next }];
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, amountTouched, isWaived, finalAmt, dep, payments.length]);
+  }, [isOpen, amountTouched, isWaived, finalAmt, payments.length]);
 
   // Numeric line-item field → cream FillInput. Stored as a number; blank shows
   // the placeholder rather than a literal 0.
@@ -356,7 +341,11 @@ export function BillModal({
         onToggleUnit={() => setLine(l.id, { discUnit: l.discUnit === "%" ? "₹" : "%" })}
         value={l.disc ? String(l.disc) : ""} onChange={(v) => setLine(l.id, { disc: Number(v) || 0 })} />
     ) },
-    { key: "tot", header: "Total", width: 84, align: "center", render: (l) => (isTrailing(l) ? "" : midCell(<span style={{ fontWeight: fonts.weight.medium, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{inr(lineTotal(l))}</span>)) },
+    { key: "tot", header: "Total", width: 84, align: "right", render: (l) => (isTrailing(l) ? "" : (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", height: 32 }}>
+        <span style={{ fontSize: fonts.size.m, color: colors.neutral900, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{inr(lineTotal(l))}</span>
+      </div>
+    )) },
     { key: "x", header: "", width: 38, headerPadding: "8px 4px", cellPadding: "8px 4px", render: (l) => (isTrailing(l) ? "" : midCell(
       <button onClick={() => removeLine(l.id)} aria-label="Remove" style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, display: "flex", justifyContent: "center" }}><Icon name="trash" size={20} tone="inherit" style={{ flexShrink: 0 }} /></button>
     )) },
@@ -388,7 +377,7 @@ export function BillModal({
       paid: isWaived ? 0 : finalAmt,
       due: 0,
       refund: 0,
-      depositApplied: applied,
+      depositApplied: 0,
       payStatus: isWaived ? "WAIVED" : "PAID",
       lineItems,
     });
@@ -409,34 +398,12 @@ export function BillModal({
     <BillLayout
       isOpen={isOpen}
       onClose={onClose}
-      rightOverlay={depositOpen ? (
-        <DepositPanel
-          onClose={() => setDepositOpen(false)}
-          deposited={dep}
-          // Deposits ADD to the running total; refunds draw it back down (never
-          // below 0). When wired, the backend owns the net and returns it; the
-          // local update is the fallback / optimistic value.
-          onApply={async (amt, mode, details) => {
-            const local = (Number(deposit) || 0) + amt;
-            setDeposit(local > 0 ? local : "");
-            setAmountTouched(false);
-            if (onDeposit) {
-              const seq = ++depSeq.current;
-              try { const net = await onDeposit(amt, "DEPOSIT", mode, details); if (seq === depSeq.current) setDeposit(net > 0 ? net : ""); } catch { /* keep optimistic */ }
-            }
-          }}
-          onRefund={async (amt, mode, details) => {
-            const local = Math.max(0, (Number(deposit) || 0) - amt);
-            setDeposit(local > 0 ? local : "");
-            setAmountTouched(false);
-            if (onDeposit) {
-              const seq = ++depSeq.current;
-              try { const net = await onDeposit(amt, "REFUND", mode, details); if (seq === depSeq.current) setDeposit(net > 0 ? net : ""); } catch { /* keep optimistic */ }
-            }
-          }}
-        />
-      ) : undefined}
-      header={<span style={{ fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 }}>{patientName ?? `${pt.code} : ${pt.name} - ${pt.meta}`}</span>}
+      header={
+        <span style={{ display: "inline-flex", alignItems: "baseline", gap: spacing.s, minWidth: 0 }}>
+          <span style={{ fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 }}>{patientName ?? `${pt.code} : ${pt.name} - ${pt.meta}`}</span>
+          {invoiceNo && <span style={{ fontSize: fonts.size.s, fontWeight: fonts.weight.regular, color: colors.neutral500 }}>{invoiceNo}</span>}
+        </span>
+      }
       headerActions={
         <>
           <button onClick={() => {}} style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, fontSize: fonts.size.s, textDecoration: "underline", whiteSpace: "nowrap" }}>View bills</button>
@@ -449,7 +416,7 @@ export function BillModal({
       total={`₹ ${balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
       left={
         <>
-          {/* Bill date / deposit */}
+          {/* Bill date */}
           <div style={{ display: "flex", alignItems: "center", gap: spacing.m, flexWrap: "wrap" }}>
             <span style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>Bill date</span>
             <span onClick={() => setShowCal(true)} style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: spacing.xs, height: 30, boxSizing: "border-box", border: `${strokes.xs} solid ${colors.neutral300}`, borderRadius: radii.m, padding: "0 10px", color: colors.neutral900, cursor: "pointer" }}>
@@ -457,18 +424,6 @@ export function BillModal({
               {showCal && (
                 <DatePicker selectedDate={billDate} showDoneButton onSelect={(d) => { setBillDate(d); setShowCal(false); }} onClose={() => setShowCal(false)} />
               )}
-            </span>
-            <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: spacing.xs, color: colors.neutral900 }}>
-              Deposit Amount:
-              {/* Display only — not editable and not clickable. The deposit is
-                  entered solely via the "+" drawer beside it. */}
-              <div style={{ width: 120, "--input-h": "32px" } as React.CSSProperties}>
-                <MeasureField box prefix="₹" placeholder="0" inputMode="decimal" ariaLabel="Deposit amount" readOnly
-                  value={deposit === "" ? "" : String(deposit)} onChange={(v) => setDeposit(v === "" ? "" : Number(v))} />
-              </div>
-              <IconButton ariaLabel="Add deposit" onClick={() => setDepositOpen(true)} color={colors.neutral900}>
-                <Icon name="plus" size={20} tone="inherit" />
-              </IconButton>
             </span>
           </div>
 
@@ -499,12 +454,11 @@ export function BillModal({
             const last = i === payments.length - 1;
             return (
               <div key={i} style={{ display: "flex", gap: spacing.s, alignItems: "center", "--input-h": "32px" } as React.CSSProperties}>
-                {/* Mode is the stretchable field; the ₹ amount keeps a fixed
-                    width so money never truncates. */}
+                {/* Mode + amount split the row evenly (50/50). */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <Select options={["Cash", "Card", "UPI", "Waive"]} value={p.mode} onChange={(m) => setPayment(i, { mode: m })} />
+                  <Select options={["Cash", "Card", "UPI", "Advance / credit", "Waive"]} value={p.mode} onChange={(m) => setPayment(i, { mode: m })} />
                 </div>
-                <div style={{ width: 110, flexShrink: 0 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <MeasureField box prefix="₹" placeholder={i === 0 ? String(Math.round(balance)) : "0"} inputMode="decimal" ariaLabel="Amount"
                     value={p.amount === "" ? "" : String(p.amount)} onChange={(v) => setPayment(i, { amount: v === "" ? "" : Number(v) })} />
                 </div>
@@ -521,8 +475,7 @@ export function BillModal({
             );
           })}
 
-          {/* Free-text note for this payment — same "Add Details" box as the
-              Deposit drawer. */}
+          {/* Free-text note for this payment. */}
           <div style={{ "--input-h": "40px" } as React.CSSProperties}>
             <Field variant="box" ariaLabel="Bill details" placeholder="Add Details" value={billNote} onChange={setBillNote} />
           </div>

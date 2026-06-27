@@ -25,19 +25,21 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing.m,
   },
 
-  // KPI strip — four equal Card(surface) tiles.
+  // KPI strip — four equal Card(surface) tiles. Matches the Stats metric-tile
+  // convention: a plain medium label, and the value in the secondary serif
+  // display font (no bold) — not semibold sans.
   kpis: { display: "flex", gap: spacing.m },
-  kpiLabel: { fontSize: fonts.size.xs, fontWeight: fonts.weight.medium, letterSpacing: "0.03em", textTransform: "uppercase", color: colors.neutral500 },
-  kpiValue: { fontSize: fonts.size.l, fontWeight: fonts.weight.semibold, color: colors.neutral900 },
+  kpiLabel: { fontSize: fonts.size.s, fontWeight: fonts.weight.regular, color: colors.neutral500 },
+  kpiValue: { fontFamily: fonts.family.secondary, fontSize: fonts.size.h4, lineHeight: 1.1, color: colors.neutral900 },
 
   // Toolbar — search + status Tabs (left), period DateRangeDropdown (right).
   toolbar: { display: "flex", alignItems: "center", gap: spacing.m, justifyContent: "space-between" },
   toolbarLeft: { display: "flex", alignItems: "center", gap: spacing.m, flex: 1, minWidth: 0 },
   toolbarRight: { display: "flex", alignItems: "center", gap: spacing.m },
 
-  // Table cell text.
-  patient: { fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 },
-  invText: { fontSize: fonts.size.m, fontWeight: fonts.weight.medium, color: colors.neutral900 },
+  // Table cell text — patient / invoice no / method use the plain DataGrid
+  // default (regular, neutral900), like the Billed column; only the date
+  // subtitle and the "–" placeholders are muted.
   muted: { color: colors.neutral500, fontSize: fonts.size.s },
   due: { color: colors.red200, fontWeight: fonts.weight.medium },
 

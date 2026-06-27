@@ -20,14 +20,14 @@ const GLYPH = 19;
 const CONFIG: Record<BillStatus, { tint: string; icon: string; iconColor: string; label: string }> = {
   paid: { tint: colors.greenAlpha20, icon: "check-circle", iconColor: colors.green200, label: "Paid" },
   due: { tint: colors.yellowAlpha20, icon: "danger-triangle", iconColor: colors.yellow200, label: "Due" },
-  refunded: { tint: colors.purpleAlpha20, icon: "", iconColor: "", label: "Refunded" },
+  refunded: { tint: colors.maroonAlpha20, icon: "", iconColor: "", label: "Refunded" },
   waived: { tint: colors.blueAlpha20, icon: "", iconColor: "", label: "Waived" },
 };
 
-// Refunded — purple circle with a cream back-arrow.
+// Refunded — maroon circle with a cream back-arrow.
 const RefundGlyph = () => (
   <svg width={GLYPH} height={GLYPH} viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }} aria-hidden="true">
-    <circle cx="9.99935" cy="10.0001" r="8.33333" fill={colors.purple200} stroke={colors.purple200} />
+    <circle cx="9.99935" cy="10.0001" r="8.33333" fill={colors.maroon200} stroke={colors.maroon200} />
     <path d="M6.51667 10.0001L13.4832 10M9.25888 12.3461L6.51667 10.0001L9.25888 7.43275" stroke={colors.primary100} strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
@@ -41,13 +41,16 @@ const WaivedGlyph = () => (
 
 export interface BillStatusBadgeProps {
   status: BillStatus;
+  /** On a state-tinted surface the alpha pill would vanish — set this to give
+      the pill a solid white fill (keeps the colour icon + dark word). */
+  onTint?: boolean;
 }
 
 /** Status pill for a bill — Paid / Due / Refunded / Waived. */
-export function BillStatusBadge({ status }: BillStatusBadgeProps) {
+export function BillStatusBadge({ status, onTint = false }: BillStatusBadgeProps) {
   const c = CONFIG[status];
   return (
-    <span style={{ ...styles.pill, backgroundColor: c.tint, color: colors.neutral800 }}>
+    <span style={{ ...styles.pill, backgroundColor: onTint ? colors.neutral100 : c.tint, color: colors.neutral800 }}>
       {status === "waived" ? <WaivedGlyph />
         : status === "refunded" ? <RefundGlyph />
         : <Icon name={c.icon} size={GLYPH} tone="inherit" style={{ color: c.iconColor }} />}

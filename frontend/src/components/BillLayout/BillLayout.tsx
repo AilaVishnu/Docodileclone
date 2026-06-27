@@ -25,6 +25,9 @@ type BillLayoutProps = {
   /** Extra icons shown at the right of the header, before the × close
       (e.g. print / share). Only rendered when `header` is present. */
   headerActions?: React.ReactNode;
+  /** Header background — a colour or any CSS `background` value (e.g. a
+      state tint). Defaults to the cream `primary200`. */
+  headerBg?: string;
   /** Left card — the line-item list and its header. */
   left: React.ReactNode;
   /** Summary card title. Default "Bill". */
@@ -56,6 +59,7 @@ export function BillLayout({
   width = 1040,
   header,
   headerActions,
+  headerBg,
   left,
   billTitle = "Bill",
   summary,
@@ -75,7 +79,7 @@ export function BillLayout({
           header bar on top, then the line-item list + bill/payment column. */}
       <div style={styles.root}>
         {hasHeader && (
-          <div style={styles.headerCard}>
+          <div style={{ ...styles.headerCard, background: headerBg ?? colors.primary200 }}>
             <div style={styles.headerLeft}>{header}</div>
             <div style={styles.headerRight}>
               {headerActions}
@@ -129,10 +133,10 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: fonts.family.primary,
   },
   headerCard: {
-    backgroundColor: colors.primary200,
+    // background is applied inline (defaults to primary200, or a state tint).
     borderRadius: radii.m,
     boxShadow: shadows.modal,
-    padding: `${spacing.m} ${spacing.xl}`,
+    padding: `${spacing.s} ${spacing.xl}`,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -148,7 +152,7 @@ const styles: Record<string, React.CSSProperties> = {
   headerRight: {
     display: "flex",
     alignItems: "center",
-    gap: spacing.xs,
+    gap: spacing.m,
     flexShrink: 0,
   },
   body: {
