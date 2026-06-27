@@ -78,8 +78,8 @@ class ChatController(
         val saved = chatMessageRepository.save(msg)
         // Per-schema topic: the STOMP in-memory broker isolates only by topic NAME (not by DB
         // schema), so the tenant's schema MUST be in the destination or group chat leaks across
-        // clinics. (Subscribe-side enforcement — rejecting a SUBSCRIBE to another schema's topic —
-        // is hardened in 2c.)
+        // clinics. Subscribe-side enforcement (rejecting a SUBSCRIBE to another schema's topic)
+        // lives in TenantChannelInterceptor.
         messagingTemplate.convertAndSend("/topic/clinic/${user.schema}", saved.toDTO())
     }
 
