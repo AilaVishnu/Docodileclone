@@ -19,6 +19,12 @@ class TenantResolutionFilter(
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
+        // Let CORS preflight through untouched: an OPTIONS preflight carries no X-Tenant
+        // (browsers never send custom headers on preflight) and must reach the CORS handler,
+        // not be rejected here as "unknown clinic".
+        if (request.method.equals("OPTIONS", ignoreCase = true)) {
+            filterChain.doFilter(request, response); return
+        }
         try {
             val sub = resolveSubdomain(request)
             if (sub != null) {

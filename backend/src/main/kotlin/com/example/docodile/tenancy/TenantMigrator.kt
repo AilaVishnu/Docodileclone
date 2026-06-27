@@ -34,6 +34,10 @@ class TenantMigrator(private val dataSource: DataSource) {
             .defaultSchema(schema)
             .locations("classpath:db/tenant")
             .table("flyway_schema_history")
+            // Tolerate a schema that already has tables but no flyway history (e.g. a
+            // dev-seeded schema, or one whose provisioning was interrupted): baseline it at
+            // V1 instead of failing the whole boot. A fresh empty schema still migrates normally.
+            .baselineOnMigrate(true)
             .load()
             .migrate()
     }
