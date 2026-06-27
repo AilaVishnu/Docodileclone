@@ -1,8 +1,11 @@
 package com.example.docodile.web
 
 import com.example.docodile.domain.Patient
+import com.example.docodile.repo.AppointmentRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.service.AuditService
+import com.example.docodile.service.BillService
+import com.example.docodile.service.PatientDepositService
 import com.example.docodile.service.PatientService
 import com.example.docodile.service.VisitService
 import org.junit.jupiter.api.Test
@@ -41,10 +44,19 @@ class PatientControllerTest @Autowired constructor(
     private lateinit var patientRepository: PatientRepository
 
     @MockitoBean
+    private lateinit var appointmentRepository: AppointmentRepository
+
+    @MockitoBean
     private lateinit var visitService: VisitService
 
     @MockitoBean
     private lateinit var auditService: AuditService
+
+    @MockitoBean
+    private lateinit var patientDepositService: PatientDepositService
+
+    @MockitoBean
+    private lateinit var billService: BillService
 
     private fun patient(id: UUID, deletedAt: Instant? = null) = Patient(
         id = id,

@@ -45,6 +45,7 @@ class VisitControllerTest @Autowired constructor(
         patientId = patientId,
         clinicId = UUID.randomUUID(),
         createdByDoctorId = null,
+        createdByDoctorName = null,
         visitDate = LocalDate.now(),
         bpSystolic = null, bpDiastolic = null, bpUnit = null,
         bmi = null, bmiUnit = null,

@@ -25,6 +25,9 @@ type BillLayoutProps = {
   /** Extra icons shown at the right of the header, before the × close
       (e.g. print / share). Only rendered when `header` is present. */
   headerActions?: React.ReactNode;
+  /** Header background — a colour or any CSS `background` value (e.g. a
+      state tint). Defaults to the cream `primary200`. */
+  headerBg?: string;
   /** Left card — the line-item list and its header. */
   left: React.ReactNode;
   /** Summary card title. Default "Bill". */
@@ -41,6 +44,13 @@ type BillLayoutProps = {
   payment: React.ReactNode;
   /** Action row pinned to the bottom of the payment card. */
   action: React.ReactNode;
+  /** Optional full-width strip across the bottom (e.g. last payment / registered
+      on). Spans the whole modal under the line-item + bill/payment columns. */
+  footer?: React.ReactNode;
+  /** Optional panel that wraps OVER the right column (the bill summary + payment
+      cards), filling exactly their footprint — e.g. the Deposit drawer. The left
+      line-item card and the footer stay visible. */
+  rightOverlay?: React.ReactNode;
 };
 
 export function BillLayout({
@@ -49,6 +59,7 @@ export function BillLayout({
   width = 1040,
   header,
   headerActions,
+  headerBg,
   left,
   billTitle = "Bill",
   summary,
@@ -57,6 +68,8 @@ export function BillLayout({
   paymentTitle = "Payment",
   payment,
   action,
+  footer,
+  rightOverlay,
 }: BillLayoutProps) {
   const hasHeader = Boolean(header || headerActions);
   return (
@@ -66,7 +79,7 @@ export function BillLayout({
           header bar on top, then the line-item list + bill/payment column. */}
       <div style={styles.root}>
         {hasHeader && (
-          <div style={styles.headerCard}>
+          <div style={{ ...styles.headerCard, background: headerBg ?? colors.primary200 }}>
             <div style={styles.headerLeft}>{header}</div>
             <div style={styles.headerRight}>
               {headerActions}
@@ -100,8 +113,13 @@ export function BillLayout({
               {payment}
               <div style={styles.actionRow}>{action}</div>
             </div>
+
+            {/* Drawer that wraps over the summary + payment cards in place. */}
+            {rightOverlay && <div style={styles.rightOverlay}>{rightOverlay}</div>}
           </div>
         </div>
+
+        {footer && <div style={styles.footerCard}>{footer}</div>}
       </div>
     </Modal>
   );
@@ -115,10 +133,10 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: fonts.family.primary,
   },
   headerCard: {
-    backgroundColor: colors.primary200,
+    // background is applied inline (defaults to primary200, or a state tint).
     borderRadius: radii.m,
     boxShadow: shadows.modal,
-    padding: `${spacing.m} ${spacing.xl}`,
+    padding: `${spacing.s} ${spacing.xl}`,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -134,7 +152,7 @@ const styles: Record<string, React.CSSProperties> = {
   headerRight: {
     display: "flex",
     alignItems: "center",
-    gap: spacing.xs,
+    gap: spacing.m,
     flexShrink: 0,
   },
   body: {
@@ -156,11 +174,18 @@ const styles: Record<string, React.CSSProperties> = {
     overflowY: "auto",
   },
   rightCol: {
+    position: "relative",
     flex: "1 1 0",
     minWidth: 0,
     display: "flex",
     flexDirection: "column",
     gap: 6,
+  },
+  rightOverlay: {
+    position: "absolute",
+    inset: 0,
+    display: "flex",
+    flexDirection: "column",
   },
   billCard: {
     backgroundColor: colors.neutral100,
@@ -231,5 +256,19 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     gap: spacing.s,
     alignItems: "center",
+  },
+  // Full-width strip under the cards — patient meta (last payment / registered).
+  footerCard: {
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.m,
+    boxShadow: shadows.modal,
+    padding: `${spacing.s} ${spacing.xl}`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.m,
+    flexShrink: 0,
+    fontSize: fonts.size.s,
+    color: colors.neutral600,
   },
 };

@@ -25,6 +25,7 @@ class AppointmentService(
     private val appointmentRepository: AppointmentRepository,
     private val appUserRepository: AppUserRepository,
     private val patientRepository: PatientRepository,
+    private val patientDepositService: PatientDepositService,
 ) {
     fun getAppointmentsForClinic(date: LocalDate): List<AppointmentDTO> {
         val startOfDay = date.atStartOfDay()
@@ -179,17 +180,36 @@ class AppointmentService(
         paymentMethod: String?,
         pharmacyAmount: java.math.BigDecimal? = null,
         discountAmount: java.math.BigDecimal? = null,
+        fee: java.math.BigDecimal? = null,
     ): AppointmentDTO {
         val appointment = appointmentRepository.findById(appointmentId).orElse(null)
             ?: throw IllegalArgumentException("Appointment not found")
+        // Reject negative money — a malformed/forged PATCH must not persist
+        // negative financials.
+        val zero = java.math.BigDecimal.ZERO
+        require(pharmacyAmount == null || pharmacyAmount >= zero) { "pharmacyAmount must be >= 0" }
+        require(discountAmount == null || discountAmount >= zero) { "discountAmount must be >= 0" }
+        require(fee == null || fee >= zero) { "fee must be >= 0" }
         appointment.payStatus = payStatus
         appointment.paymentMethod = paymentMethod
-        // Only overwrite pharmacy_amount / discount when the caller passes
+        // Only overwrite pharmacy_amount / discount / fee when the caller passes
         // a value (null = "don't touch"). Lets independent flows update
-        // payment status without nuking each other's fields.
+        // payment status without nuking each other's fields. `fee` is the
+        // consultation/service bucket — the single bill writes it (net charged)
+        // alongside pharmacyAmount so the two stay separate, no double-count.
         if (pharmacyAmount != null) appointment.pharmacyAmount = pharmacyAmount
         if (discountAmount != null) appointment.discountAmount = discountAmount
-        return appointmentRepository.save(appointment).toDTO()
+        if (fee != null) appointment.fee = fee
+        val saved = appointmentRepository.save(appointment)
+        // Auto-cover: a PAID bill draws the patient's advance down by up to the
+        // bill total (fee + pharmacy − discount), recording a BILL_DEDUCTION.
+        // Idempotent per appointment, so re-saving a paid bill won't re-charge
+        // the deposit. WAIVED/DUE never consume the advance.
+        if (payStatus.uppercase() == "PAID") {
+            val billTotal = ((saved.fee ?: zero) + (saved.pharmacyAmount ?: zero) - (saved.discountAmount ?: zero)).max(zero)
+            patientDepositService.applyToBill(saved, billTotal)
+        }
+        return saved.toDTO()
     }
 
     @Transactional

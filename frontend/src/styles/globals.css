@@ -270,6 +270,9 @@ body {
   --ctrl-fs-sm: 14px;
   --ctrl-fs-xs: 12px;
 
+  /* Meds module list view — cell font steps up to sm (14) at 1440+, holds at xs (12) below */
+  --meds-list-fs: var(--ctrl-fs-sm);
+
   --ps-h2: 48px;
   --ps-h4: 44px;
   --ps-h5: 34px;
@@ -409,6 +412,7 @@ body {
     --ctrl-fs-md: 14px;
     --ctrl-fs-sm: 13px;
     /* --ctrl-fs-xs holds at 12px */
+    --meds-list-fs: var(--ctrl-fs-xs);
 
     --ps-h2: 40px;
     --ps-h4: 36px;

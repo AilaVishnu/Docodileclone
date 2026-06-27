@@ -15,5 +15,6 @@ data class RxRowDTO(
     @field:Size(max = 500) val frequency: String? = null,
     @field:Size(max = 500) val frequencyInterval: String? = null,
     @field:Size(max = 500) val duration: String? = null,
-    @field:Size(max = 500) val notes: String? = null
+    @field:Size(max = 500) val notes: String? = null,
+    val dispenseQty: Int? = null
 )

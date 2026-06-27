@@ -64,7 +64,10 @@ CREATE TABLE patient (
     external_ref VARCHAR(128),
     display_no   INTEGER,
     deleted_at   TIMESTAMPTZ,
-    updated_at   TIMESTAMPTZ
+    updated_at   TIMESTAMPTZ,
+    -- Running advance/deposit balance — credit held against future bills.
+    -- Every movement is recorded in patient_deposit_ledger. Never negative.
+    deposit      NUMERIC(12,2)
 );
 
 -- Fast phone lookup (non-unique — same phone allowed for family members)
@@ -185,7 +188,11 @@ CREATE TABLE visit (
     -- Link to the appointment that opened this visit
     appointment_id           UUID REFERENCES appointment(id) ON DELETE SET NULL,
 
-    deleted_at               TIMESTAMPTZ
+    deleted_at               TIMESTAMPTZ,
+
+    -- Sticky "completed at least once" marker: stamped when session_ended_at is
+    -- first set, never cleared on a later amend re-open.
+    completed_at             TIMESTAMP
 );
 
 CREATE INDEX idx_visit_patient_date
@@ -1139,3 +1146,59 @@ INSERT INTO suggestion (id, speciality, field, value, use_count, created_at) VAL
   (gen_random_uuid(), 'dermatology', 'tests', 'Liver Fitness Test', 0, now()),
   (gen_random_uuid(), 'dermatology', 'tests', 'Retinal Examination', 0, now())
 ON CONFLICT ON CONSTRAINT uq_suggestion_speciality_field_value DO NOTHING;
+
+-- ============================================================
+-- patient_deposit_ledger  (clinic_id dropped; schema-scoped)
+-- Auditable trail of every DEPOSIT, REFUND and BILL_DEDUCTION movement.
+-- The running net balance lives on patient.deposit (fast read); every
+-- movement is written here so the history is auditable. The net never
+-- goes below zero.
+-- ============================================================
+CREATE TABLE patient_deposit_ledger (
+    id             UUID PRIMARY KEY,
+    patient_id     UUID NOT NULL REFERENCES patient(id),
+    -- Set only for BILL_DEDUCTION rows: which appointment drew the deposit.
+    appointment_id UUID REFERENCES appointment(id),
+    type           VARCHAR(32) NOT NULL,     -- DEPOSIT | REFUND | BILL_DEDUCTION
+    amount         NUMERIC(12,2) NOT NULL,   -- always positive; type gives direction
+    mode           VARCHAR(64),              -- payment mode for DEPOSIT / REFUND
+    details        TEXT,                     -- free-text note from the deposit drawer
+    balance_after  NUMERIC(12,2) NOT NULL,   -- running net after this movement
+    created_at     TIMESTAMP NOT NULL
+);
+
+CREATE INDEX idx_deposit_ledger_patient
+    ON patient_deposit_ledger (patient_id, created_at DESC);
+
+-- ============================================================
+-- bill  (clinic_id dropped; seq is per-schema, unique per schema)
+-- Each Charge & Bill snapshots one invoice here. SUPPLEMENTS the existing
+-- appointment-level billing (fee/pharmacy_amount/pay_status) — this table
+-- is the invoice history record, not the live revenue figure. `seq` is a
+-- per-schema running number that formats invoice_no (INV_0001 …); `items`
+-- is a JSON snapshot of the line items so a bill can be reprinted.
+-- ============================================================
+CREATE TABLE bill (
+    id              UUID PRIMARY KEY,
+    patient_id      UUID NOT NULL REFERENCES patient(id),
+    appointment_id  UUID REFERENCES appointment(id),
+    invoice_no      VARCHAR(32) NOT NULL,
+    seq             INTEGER NOT NULL,
+    bill_date       DATE NOT NULL,
+    billed          NUMERIC(12,2) NOT NULL,
+    paid            NUMERIC(12,2) NOT NULL,
+    due             NUMERIC(12,2) NOT NULL,
+    refund          NUMERIC(12,2) NOT NULL,
+    deposit_applied NUMERIC(12,2),
+    pay_status      VARCHAR(32),
+    payment_method  VARCHAR(64),
+    items           TEXT,
+    created_at      TIMESTAMP NOT NULL
+);
+
+CREATE INDEX idx_bill_patient_date
+    ON bill (patient_id, bill_date DESC, seq DESC);
+
+-- Per-schema unique: two invoices in a schema can never share a seq number
+-- (concurrent creates lose the race with a constraint error, not a duplicate).
+CREATE UNIQUE INDEX uq_bill_seq ON bill (seq);

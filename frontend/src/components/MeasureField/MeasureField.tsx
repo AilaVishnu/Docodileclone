@@ -22,6 +22,8 @@ export type MeasureFieldProps = {
   prefix?: string;
   placeholder?: string;
   invalid?: boolean;
+  /** Lock the value box — shown but not editable (e.g. an auto-calculated BMI). */
+  readOnly?: boolean;
   dense?: boolean;
   inputMode?: "numeric" | "decimal" | "text";
   ariaLabel?: string;
@@ -43,7 +45,7 @@ export type MeasureFieldProps = {
 };
 
 export function MeasureField({
-  value, onChange, unit, onToggleUnit, prefix, placeholder, invalid, dense, box, unitFilled,
+  value, onChange, unit, onToggleUnit, prefix, placeholder, invalid, readOnly, dense, box, unitFilled,
   inputMode = "numeric", ariaLabel, onKeyDown, onFocus, unitWidth, unitColor, bp, value2 = "", onChange2, ariaLabel2,
 }: MeasureFieldProps) {
   const switchable = !!onToggleUnit;
@@ -65,6 +67,7 @@ export function MeasureField({
     flex: 1, minWidth: 0, height: "100%", border: "none", outline: "none", padding: 0,
     fontSize: fonts.control.sm, fontFamily: fonts.family.primary, color: colors.neutral900,
     backgroundColor: "transparent", textAlign: box ? "left" : "center",
+    ...(readOnly ? { cursor: "default" } : null),
   };
 
   const inputs = (
@@ -72,6 +75,7 @@ export function MeasureField({
       <input
         className={box ? "text-input-field" : "text-input-field is-filled"}
         inputMode={inputMode} aria-label={ariaLabel} aria-invalid={invalid || undefined}
+        readOnly={readOnly}
         value={value} onChange={handleFirstChange} onKeyDown={handleFirstKeyDown} onFocus={onFocus} placeholder={placeholder} style={inputBase}
       />
       {bp && (

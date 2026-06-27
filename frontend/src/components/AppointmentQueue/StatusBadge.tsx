@@ -21,6 +21,7 @@ const formatSince = (iso: string) =>
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 export type AppointmentStatusValue =
+  | "UNSEEN"
   | "WAITING"
   | "IN_PROGRESS"
   | "COMPLETED"
@@ -38,6 +39,10 @@ const STATUS_CONFIG: Record<
   string,
   { bg: string; color: string; label: string }
 > = {
+  // UNSEEN — a new appointment/patient that hasn't been opened/seen yet. Soft
+  // sage pill (secondary200) with dark text, same size/radius as every other
+  // status badge.
+  UNSEEN: { bg: colors.secondary200, color: colors.neutral900, label: "Unseen" },
   BOOKED: { bg: colors.active.shade300, color: colors.neutral900, label: "Booked" },
   WAITING: { bg: colors.yellow100, color: colors.neutral900, label: "Waiting" },
   // SCHEDULED is a backend alias of BOOKED (the server emits either for a

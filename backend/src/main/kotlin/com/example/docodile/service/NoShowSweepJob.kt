@@ -42,11 +42,18 @@ class NoShowSweepJob(
 
     private fun runSweep(reason: String) {
         // Cutoff = start of today; anything scheduled before that and still
-        // BOOKED was a no-show.
+        // pending is stale.
         val cutoff: LocalDateTime = LocalDate.now().atStartOfDay()
-        val touched = appointmentRepository.markBookedBeforeAsNoShow(cutoff)
-        if (touched > 0) {
-            log.info("NoShowSweep ($reason): marked {} stale BOOKED → NO_SHOW (cutoff {})", touched, cutoff)
+        // Stage 1 — pre-arrival no-shows: BOOKED/SCHEDULED/WAITING → NO_SHOW.
+        val noShow = appointmentRepository.markBookedBeforeAsNoShow(cutoff)
+        if (noShow > 0) {
+            log.info("NoShowSweep ($reason): marked {} stale BOOKED → NO_SHOW (cutoff {})", noShow, cutoff)
+        }
+        // Stage 2 — never-opened consultations: an At-Doc (IN_PROGRESS/AT_DOC)
+        // appointment whose pad was never opened (no started visit) → UNSEEN.
+        val unseen = appointmentRepository.markStaleAtDocAsUnseen(cutoff)
+        if (unseen > 0) {
+            log.info("NoShowSweep ($reason): marked {} stale At-Doc → UNSEEN (cutoff {})", unseen, cutoff)
         }
     }
 }

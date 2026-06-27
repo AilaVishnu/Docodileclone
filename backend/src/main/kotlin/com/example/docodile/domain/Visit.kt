@@ -88,5 +88,9 @@ class Visit(
     // Null for visits created natively. Makes re-imports idempotent.
     @Column(name = "external_ref") var externalRef: String? = null,
 
-    @Column(name = "appointment_id") var appointmentId: UUID? = null
+    @Column(name = "appointment_id") var appointmentId: UUID? = null,
+
+    // Sticky "completed at least once" marker — stamped when session_ended_at
+    // is first set, never cleared on a later amend re-open.
+    @Column(name = "completed_at") var completedAt: java.time.Instant? = null
 )

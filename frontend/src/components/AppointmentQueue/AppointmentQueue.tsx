@@ -3,22 +3,22 @@ import { Tabs, TabItem } from "../Tabs";
 import { QueueTable, Appointment } from "./QueueTable";
 import { styles } from "./AppointmentQueue.styles";
 import { DatePicker } from "../DatePicker/DatePicker";
-import { colors, fonts, radii, spacing } from "../../styles/theme";
+import { colors, radii } from "../../styles/theme";
 import { BookAppointment, EditAppointmentData } from "./BookAppointment";
 import { PageHeader } from "../PageHeader/PageHeader";
 import { ChevronDown } from "../icons/ChevronDown";
-import { BillMedicinesModal } from "./BillMedicinesModal";
-import { BillCard } from "../BillCard/BillCard";
+import { BillModal } from "../BillCard/BillModal";
 import { DoctorStatusCard } from "./DoctorStatusCard";
 import { HeatmapCard } from "./HeatmapCard";
 import { Toast } from "../Toast";
 import { resolveToastIcon } from "../Toast/toastIcon";
-import { Button } from "../Button";
 import { ConfirmDialog } from "../ConfirmDialog";
-import { Modal } from "../Modal";
 import { API_BASE_URL } from "../../apiConfig";
-import { listPharmacyStock, deductPharmacyStock } from "../../api/pharmacy";
+import { listPharmacyStock } from "../../api/pharmacy";
 import { getActiveSessions } from "../../api/visits";
+import { recordPatientDeposit } from "../../api/patientSearch";
+import { listBills, chargeAppointment, type Bill } from "../../api/bills";
+import { RecentBills } from "../BillCard/RecentBills";
 
 type Doctor = {
   id: string;
@@ -34,6 +34,20 @@ type BillingMedicine = {
   unitPrice: number;
   qty: number;
 };
+
+// Stable empty list for a blank ("Create Bill") editor. Must be a constant —
+// a fresh `[]` each render would re-fire BillModal's seed effect (which the 3s
+// queue poll re-renders into) and wipe the bill on every tick.
+const NO_MEDS: BillingMedicine[] = [];
+
+// Patient label for the bill header — "name (G|years)", matching the queue row.
+// `ageMonths` is stored in months (the queue divides by 12).
+function patientLabel(name: string, gender?: string, ageMonths?: number): string {
+  const g = gender ? gender.charAt(0).toUpperCase() : "";
+  const years = ageMonths != null && ageMonths > 0 ? Math.floor(ageMonths / 12) : null;
+  const parts = [g, years != null ? String(years) : ""].filter(Boolean);
+  return parts.length ? `${name} (${parts.join("|")})` : name;
+}
 
 type AppointmentQueueProps = {
   isBooking?: boolean;
@@ -55,13 +69,30 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
   const [toastMessage, setToastMessage] = useState("");
   const [pendingCancelId, setPendingCancelId] = useState<string | null>(null);
   const [medsBillingApt, setMedsBillingApt] = useState<Appointment | null>(null);
-  // "Mark as Paid" popup state — keeps the receptionist on the queue
-  // instead of opening the full Edit modal just to pick a channel.
-  const [payDueApt, setPayDueApt] = useState<Appointment | null>(null);
-  const [payDueMethod, setPayDueMethod] = useState<string>("Cash");
-  const [payDueSubmitting, setPayDueSubmitting] = useState(false);
-  const [payDueDiscount, setPayDueDiscount] = useState<number>(0);
-  const [payDueDiscountMode, setPayDueDiscountMode] = useState<"%" | "₹">("₹");
+  // An ADDITIONAL bill opens BLANK — the consultation + prescribed meds were
+  // already billed on the first invoice of the date. The FIRST bill (no prior
+  // bill that date) auto-seeds them. Derived from the live bill count so it can
+  // never get stuck on a stale flag.
+  const additionalBill = (medsBillingApt?.todayBillCount ?? 0) > 0;
+  // Recent Bills history (shown when the patient already has a bill today).
+  const [billsHistoryApt, setBillsHistoryApt] = useState<Appointment | null>(null);
+  const [historyBills, setHistoryBills] = useState<Bill[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const openBillsHistory = (apt: Appointment) => {
+    if (apt.patientArchived) {
+      setToastMessage(`${apt.patientName} is archived — restore the patient to continue.`);
+      return;
+    }
+    setBillsHistoryApt(apt);
+    setHistoryBills([]);
+    if (!apt.patientId) return;
+    setHistoryLoading(true);
+    listBills(apt.patientId)
+      .then(setHistoryBills)
+      .catch((err) => setToastMessage(`Couldn't load bills: ${(err as Error).message}`))
+      .finally(() => setHistoryLoading(false));
+  };
   // appointmentId → backend session start (ISO) for in-progress consultations.
   // Polled from the active-sessions endpoint; drives the live status-badge
   // timer (the badge itself ticks each second from this start instant).
@@ -173,39 +204,9 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
       setBillingMedicines([]);
       return;
     }
-    // Derive the dispensary quantity from the prescription itself so the
-    // receptionist doesn't have to mentally compute
-    // (units/dose × doses/day × days). Falls back to 1 when any field is
-    // missing or non-numeric (e.g. SOS, "As directed").
-    const parseDurationDays = (d?: string): number | null => {
-      if (!d) return null;
-      const m = d.match(/(\d+)\s*(day|week|month|year|d|w|m|y)?/i);
-      if (!m) return null;
-      const n = parseInt(m[1], 10);
-      if (!Number.isFinite(n) || n <= 0) return null;
-      const unit = (m[2] ?? "day").toLowerCase();
-      if (unit.startsWith("w")) return n * 7;
-      if (unit.startsWith("mon") || unit === "m") return n * 30;
-      if (unit.startsWith("y")) return n * 365;
-      return n; // days / unknown unit
-    };
-    // Topical / liquid / per-pack forms (creams, lotions, drops, syrups…) are
-    // dispensed as ONE unit (a tube/bottle/bar) — not "doses × days" like
-    // tablets/capsules. Default those to 1; the receptionist can still adjust.
-    const PER_PACK_FORM = /cream|lotion|gel|ointment|\boil\b|shampoo|soap|wash|serum|sunscreen|balm|paste|scrub|spray|powder|syrup|suspension|solution|drop|moisturi|conditioner|foam|emulsion|liniment|tincture/i;
-    const computeQty = (name: string, dosage?: string, frequency?: string, duration?: string): number | null => {
-      if (PER_PACK_FORM.test(name)) return 1;
-      const dosageMatch = (dosage ?? "").match(/([\d.]+)/);
-      const unitsPerDose = dosageMatch ? parseFloat(dosageMatch[1]) : 1;
-      const dosesPerDay = (frequency ?? "")
-        .split(/[-+,/\s]+/)
-        .map((p) => parseInt(p, 10))
-        .filter((n) => Number.isFinite(n))
-        .reduce((a, b) => a + b, 0);
-      const days = parseDurationDays(duration);
-      if (!dosesPerDay || !days || !Number.isFinite(unitsPerDose) || unitsPerDose <= 0) return null;
-      return Math.ceil(unitsPerDose * dosesPerDay * days);
-    };
+    // Dispensary quantity is now derived server-side (RxRowDTO.dispenseQty), so
+    // bills and inventory share one rule. Default to 1 when the server can't
+    // compute it (SOS / "as directed"); the desk can still adjust.
     const patientId = medsBillingApt.patientId;
     setBillingLoading(true);
     const token = localStorage.getItem("docodile_token");
@@ -246,7 +247,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               // qty = units/dose × doses/day × days, ceiling to a whole
               // unit. The receptionist can still bump up/down in the
               // modal if the doctor wrote SOS or fractional doses.
-              qty: computeQty(name, p.dosage, p.frequency, p.duration) ?? 1,
+              qty: p.dispenseQty ?? 1,
             };
           });
         setBillingMedicines(rows);
@@ -298,28 +299,9 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           const aptData = await aptRes.json();
           const grouped: Record<string, Appointment[]> = {};
 
-          // Client-side no-show derivation — mirrors the backend
-          // NoShowSweepJob (1am cron) so the queue doesn't show stale
-          // "Booked" pills before the nightly sweep runs. Any pending
-          // appointment (BOOKED/SCHEDULED/WAITING) whose scheduled time is
-          // before the start of today is displayed as NO_SHOW.
-          const startOfToday = new Date();
-          startOfToday.setHours(0, 0, 0, 0);
-          const PENDING_STATUSES = new Set(["BOOKED", "SCHEDULED", "WAITING"]);
-          const deriveStatus = (rawStatus: string | undefined, rawSched: string | undefined): string => {
-            // Legacy walk-in rows can carry "AT_DOC" — normalise to IN_PROGRESS
-            // so the existing StatusBadge / sort priority / filter logic apply
-            // without a new branch (At Doc is the IN_PROGRESS display label
-            // before Start Session is clicked).
-            const incoming = rawStatus?.toUpperCase() === "AT_DOC" ? "IN_PROGRESS" : rawStatus;
-            const status = incoming || "WAITING";
-            if (!PENDING_STATUSES.has(status.toUpperCase())) return status;
-            if (!rawSched) return status;
-            const sched = new Date(rawSched);
-            if (Number.isNaN(sched.getTime())) return status;
-            return sched < startOfToday ? "NO_SHOW" : status;
-          };
-
+          // Status is now derived server-side (AT_DOC→IN_PROGRESS, blank→WAITING,
+          // and pending-before-today→NO_SHOW) in getAppointmentsForClinic, so the
+          // queue just uses apt.status as returned — every client agrees.
           aptData.forEach((apt: any) => {
             if (!grouped[apt.doctorId]) {
               grouped[apt.doctorId] = [];
@@ -334,7 +316,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               scheduledTime: apt.scheduledTime ? new Date(apt.scheduledTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Walk-in",
               rawScheduledTime: apt.scheduledTime || undefined,
               isWalkin: apt.isWalkin,
-              status: deriveStatus(apt.status, apt.scheduledTime) as Appointment["status"],
+              status: (apt.status || "WAITING") as Appointment["status"],
               payStatus: apt.payStatus || "DUE",
               paymentMethod: apt.paymentMethod || "",
               doctorId: apt.doctorId,
@@ -346,6 +328,8 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               notes: apt.notes || "",
               fee: apt.fee || 0,
               pharmacyAmount: apt.pharmacyAmount || 0,
+              deposit: apt.patientDeposit || 0,
+              todayBillCount: apt.todayBillCount || 0,
               patientArchived: apt.patientArchived || false,
               createdAt: apt.createdAt || undefined,
             });
@@ -376,6 +360,9 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
     "COMPLETED": 3,
     "NO_SHOW": 4,
     "CANCELLED": 5,
+    // A never-opened At-Doc consultation swept stale by NoShowSweepJob — group
+    // it with the other terminal/missed states at the bottom of the queue.
+    "UNSEEN": 6,
   };
 
   const activeQueue = (activeDoctorId ? appointments[activeDoctorId] || [] : [])
@@ -540,30 +527,19 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                   }, apt.id, apt.doctorId || activeDoctorId);
                 }
               } },
-              { label: "Bill Medicines", onClick: (apt) => {
+              // Billing is ONE swapping item: before the day's first bill the
+              // kebab shows "Bill" (opens the editor). Once a bill exists for the
+              // appointment's date it disappears and "View/Create Bills" takes its
+              // place — the Recent Bills history, which carries its own
+              // "Create New Bill" for additional invoices.
+              { label: "Create Bill", visible: (apt) => !apt.todayBillCount, onClick: (apt) => {
                 if (apt.patientArchived) {
                   setToastMessage(`${apt.patientName} is archived — restore the patient to continue.`);
                   return;
                 }
                 setMedsBillingApt(apt);
               } },
-              // One-click consultation-fee paid. Only appears when the
-              // appointment is in DUE state (anything other than PAID/
-              // WAIVED). PATCHes payStatus → PAID with method "Cash"
-              // and refreshes the queue so the pill flips immediately.
-              {
-                label: "Mark as Paid",
-                visible: (apt) => {
-                  const ps = (apt.payStatus || "").toUpperCase();
-                  return ps !== "PAID" && ps !== "WAIVED";
-                },
-                onClick: (apt) => {
-                  setPayDueApt(apt);
-                  setPayDueMethod(apt.paymentMethod || "Cash");
-                  setPayDueDiscount(0);
-                  setPayDueDiscountMode("₹");
-                },
-              },
+              { label: "View/Create Bills", visible: (apt) => !!apt.todayBillCount, onClick: (apt) => openBillsHistory(apt) },
             ]}
             // Only today's queue can mutate appointment status — past
             // and future dates render the badge read-only so a stray
@@ -615,296 +591,99 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
         onCancel={() => setPendingCancelId(null)}
       />
 
-      <BillMedicinesModal
+      <BillModal
         isOpen={!!medsBillingApt}
         onClose={() => setMedsBillingApt(null)}
-        onBilled={(method, total, billedItems) => {
-          const inr = total.toLocaleString("en-IN", { minimumFractionDigits: 2 });
-          const baseMsg = method === "Waive"
-            ? `Bill waived for ${medsBillingApt?.patientName}`
-            : `₹${inr} billed via ${method} for ${medsBillingApt?.patientName}`;
-
-          // Persist pay status + method on the appointment row so the
-          // queue's Pay pill stays accurate after a reload. WAIVED for a
-          // waived bill, PAID for everything else; the channel is the
-          // selected radio. Fire-and-forget — toast on failure.
+        onBilled={async ({ method, lineItems }) => {
+          // ONE atomic call: the server recomputes the totals from these line
+          // items, writes payment, creates the invoice, auto-covers from the
+          // deposit and deducts stock — so money + inventory never drift apart.
           const aptId = medsBillingApt?.id;
-          if (aptId) {
-            const token = localStorage.getItem("docodile_token");
-            const payStatus = method === "Waive" ? "WAIVED" : "PAID";
-            fetch(`${API_BASE_URL}/api/tenant/appointments/${aptId}/payment`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-              // pharmacyAmount = the bill total minus any pending
-              // consultation due that's rolled in. For waived bills
-              // pass 0 so finance reflects the goodwill, not a charge.
-              body: JSON.stringify({ payStatus, paymentMethod: method, pharmacyAmount: method === "Waive" ? 0 : total }),
-            })
-              .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); })
-              .then(() => setRefreshKey((k) => k + 1))
-              .catch((err) => setToastMessage(`Pay status update failed: ${(err as Error).message}`));
-          }
-
-          // Only deduct meds the clinic actually stocks — out-of-stock
-          // items have no inventory row to touch. Waived bills still
-          // deduct (the meds were dispensed, just not charged).
-          const toDeduct = billedItems.filter((b) => b.inStock && b.qty > 0).map((b) => ({ name: b.name, qty: b.qty }));
-          if (toDeduct.length === 0) {
-            setToastMessage(baseMsg);
-            return;
-          }
-          deductPharmacyStock(toDeduct)
-            .then((result) => {
-              // Refresh the local catalog so the next bill modal sees
-              // the updated stock counts without a page reload.
-              listPharmacyStock().then((meds) => {
-                const byName = new Map<string, { id: string; name: string; unitPrice: number }>();
-                for (const m of meds) {
-                  const key = m.name.trim().toLowerCase();
-                  if (!key) continue;
-                  const existing = byName.get(key);
-                  if (!existing || m.unitPrice < existing.unitPrice) {
-                    byName.set(key, { id: m.id, name: m.name.trim(), unitPrice: m.unitPrice });
-                  }
+          const who = medsBillingApt?.patientName;
+          const isWaive = method === "Waive";
+          if (!aptId) { setToastMessage("No appointment to bill"); return; }
+          try {
+            const result = await chargeAppointment(aptId, { method, items: lineItems });
+            const inr = result.bill.billed.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+            const baseMsg = isWaive ? `Bill waived for ${who}` : `₹${inr} billed via ${method} for ${who}`;
+            setRefreshKey((k) => k + 1);
+            // Refresh the local catalog so the next bill sees updated stock.
+            listPharmacyStock().then((meds) => {
+              const byName = new Map<string, { id: string; name: string; unitPrice: number }>();
+              for (const m of meds) {
+                const key = m.name.trim().toLowerCase();
+                if (!key) continue;
+                const existing = byName.get(key);
+                if (!existing || m.unitPrice < existing.unitPrice) {
+                  byName.set(key, { id: m.id, name: m.name.trim(), unitPrice: m.unitPrice });
                 }
-                setPharmacyStock(Array.from(byName.values()));
-              }).catch(() => {});
-              const shortFills = result.applied.filter((a) => a.deducted < a.requested);
-              if (shortFills.length > 0) {
-                const names = shortFills.map((s) => `${s.name} (${s.deducted}/${s.requested})`).join(", ");
-                setToastMessage(`${baseMsg} · Short stock on: ${names}`);
-              } else {
-                setToastMessage(`${baseMsg} · Inventory updated`);
               }
-            })
-            .catch((err) => {
-              setToastMessage(`${baseMsg} · Inventory deduction failed: ${(err as Error).message}`);
-            });
+              setPharmacyStock(Array.from(byName.values()));
+            }).catch(() => {});
+            const shortFills = result.stock.applied.filter((a) => a.deducted < a.requested);
+            if (shortFills.length > 0) {
+              const names = shortFills.map((s) => `${s.name} (${s.deducted}/${s.requested})`).join(", ");
+              setToastMessage(`${baseMsg} · Short stock on: ${names}`);
+            } else if (result.stock.applied.length > 0) {
+              setToastMessage(`${baseMsg} · Inventory updated`);
+            } else {
+              setToastMessage(baseMsg);
+            }
+          } catch (err) {
+            setToastMessage(`Charge failed: ${(err as Error).message}`);
+          }
         }}
-        patientName={medsBillingApt?.patientName || ""}
-        medicines={billingMedicines}
-        loading={billingLoading}
+        patientName={medsBillingApt ? patientLabel(medsBillingApt.patientName, medsBillingApt.patientGender, medsBillingApt.patientAge) : ""}
+        patientId={medsBillingApt?.patientId}
+        // Blank for an additional bill (consultation + meds already invoiced);
+        // seeded with the prescribed meds for the first bill of the day.
+        medicines={additionalBill ? NO_MEDS : billingMedicines}
+        loading={additionalBill ? false : billingLoading}
+        // The patient's advance/deposit — seeds the Deposit field, adjusted via
+        // the drawer (add/refund) and auto-drawn on Charge & Bill. The backend
+        // owns the running net; we sync medsBillingApt so a re-open shows it.
+        initialDeposit={medsBillingApt?.deposit ?? 0}
+        onDeposit={async (amount, type, mode, details) => {
+          const patientId = medsBillingApt?.patientId;
+          if (!patientId) throw new Error("No patient to deposit against");
+          const { deposit } = await recordPatientDeposit(patientId, amount, type, mode, details);
+          setMedsBillingApt((cur) => (cur ? { ...cur, deposit } : cur));
+          setRefreshKey((k) => k + 1);
+          return deposit;
+        }}
         // Use this clinic's pharmacy inventory as the Add-medicine
         // catalog so prices match what the dispensary actually stocks.
         // Falls back to the modal's hardcoded default when empty.
         catalog={pharmacyStock.length > 0 ? pharmacyStock : undefined}
-        pendingDue={medsBillingApt?.payStatus === "DUE" ? (medsBillingApt.fee ?? 500) : 0}
+        // The pending consultation/service for this appointment, seeded as the
+        // first bill line — only while it's still UNPAID (any status that isn't
+        // PAID/WAIVED; the backend uses "Unpaid"/"DUE" interchangeably), so a
+        // paid consultation isn't re-billed. This is the old "pending due",
+        // now itemized.
+        serviceName={medsBillingApt?.service?.trim() || "Consultation"}
+        serviceFee={
+          !additionalBill && medsBillingApt && !["PAID", "WAIVED"].includes((medsBillingApt.payStatus || "").toUpperCase())
+            ? (medsBillingApt.fee ?? 0)
+            : 0
+        }
       />
 
-      {/* Pay Due popup — opened by the "Mark as Paid" menu action.
-          Tiny modal: shows patient + due amount, lets the receptionist
-          pick Cash/Card/UPI/Waive, then PATCHes payStatus → PAID. */}
-      {payDueApt && (() => {
-        const consultAmt = payDueApt.fee ?? 0;
-        const pharmacyAmt = payDueApt.pharmacyAmount ?? 0;
-        const subtotal = consultAmt + pharmacyAmt;
-        // Waive pins the bill to ₹0 (full 100% discount) and locks the
-        // discount input so the receptionist can't override it. Toggle
-        // back to Cash/Card/UPI and the prior discount values restore.
-        const isWaived = payDueMethod === "Waive";
-        const discountAmt = isWaived
-          ? subtotal
-          : (payDueDiscountMode === "%"
-              ? (subtotal * payDueDiscount) / 100
-              : payDueDiscount);
-        const totalDue = isWaived ? 0 : Math.max(0, subtotal - discountAmt);
-        const services: { name: string; price: number }[] = [];
-        if (consultAmt > 0) services.push({ name: payDueApt.service?.trim() || "Consultation", price: consultAmt });
-        if (pharmacyAmt > 0) services.push({ name: "Pharmacy", price: pharmacyAmt });
-        const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        return (
-        <Modal
-          isOpen
-          onClose={() => setPayDueApt(null)}
-          level="top"
-          surface="transparent"
-          padding={0}
-          radius={0}
-          shadow="none"
-          width={360}
-          closeOnBackdrop={false}
-          closeOnEsc={false}
-        >
-          <div style={{ display: "flex", flexDirection: "column", width: 360, maxWidth: "92vw" }}>
-            {/* Receipt card — patient header + bill body + actions, all
-                under one white sheet so the action buttons read as part
-                of the bill instead of hanging detached below the zigzag. */}
-            <div style={{ position: "relative", backgroundColor: colors.neutral100, padding: spacing.xl, borderRadius: "16px 16px 0 0", display: "flex", flexDirection: "column", gap: spacing.s }}>
-              {/* Close (X) — top-right; same as Cancel. Disabled mid-submit. */}
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={() => setPayDueApt(null)}
-                disabled={payDueSubmitting}
-                style={{
-                  position: "absolute", top: spacing.s, right: spacing.s,
-                  width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
-                  border: "none", borderRadius: "50%", background: "transparent",
-                  cursor: payDueSubmitting ? "default" : "pointer",
-                  color: colors.neutral500, fontSize: 18, lineHeight: 1,
-                }}
-                onMouseEnter={(e) => { if (!payDueSubmitting) e.currentTarget.style.backgroundColor = colors.primary100; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-              >
-                ✕
-              </button>
-              {/* Patient name header — serif, centered */}
-              <h3 style={{ margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.regular, color: colors.neutral900, textAlign: "center" as const }}>
-                {payDueApt.patientName}
-              </h3>
-              <div style={{ fontFamily: fonts.family.primary, fontSize: fonts.size.xs, color: colors.neutral500, textAlign: "center" as const, marginTop: -spacing["2xs"] }}>Pay Due</div>
+      <RecentBills
+        isOpen={!!billsHistoryApt}
+        onClose={() => setBillsHistoryApt(null)}
+        patientName={billsHistoryApt?.patientName || ""}
+        bills={historyBills}
+        loading={historyLoading}
+        // Create New Bill → close the history and open the editor for another
+        // invoice. It opens blank automatically because the patient already has
+        // a bill for the date (additionalBill = todayBillCount > 0).
+        onCreateNew={() => {
+          const apt = billsHistoryApt;
+          setBillsHistoryApt(null);
+          if (apt) setMedsBillingApt(apt);
+        }}
+      />
 
-              {/* Service line items in cream pills */}
-              {services.map((svc) => (
-                <div key={svc.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${spacing.xs} ${spacing.s}`, backgroundColor: colors.primary100, borderRadius: radii.m, fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral900 }}>
-                  <span>{svc.name}</span>
-                  <span style={{ fontVariantNumeric: "tabular-nums" as const, fontWeight: fonts.weight.medium }}>₹ {fmt(svc.price)}</span>
-                </div>
-              ))}
-              {services.length === 0 && (
-                <div style={{ padding: spacing.s, fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral500, textAlign: "center" as const }}>
-                  No charges on this booking.
-                </div>
-              )}
-
-              {/* Subtotal + Discount rows — underline style */}
-              {subtotal > 0 && (
-                <>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${spacing.xs} 0`, borderBottom: `1px solid ${colors.neutral200}`, fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral700 }}>
-                    <span>Subtotal</span>
-                    <span style={{ fontVariantNumeric: "tabular-nums" as const }}>₹ {fmt(subtotal)}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs} 0`, borderBottom: `1px solid ${colors.neutral200}`, fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral700, opacity: isWaived ? 0.5 : 1 }}>
-                    <span>Discount</span>
-                    <input
-                      type="number"
-                      min={0}
-                      value={isWaived ? (payDueDiscountMode === "%" ? 100 : subtotal) : (payDueDiscount || "")}
-                      placeholder="0"
-                      disabled={isWaived}
-                      onChange={(e) => setPayDueDiscount(Number(e.target.value) || 0)}
-                      style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", textAlign: "right" as const, fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral900, padding: 0, fontVariantNumeric: "tabular-nums" as const, cursor: isWaived ? "not-allowed" : "text" }}
-                    />
-                    {/* % / ₹ toggle — also disabled while Waive is on. */}
-                    <div style={{ display: "flex", border: `1px solid ${colors.neutral300}`, borderRadius: radii.s, overflow: "hidden", flexShrink: 0 }}>
-                      <button
-                        type="button"
-                        onClick={() => setPayDueDiscountMode("%")}
-                        disabled={isWaived}
-                        style={{
-                          padding: "2px 10px",
-                          border: "none",
-                          cursor: isWaived ? "not-allowed" : "pointer",
-                          fontFamily: fonts.family.primary,
-                          fontSize: fonts.control.xs,
-                          fontWeight: payDueDiscountMode === "%" ? fonts.weight.semibold : fonts.weight.regular,
-                          backgroundColor: payDueDiscountMode === "%" ? colors.active.shade100 : "transparent",
-                          color: payDueDiscountMode === "%" ? colors.neutral900 : colors.neutral500,
-                        }}
-                      >%</button>
-                      <button
-                        type="button"
-                        onClick={() => setPayDueDiscountMode("₹")}
-                        disabled={isWaived}
-                        style={{
-                          padding: "2px 10px",
-                          border: "none",
-                          cursor: isWaived ? "not-allowed" : "pointer",
-                          fontFamily: fonts.family.primary,
-                          fontSize: fonts.control.xs,
-                          fontWeight: payDueDiscountMode === "₹" ? fonts.weight.semibold : fonts.weight.regular,
-                          backgroundColor: payDueDiscountMode === "₹" ? colors.active.shade100 : "transparent",
-                          color: payDueDiscountMode === "₹" ? colors.neutral900 : colors.neutral500,
-                        }}
-                      >₹</button>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Total — cream-banded headline */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: `${spacing.xs} ${spacing.s}`, backgroundColor: colors.primary100, borderRadius: radii.m, marginTop: spacing["2xs"] }}>
-                <span style={{ fontFamily: fonts.family.primary, fontSize: fonts.control.md, fontWeight: fonts.weight.semibold, color: colors.neutral900 }}>Total</span>
-                <span style={{ fontFamily: fonts.family.secondary, fontSize: fonts.size.h4, lineHeight: 1, color: colors.neutral900, fontWeight: fonts.weight.regular, fontVariantNumeric: "tabular-nums" as const }}>₹ {fmt(totalDue)}</span>
-              </div>
-
-              {/* Method radio row */}
-              <div style={{ display: "flex", gap: spacing.m, justifyContent: "center", flexWrap: "wrap" as const, paddingTop: spacing["2xs"] }}>
-                {["Cash", "Card", "UPI", "Waive"].map((m) => (
-                  <label key={m} style={{ display: "flex", alignItems: "center", gap: spacing["2xs"], cursor: "pointer", fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: m === "Waive" ? colors.red200 : colors.neutral900 }}>
-                    <input
-                      type="radio"
-                      name="payDueMethod"
-                      checked={payDueMethod === m}
-                      onChange={() => setPayDueMethod(m)}
-                      style={{ margin: 0, cursor: "pointer" }}
-                    />
-                    {m}
-                  </label>
-                ))}
-              </div>
-
-              {/* Action buttons — inside the white card, above the zigzag */}
-              <div style={{ display: "flex", gap: spacing.s, justifyContent: "center", paddingTop: spacing.s }}>
-              <Button
-                variant="light"
-                size="sm"
-                onClick={() => { setPayDueApt(null); }}
-                disabled={payDueSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="dark"
-                size="sm"
-                disabled={payDueSubmitting}
-                onClick={async () => {
-                  const apt = payDueApt;
-                  setPayDueSubmitting(true);
-                  const token = localStorage.getItem("docodile_token");
-                  const newPayStatus = payDueMethod === "Waive" ? "WAIVED" : "PAID";
-                  try {
-                    const res = await fetch(`${API_BASE_URL}/api/tenant/appointments/${apt.id}/payment`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                      // Discount = full subtotal for Waive, computed
-                      // amount otherwise. Backend persists it for the
-                      // finance dashboard's collected-revenue rollup.
-                      body: JSON.stringify({
-                        payStatus: newPayStatus,
-                        paymentMethod: payDueMethod,
-                        discountAmount: discountAmt,
-                      }),
-                    });
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                    setToastMessage(payDueMethod === "Waive"
-                      ? `Bill waived for ${apt.patientName}`
-                      : `Marked ${apt.patientName} as Paid via ${payDueMethod}`);
-                    setRefreshKey((k) => k + 1);
-                    setPayDueApt(null);
-                  } catch (e) {
-                    setToastMessage(`Couldn't update payment: ${(e as Error).message}`);
-                  } finally {
-                    setPayDueSubmitting(false);
-                  }
-                }}
-              >
-                {payDueSubmitting ? "Saving…" : payDueMethod === "Waive" ? "Mark Waived" : "Pay Due"}
-              </Button>
-            </div>
-            </div>
-            {/* Zigzag torn-receipt edge under the unified card */}
-            <div style={{
-              width: "100%",
-              height: 20,
-              backgroundImage: `linear-gradient(135deg, ${colors.neutral100} 50%, transparent 50%), linear-gradient(225deg, ${colors.neutral100} 50%, transparent 50%)`,
-              backgroundSize: "20px 20px",
-              backgroundRepeat: "repeat-x",
-            }} />
-          </div>
-        </Modal>
-        );
-      })()}
     </div>
   );
 }

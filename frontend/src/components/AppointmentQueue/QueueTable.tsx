@@ -38,10 +38,16 @@ export type Appointment = {
   doctorId?: string;
   notes?: string;
   fee?: number;
-  /** Latest pharmacy bill total set by Bill Medicines. Surfaced in the
-   *  Pay Due popup so the receptionist sees consultation + medicine
-   *  charges separately. */
+  /** Latest pharmacy (medicines) bill total, written by the single Bill flow
+   *  alongside the consultation `fee` — kept separate so finance can split
+   *  consultation vs pharmacy revenue. */
   pharmacyAmount?: number;
+  /** The patient's running advance/deposit balance. Seeds the bill's Deposit
+   *  field and auto-covers the bill on Charge & Bill; adjusted via the drawer. */
+  deposit?: number;
+  /** Bills the patient already has for this date. 0 → kebab shows "Bill";
+   *  > 0 → it shows "Create Bill" + "View Bills". */
+  todayBillCount?: number;
   /** True when the linked patient has been archived. Drives "patient is
    *  archived" toasts in queue/pad navigation. */
   patientArchived?: boolean;
@@ -54,8 +60,8 @@ type MenuItem = {
   label: string;
   onClick: (appointment: Appointment) => void;
   // Optional per-row gate — return false to omit this menu item for a
-  // given appointment. Lets the parent express conditional actions like
-  // "Mark as Paid" only for DUE rows without duplicating menus.
+  // given appointment. Lets the parent show an action only for the rows it
+  // applies to, without duplicating menus.
   visible?: (appointment: Appointment) => boolean;
 };
 
@@ -71,6 +77,9 @@ type QueueTableProps = {
 
 // Front-desk status actions. Completion is intentionally NOT here — only the
 // doctor marks a visit complete (via "Complete visit" on the prescription pad).
+// UNSEEN is also intentionally absent: it's an AUTO-only state set by the
+// NoShowSweepJob when an At-Doc pad is never opened within 24h, never by hand
+// (the backend rejects a manual UNSEEN too).
 const STATUS_OPTIONS = [
   { label: "No-Show", value: "NO_SHOW" },
   { label: "Arrived", value: "WAITING" },
@@ -99,9 +108,14 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange, sessionSta
   sessionStartedAt?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [timerStarted, setTimerStarted] = useState(() =>
+  // "In progress" = the consultation session is live. The server owns this
+  // (sessionStartedAt, per appointment, from getActiveSessions) — that's the
+  // source of truth across devices; the per-device localStorage flag is only a
+  // fallback for before the session map has loaded.
+  const [localStarted, setLocalStarted] = useState(() =>
     appointment.patientId ? loadStartedSet().has(appointment.patientId) : false
   );
+  const timerStarted = !!sessionStartedAt || localStarted;
   const ref = useRef<HTMLDivElement>(null);
   // Lock the status badge while the doctor's actually in a session for
   // this patient — but only if the appointment is in flight. A stale
@@ -115,7 +129,7 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange, sessionSta
     if (!appointment.patientId) return;
     const pid = appointment.patientId;
     const interval = setInterval(() => {
-      setTimerStarted(loadStartedSet().has(pid));
+      setLocalStarted(loadStartedSet().has(pid));
     }, 1000);
     return () => clearInterval(interval);
   }, [appointment.patientId]);

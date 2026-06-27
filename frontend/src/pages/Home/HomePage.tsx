@@ -6,9 +6,10 @@ import { ServicesView } from "../Services";
 import { HomeView } from "./HomeView";
 import { StatsPage } from "../Stats";
 import { PharmacyView } from "../Pharmacy";
+import { BillsView } from "../Bills";
+import { sampleBills } from "../Bills/sampleBills";
 import { SettingsPage, DEFAULT_SETTINGS_SECTION, SettingsSection } from "../Settings";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
-import { ComingSoon } from "../../components/ComingSoon/ComingSoon";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { ChatBubble } from "../../components/Chat/ChatBubble";
 import { setPendingSessionNav } from "../../components/TopNav/SessionTrayButton";
@@ -278,16 +279,31 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
   } as const;
 
 
+  // Route the Home pinboard's quick-action tiles to the matching section.
+  const handleQuickAction = (key: string) => {
+    switch (key) {
+      case "book":
+        handleNewAppointment();
+        break;
+      case "script":
+        setActiveTab("Prescription");
+        break;
+      case "patient":
+      case "records":
+        setActiveTab("Patient Files");
+        break;
+    }
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case "Home":
-        return <HomeView />;
+        return <HomeView onQuickAction={handleQuickAction} />;
       case "Appointments":
         return <AppointmentsView isBooking={isBooking} bookingKey={bookingKey} onBack={() => { setIsBooking(false); setIsEditing(false); }} onEditStart={() => setIsEditing(true)} onViewPatientFile={(patient, appointmentId) => {
-          // Open the patient's prescription/visit directly — same path
-          // PrescriptionQueue's View Pad uses, so the doctor lands inside
-          // the file instead of on the Patient Files index summary.
-          setPendingSessionNav({ patient, appointmentId });
+          // Open the patient's FILE on its Info tab (demographics), not the
+          // prescription pad. initialAction 4 = INFO_ACTION; Back → Appointments.
+          setPendingSessionNav({ patient, appointmentId, returnTab: "Appointments", initialAction: 4 });
           setActiveTab("Prescription");
         }} />;
       case "Prescription":
@@ -303,7 +319,8 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
       case "Settings":
         return <SettingsPage section={settingsSection} />;
       case "Billing":
-        return <ComingSoon title="Bills" />;
+        // TODO: swap sampleBills for a clinic-wide bills fetch once /api/bills exists.
+        return <BillsView bills={sampleBills} />;
       default:
         return (
           <div>

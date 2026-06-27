@@ -2,9 +2,11 @@ import React from "react";
 import { styles } from "./PrescriptionPage.styles";
 import { pickAvatar } from "../../utils/avatar";
 import { Icon } from "../../components/Icon";
+import { VisitTabs } from "../../components/VisitTabs";
 import { Card } from "../../components/Card";
 import { IconButton } from "../../components/IconButton";
 import { MeasureField } from "../../components/MeasureField";
+import { Field } from "../../components/Field";
 import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 import { Toast } from "../../components/Toast";
@@ -110,6 +112,36 @@ const VITAL_COLUMNS: VitalCell[][] = [
 const VITAL_CELLS: { cell: VitalCell; cellKey: string }[] = VITAL_COLUMNS.flatMap(
   (col, ci) => col.map((cell, ri) => ({ cell, cellKey: `${ci}-${ri}` })),
 );
+
+// `${ci}-${ri}` cell key for each (uniquely-labelled) vital — used to wire the
+// BMI auto-calc to its Height + Weight inputs.
+const VITAL_KEY_BY_LABEL: Record<string, string> = {};
+VITAL_COLUMNS.forEach((col, ci) =>
+  col.forEach((v, ri) => { VITAL_KEY_BY_LABEL[v.label] = `${ci}-${ri}`; }),
+);
+const BMI_KEY = VITAL_KEY_BY_LABEL["BMI"];
+const HEIGHT_KEY = VITAL_KEY_BY_LABEL["Height"];
+const WEIGHT_KEY = VITAL_KEY_BY_LABEL["Weight"];
+
+// BMI = weight(kg) / height(m)². Height/Weight may be entered in imperial
+// units, so normalise to metric first (cm/in → m, kg/lb → kg). Returns "" when
+// either input is missing or non-positive, so the locked BMI field simply
+// blanks until both are present. BMI is always reported in kg/m².
+const computeBmi = (
+  height: VitalCellState | undefined,
+  weight: VitalCellState | undefined,
+): string => {
+  if (!height || !weight) return "";
+  const h = parseFloat(height.value);
+  const w = parseFloat(weight.value);
+  if (!Number.isFinite(h) || !Number.isFinite(w) || h <= 0 || w <= 0) return "";
+  const heightM = height.unit === "in" ? h * 0.0254 : h / 100; // cm is the default
+  const weightKg = weight.unit === "lb" ? w * 0.453592 : w;    // kg is the default
+  if (heightM <= 0) return "";
+  const bmi = weightKg / (heightM * heightM);
+  if (!Number.isFinite(bmi) || bmi <= 0) return "";
+  return bmi.toFixed(1);
+};
 
 // Figma node 2073:3030 — History section. 2×2 grid of cream-filled fields.
 // Each row carries the `field` key for the suggestion API
@@ -1210,6 +1242,43 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     flagDirty();
   };
 
+  // BMI auto-calc, one half of the Height/Weight ⇄ BMI mutual exclusion. When
+  // Height or Weight is present, BMI is DERIVED from them (and locked). We only
+  // overwrite BMI while at least one of Height/Weight is filled — so a BMI typed
+  // DIRECTLY (with Height/Weight empty) is never wiped by this effect. A derived
+  // BMI is non-empty only when BOTH inputs are filled, so clearing either one
+  // blanks it via computeBmi → there's no stale value left to mislead the lock.
+  // Uses the raw setVitalState — recomputing BMI is never itself a doctor edit,
+  // so it must not flag dirty (the Height/Weight change that triggered it
+  // already did). buildSaveRequest reads BMI straight from vitalState, so the
+  // persisted value follows automatically.
+  const heightCellValue = vitalState[HEIGHT_KEY]?.value;
+  const heightCellUnit = vitalState[HEIGHT_KEY]?.unit;
+  const weightCellValue = vitalState[WEIGHT_KEY]?.value;
+  const weightCellUnit = vitalState[WEIGHT_KEY]?.unit;
+  React.useEffect(() => {
+    const hwFilled =
+      (heightCellValue ?? "").trim() !== "" || (weightCellValue ?? "").trim() !== "";
+    if (!hwFilled) return; // BMI is free for manual entry — don't overwrite it
+    const next = computeBmi(vitalState[HEIGHT_KEY], vitalState[WEIGHT_KEY]);
+    setVitalState((prev) =>
+      prev[BMI_KEY]?.value === next
+        ? prev
+        : { ...prev, [BMI_KEY]: { value: next, unit: prev[BMI_KEY]?.unit ?? "kg/m²" } },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heightCellValue, heightCellUnit, weightCellValue, weightCellUnit]);
+
+  // The mutual-exclusion lock state, derived from current values:
+  //  • Height/Weight present → BMI is locked (shows the auto-calculated value).
+  //  • BMI present with NO Height/Weight → Height + Weight are locked.
+  //  • everything empty → nothing locked (pick either method).
+  const vitalsHaveHeightWeight =
+    (heightCellValue ?? "").trim() !== "" || (weightCellValue ?? "").trim() !== "";
+  const vitalsHaveBmi = (vitalState[BMI_KEY]?.value ?? "").trim() !== "";
+  const lockBmiField = vitalsHaveHeightWeight;
+  const lockHeightWeightFields = vitalsHaveBmi && !vitalsHaveHeightWeight;
+
   // List-view tab state — shared across Reports / Files. Defaults to the
   // first tab ("All Reports" / "All Files").
   const [activeListTab, setActiveListTab] = React.useState<number>(0);
@@ -1346,7 +1415,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // video / edit) without crowding the section nav beside it.
   const contactMenuItems = [
     ...(selectedPatient?.phone
-      ? [{ icon: <Icon name="phone" tone="inherit" style={styles.kebabItemIcon} />, label: `${selectedPatient.phone}`, onClick: () => { window.location.href = `tel:${selectedPatient.phone}`; } }]
+      ? [{ icon: <Icon name="phone" tone="inherit" style={styles.kebabItemIcon} />, label: "Call patient", onClick: () => { window.location.href = `tel:${selectedPatient.phone}`; } }]
       : []),
     { icon: <Icon name="mail" tone="inherit" style={styles.kebabItemIcon} />, label: "Email patient", onClick: () => {} },
     { icon: <Icon name="videocamera" tone="inherit" style={styles.kebabItemIcon} />, label: "Video call", onClick: () => {} },
@@ -1608,6 +1677,12 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // blocked and the offending fields are highlighted with a toast.
   const invalidVitalLabels = VITAL_CELLS.filter(({ cell: v, cellKey }) => {
     const cell = vitalState[cellKey];
+    // BMI: when DERIVED (Height/Weight present) it's locked, not typed — never
+    // block save on it; its inputs carry their own validation. When entered
+    // MANUALLY (no Height/Weight) it's a normal editable field, so range-check it.
+    if (v.label === "BMI") {
+      return !lockBmiField && !isVitalValid("BMI", cell.value, cell.unit);
+    }
     if (v.label === "BP") {
       const [sys = "", dia = ""] = cell.value.split("/");
       return !(isVitalValid("BP_sys", sys, cell.unit) && isVitalValid("BP_dia", dia, cell.unit));
@@ -2074,7 +2149,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       visitDate: activeVisit.visitDate,
       visitTime: new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }),
       referredBy: referDoctorName || null,
-      doctorName: doctors.find((d) => d.id === activeVisit.createdByDoctorId)?.name ?? null,
+      // Prefer the server-resolved name (works even when the prescriber isn't in
+      // the caller's scoped doctors list); fall back to the loaded list.
+      doctorName: activeVisit.createdByDoctorName ?? doctors.find((d) => d.id === activeVisit.createdByDoctorId)?.name ?? null,
       doctorCredentials: null,
       complaints: complaintsValue,
       diagnosis: diagnosisValue,
@@ -2430,39 +2507,20 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
             </section>
           ) : (
             <>
-              {/* Visit tabs — sit OUTSIDE the cream sheet, above it. The tuning
-              button (Figma node 2133:9927) is pushed to the far right of the
-              row to filter / reconfigure the current visit's view. Each tab
+              {/* Visit tabs — sit OUTSIDE the cream sheet, above it. Each tab
               loads that visit's prescription data into the form below.
               `pointerEvents: auto` is forced on so the tabs remain clickable
-              even when the form below has `pointer-events: none` (locked
-              past visit / pre-Start state) — the doctor must always be
-              able to navigate back to today to start the session. */}
-              <div style={{ ...styles.tabsBar, pointerEvents: "auto" }}>
-                {visits.map((v, i) => (
-                  <div
-                    key={v.id}
-                    style={{ ...styles.tab, ...(activeTab === i ? styles.tabActive : styles.tabInactive) }}
-                    onClick={() => setActiveTab(i)}
-                  >
-                    <span style={{ ...styles.tabNumber, ...(activeTab === i ? styles.tabNumberActive : {}) }}>{i + 1}</span>
-                    <span style={styles.tabLabel}>{formatVisitLabel(v.visitDate)}</span>
-                  </div>
-                ))}
-                {/* "+ New Visit" — the "new tab" slot, sitting right after the
-                    last visit. Deliberately the ONLY create action here and
-                    kept clear of anything destructive. */}
-                <button
-                  type="button"
-                  style={styles.newVisitBtn}
-                  onClick={handleAddVisit}
-                  disabled={addingVisit}
-                  title="Add a new visit"
-                >
-                  <span style={styles.newVisitPlus} aria-hidden="true">+</span>
-                  <span>{addingVisit ? "Creating…" : "New Visit"}</span>
-                </button>
-              </div>
+              even when the form below has `pointer-events: none` (locked past
+              visit / pre-Start state) — the doctor must always be able to
+              navigate back to today to start the session. */}
+              <VisitTabs
+                style={{ ...styles.tabsBar, pointerEvents: "auto" }}
+                tabs={visits.map((v) => ({ id: v.id, label: formatVisitLabel(v.visitDate) }))}
+                activeIndex={activeTab}
+                onSelect={setActiveTab}
+                onAddVisit={handleAddVisit}
+                addingVisit={addingVisit}
+              />
 
               {/* Cream sheet wrapping all visit-content sections. Keyed by the
               active tab so React unmounts/remounts the subtree on switch,
@@ -2502,14 +2560,26 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                             // The combined "sys/dia" string still lives in vitalState
                             // so unit conversion (mmHg↔kPa) keeps working.
                             const isBp = v.label === "BP";
+                            // Height/Weight ⇄ BMI mutual exclusion: BMI is locked
+                            // while Height/Weight carry a value (it auto-calculates);
+                            // Height + Weight are locked while a BMI was typed
+                            // directly. A locked cell is read-only, can't toggle its
+                            // unit, and its edit handler is a no-op.
+                            const isBmi = v.label === "BMI";
+                            const isHeightOrWeight = v.label === "Height" || v.label === "Weight";
+                            const cellLocked =
+                              (isBmi && lockBmiField) || (isHeightOrWeight && lockHeightWeightFields);
                             const [bpSys = "", bpDia = ""] = isBp ? cell.value.split("/") : [];
                             const setBpPart = (sys: string, dia: string) =>
                               setVitalValue(cellKey, `${sys}/${dia}`);
                             // Range validation per (label, unit). Out-of-range values
-                            // get a soft red tint; empty values stay neutral.
+                            // get a soft red tint; empty values stay neutral. A
+                            // locked (derived) BMI never shows an error — its inputs do.
                             const sysValid = isBp ? isVitalValid("BP_sys", bpSys, cell.unit) : true;
                             const diaValid = isBp ? isVitalValid("BP_dia", bpDia, cell.unit) : true;
-                            const valueValid = isBp ? sysValid && diaValid : isVitalValid(v.label, cell.value, cell.unit);
+                            const valueValid = isBmi && lockBmiField
+                              ? true
+                              : isBp ? sysValid && diaValid : isVitalValid(v.label, cell.value, cell.unit);
                             const rangeForLabel = isBp ? VITAL_RANGES.BP_sys?.[cell.unit] : VITAL_RANGES[v.label]?.[cell.unit];
                             const rangeHint = rangeForLabel
                               ? `Valid: ${rangeForLabel.min}–${rangeForLabel.max} ${cell.unit}`
@@ -2521,12 +2591,13 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                   <MeasureField
                                     bp={isBp}
                                     value={isBp ? bpSys : cell.value}
-                                    onChange={isBp ? (val) => setBpPart(val, bpDia) : (val) => setVitalValue(cellKey, val)}
+                                    readOnly={cellLocked}
+                                    onChange={isBp ? (val) => setBpPart(val, bpDia) : cellLocked ? () => {} : (val) => setVitalValue(cellKey, val)}
                                     value2={isBp ? bpDia : undefined}
                                     onChange2={isBp ? (val) => setBpPart(bpSys, val) : undefined}
                                     unit={cell.unit}
                                     unitWidth={v.unitWidth}
-                                    onToggleUnit={canToggle ? () => toggleVitalUnit(cellKey) : undefined}
+                                    onToggleUnit={canToggle && !cellLocked ? () => toggleVitalUnit(cellKey) : undefined}
                                     invalid={!valueValid}
                                     dense
                                     placeholder={v.placeholder ?? ""}
@@ -2780,7 +2851,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                 <div style={styles.rxDataCell}><WhenPicker value={row.whenToTake} onChange={(v) => updateField("whenToTake", v)} /></div>
                                 <div style={styles.rxDataCell}><FrequencyIntervalPicker value={row.frequencyInterval} onChange={(v) => updateField("frequencyInterval", v)} /></div>
                                 <div style={styles.rxDataCell}><DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} /></div>
-                                <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={row.notes} onChange={(e) => updateField("notes", e.target.value)} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <Field multiline variant="box" fill="filled" placeholder="Notes" value={row.notes} onChange={(v) => updateField("notes", v)} style={{ minHeight: 40, padding: `${spacing.xs} ${spacing.s}` }} inputStyle={{ fontSize: fonts.control.sm }} />
+                                </div>
                                 {row.medicine.trim() && (
                                   <button type="button" style={styles.rxDeleteBtn} onClick={() => removeRxRow(i)} title="Remove medicine">
                                     <Icon name="trash" size={16} tone="inherit" />
@@ -2793,7 +2866,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                                   <div style={styles.rxDataCell}><WhenPicker value={thenRow.whenToTake} onChange={(v) => updateThenField(i, ti, "whenToTake", v)} /></div>
                                   <div style={styles.rxDataCell}><FrequencyIntervalPicker value={thenRow.frequencyInterval} onChange={(v) => updateThenField(i, ti, "frequencyInterval", v)} /></div>
                                   <div style={styles.rxDataCell}><DurationPicker value={thenRow.duration} onChange={(v) => updateThenField(i, ti, "duration", v)} /></div>
-                                  <input style={{ ...styles.rxCell, flex: 1, minWidth: 0 }} placeholder="Notes" value={thenRow.notes} onChange={(e) => updateThenField(i, ti, "notes", e.target.value)} />
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <Field multiline variant="box" fill="filled" placeholder="Notes" value={thenRow.notes} onChange={(v) => updateThenField(i, ti, "notes", v)} style={{ minHeight: 40, padding: `${spacing.xs} ${spacing.s}` }} inputStyle={{ fontSize: fonts.control.sm }} />
+                                  </div>
                                   <button type="button" style={styles.rxDeleteBtn} onClick={() => removeThenRow(i, ti)} title="Remove tapering row">
                                     <Icon name="trash" size={16} tone="inherit" />
                                   </button>
@@ -3165,8 +3240,14 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                   the visit. Clear all stays throughout the 24h window. */}
               {canEditForm
                 && (() => {
+                // "Completed at least once" — server-owned Visit.completedAt is
+                // the source of truth (survives amend re-opens, follows the
+                // patient across devices); the localStorage flag is a fallback
+                // for visits saved before the field existed / pre-restart.
                 const everCompleted =
-                  activeCompleted || (activeVisit ? wasVisitCompleted(activeVisit.id) : false);
+                  activeCompleted
+                  || activeVisit?.completedAt != null
+                  || (activeVisit ? wasVisitCompleted(activeVisit.id) : false);
                 // A live (running) session — the timer is going (started, not yet
                 // ended). The doctor may have stepped out mid-treatment leaving it
                 // running on purpose, so the button must stay available to END it

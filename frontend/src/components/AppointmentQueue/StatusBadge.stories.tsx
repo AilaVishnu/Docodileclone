@@ -4,6 +4,7 @@ import { StatusBadge } from './StatusBadge';
 // SCHEDULED is omitted here: it's a backend alias of BOOKED and renders the
 // identical "Booked" pill, so the catalog shows it once.
 const STATUSES = [
+  'UNSEEN',
   'BOOKED',
   'WAITING',
   'ARRIVED',
@@ -41,6 +42,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Waiting: Story = {};
+
+/** UNSEEN — a new appointment/patient nobody has opened yet (muted sage). */
+export const Unseen: Story = { args: { status: 'UNSEEN' } };
 
 export const Completed: Story = { args: { status: 'COMPLETED' } };
 

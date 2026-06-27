@@ -29,6 +29,9 @@ class AppointmentServiceTest {
     @Mock
     private lateinit var patientRepository: PatientRepository
 
+    @Mock
+    private lateinit var patientDepositService: com.example.docodile.service.PatientDepositService
+
     @InjectMocks
     private lateinit var appointmentService: AppointmentService
 

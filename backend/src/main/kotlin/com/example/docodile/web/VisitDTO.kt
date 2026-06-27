@@ -12,6 +12,10 @@ data class VisitDTO(
     val patientId: UUID,
     val clinicId: UUID,
     val createdByDoctorId: UUID?,
+    // Prescribing doctor's name, resolved server-side so the prescription print
+    // shows it even when that doctor isn't in the caller's scoped /api/doctors
+    // list (different department, archived, or a non-doctor user printing).
+    val createdByDoctorName: String?,
     val visitDate: LocalDate,
 
     // Vitals + units
@@ -60,6 +64,8 @@ data class VisitDTO(
     // the SessionBar's "Session Ended" pill.
     val sessionStartedAt: Instant?,
     val sessionEndedAt: Instant?,
+    // Sticky "completed at least once" (set on first completion, survives re-open).
+    val completedAt: Instant? = null,
     val sessionDurationSec: Int?,
 
     // The appointment this visit belongs to (null for legacy/imported

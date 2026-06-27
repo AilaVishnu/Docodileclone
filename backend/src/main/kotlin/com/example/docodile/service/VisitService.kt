@@ -254,6 +254,14 @@ class VisitService(
             } else {
                 r.sessionDurationSec
             }
+        // "Completed at least once" — STICKY: stamped the first time the visit is
+        // ended, never cleared on a later amend re-open (unlike sessionEndedAt,
+        // which the re-open clears). This is the server-side replacement for the
+        // localStorage visitCompleted flag that drives the footer's permanent
+        // switch from "Complete visit" to "Save changes".
+        if (r.sessionEndedAt != null && visit.completedAt == null) {
+            visit.completedAt = Instant.now()
+        }
         // Tag the visit with its appointment on create; never null it out
         // on a later update that omits the field.
         if (r.appointmentId != null) visit.appointmentId = r.appointmentId
@@ -289,14 +297,47 @@ class VisitService(
         frequency = this.frequency,
         frequencyInterval = this.frequencyInterval,
         duration = this.duration,
-        notes = this.notes
+        notes = this.notes,
+        dispenseQty = computeDispenseQty(this.medicine, this.dosage, this.frequency, this.duration)
     )
+
+    // ── Dispensary-quantity derivation (moved off the frontend so bills /
+    // inventory use one server-side rule). Topical/liquid "per-pack" forms are
+    // one unit; otherwise units/dose × doses/day × days, rounded up. Null when
+    // any piece is missing/non-numeric (SOS, "as directed", …). ──
+    private val PER_PACK_FORM = Regex(
+        "cream|lotion|gel|ointment|\\boil\\b|shampoo|soap|wash|serum|sunscreen|balm|paste|scrub|spray|powder|syrup|suspension|solution|drop|moisturi|conditioner|foam|emulsion|liniment|tincture",
+        RegexOption.IGNORE_CASE,
+    )
+    private fun parseDurationDays(d: String?): Int? {
+        if (d.isNullOrBlank()) return null
+        val m = Regex("(\\d+)\\s*(day|week|month|year|d|w|m|y)?", RegexOption.IGNORE_CASE).find(d) ?: return null
+        val n = m.groupValues[1].toIntOrNull() ?: return null
+        if (n <= 0) return null
+        val unit = m.groupValues[2].ifBlank { "day" }.lowercase()
+        return when {
+            unit.startsWith("w") -> n * 7
+            unit.startsWith("mon") || unit == "m" -> n * 30
+            unit.startsWith("y") -> n * 365
+            else -> n
+        }
+    }
+
+    private fun computeDispenseQty(name: String?, dosage: String?, frequency: String?, duration: String?): Int? {
+        if (name != null && PER_PACK_FORM.containsMatchIn(name)) return 1
+        val unitsPerDose = Regex("([\\d.]+)").find(dosage ?: "")?.groupValues?.get(1)?.toDoubleOrNull() ?: 1.0
+        val dosesPerDay = (frequency ?: "").split(Regex("[-+,/\\s]+")).mapNotNull { it.toIntOrNull() }.sum()
+        val days = parseDurationDays(duration) ?: return null
+        if (dosesPerDay <= 0 || unitsPerDose <= 0) return null
+        return Math.ceil(unitsPerDose * dosesPerDay * days).toInt()
+    }
 
     private fun Visit.toDTO(rxRows: List<RxRowDTO>, appointmentStatus: String? = null): VisitDTO = VisitDTO(
         id = this.id,
         patientId = this.patient?.id ?: UUID(0, 0),
         clinicId = UUID(0, 0),
         createdByDoctorId = this.createdByDoctor?.id,
+        createdByDoctorName = this.createdByDoctor?.name,
         visitDate = this.visitDate,
         bpSystolic = this.bpSystolic, bpDiastolic = this.bpDiastolic, bpUnit = this.bpUnit,
         bmi = this.bmi, bmiUnit = this.bmiUnit,
@@ -323,6 +364,7 @@ class VisitService(
         reviewNotes = this.reviewNotes,
         sessionStartedAt = this.sessionStartedAt,
         sessionEndedAt = this.sessionEndedAt,
+        completedAt = this.completedAt,
         sessionDurationSec = this.sessionDurationSec,
         appointmentId = this.appointmentId,
         appointmentStatus = appointmentStatus,

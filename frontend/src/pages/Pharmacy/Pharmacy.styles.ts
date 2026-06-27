@@ -190,10 +190,11 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.primary700,
     textDecoration: "none",
     cursor: "pointer",
-    fontSize: fonts.control.xs,
+    fontSize: "var(--meds-list-fs)",
   },
-  // Secondary info (invoice no., batch) — slightly smaller than the main cells.
-  secondaryCell: { fontSize: fonts.control.xs },
+  // Secondary info (batch) — same size as the rest of the row (the tier-stepping
+  // --meds-list-fs token) so every cell matches the invoice column.
+  secondaryCell: { fontSize: "var(--meds-list-fs)" },
   // Vertical 3-dot (kebab) trigger for the row-actions menu.
   kebab: { fontSize: fonts.size.l, lineHeight: 1, color: colors.neutral600 },
   actionBtn: {

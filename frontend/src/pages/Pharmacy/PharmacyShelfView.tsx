@@ -15,23 +15,19 @@ export function PharmacyShelfView({ items, groupBy, onPick }: Props) {
   const groups = groupItems(items, groupBy);
 
   if (groups.length === 0) {
-    return (
-      <div style={styles.emptyState}>
-        {groupBy === "attention"
-          ? "All clear — no stock needs attention."
-          : "No medicines match your filters."}
-      </div>
-    );
+    return <div style={styles.emptyState}>No medicines match your filters.</div>;
   }
 
   return (
     <div style={styles.shelfContainer}>
       {groups.map((g) => (
         <div key={g.key} style={styles.shelf}>
-          <div style={styles.shelfHeader}>
-            <h3 style={styles.shelfTitle}>{g.label}</h3>
-            <span style={styles.shelfCount}>{g.items.length} item{g.items.length === 1 ? "" : "s"}</span>
-          </div>
+          {g.label && (
+            <div style={styles.shelfHeader}>
+              <h3 style={styles.shelfTitle}>{g.label}</h3>
+              <span style={styles.shelfCount}>{g.items.length} item{g.items.length === 1 ? "" : "s"}</span>
+            </div>
+          )}
           <div style={styles.shelfPlank}>
             <div style={styles.shelfRow} className="no-scrollbar">
               {g.items.map((m) => (

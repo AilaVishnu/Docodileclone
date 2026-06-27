@@ -61,3 +61,19 @@ export const withClinicSession = withLocalStorage({
   docodile_role: 'doctor',
   docodile_gender: 'female',
 });
+
+/**
+ * Seed a realistic clinic schedule (key: docodile_schedule) so hours/heatmap
+ * components (HoursWidget, MyHoursCalendar) render with data in stories.
+ * Mon–Fri 9–12 & 5–8, Sat 9–1, Sun off.
+ */
+const _work2 = { off: false, sessions: [{ start: '09:00', end: '12:00' }, { start: '17:00', end: '20:00' }] };
+const _sat = { off: false, sessions: [{ start: '09:00', end: '13:00' }] };
+const _off = { off: true, sessions: [] };
+export const withSchedule = withLocalStorage({
+  docodile_schedule: JSON.stringify({
+    default: { mon: _work2, tue: _work2, wed: _work2, thu: _work2, fri: _work2, sat: _sat, sun: _off },
+    overrides: {},
+    configured: true,
+  }),
+});
