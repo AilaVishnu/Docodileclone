@@ -3,6 +3,10 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { installApiInterceptor } from './apiInterceptor';
+
+// Make every backend request tenant-aware (adds X-Tenant from the subdomain).
+installApiInterceptor();
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
