@@ -234,7 +234,7 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
 
       {/* An unpaid bill is still a draft → the editable BillModal (seeded with
           its line items); a settled bill → the read-only BillReadModal. */}
-      {openBill && (openBill.paid === 0 ? (
+      {openBill && (openBill.paid === 0 && billStatusOf(openBill) !== "waived" ? (
         <BillModal
           isOpen
           onClose={() => setOpenBill(null)}

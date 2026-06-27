@@ -209,9 +209,10 @@ export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefund
       summary={
         <>
           {sumRow("Total billed", inr(billed))}
-          {sumRow("Discount", `− ${inr(discount)}`)}
-          {sumRow("Tax", inr(tax))}
-          {sumRow("Final amount", inr(finalAmt), true)}
+          {/* A waive is a full write-off → 100% discount, Final ₹0. */}
+          {sumRow(isWaived ? "Discount (100%)" : "Discount", `− ${inr(isWaived ? billed : discount)}`)}
+          {sumRow("Tax", inr(isWaived ? 0 : tax))}
+          {sumRow("Final amount", inr(isWaived ? 0 : finalAmt), true)}
           {sumRow("Received", inr(bill.paid))}
           {sumRow("Refund", `− ${inr(effRefund)}`)}
         </>
