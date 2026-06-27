@@ -7,6 +7,8 @@ import { Field } from "../../components/Field";
 import { Select } from "../../components/Input/Select/Select";
 import { Button } from "../../components/Button";
 import { Icon } from "../../components/Icon";
+import { ConfirmDialog } from "../../components/ConfirmDialog/ConfirmDialog";
+import { refundBill } from "../../api/bills";
 import type { ClinicBill } from "./BillsView";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 
@@ -87,15 +89,41 @@ export interface BillReadModalProps {
   bill: ClinicBill;
   /** Collect the outstanding balance on a Due bill. */
   onRecordPayment?: (bill: ClinicBill) => void;
-  /** Refund a paid bill. */
-  onRefund?: (bill: ClinicBill) => void;
+  /** Called after a successful refund with the updated bill, so the caller can
+   *  refresh its list. The confirm prompt + API call are handled in here. */
+  onRefunded?: (updated: ClinicBill) => void;
   /** Open the patient's full bill history (header link). */
   onViewBills?: (bill: ClinicBill) => void;
   onPrint?: (bill: ClinicBill) => void;
 }
 
-export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefund, onViewBills, onPrint }: BillReadModalProps) {
+export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefunded, onViewBills, onPrint }: BillReadModalProps) {
   const committed = React.useMemo(() => parseLines(bill.items), [bill.items]);
+
+  // Refund flow: Refund button → confirm → POST → reflect REFUNDED in place
+  // (and hand the updated bill back so the caller refreshes its list). The
+  // overlay carries the post-refund refund/status so the modal updates at once.
+  const [confirmRefund, setConfirmRefund] = React.useState(false);
+  const [refunding, setRefunding] = React.useState(false);
+  const [refundErr, setRefundErr] = React.useState<string | null>(null);
+  const [refundOverlay, setRefundOverlay] = React.useState<{ refund: number; payStatus: string } | null>(null);
+  React.useEffect(() => { setRefundOverlay(null); setConfirmRefund(false); setRefundErr(null); }, [bill.id]);
+  const doRefund = async () => {
+    setRefunding(true);
+    setRefundErr(null);
+    try {
+      const updated = await refundBill(bill.id);
+      setRefundOverlay({ refund: Number(updated.refund), payStatus: updated.payStatus ?? "REFUNDED" });
+      setConfirmRefund(false);
+      onRefunded?.(updated);
+    } catch {
+      setRefundErr("Refund failed. Please try again.");
+    } finally {
+      setRefunding(false);
+    }
+  };
+  const effRefund = refundOverlay?.refund ?? bill.refund;
+  const effPayStatus = refundOverlay?.payStatus ?? bill.payStatus;
 
   // A part-paid bill isn't closed: committed lines stay frozen, but the desk can
   // append NEW services. A trailing empty row is always present — typing into it
@@ -116,7 +144,7 @@ export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefund
   const tax = allLines.reduce((s, l) => s + (l.qty * l.unit * (l.gst || 0)) / 100, 0);
   const finalAmt = billed - discount + tax;
   const balance = isWaived ? 0 : Math.max(0, finalAmt - bill.paid);
-  const status = billStatusOf({ payStatus: bill.payStatus, refund: bill.refund, due: balance, paid: bill.paid });
+  const status = billStatusOf({ payStatus: effPayStatus, refund: effRefund, due: balance, paid: bill.paid });
 
   // The bill record keeps one method + amount, not a per-mode split.
   const payments = bill.paid > 0 ? [{ mode: bill.paymentMethod || "—", amount: bill.paid }] : [];
@@ -147,6 +175,7 @@ export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefund
   ];
 
   return (
+    <>
     <BillLayout
       isOpen={isOpen}
       onClose={onClose}
@@ -184,7 +213,7 @@ export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefund
           {sumRow("Tax", inr(tax))}
           {sumRow("Final amount", inr(finalAmt), true)}
           {sumRow("Received", inr(bill.paid))}
-          {sumRow("Refund", `− ${inr(bill.refund)}`)}
+          {sumRow("Refund", `− ${inr(effRefund)}`)}
         </>
       }
       payment={
@@ -215,11 +244,27 @@ export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefund
         // lives in the header. Refunded / Waived have no action.
         balance > 0 ? (
           <Button variant="dark" size="md" style={{ flex: 1 }} onClick={() => onRecordPayment?.(bill)} iconLeft={<Icon name="bill-check" size={18} tone="inverse" />}>Record payment</Button>
-        ) : bill.refund === 0 && status !== "waived" ? (
-          <Button variant="light" size="md" style={{ flex: 1 }} onClick={() => onRefund?.(bill)}>Refund</Button>
+        ) : effRefund === 0 && status !== "waived" ? (
+          <Button variant="light" size="md" style={{ flex: 1 }} onClick={() => setConfirmRefund(true)}>Refund</Button>
         ) : null
       }
     />
+      <ConfirmDialog
+        isOpen={confirmRefund}
+        title="Refund this bill?"
+        message={
+          <>
+            You're refunding <strong>{inr(bill.paid)}</strong> to {bill.patientName}. This can't be undone.
+            {refundErr && <><br /><span style={{ color: colors.red200 }}>{refundErr}</span></>}
+          </>
+        }
+        confirmLabel={refunding ? "Refunding…" : "Refund"}
+        confirmDisabled={refunding}
+        destructive
+        onCancel={() => { if (!refunding) { setConfirmRefund(false); setRefundErr(null); } }}
+        onConfirm={doRefund}
+      />
+    </>
   );
 }
 
