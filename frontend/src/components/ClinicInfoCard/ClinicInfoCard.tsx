@@ -4,7 +4,6 @@ import { styles } from "./ClinicInfoCard.styles";
 import { colors, fonts, radii, spacing, strokes, shadows, zIndex } from "../../styles/theme";
 import { Icon } from "../Icon";
 import { Clinic } from "../ClinicTabs";
-import { API_BASE_URL } from "../../apiConfig";
 
 const DEPARTMENTS = [
   "Cardiology", "Dermatology", "ENT", "Gynecology", "Neurology",
@@ -21,58 +20,12 @@ type ClinicInfoCardProps = {
   onShowToast?: (message: string) => void;
 };
 
-const isUuid = (str: string) =>
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-
 export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
   const [deptInput, setDeptInput] = useState("");
   const [deptDropdownOpen, setDeptDropdownOpen] = useState(false);
   const deptWrapRef = useRef<HTMLDivElement>(null);
-  const [isSaved, setIsSaved] = useState(isUuid(clinic.id));
 
-  useEffect(() => {
-    setIsSaved(isUuid(clinic.id));
-  }, [clinic.id]);
-
-  const { domain, name: clinicName, phone, departments, address } = clinic;
-
-  const [domainAvailability, setDomainAvailability] = useState<
-    "idle" | "checking" | "available" | "taken"
-  >("idle");
-  const domainCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    const locked = isSaved;
-    if (!domain || domain.trim().length < 2 || locked) {
-      setDomainAvailability("idle");
-      return;
-    }
-    setDomainAvailability("checking");
-    if (domainCheckTimer.current) clearTimeout(domainCheckTimer.current);
-    domainCheckTimer.current = setTimeout(async () => {
-      try {
-        const res = await fetch(
-          `${API_BASE_URL}/api/tenant/domain/check?domain=${encodeURIComponent(domain.trim())}`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("docodile_token")}`,
-            },
-          }
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setDomainAvailability(data.available ? "available" : "taken");
-        } else {
-          setDomainAvailability("idle");
-        }
-      } catch {
-        setDomainAvailability("idle");
-      }
-    }, 500);
-    return () => {
-      if (domainCheckTimer.current) clearTimeout(domainCheckTimer.current);
-    };
-  }, [domain, isSaved]);
+  const { name: clinicName, phone, departments, address } = clinic;
 
   const deptExists = (name: string) =>
     departments.some((d) => d.toLowerCase() === name.toLowerCase());
@@ -119,10 +72,6 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
   // "Next" (which validates and POSTs every clinic). Kept as a const so the
   // existing field rows stay simple.
   const fieldsLocked = false;
-  // Domain (the subdomain/nick-name) is permanent: once saved it's locked
-  // forever — changing a live tenant subdomain is consequential. Front-end
-  // enforcement only.
-  const domainLocked = isSaved;
 
   const handlePhoneChange = (val: string) => {
     let digits = val.replace(/\D/g, "");
@@ -252,58 +201,12 @@ export function ClinicInfoCard({ clinic, onUpdate }: ClinicInfoCardProps) {
         />
       </div>
 
-      {/* Domain (nick name) — sits at the bottom. Editable only during the
-          initial setup; locked permanently once the clinic is saved. */}
-      <div style={{ ...styles.domainSection, ...(domainLocked ? styles.locked : {}) }}>
-        <label style={styles.domainLabel}>give a nick name to your clinic</label>
-        <div
-          style={{
-            ...styles.domainBox,
-            ...(domainAvailability === "taken"
-              ? { borderColor: colors.red200 }
-              : domainAvailability === "available"
-                ? { borderColor: colors.secondary700 }
-                : {}),
-          }}
-        >
-          <input
-            style={styles.domainInput}
-            value={domain}
-            onChange={(e) => onUpdate({ domain: e.target.value })}
-            placeholder="your-clinic"
-            disabled={domainLocked}
-          />
-          <span
-            style={{
-              ...styles.domainSuffix,
-              ...(domainLocked ? styles.domainSuffixLocked : {}),
-            }}
-          >
-            .docodile.app
-          </span>
+      {/* Subdomain — fixed at provisioning, shown read-only */}
+      <div style={styles.domainSection}>
+        <label style={styles.domainLabel}>your clinic address</label>
+        <div style={{ ...styles.domainBox, ...styles.locked }}>
+          <span style={styles.domainInput}>{window.location.hostname}</span>
         </div>
-        {!domainLocked && domainAvailability !== "idle" && (
-          <div
-            style={{
-              fontSize: fonts.size.xs,
-              fontFamily: fonts.family.primary,
-              color:
-                domainAvailability === "available"
-                  ? colors.secondary700
-                  : domainAvailability === "taken"
-                    ? colors.red200
-                    : colors.neutral700,
-              marginTop: 4,
-              marginLeft: 4,
-            }}
-          >
-            {domainAvailability === "checking"
-              ? "Checking..."
-              : domainAvailability === "available"
-                ? "Available"
-                : "Already taken"}
-          </div>
-        )}
       </div>
 
     </div>
