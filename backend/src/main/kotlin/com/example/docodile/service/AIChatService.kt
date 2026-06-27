@@ -3,7 +3,6 @@ package com.example.docodile.service
 import com.example.docodile.repo.AppointmentRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.repo.VisitRepository
-import com.example.docodile.security.CurrentUser
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -27,7 +26,6 @@ class AIChatService(
     private val patientRepository: PatientRepository,
     private val visitRepository: VisitRepository,
     private val appointmentRepository: AppointmentRepository,
-    private val currentUser: CurrentUser,
 ) {
     private val log = LoggerFactory.getLogger(AIChatService::class.java)
     private val mapper = ObjectMapper()
@@ -91,21 +89,20 @@ class AIChatService(
     // ── Tools ───────────────────────────────────────────────────────────────
 
     private fun runTool(name: String, args: Map<String, Any?>): Any {
-        val clinicId = currentUser.clinicId()
         return when (name) {
-            "search_patients" -> searchPatients(clinicId, (args["query"] as? String).orEmpty())
-            "patient_history" -> patientHistory(clinicId, args["patientId"] as? String)
-            "today_queue_status" -> todayQueueStatus(clinicId)
-            "overdue_reviews" -> overdueReviews(clinicId)
-            "find_patients_by_condition" -> findPatientsByCondition(clinicId, (args["term"] as? String).orEmpty())
+            "search_patients" -> searchPatients((args["query"] as? String).orEmpty())
+            "patient_history" -> patientHistory(args["patientId"] as? String)
+            "today_queue_status" -> todayQueueStatus()
+            "overdue_reviews" -> overdueReviews()
+            "find_patients_by_condition" -> findPatientsByCondition((args["term"] as? String).orEmpty())
             else -> mapOf("error" to "Unknown tool: $name")
         }
     }
 
-    private fun searchPatients(clinicId: UUID, query: String): Any {
+    private fun searchPatients(query: String): Any {
         if (query.isBlank()) return emptyList<Any>()
         val q = query.lowercase()
-        return patientRepository.findAllByClinicId(clinicId)
+        return patientRepository.findAllByDeletedAtIsNull()
             .asSequence()
             .filter {
                 it.name.lowercase().contains(q) ||
@@ -125,12 +122,12 @@ class AIChatService(
             .toList()
     }
 
-    private fun patientHistory(clinicId: UUID, patientIdStr: String?): Any {
+    private fun patientHistory(patientIdStr: String?): Any {
         val id = try { UUID.fromString(patientIdStr ?: "") }
             catch (_: Exception) { return mapOf("error" to "Invalid patientId") }
-        val p = patientRepository.findByIdAndClinicId(id, clinicId)
-            ?: return mapOf("error" to "Patient not found in this clinic")
-        val visits = visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAscCreatedAtAsc(clinicId, id)
+        val p = patientRepository.findById(id).orElse(null)
+            ?: return mapOf("error" to "Patient not found")
+        val visits = visitRepository.findAllByPatientIdOrderByVisitDateAscCreatedAtAsc(id)
         return mapOf(
             "name" to p.name,
             "phone" to p.phone,
@@ -145,10 +142,9 @@ class AIChatService(
         )
     }
 
-    private fun todayQueueStatus(clinicId: UUID): Any {
+    private fun todayQueueStatus(): Any {
         val today = LocalDate.now()
-        val apts = appointmentRepository.findAllByClinicIdAndScheduledTimeBetween(
-            clinicId,
+        val apts = appointmentRepository.findAllByScheduledTimeBetween(
             today.atStartOfDay(),
             today.atTime(23, 59, 59),
         )
@@ -162,9 +158,9 @@ class AIChatService(
         )
     }
 
-    private fun overdueReviews(clinicId: UUID): Any {
+    private fun overdueReviews(): Any {
         val today = LocalDate.now()
-        return visitRepository.findOverdueReviews(clinicId, today)
+        return visitRepository.findOverdueReviews(today)
             .take(20)
             .map { v ->
                 mapOf(
@@ -177,15 +173,13 @@ class AIChatService(
             }
     }
 
-    private fun findPatientsByCondition(clinicId: UUID, term: String): Any {
+    private fun findPatientsByCondition(term: String): Any {
         if (term.isBlank()) return emptyList<Any>()
         val t = term.lowercase()
         val matched = mutableMapOf<UUID, MutableList<String>>()
         // Walk recent visits; gather patients whose complaints/diagnosis match.
         val cutoff = LocalDate.now().minusMonths(12)
-        val visits = visitRepository.findAllByClinicIdAndVisitDateBetween(
-            clinicId, cutoff, LocalDate.now()
-        )
+        val visits = visitRepository.findAllByVisitDateBetween(cutoff, LocalDate.now())
         for (v in visits) {
             val text = listOfNotNull(v.complaints, v.diagnosis).joinToString(" ").lowercase()
             if (text.contains(t)) {
@@ -194,7 +188,7 @@ class AIChatService(
             }
         }
         if (matched.isEmpty()) return emptyList<Any>()
-        val patientsById = patientRepository.findAllByClinicId(clinicId).associateBy { it.id }
+        val patientsById = patientRepository.findAllByDeletedAtIsNull().associateBy { it.id }
         return matched.entries.take(20).map { (pid, dates) ->
             val p = patientsById[pid]
             mapOf(

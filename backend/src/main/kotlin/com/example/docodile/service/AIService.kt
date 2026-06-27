@@ -5,7 +5,6 @@ import com.example.docodile.repo.PatientAISummaryRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.repo.RxRowRepository
 import com.example.docodile.repo.VisitRepository
-import com.example.docodile.security.CurrentUser
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -31,7 +30,6 @@ class AIService(
     private val visitRepository: VisitRepository,
     private val rxRowRepository: RxRowRepository,
     private val patientAISummaryRepo: PatientAISummaryRepository,
-    private val currentUser: CurrentUser,
 ) {
     private val log = LoggerFactory.getLogger(AIService::class.java)
     private val dateFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
@@ -45,10 +43,9 @@ class AIService(
      * clicks "Generate".
      */
     fun getCachedPatientSummary(patientId: UUID): PatientSummaryResult {
-        val clinicId = currentUser.clinicId()
-        val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
+        val patient = patientRepository.findById(patientId).orElse(null)
             ?: throw IllegalArgumentException("Patient not found")
-        val visits = visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAscCreatedAtAsc(clinicId, patientId)
+        val visits = visitRepository.findAllByPatientIdOrderByVisitDateAscCreatedAtAsc(patientId)
         val currentHash = visitsHash(visits)
         val cached = patientAISummaryRepo.findById(patientId).orElse(null)
         val isFresh = cached != null && cached.visitsHash == currentHash
@@ -68,11 +65,10 @@ class AIService(
      */
     @Transactional
     fun generatePatientSummary(patientId: UUID): PatientSummaryResult {
-        val clinicId = currentUser.clinicId()
-        val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
+        val patient = patientRepository.findById(patientId).orElse(null)
             ?: throw IllegalArgumentException("Patient not found")
 
-        val visits = visitRepository.findAllByClinicIdAndPatientIdOrderByVisitDateAscCreatedAtAsc(clinicId, patientId)
+        val visits = visitRepository.findAllByPatientIdOrderByVisitDateAscCreatedAtAsc(patientId)
         val hash = visitsHash(visits)
 
         // Build the prompt. Compact JSON-y blob of patient context — gives
@@ -105,9 +101,8 @@ class AIService(
         }
 
         val row = patientAISummaryRepo.findById(patientId).orElseGet {
-            PatientAISummary(patientId = patientId, clinicId = clinicId)
+            PatientAISummary(patientId = patientId)
         }
-        row.clinicId = clinicId
         row.content = raw
         row.visitsHash = hash
         row.updatedAt = Instant.now()
@@ -168,8 +163,7 @@ class AIService(
      * what to keep and writes it back through the regular save flow.
      */
     fun draftSoapForVisit(visitId: UUID): String {
-        val clinicId = currentUser.clinicId()
-        val v = visitRepository.findByIdAndClinicId(visitId, clinicId)
+        val v = visitRepository.findById(visitId).orElse(null)
             ?: throw IllegalArgumentException("Visit not found")
         val ctx = buildString {
             appendLine("Date: ${dateFmt.format(v.visitDate ?: LocalDate.now())}")

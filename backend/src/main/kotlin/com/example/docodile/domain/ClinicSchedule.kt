@@ -13,8 +13,7 @@ import java.util.UUID
 @Table(name = "clinic_schedule")
 class ClinicSchedule(
     @Id
-    @Column(name = "clinic_id")
-    var clinicId: UUID = UUID.randomUUID(),
+    var id: UUID = UUID.randomUUID(),
 
     // Frontend owns the JSON shape (default week + date-keyed overrides +
     // configured flag). We don't introspect it server-side — just round-trip.

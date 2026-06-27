@@ -2,7 +2,6 @@ package com.example.docodile.web
 
 import com.example.docodile.domain.AuditAction
 import com.example.docodile.repo.PatientRepository
-import com.example.docodile.security.CurrentUser
 import com.example.docodile.service.AuditService
 import com.example.docodile.service.PatientService
 import com.example.docodile.service.VisitService
@@ -29,7 +28,6 @@ class PatientController(
     private val patientService: PatientService,
     private val patientRepository: PatientRepository,
     private val visitService: VisitService,
-    private val currentUser: CurrentUser,
     private val auditService: AuditService,
 ) {
 
@@ -63,12 +61,10 @@ class PatientController(
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     @Transactional
     fun archive(@PathVariable patientId: UUID): ResponseEntity<Void> {
-        val clinicId = currentUser.clinicId()
-        val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
+        val patient = patientRepository.findById(patientId).orElse(null)
             ?: return ResponseEntity.notFound().build()
         if (patient.deletedAt == null) {
             patient.deletedAt = Instant.now()
-            patient.deletedBy = currentUser.userId()
             patientRepository.save(patient)
             auditService.log(AuditAction.PATIENT_ARCHIVED, entityType = "Patient", entityId = patientId)
         }
@@ -79,12 +75,10 @@ class PatientController(
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     @Transactional
     fun unarchive(@PathVariable patientId: UUID): ResponseEntity<Void> {
-        val clinicId = currentUser.clinicId()
-        val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
+        val patient = patientRepository.findById(patientId).orElse(null)
             ?: return ResponseEntity.notFound().build()
         if (patient.deletedAt != null) {
             patient.deletedAt = null
-            patient.deletedBy = null
             patientRepository.save(patient)
             auditService.log(AuditAction.PATIENT_UNARCHIVED, entityType = "Patient", entityId = patientId)
         }
@@ -98,8 +92,7 @@ class PatientController(
         @PathVariable patientId: UUID,
         @RequestBody req: UpdatePatientRequest
     ): ResponseEntity<Void> {
-        val clinicId = currentUser.clinicId()
-        val patient = patientRepository.findByIdAndClinicId(patientId, clinicId)
+        val patient = patientRepository.findById(patientId).orElse(null)
             ?.takeIf { it.deletedAt == null }
             ?: return ResponseEntity.notFound().build()
 

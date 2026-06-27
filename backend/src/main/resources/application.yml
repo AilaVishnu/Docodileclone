@@ -46,7 +46,7 @@ spring:
       hibernate.order_updates: true
     defer-datasource-initialization: true
   flyway:
-    enabled: true
+    enabled: false
     locations: classpath:db/migration
     baseline-on-migrate: true
   mail:

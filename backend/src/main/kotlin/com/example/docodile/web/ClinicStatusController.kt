@@ -1,6 +1,6 @@
 package com.example.docodile.web
 
-import com.example.docodile.domain.ClinicEntity
+import com.example.docodile.domain.ClinicSettings
 import com.example.docodile.service.AppointmentService
 import com.example.docodile.service.ClinicStatusService
 import com.example.docodile.service.DuplicateAppointmentException
@@ -27,57 +27,36 @@ class ClinicStatusController(
         return mapOf("complete" to clinicStatusService.isClinicComplete())
     }
 
-    @GetMapping("/config")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun config(): Map<String, Any> {
-        return clinicStatusService.getTenantLimits()
-    }
-
     @PostMapping("/clinic")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun saveClinic(@RequestBody request: ClinicDetailsRequest): ResponseEntity<ClinicEntity> {
+    fun saveClinic(@RequestBody request: ClinicDetailsRequest): ResponseEntity<ClinicSettings> {
         val saved = clinicStatusService.saveClinicDetails(request)
         return ResponseEntity.ok(saved)
     }
 
-    @GetMapping("/clinics")
+    @GetMapping("/staff")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun listClinics(): List<ClinicEntity> {
-        return clinicStatusService.getClinicsForTenant()
+    fun listStaff(): List<AppUser> {
+        return clinicStatusService.getStaff()
     }
 
-    @GetMapping("/clinics/{clinicId}/staff")
+    @PostMapping("/staff")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun listStaff(@PathVariable clinicId: UUID): List<AppUser> {
-        return clinicStatusService.getStaffForClinic(clinicId)
+    fun saveStaff(@RequestBody request: StaffRequest): AppUser {
+        return clinicStatusService.saveStaff(request)
     }
 
-    @PostMapping("/clinics/{clinicId}/staff")
+    @DeleteMapping("/staff/{staffId}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun saveStaff(
-        @PathVariable clinicId: UUID,
-        @RequestBody request: StaffRequest
-    ): AppUser {
-        return clinicStatusService.saveStaff(clinicId, request)
-    }
-
-    @DeleteMapping("/clinics/{clinicId}/staff/{staffId}")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun deleteStaff(
-        @PathVariable clinicId: UUID,
-        @PathVariable staffId: UUID
-    ): ResponseEntity<Void> {
-        clinicStatusService.deleteStaff(clinicId, staffId)
+    fun deleteStaff(@PathVariable staffId: UUID): ResponseEntity<Void> {
+        clinicStatusService.deactivateStaff(staffId)
         return ResponseEntity.noContent().build()
     }
 
-    @PatchMapping("/clinics/{clinicId}/staff/{staffId}/reactivate")
+    @PatchMapping("/staff/{staffId}/reactivate")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun reactivateStaff(
-        @PathVariable clinicId: UUID,
-        @PathVariable staffId: UUID
-    ): ResponseEntity<Void> {
-        clinicStatusService.reactivateStaff(clinicId, staffId)
+    fun reactivateStaff(@PathVariable staffId: UUID): ResponseEntity<Void> {
+        clinicStatusService.reactivateStaff(staffId)
         return ResponseEntity.noContent().build()
     }
 
@@ -164,12 +143,6 @@ class ClinicStatusController(
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Invalid request")))
         }
-    }
-
-    @GetMapping("/domain/check")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun checkDomain(@RequestParam domain: String): Map<String, Boolean> {
-        return mapOf("available" to clinicStatusService.isDomainAvailable(domain))
     }
 
     @ExceptionHandler(IllegalArgumentException::class)

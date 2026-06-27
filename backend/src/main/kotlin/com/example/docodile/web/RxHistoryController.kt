@@ -1,7 +1,6 @@
 package com.example.docodile.web
 
 import com.example.docodile.repo.RxRowRepository
-import com.example.docodile.security.CurrentUser
 import org.springframework.data.domain.PageRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -25,7 +24,6 @@ data class RxLatestDTO(
 @RequestMapping("/api/tenant/rx-history")
 class RxHistoryController(
     private val rxRowRepository: RxRowRepository,
-    private val currentUser: CurrentUser,
 ) {
     /**
      * Latest prescription of a given medicine across the clinic — used by the
@@ -40,8 +38,8 @@ class RxHistoryController(
     ): ResponseEntity<RxLatestDTO> {
         val name = medicine.trim()
         if (name.isBlank()) return ResponseEntity.noContent().build()
-        val rows = rxRowRepository.findLatestByClinicAndMedicine(
-            currentUser.clinicId(), name, excludeVisitId, PageRequest.of(0, 1),
+        val rows = rxRowRepository.findLatestByMedicine(
+            name, excludeVisitId, PageRequest.of(0, 1),
         )
         val r = rows.firstOrNull() ?: return ResponseEntity.noContent().build()
         return ResponseEntity.ok(

@@ -2,7 +2,6 @@ package com.example.docodile.service
 
 import com.example.docodile.domain.AuditAction
 import com.example.docodile.repo.PatientRepository
-import com.example.docodile.repo.RevokedTokenRepository
 import com.example.docodile.repo.UserSessionRepository
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -13,23 +12,14 @@ import java.time.temporal.ChronoUnit
 
 @Component
 class PurgeJob(
-    private val revokedTokenRepository: RevokedTokenRepository,
     private val userSessionRepository: UserSessionRepository,
     private val patientRepository: PatientRepository,
     private val auditService: AuditService,
 ) {
     private val log = LoggerFactory.getLogger(PurgeJob::class.java)
 
-    // Run every Sunday at 02:00 — purge JWT blacklist rows whose tokens have expired.
-    // Safe to delete because an expired token is already invalid by signature.
-    @Scheduled(cron = "0 0 2 * * SUN")
-    @Transactional
-    fun purgeExpiredRevokedTokens() {
-        val deleted = revokedTokenRepository.deleteExpired(Instant.now())
-        log.info("PurgeJob: deleted {} expired revoked_token rows", deleted)
-    }
-
     // Run every Sunday at 02:15 — purge user_session rows for fully expired sessions.
+    // (Revocation now lives on user_session.revoked_at; the separate revoked_token table was merged in.)
     @Scheduled(cron = "0 15 2 * * SUN")
     @Transactional
     fun purgeExpiredSessions() {

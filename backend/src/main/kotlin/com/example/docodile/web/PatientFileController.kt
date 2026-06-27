@@ -34,11 +34,17 @@ class PatientFileController(
 ) {
     private val allRoles = "hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','LAB','OTHER')"
 
+    // Derive a stable UUID from the schema name to use as AAD in
+    // EncryptionService (which still requires a UUID for backward compat).
+    // Schema is clinic-scoped, so this is functionally equivalent to the
+    // old clinicId-based AAD for files written after the schema migration.
+    private fun schemaUuid(): UUID =
+        UUID.nameUUIDFromBytes(currentUser.schema().toByteArray(Charsets.UTF_8))
+
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','LAB','OTHER')")
     fun list(@PathVariable patientId: UUID): List<PatientFileDTO> {
-        val clinicId = currentUser.clinicId()
-        return repo.findAllByClinicIdAndPatientIdOrderByCreatedAtDesc(clinicId, patientId)
+        return repo.findAllByPatientIdOrderByCreatedAtDesc(patientId)
             .map { it.toDTO() }
     }
 
@@ -51,13 +57,12 @@ class PatientFileController(
         @RequestParam("investigationDate", required = false) investigationDate: String?,
         @RequestParam("notes", required = false) notes: String?
     ): ResponseEntity<PatientFileDTO> {
-        val clinicId = currentUser.clinicId()
+        val schemaId = schemaUuid()
         // Build the entity first so pf.id (generated on construction) is stable
         // before encrypting — the same ID is used as AAD, so encrypt and decrypt
         // must see the same fileId.
         val pf = PatientFile(
             patientId = patientId,
-            clinicId = clinicId,
             uploadedBy = currentUser.userId(),
             name = file.originalFilename ?: file.name,
             category = category?.takeIf { it.isNotBlank() },
@@ -67,7 +72,7 @@ class PatientFileController(
             fileData = ByteArray(0), // placeholder; overwritten below
             fileSize = file.size
         )
-        pf.fileData = encryptionService.encrypt(file.bytes, pf.id, clinicId)
+        pf.fileData = encryptionService.encrypt(file.bytes, pf.id, schemaId)
         repo.save(pf)
         return ResponseEntity.status(HttpStatus.CREATED).body(pf.toDTO())
     }
@@ -75,21 +80,23 @@ class PatientFileController(
     @GetMapping("/{fileId}/download")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','LAB','OTHER')")
     fun download(@PathVariable patientId: UUID, @PathVariable fileId: UUID): ResponseEntity<ByteArray> {
-        val clinicId = currentUser.clinicId()
-        val pf = repo.findByIdAndClinicId(fileId, clinicId)
+        val pf = repo.findById(fileId).orElse(null)
             ?: return ResponseEntity.notFound().build()
         val headers = HttpHeaders()
         headers.contentType = MediaType.parseMediaType(pf.mimeType ?: MediaType.APPLICATION_OCTET_STREAM_VALUE)
         headers.setContentDispositionFormData("inline", pf.name)
-        return ResponseEntity.ok().headers(headers).body(encryptionService.decrypt(pf.fileData, pf.id, pf.clinicId))
+        return ResponseEntity.ok().headers(headers).body(encryptionService.decrypt(pf.fileData, pf.id, schemaUuid()))
     }
 
     @DeleteMapping("/{fileId}")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','LAB','OTHER')")
     fun delete(@PathVariable patientId: UUID, @PathVariable fileId: UUID): ResponseEntity<Void> {
-        val clinicId = currentUser.clinicId()
-        val deleted = repo.deleteByIdAndClinicId(fileId, clinicId)
-        return if (deleted > 0) ResponseEntity.noContent().build() else ResponseEntity.notFound().build()
+        return if (repo.existsById(fileId)) {
+            repo.deleteById(fileId)
+            ResponseEntity.noContent().build()
+        } else {
+            ResponseEntity.notFound().build()
+        }
     }
 
     private fun PatientFile.toDTO() = PatientFileDTO(

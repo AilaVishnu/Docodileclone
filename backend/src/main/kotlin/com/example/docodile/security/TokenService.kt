@@ -16,25 +16,22 @@ class TokenService(private val props: JwtProperties) {
 
     val expirationMs: Long get() = props.expirationMs
 
-    fun generateToken(userId: UUID, tenantId: UUID, role: String, email: String, clinicId: UUID?): String {
+    fun generateToken(userId: UUID, schema: String, role: String, email: String): String {
         val now = Date()
         val expiry = Date(now.time + props.expirationMs)
         val jti = UUID.randomUUID()
 
-        val builder = Jwts.builder()
+        return Jwts.builder()
             .setId(jti.toString())
             .setSubject(userId.toString())
             .setIssuedAt(now)
             .setExpiration(expiry)
             .claim("user_id", userId.toString())
-            .claim("tenant_id", tenantId.toString())
+            .claim("schema", schema)
             .claim("role", role)
             .claim("email", email)
             .signWith(key, SignatureAlgorithm.HS256)
-        if (clinicId != null) {
-            builder.claim("clinic_id", clinicId.toString())
-        }
-        return builder.compact()
+            .compact()
     }
 
     fun generateMfaPendingToken(userId: UUID): String {

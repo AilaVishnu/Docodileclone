@@ -27,10 +27,22 @@ class TenantResolutionFilter(
                     TenantContext.set(clinic.schemaName)
                 }
             }
+            // Reject tenant-scoped requests with no resolved tenant
+            if (TenantContext.get() == null && isTenantScopedPath(request)) {
+                response.contentType = "application/json"
+                response.status = HttpServletResponse.SC_BAD_REQUEST
+                response.writer.write("""{"error":"Unknown or missing clinic"}""")
+                return
+            }
             filterChain.doFilter(request, response)
         } finally {
             TenantContext.clear()
         }
+    }
+
+    private fun isTenantScopedPath(request: HttpServletRequest): Boolean {
+        val path = request.requestURI
+        return !path.startsWith("/actuator") && !path.startsWith("/api/health") && !path.startsWith("/ws")
     }
 
     /** First DNS label for known base domains, or the X-Tenant header override. Null if none. */

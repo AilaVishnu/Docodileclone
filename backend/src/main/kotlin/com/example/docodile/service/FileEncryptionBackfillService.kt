@@ -1,6 +1,5 @@
 package com.example.docodile.service
 
-import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.PatientFileRepository
 import com.example.docodile.security.CurrentUser
 import org.slf4j.LoggerFactory
@@ -18,19 +17,25 @@ import java.util.UUID
  * rather than on startup, because it rewrites every file blob and should be run
  * deliberately after FILE_ENCRYPTION_KEY is set and a full DB backup is taken.
  *
- * Scoped to the calling admin's tenant only (tenant isolation). Pages through
- * file IDs and loads + re-saves one row at a time in its own transaction, so a
- * large file table never balloons the heap or holds row locks for the whole run.
- * Includes soft-deleted rows, since their blobs remain at rest in the database.
+ * Schema-scoped: the schema search_path already confines all queries to the
+ * calling clinic's tenant, so no explicit clinic/tenant filter is needed.
+ * Pages through file IDs and loads + re-saves one row at a time in its own
+ * transaction, so a large file table never balloons the heap or holds row
+ * locks for the whole run. Includes soft-deleted rows, since their blobs
+ * remain at rest in the database.
  *
  * The per-row transactional work lives in [FileEncryptionRowProcessor] — a
  * separate bean so the REQUIRES_NEW transaction is honoured (a self-invocation
  * within one bean would bypass Spring's transactional proxy).
+ *
+ * Key-derivation note: the GCM AAD previously bound ciphertext to a clinicId
+ * UUID. Post-schema-per-tenant that field is gone from PatientFile. We now
+ * derive a stable UUID from the schema name via UUID.nameUUIDFromBytes so the
+ * AAD remains non-empty and schema-scoped without storing a separate column.
  */
 @Service
 class FileEncryptionBackfillService(
     private val patientFileRepository: PatientFileRepository,
-    private val clinicEntityRepository: ClinicEntityRepository,
     private val encryptionService: EncryptionService,
     private val currentUser: CurrentUser,
     private val rowProcessor: FileEncryptionRowProcessor,
@@ -45,22 +50,17 @@ class FileEncryptionBackfillService(
             return BackfillResult(total = 0, encrypted = 0, skipped = 0, enabled = false)
         }
 
-        val tenantId = currentUser.tenantId()
-        val clinicIds = clinicEntityRepository.findAllByTenantId(tenantId).map { it.id }
-        if (clinicIds.isEmpty()) {
-            return BackfillResult(total = 0, encrypted = 0, skipped = 0, enabled = true)
-        }
-
-        val ids = patientFileRepository.findAllIdsByClinicIds(clinicIds)
+        val schemaId = UUID.nameUUIDFromBytes(currentUser.schema().toByteArray())
+        val ids = patientFileRepository.findAllIds()
         var encrypted = 0
         var skipped = 0
         for (id in ids) {
-            if (rowProcessor.encryptOne(id)) encrypted++ else skipped++
+            if (rowProcessor.encryptOne(id, schemaId)) encrypted++ else skipped++
         }
 
         log.info(
-            "File encryption backfill complete (tenant={}): total={} encrypted={} skipped={}",
-            tenantId, ids.size, encrypted, skipped,
+            "File encryption backfill complete (schema={}): total={} encrypted={} skipped={}",
+            currentUser.schema(), ids.size, encrypted, skipped,
         )
         return BackfillResult(total = ids.size, encrypted = encrypted, skipped = skipped, enabled = true)
     }
@@ -76,10 +76,10 @@ class FileEncryptionRowProcessor(
     private val encryptionService: EncryptionService,
 ) {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    fun encryptOne(id: UUID): Boolean {
+    fun encryptOne(id: UUID, schemaId: UUID): Boolean {
         val pf = patientFileRepository.findRawById(id) ?: return false
         if (encryptionService.isEncrypted(pf.fileData)) return false
-        pf.fileData = encryptionService.encrypt(pf.fileData, pf.id, pf.clinicId)
+        pf.fileData = encryptionService.encrypt(pf.fileData, pf.id, schemaId)
         patientFileRepository.save(pf)
         return true
     }

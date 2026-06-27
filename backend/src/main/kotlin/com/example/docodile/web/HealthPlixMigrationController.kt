@@ -1,7 +1,6 @@
 package com.example.docodile.web
 
 import com.example.docodile.repo.MigrationRunRepository
-import com.example.docodile.security.CurrentUser
 import com.example.docodile.service.HealthPlixMigrationService
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -25,7 +24,6 @@ import org.springframework.web.multipart.MultipartFile
 class HealthPlixMigrationController(
     private val migrationService: HealthPlixMigrationService,
     private val migrationRunRepository: MigrationRunRepository,
-    private val currentUser: CurrentUser,
 ) {
 
     // Self-service migration — any signed-in member of a clinic can run it.
@@ -67,7 +65,7 @@ class HealthPlixMigrationController(
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','LAB','OTHER')")
     fun lastMigration(): ResponseEntity<MigrationRunDTO> {
         val run = migrationRunRepository
-            .findFirstByClinicIdOrderByCreatedAtDesc(currentUser.clinicId())
+            .findFirstByOrderByCreatedAtDesc()
             ?: return ResponseEntity.noContent().build()
         return ResponseEntity.ok(
             MigrationRunDTO(

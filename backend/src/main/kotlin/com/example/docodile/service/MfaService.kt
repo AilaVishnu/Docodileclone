@@ -99,7 +99,6 @@ class MfaService(
                 action     = AuditAction.LOGIN_FAILURE,
                 outcome    = "ACCOUNT_LOCKED",
                 actorId    = userId,
-                tenantId   = user.tenant?.id,
                 metadata   = mapOf("stage" to "mfa"),
             )
             return null
@@ -126,7 +125,6 @@ class MfaService(
                 entityType = "AppUser",
                 entityId   = userId,
                 actorId    = userId,
-                tenantId   = user.tenant?.id,
                 metadata   = mapOf("failedAttempts" to user.failedLoginAttempts, "stage" to "mfa"),
             )
         }

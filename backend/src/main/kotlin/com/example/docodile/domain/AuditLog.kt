@@ -16,12 +16,6 @@ class AuditLog(
     @Column(name = "actor_id")
     var actorId: UUID? = null,
 
-    @Column(name = "tenant_id")
-    var tenantId: UUID? = null,
-
-    @Column(name = "clinic_id")
-    var clinicId: UUID? = null,
-
     @Column(nullable = false)
     var action: String = "",
 

@@ -4,11 +4,9 @@ import com.example.docodile.domain.RxRow
 import com.example.docodile.domain.Visit
 import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.repo.AppointmentRepository
-import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.repo.RxRowRepository
 import com.example.docodile.repo.VisitRepository
-import com.example.docodile.security.CurrentUser
 import com.example.docodile.web.ActiveSessionDTO
 import com.example.docodile.web.PatientContentMatch
 import com.example.docodile.web.RxRowDTO
@@ -28,19 +26,15 @@ class VisitService(
     private val visitRepository: VisitRepository,
     private val rxRowRepository: RxRowRepository,
     private val patientRepository: PatientRepository,
-    private val clinicEntityRepository: ClinicEntityRepository,
     private val appUserRepository: AppUserRepository,
     private val appointmentRepository: AppointmentRepository,
-    private val currentUser: CurrentUser
 ) {
     fun listForPatient(patientId: UUID): List<VisitDTO> {
-        val clinicId = currentUser.clinicId()
-
         // Strictly this patient's own visits. A phone number can be shared
         // across a family, so visit history must never be merged by phone —
         // each patient row owns its own history.
         val visits = visitRepository
-            .findAllByClinicIdAndPatientIdOrderByVisitDateAscCreatedAtAsc(clinicId, patientId)
+            .findAllByPatientIdOrderByVisitDateAscCreatedAtAsc(patientId)
         // Batch-resolve each visit's appointment status in one query so the
         // pad can lock/label tabs from their own completion state.
         val statusById = appointmentStatuses(visits.mapNotNull { it.appointmentId })
@@ -59,9 +53,8 @@ class VisitService(
     // the doctor has opened the pad but not yet completed the visit. Newest
     // first so the most recently started session leads.
     fun listActiveSessions(): List<ActiveSessionDTO> {
-        val clinicId = currentUser.clinicId()
         return visitRepository
-            .findActiveSessions(clinicId)
+            .findActiveSessions()
             .mapNotNull { v ->
                 val p = v.patient ?: return@mapNotNull null
                 val startedAt = v.sessionStartedAt ?: return@mapNotNull null
@@ -83,8 +76,7 @@ class VisitService(
     }
 
     fun get(visitId: UUID): VisitDTO {
-        val clinicId = currentUser.clinicId()
-        val visit = visitRepository.findByIdAndClinicId(visitId, clinicId)
+        val visit = visitRepository.findById(visitId).orElse(null)
             ?: throw IllegalArgumentException("Visit not found")
         return visit.toDTO(loadRxRows(visit.id), statusFor(visit.appointmentId))
     }
@@ -124,14 +116,13 @@ class VisitService(
     fun contentSearch(query: String): List<PatientContentMatch> {
         val q = query.trim()
         if (q.length < 2) return emptyList()
-        val clinicId = currentUser.clinicId()
         val ql = q.lowercase()
         val like = "%$ql%"
         // Keyed "patientId|type" so each patient shows at most one Rx and one
         // Visit hit; first (most recent, via the queries' ordering) wins.
         val out = LinkedHashMap<String, PatientContentMatch>()
 
-        rxRowRepository.searchContent(clinicId, like).forEach { r ->
+        rxRowRepository.searchContent(like).forEach { r ->
             val p = r.visit?.patient ?: return@forEach
             val text = listOfNotNull(r.medicine, r.dosage, r.notes, r.medicineNote)
                 .joinToString(" ") { it.trim() }
@@ -141,7 +132,7 @@ class VisitService(
                 PatientContentMatch(p.id, p.name, p.gender, p.age, p.displayNo, "Rx", snippet(text, ql)),
             )
         }
-        visitRepository.searchNotes(clinicId, like).forEach { v ->
+        visitRepository.searchNotes(like).forEach { v ->
             val p = v.patient ?: return@forEach
             val field = listOfNotNull(
                 v.complaints, v.diagnosis, v.privateNotes, v.notesForPatient, v.tests, v.reviewNotes,
@@ -170,21 +161,16 @@ class VisitService(
 
     @Transactional
     fun create(patientId: UUID, request: SaveVisitRequest): VisitDTO {
-        val clinicId = currentUser.clinicId()
-        val clinic = clinicEntityRepository.findById(clinicId)
-            .orElseThrow { IllegalArgumentException("Clinic not found") }
         val patient = patientRepository.findById(patientId)
             .orElseThrow { IllegalArgumentException("Patient not found") }
-        require(patient.clinic?.id == clinicId) { "Patient does not belong to current clinic" }
 
         val visit = Visit(
-            clinic = clinic,
             patient = patient,
             visitDate = request.visitDate ?: LocalDate.now(),
             createdAt = Instant.now(),
             updatedAt = Instant.now()
         )
-        applyRequest(visit, request, clinicId)
+        applyRequest(visit, request)
         val saved = visitRepository.save(visit)
         val rxRows = saveRxRows(saved, request.prescriptions)
         return saved.toDTO(rxRows.map { it.toDTO() }, statusFor(saved.appointmentId))
@@ -192,12 +178,11 @@ class VisitService(
 
     @Transactional
     fun update(visitId: UUID, request: SaveVisitRequest): VisitDTO {
-        val clinicId = currentUser.clinicId()
-        val visit = visitRepository.findByIdAndClinicId(visitId, clinicId)
+        val visit = visitRepository.findById(visitId).orElse(null)
             ?: throw IllegalArgumentException("Visit not found")
         requireWithinEditWindow(visit)
         if (request.visitDate != null) visit.visitDate = request.visitDate
-        applyRequest(visit, request, clinicId)
+        applyRequest(visit, request)
         visit.updatedAt = Instant.now()
         val saved = visitRepository.save(visit)
         rxRowRepository.deleteByVisitId(saved.id)
@@ -207,8 +192,7 @@ class VisitService(
 
     @Transactional
     fun delete(visitId: UUID) {
-        val clinicId = currentUser.clinicId()
-        val visit = visitRepository.findByIdAndClinicId(visitId, clinicId)
+        val visit = visitRepository.findById(visitId).orElse(null)
             ?: throw IllegalArgumentException("Visit not found")
         // rx_row ON DELETE CASCADE handles the children.
         visitRepository.delete(visit)
@@ -216,7 +200,7 @@ class VisitService(
 
     // ── helpers ──────────────────────────────────────────────────────────
 
-    private fun applyRequest(visit: Visit, r: SaveVisitRequest, clinicId: UUID) {
+    private fun applyRequest(visit: Visit, r: SaveVisitRequest) {
         // Vitals
         visit.bpSystolic = r.bpSystolic; visit.bpDiastolic = r.bpDiastolic; visit.bpUnit = r.bpUnit
         visit.bmi = r.bmi; visit.bmiUnit = r.bmiUnit
@@ -311,7 +295,7 @@ class VisitService(
     private fun Visit.toDTO(rxRows: List<RxRowDTO>, appointmentStatus: String? = null): VisitDTO = VisitDTO(
         id = this.id,
         patientId = this.patient?.id ?: UUID(0, 0),
-        clinicId = this.clinic?.id ?: UUID(0, 0),
+        clinicId = UUID(0, 0),
         createdByDoctorId = this.createdByDoctor?.id,
         visitDate = this.visitDate,
         bpSystolic = this.bpSystolic, bpDiastolic = this.bpDiastolic, bpUnit = this.bpUnit,

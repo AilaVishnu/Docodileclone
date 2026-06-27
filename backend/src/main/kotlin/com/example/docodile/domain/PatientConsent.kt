@@ -16,9 +16,6 @@ class PatientConsent(
     @Column(name = "patient_id", nullable = false)
     var patientId: UUID,
 
-    @Column(name = "clinic_id", nullable = false)
-    var clinicId: UUID,
-
     @Column(nullable = false)
     var purpose: String,
 

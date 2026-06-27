@@ -1,6 +1,7 @@
 package com.example.docodile.tenancy
 
 import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider
+import org.springframework.stereotype.Component
 import java.sql.Connection
 import javax.sql.DataSource
 
@@ -8,8 +9,9 @@ import javax.sql.DataSource
  * SCHEMA multi-tenancy: one shared DataSource, switch Postgres search_path per tenant.
  * On checkout set search_path to the tenant schema; on release reset it before the
  * connection returns to the Hikari pool (critical: otherwise a later borrower inherits
- * this tenant's scope). NOT registered with Hibernate in Plan 2a — wired in Plan 2b.
+ * this tenant's scope). Registered with Hibernate via MultiTenancyConfig.
  */
+@Component
 class SchemaMultiTenantConnectionProvider(
     private val dataSource: DataSource,
 ) : MultiTenantConnectionProvider<String> {
@@ -47,6 +49,7 @@ class SchemaMultiTenantConnectionProvider(
         }
     }
 
+    override fun handlesConnectionSchema(): Boolean = true
     override fun supportsAggressiveRelease(): Boolean = false
     override fun isUnwrappableAs(unwrapType: Class<*>): Boolean = false
     override fun <T : Any?> unwrap(unwrapType: Class<T>): T =

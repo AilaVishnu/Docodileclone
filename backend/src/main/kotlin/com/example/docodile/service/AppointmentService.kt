@@ -3,10 +3,8 @@ package com.example.docodile.service
 import com.example.docodile.domain.Appointment
 import com.example.docodile.domain.Patient
 import com.example.docodile.repo.AppointmentRepository
-import com.example.docodile.repo.ClinicEntityRepository
 import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.repo.PatientRepository
-import com.example.docodile.security.CurrentUser
 import com.example.docodile.web.AppointmentDTO
 import com.example.docodile.web.BookAppointmentRequest
 import org.springframework.stereotype.Service
@@ -25,26 +23,19 @@ class DuplicateAppointmentException(message: String) : RuntimeException(message)
 @Service
 class AppointmentService(
     private val appointmentRepository: AppointmentRepository,
-    private val clinicEntityRepository: ClinicEntityRepository,
     private val appUserRepository: AppUserRepository,
     private val patientRepository: PatientRepository,
-    private val currentUser: CurrentUser
 ) {
     fun getAppointmentsForClinic(date: LocalDate): List<AppointmentDTO> {
-        val clinicId = currentUser.clinicId()
         val startOfDay = date.atStartOfDay()
         val endOfDay = date.atTime(23, 59, 59)
 
-        return appointmentRepository.findAllByClinicIdAndScheduledTimeBetween(clinicId, startOfDay, endOfDay)
+        return appointmentRepository.findAllByScheduledTimeBetween(startOfDay, endOfDay)
             .map { it.toDTO() }
     }
 
     @Transactional
     fun bookAppointment(request: BookAppointmentRequest): AppointmentDTO {
-        val clinicId = currentUser.clinicId()
-        val clinic = clinicEntityRepository.findById(clinicId)
-            .orElseThrow { IllegalArgumentException("Clinic not found") }
-
         val doctor = appUserRepository.findById(request.doctorId)
             .orElseThrow { IllegalArgumentException("Doctor not found") }
 
@@ -61,7 +52,7 @@ class AppointmentService(
         // overwriting Ravi's record.
         val reqDigits = normalizePhone(request.patientPhone)
         val existingPatient = reqDigits?.let { digits ->
-            patientRepository.findAllByClinicId(clinic.id!!)
+            patientRepository.findAllByDeletedAtIsNull()
                 .filter { normalizePhone(it.phone) == digits }
                 .filter { it.name.trim().equals(request.patientName.trim(), ignoreCase = true) }
                 .minByOrNull { it.createdAt ?: Instant.EPOCH }
@@ -76,7 +67,6 @@ class AppointmentService(
             patientRepository.save(existingPatient)
         } else {
             val patient = Patient(
-                clinic = clinic,
                 name = request.patientName,
                 phone = request.patientPhone,
                 email = request.patientEmail,
@@ -86,7 +76,7 @@ class AppointmentService(
                 createdAt = Instant.now(),
                 // Next free patient number for this clinic, continuing the
                 // sequence used by imports. See V46 / PatientRepository.
-                displayNo = patientRepository.findMaxDisplayNoByClinicId(clinic.id!!) + 1
+                displayNo = patientRepository.findMaxDisplayNo() + 1
             )
             patientRepository.save(patient)
         }
@@ -100,8 +90,8 @@ class AppointmentService(
             val dayStart = request.scheduledTime.toLocalDate().atStartOfDay()
             val dayEnd = request.scheduledTime.toLocalDate().atTime(23, 59, 59)
             val sameDay = appointmentRepository
-                .findAllByClinicIdAndPatientIdAndScheduledTimeBetween(
-                    clinic.id!!, savedPatient.id!!, dayStart, dayEnd,
+                .findAllByPatientIdAndScheduledTimeBetween(
+                    savedPatient.id!!, dayStart, dayEnd,
                 )
             if (sameDay.isNotEmpty()) {
                 val timeFmt = DateTimeFormatter.ofPattern("hh:mm a", Locale.ENGLISH)
@@ -116,7 +106,6 @@ class AppointmentService(
         }
 
         val appointment = Appointment(
-            clinic = clinic,
             patient = savedPatient,
             doctor = doctor,
             scheduledTime = request.scheduledTime,
@@ -137,7 +126,7 @@ class AppointmentService(
 
     @Transactional
     fun updateAppointment(appointmentId: UUID, request: BookAppointmentRequest): AppointmentDTO {
-        val appointment = appointmentRepository.findByIdAndClinicId(appointmentId, currentUser.clinicId())
+        val appointment = appointmentRepository.findById(appointmentId).orElse(null)
             ?: throw IllegalArgumentException("Appointment not found")
 
         // Server-side enforcement of the edit window — mirrors the
@@ -191,7 +180,7 @@ class AppointmentService(
         pharmacyAmount: java.math.BigDecimal? = null,
         discountAmount: java.math.BigDecimal? = null,
     ): AppointmentDTO {
-        val appointment = appointmentRepository.findByIdAndClinicId(appointmentId, currentUser.clinicId())
+        val appointment = appointmentRepository.findById(appointmentId).orElse(null)
             ?: throw IllegalArgumentException("Appointment not found")
         appointment.payStatus = payStatus
         appointment.paymentMethod = paymentMethod
@@ -205,7 +194,7 @@ class AppointmentService(
 
     @Transactional
     fun updateStatus(appointmentId: UUID, status: String): AppointmentDTO {
-        val appointment = appointmentRepository.findByIdAndClinicId(appointmentId, currentUser.clinicId())
+        val appointment = appointmentRepository.findById(appointmentId).orElse(null)
             ?: throw IllegalArgumentException("Appointment not found")
         appointment.status = status
         return appointmentRepository.save(appointment).toDTO()

@@ -16,9 +16,6 @@ class PatientAISummary(
     @Column(name = "patient_id")
     var patientId: UUID = UUID.randomUUID(),
 
-    @Column(name = "clinic_id", nullable = false)
-    var clinicId: UUID = UUID.randomUUID(),
-
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "JSONB")
     var content: String = "{}",
