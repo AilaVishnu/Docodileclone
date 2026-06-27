@@ -26,9 +26,12 @@ class ChargeService(
     private val patientDepositService: PatientDepositService,
     private val billService: BillService,
     private val pharmacyStockService: PharmacyStockService,
-    private val objectMapper: ObjectMapper,
     private val currentUser: CurrentUser,
 ) {
+    // Own mapper (the app exposes no ObjectMapper bean) — used only to serialize
+    // the line-item snapshot into the bill's `items` JSON. Serialization reads
+    // the data-class getters, so the Kotlin module isn't needed here.
+    private val objectMapper = ObjectMapper()
     private val zero: BigDecimal = BigDecimal.ZERO
     private val hundred: BigDecimal = BigDecimal(100)
 
