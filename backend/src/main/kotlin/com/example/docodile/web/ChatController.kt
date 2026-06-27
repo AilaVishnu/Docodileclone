@@ -76,7 +76,11 @@ class ChatController(
             content = payload.content.trim(),
         )
         val saved = chatMessageRepository.save(msg)
-        messagingTemplate.convertAndSend("/topic/clinic", saved.toDTO())
+        // Per-schema topic: the STOMP in-memory broker isolates only by topic NAME (not by DB
+        // schema), so the tenant's schema MUST be in the destination or group chat leaks across
+        // clinics. (Subscribe-side enforcement — rejecting a SUBSCRIBE to another schema's topic —
+        // is hardened in 2c.)
+        messagingTemplate.convertAndSend("/topic/clinic/${user.schema}", saved.toDTO())
     }
 
     // ── WebSocket: send direct message ───────────────────────────────────
