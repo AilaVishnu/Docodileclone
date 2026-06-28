@@ -12,7 +12,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Sub-domain picker for clinic onboarding and the staff/forgot-password login flows. As you type (≥2 chars) it debounces 500ms then hits `GET /api/tenant/domain/check?domain=…` and reads `data.available` to show a green "Available" or red "Already taken" line under the field. The `readOnly` look (used on a ClinicCard) goes transparent and skips the network check entirely.',
+          'Sub-domain picker for clinic onboarding and login. As you type (≥2 chars) it debounces 500ms then hits `GET /api/tenant/domain/check?domain=…` and reads `data.available` to show a green "Available" or red "Already taken" line under the field. Set `checkAvailability={false}` on the login flow (the clinic is expected to already exist, so the check is meaningless). The `readOnly` look (used on a ClinicCard) goes transparent and skips the network check entirely.',
       },
     },
   },
@@ -22,6 +22,7 @@ const meta = {
     suffix: { control: 'text' },
     disabled: { control: 'boolean' },
     readOnly: { control: 'boolean' },
+    checkAvailability: { control: 'boolean' },
     onChange: { control: false },
     onKeyDown: { control: false },
   },
@@ -62,6 +63,12 @@ export const Taken: Story = {
       ],
     },
   },
+};
+
+/** Login flow — editable, but the availability check is disabled (the clinic
+ *  is expected to already exist, so no "Available/Taken" line shows). */
+export const LoginMode: Story = {
+  args: { value: 'sunrise-skin', checkAvailability: false },
 };
 
 /** Display-only on a card — transparent background, no availability check fires. */

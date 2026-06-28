@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { styles } from "./LoginCard.styles";
 import { Field } from "../Field";
+import { DomainInput } from "../Input/DomainInput";
 import { Button } from "../Button";
 import { Card } from "../Card";
 import { Icon } from "../Icon";
@@ -24,6 +25,7 @@ type LoginResponse = {
 };
 
 export function LoginCard({ onLoginSuccess }: LoginCardProps) {
+  const [domain, setDomain] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -35,17 +37,24 @@ export function LoginCard({ onLoginSuccess }: LoginCardProps) {
   const [forgotSubmitting, setForgotSubmitting] = useState(false);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      setToastMessage("Please enter email and password.");
+    if (!domain.trim() || !email.trim() || !password.trim()) {
+      setToastMessage("Please enter clinic domain, email and password.");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
+      // The typed clinic domain scopes the request to its tenant. Setting
+      // X-Tenant explicitly takes precedence over the subdomain-derived value
+      // the global interceptor would otherwise add (apiInterceptor.ts), so
+      // login works on a bare host with no clinic subdomain.
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Tenant": domain.trim().toLowerCase(),
+        },
         body: JSON.stringify({ email, password }),
       });
 
@@ -89,6 +98,10 @@ export function LoginCard({ onLoginSuccess }: LoginCardProps) {
 
   const handleForgotPassword = async () => {
     const emailVal = forgotEmail.trim();
+    if (!domain.trim()) {
+      setToastMessage("Enter your clinic domain");
+      return;
+    }
     if (!emailVal) {
       setToastMessage("Enter a valid email address");
       return;
@@ -96,9 +109,14 @@ export function LoginCard({ onLoginSuccess }: LoginCardProps) {
 
     setForgotSubmitting(true);
     try {
+      // Same tenant scoping as login: the typed domain drives X-Tenant so the
+      // reset works on a bare host with no clinic subdomain.
       const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Tenant": domain.trim().toLowerCase(),
+        },
         body: JSON.stringify({ email: emailVal }),
       });
 
@@ -130,8 +148,15 @@ export function LoginCard({ onLoginSuccess }: LoginCardProps) {
 
   if (view === "forgot") {
     return (
-      <Card style={{ ...styles.card, width: "40vw", backgroundColor: colors.secondary50 }}>
+      <Card style={{ ...styles.card, width: "40vw", backgroundColor: colors.primary100 }}>
         <h4 style={styles.title}>Reset Password</h4>
+
+        <DomainInput
+          value={domain}
+          onChange={setDomain}
+          checkAvailability={false}
+          onKeyDown={handleForgotKeyDown}
+        />
 
         <Field
           variant="underline"
@@ -144,7 +169,7 @@ export function LoginCard({ onLoginSuccess }: LoginCardProps) {
         />
 
         <Button
-          variant="secondary"
+          variant="primary"
           size="md"
           onClick={handleForgotPassword}
           disabled={forgotSubmitting}
@@ -187,10 +212,18 @@ export function LoginCard({ onLoginSuccess }: LoginCardProps) {
   }
 
   return (
-    <Card style={{ ...styles.card, width: "var(--login-card-w)", backgroundColor: colors.secondary50 }}>
+    <Card style={{ ...styles.card, width: "var(--login-card-w)", backgroundColor: colors.primary100 }}>
       <h4 style={styles.title}>
         Login
       </h4>
+
+      {/* Clinic domain */}
+      <DomainInput
+        value={domain}
+        onChange={setDomain}
+        checkAvailability={false}
+        onKeyDown={handleKeyDown}
+      />
 
       {/* Email */}
       <Field
@@ -225,7 +258,7 @@ export function LoginCard({ onLoginSuccess }: LoginCardProps) {
 
       {/* Sign in */}
       <Button
-        variant="secondary"
+        variant="primary"
         size="md"
         onClick={handleLogin}
         disabled={isSubmitting}
