@@ -11,7 +11,7 @@ const FAKE_JWT =
   '.eyJ1c2VyX2lkIjoidTEiLCJlbWFpbCI6ImFkbWluQHN1bnJpc2UuY2xpbmljIn0' +
   '.s1gn4tur3';
 
-const adminSuccess = {
+const loginSuccess = {
   token: FAKE_JWT,
   role: 'admin',
   clinicId: 'clinic-1',
@@ -19,21 +19,10 @@ const adminSuccess = {
   gender: 'female',
 };
 
-const staffSuccess = {
-  token: FAKE_JWT,
-  role: 'doctor',
-  clinicId: 'clinic-1',
-  clinicName: 'Sunrise Skin Clinic',
-  gender: 'female',
-};
-
-// Auth endpoints the card POSTs to. /auth/login (admin), /auth/staff/login
-// (staff), and /auth/forgot-password for the reset view. The staff form also
-// renders a DomainInput, whose availability check (/api/tenant/domain/check)
-// is already covered by the default handler.
+// Auth endpoints the card POSTs to. /auth/login carries the typed clinic
+// domain as an X-Tenant header, and /auth/forgot-password backs the reset view.
 const authHandlers = [
-  http.post('http://localhost:8080/auth/login', () => HttpResponse.json(adminSuccess)),
-  http.post('http://localhost:8080/auth/staff/login', () => HttpResponse.json(staffSuccess)),
+  http.post('http://localhost:8080/auth/login', () => HttpResponse.json(loginSuccess)),
   http.post('http://localhost:8080/auth/forgot-password', () =>
     HttpResponse.json({ ok: true }),
   ),
@@ -47,25 +36,17 @@ const meta = {
     docs: {
       description: {
         component:
-          'The login card used on the admin and staff entry screens. `mode="admin"` POSTs to `/auth/login`; `mode="staff"` adds a clinic `DomainInput` and POSTs to `/auth/staff/login`. On success it stows the JWT/role/clinic in localStorage and calls `onLoginSuccess`. The "Forgot Password" link swaps to a reset view that POSTs to `/auth/forgot-password`. Validation happens on submit via an inline Toast.',
+          'The single login card. The user enters their clinic `DomainInput` + email + password; on submit it POSTs to `/auth/login` with the typed domain sent as an `X-Tenant` header (scoping the request to that clinic regardless of subdomain). On success it stows the JWT/role/clinic in localStorage and calls `onLoginSuccess`. The "Forgot Password" link swaps to a reset view that takes the same clinic domain (sent as `X-Tenant`) plus email and POSTs to `/auth/forgot-password`. Validation happens on submit via an inline Toast.',
       },
     },
     layout: 'centered',
     msw: { handlers: authHandlers },
   },
   argTypes: {
-    mode: {
-      control: 'inline-radio',
-      options: ['admin', 'staff'],
-      table: { defaultValue: { summary: 'admin' } },
-    },
     onLoginSuccess: { control: false },
-    onSwitchMode: { control: false },
   },
   args: {
-    mode: 'admin',
     onLoginSuccess: () => {},
-    onSwitchMode: () => {},
   },
   decorators: [
     withClinicSession,
@@ -82,12 +63,5 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Admin login — email + password, POSTs to /auth/login. */
-export const Admin: Story = {
-  args: { mode: 'admin' },
-};
-
-/** Staff login — adds the clinic DomainInput and POSTs to /auth/staff/login. */
-export const Staff: Story = {
-  args: { mode: 'staff' },
-};
+/** Login — clinic domain + email + password, POSTs to /auth/login. */
+export const Login: Story = {};
