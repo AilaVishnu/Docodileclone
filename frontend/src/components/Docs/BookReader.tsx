@@ -11,21 +11,25 @@ import type { Booklet, BookletPage } from "../../pages/Docs/docsContent";
  * (it's the first leaf) and flows into a page-flip book. Turn pages by clicking
  * a page, the ‹ › icons, or the arrow keys; a dot bar tracks progress; Esc /
  * backdrop / the close button dismiss it.
+ *
+ * Sized natively at S× (not via CSS `transform: scale`, which rasterises and
+ * blurs the text/art) so every page renders crisp.
  */
 const ink = colors.neutral900;
 const clay = colors.primary700;
 const cream = colors.primary100;
 const serif = fonts.family.secondary;
 const white = colors.neutral100;
+const S = 1.5; // book scale — applied to real dimensions + type, so it stays sharp
 
-const pad: React.CSSProperties = { padding: "40px 38px", boxSizing: "border-box", display: "flex", flexDirection: "column", height: "100%" };
+const pad: React.CSSProperties = { padding: `${40 * S}px ${38 * S}px`, boxSizing: "border-box", display: "flex", flexDirection: "column", height: "100%" };
 
 function StepPage({ kicker, title, body }: BookletPage) {
   return (
     <div style={pad}>
-      <div style={{ fontSize: 12, letterSpacing: 1.3, textTransform: "uppercase", color: clay, fontWeight: 700, marginBottom: 12 }}>{kicker}</div>
-      <div style={{ fontFamily: serif, fontSize: 27, fontWeight: 600, color: ink, marginBottom: 16, lineHeight: 1.12 }}>{title}</div>
-      <div style={{ fontSize: 16, lineHeight: 1.65, color: colors.neutral700 }}>{body}</div>
+      <div style={{ fontSize: 12 * S, letterSpacing: 1.3, textTransform: "uppercase", color: clay, fontWeight: 700, marginBottom: 12 * S }}>{kicker}</div>
+      <div style={{ fontFamily: serif, fontSize: 27 * S, fontWeight: 600, color: ink, marginBottom: 16 * S, lineHeight: 1.12 }}>{title}</div>
+      <div style={{ fontSize: 16 * S, lineHeight: 1.65, color: colors.neutral700 }}>{body}</div>
     </div>
   );
 }
@@ -34,34 +38,34 @@ function TitlePage({ book }: { book: Booklet }) {
   const meta = book.pages?.length ? `${book.pages.length} steps · 2 min read` : "A short read";
   return (
     <div style={pad}>
-      <div style={{ fontSize: 12, letterSpacing: 1.5, textTransform: "uppercase", color: clay, fontWeight: 700 }}>A Docodile guide</div>
+      <div style={{ fontSize: 12 * S, letterSpacing: 1.5, textTransform: "uppercase", color: clay, fontWeight: 700 }}>A Docodile guide</div>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-        <div style={{ fontFamily: serif, fontSize: 34, fontWeight: 600, color: ink, lineHeight: 1.1 }}>{book.title}</div>
-        {book.summary && <div style={{ marginTop: 16, fontSize: 16, color: colors.neutral600, lineHeight: 1.55 }}>{book.summary}</div>}
+        <div style={{ fontFamily: serif, fontSize: 34 * S, fontWeight: 600, color: ink, lineHeight: 1.1 }}>{book.title}</div>
+        {book.summary && <div style={{ marginTop: 16 * S, fontSize: 16 * S, color: colors.neutral600, lineHeight: 1.55 }}>{book.summary}</div>}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, color: colors.neutral500, fontSize: 14 }}><Croc size={30} /> {meta}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 * S, color: colors.neutral500, fontSize: 14 * S }}><Croc size={30 * S} /> {meta}</div>
     </div>
   );
 }
 
 const ComingSoon = (
-  <div style={{ ...pad, alignItems: "center", justifyContent: "center", textAlign: "center", gap: 14 }}>
-    <Croc size={60} />
-    <div style={{ fontFamily: serif, fontSize: 22, fontWeight: 600, color: ink }}>Still being written</div>
-    <div style={{ fontSize: 15, color: colors.neutral600, maxWidth: 240, lineHeight: 1.5 }}>This guide is on the way. Ask Croc in the meantime.</div>
+  <div style={{ ...pad, alignItems: "center", justifyContent: "center", textAlign: "center", gap: 14 * S }}>
+    <Croc size={60 * S} />
+    <div style={{ fontFamily: serif, fontSize: 22 * S, fontWeight: 600, color: ink }}>Still being written</div>
+    <div style={{ fontSize: 15 * S, color: colors.neutral600, maxWidth: 240 * S, lineHeight: 1.5 }}>This guide is on the way. Ask Croc in the meantime.</div>
   </div>
 );
 const EndPage = (
-  <div style={{ ...pad, alignItems: "center", justifyContent: "center", textAlign: "center", gap: 14 }}>
-    <Croc size={66} />
-    <div style={{ fontFamily: serif, fontSize: 24, fontWeight: 600, color: ink }}>That’s it!</div>
-    <div style={{ fontSize: 15, color: colors.neutral600, maxWidth: 240, lineHeight: 1.5 }}>Ask Croc anytime if you get stuck.</div>
+  <div style={{ ...pad, alignItems: "center", justifyContent: "center", textAlign: "center", gap: 14 * S }}>
+    <Croc size={66 * S} />
+    <div style={{ fontFamily: serif, fontSize: 24 * S, fontWeight: 600, color: ink }}>That’s it!</div>
+    <div style={{ fontSize: 15 * S, color: colors.neutral600, maxWidth: 240 * S, lineHeight: 1.5 }}>Ask Croc anytime if you get stuck.</div>
   </div>
 );
 const Blank = <div style={{ ...pad, background: cream }} />;
 
 export function BookReader({ book, onClose }: { book: Booklet; onClose: () => void }) {
-  const PW = 300, PH = 402;
+  const PW = 300 * S, PH = 402 * S;
   const [flipped, setFlipped] = useState(0);
 
   // Inside faces, in reading order, then split into leaves. Leaf 0's front is
@@ -92,26 +96,26 @@ export function BookReader({ book, onClose }: { book: Booklet; onClose: () => vo
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(58, 33, 14, 0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9500 }} onClick={onClose} role="dialog" aria-modal="true" aria-label={book.title}>
-      <style>{`@keyframes bookIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}`}</style>
-      <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 20, animation: "bookIn .3s ease" }}>
-        <IconButton ariaLabel="Close" onClick={onClose} color={white} style={{ position: "absolute", top: -46, right: -2 }} />
+      <style>{`@keyframes bookIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}`}</style>
+      <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 22, animation: "bookIn .3s ease" }}>
+        <IconButton ariaLabel="Close" onClick={onClose} color={white} style={{ position: "absolute", top: -48, right: -2 }} />
 
-        <div style={{ perspective: 3000 }}>
+        <div style={{ perspective: 4500 }}>
           <div style={{ position: "relative", width: PW * 2, height: PH, transformStyle: "preserve-3d", transform: closed ? `translateX(${-PW / 2}px)` : "none", transition: "transform .9s cubic-bezier(.2,.7,.2,1)" }}>
-            {!closed && <div style={{ position: "absolute", left: 0, top: 0, width: PW, height: PH, background: colors.primary200, borderRadius: "10px 2px 2px 10px" }} />}
-            {!closed && <div style={{ position: "absolute", left: PW, top: 0, width: PW, height: PH, background: colors.primary200, borderRadius: "2px 10px 10px 2px" }} />}
+            {!closed && <div style={{ position: "absolute", left: 0, top: 0, width: PW, height: PH, background: colors.primary200, borderRadius: "12px 3px 3px 12px" }} />}
+            {!closed && <div style={{ position: "absolute", left: PW, top: 0, width: PW, height: PH, background: colors.primary200, borderRadius: "3px 12px 12px 3px" }} />}
 
             {leaves.map(([front, back], i) => {
               const isFlipped = i < flipped;
               return (
                 <div key={i} style={{ position: "absolute", left: PW, top: 0, width: PW, height: PH, transformStyle: "preserve-3d", transformOrigin: "left center", transform: isFlipped ? "rotateY(-180deg)" : "rotateY(0deg)", transition: "transform .9s cubic-bezier(.2,.7,.2,1)", zIndex: isFlipped ? i : N - i }}>
-                  <div style={{ ...faceBase, borderRadius: "2px 10px 10px 2px", boxShadow: "inset 7px 0 16px rgba(0,0,0,0.05)" }}>{front}</div>
-                  <div style={{ ...faceBase, borderRadius: "10px 2px 2px 10px", transform: "rotateY(180deg)", boxShadow: "inset -7px 0 16px rgba(0,0,0,0.05)" }}>{back}</div>
+                  <div style={{ ...faceBase, borderRadius: "3px 12px 12px 3px", boxShadow: "inset 9px 0 20px rgba(0,0,0,0.05)" }}>{front}</div>
+                  <div style={{ ...faceBase, borderRadius: "12px 3px 3px 12px", transform: "rotateY(180deg)", boxShadow: "inset -9px 0 20px rgba(0,0,0,0.05)" }}>{back}</div>
                 </div>
               );
             })}
 
-            {!closed && <div style={{ position: "absolute", left: PW - 1, top: 8, width: 2, height: PH - 16, background: "rgba(0,0,0,0.08)", zIndex: 40, pointerEvents: "none" }} />}
+            {!closed && <div style={{ position: "absolute", left: PW - 1, top: 10, width: 2, height: PH - 20, background: "rgba(0,0,0,0.08)", zIndex: 40, pointerEvents: "none" }} />}
 
             {flipped > 1 && <div onClick={() => turn(-1)} style={{ position: "absolute", left: 0, top: 0, width: PW, height: PH, zIndex: 60, cursor: "pointer" }} aria-label="Previous page" role="button" />}
             {flipped < N && <div onClick={() => turn(1)} style={{ position: "absolute", left: closed ? 0 : PW, top: 0, width: closed ? PW * 2 : PW, height: PH, zIndex: 60, cursor: "pointer" }} aria-label="Next page" role="button" />}
