@@ -6,7 +6,13 @@ import { Service } from "./types";
 import { AddServiceModal } from "./AddServiceModal";
 import { Button } from "../../components/Button";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
+import { Tabs } from "../../components/Tabs";
 import { Icon } from "../../components/Icon";
+import { DirectoryView } from "../Catalog/DirectoryView";
+import { Category } from "../Catalog/catalogData";
+
+// Catalog categories — Services (this view) + the directory of external parties.
+const CATALOG_CATS: Category[] = ["Services", "Referral doctors", "Labs", "Suppliers", "Contacts"];
 import {
   listServices,
   createService,
@@ -51,6 +57,7 @@ export function ServicesView() {
   const [services, setServices] = useState<Service[]>([]);
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [cat, setCat] = useState<Category>("Services");
   const [editing, setEditing] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,6 +120,17 @@ export function ServicesView() {
     <div style={styles.page}>
       <PageHeader title="Catalog" />
 
+      <div style={{ marginTop: "var(--main-gap, 24px)" }}>
+        <Tabs variant="block" inline items={CATALOG_CATS.map((c) => ({ id: c, label: c }))} activeId={cat} onSelect={(id) => setCat(id as Category)} />
+      </div>
+
+      {cat !== "Services" && (
+        <div style={{ marginTop: "var(--main-gap, 24px)" }}>
+          <DirectoryView category={cat as Exclude<Category, "Services">} />
+        </div>
+      )}
+
+      {cat === "Services" && (
       <div style={styles.content}>
       <div style={styles.toolbar}>
         <div style={styles.searchBox}>
@@ -177,6 +195,7 @@ export function ServicesView() {
         )}
       </div>
       </div>
+      )}
 
       <AddServiceModal
         isOpen={modalOpen}

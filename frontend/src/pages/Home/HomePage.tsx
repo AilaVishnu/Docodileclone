@@ -15,7 +15,8 @@ import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { ChatBubble } from "../../components/Chat/ChatBubble";
 import { setPendingSessionNav } from "../../components/TopNav/SessionTrayButton";
 import { hydrateScheduleFromBackend } from "../../components/DoctorSchedule/scheduleStorage";
-import { NewPrescriptionModal, type NewPatientDraft } from "../PrescriptionPage/NewPrescriptionModal";
+import { type NewPatientDraft } from "../PrescriptionPage/NewPrescriptionModal";
+import { NewPrescriptionView, type PrescribeRequest } from "../PrescriptionPage/NewPrescriptionView";
 import { createWalkinAppointment } from "../../api/walkin";
 import type { Patient } from "../../hooks/usePatients";
 import { listServices, type ServiceDTO } from "../../api/services";
@@ -308,7 +309,21 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
           setActiveTab("Prescription");
         }} />;
       case "Prescription":
-        return <PrescriptionView onNavigate={setActiveTab} queueRefreshKey={prescriptionRefreshKey} />;
+        // The "New Prescription" CTA opens the consolidated page (walk-in,
+        // no appointment) inline over the Rx Pad — replaces the old modals.
+        return showNewRxModal ? (
+          <NewPrescriptionView
+            onBack={() => setShowNewRxModal(false)}
+            onPrescribe={(req: PrescribeRequest) => {
+              // payNow is a no-op for now — the walk-in API has no payStatus
+              // (see flag); both CTAs create a DUE walk-in and open the pad.
+              setShowNewRxModal(false);
+              void runWalkin(req.doctorId, req);
+            }}
+          />
+        ) : (
+          <PrescriptionView onNavigate={setActiveTab} queueRefreshKey={prescriptionRefreshKey} />
+        );
       case "Patient Files":
         return <PatientFilesView onNavigate={setActiveTab} initialSelectedId={patientFileNavId} />;
       case "Services":
@@ -376,12 +391,8 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
       onCancel={() => setShowConfirm(false)}
     />
 
-    <NewPrescriptionModal
-      isOpen={showNewRxModal}
-      onClose={() => setShowNewRxModal(false)}
-      onSelectPatient={handleWalkinExisting}
-      onAddPatient={handleWalkinNew}
-    />
+    {/* New Prescription now renders inline in the Prescription tab
+        (see renderContent) instead of a modal. */}
 
     <ConfirmDialog
       isOpen={!!walkinError}
