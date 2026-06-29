@@ -67,6 +67,31 @@ export const Hours: Story = {
   ),
 };
 
+// Creative treatments for the weekly "This week" hours widget — pick a keeper.
+// The Day strip (chosen) is shown compact; the others at the size each needs.
+const THIS_WEEK_OPTIONS = [
+  { v: "week", label: "Day strip (compact)", h: 140 },
+  { v: "weekColumns", label: "Columns", h: 170 },
+  { v: "agendaBars", label: "Ribbon", h: 232 },
+  { v: "weekHeatRows", label: "Heatmap list", h: 232 },
+  { v: "agenda", label: "List", h: 232 },
+] as const;
+
+export const ThisWeek: Story = {
+  render: () => (
+    <div style={{ display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap", maxWidth: 1180 }}>
+      {THIS_WEEK_OPTIONS.map(({ v, label, h }) => (
+        <div key={v} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <span style={{ fontSize: 12, color: colors.neutral600, fontFamily: "Inter, sans-serif" }}>{label}</span>
+          <div style={{ width: 224, height: h }}>
+            <HoursWidget variant={v} />
+          </div>
+        </div>
+      ))}
+    </div>
+  ),
+};
+
 // Four treatments of the "Today" stats widget to choose from.
 const STATS_OPTIONS = [
   ["bar", "Composition bar"],

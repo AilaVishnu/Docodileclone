@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { RadialScore } from './index';
 import { withSize } from '../../sb/decorators';
+import { colors } from '../../styles/theme';
 
 const meta = {
-  title: 'Components/Charts/RadialScore',
+  title: 'Components/Charts/Radial/RadialScore',
   component: RadialScore,
   tags: ['autodocs'],
   decorators: [withSize(200, 200)],
@@ -18,8 +19,8 @@ const meta = {
   args: {
     size: 180,
     score: 78,
-    color: '#16A34A',
-    trackColor: '#E5F4EA',
+    color: colors.active.shade600,
+    trackColor: colors.neutral200,
   },
 } satisfies Meta<typeof RadialScore>;
 
@@ -32,7 +33,7 @@ export const Default: Story = {};
 export const LowScore: Story = {
   args: {
     score: 34,
-    color: '#EF4444',
-    trackColor: '#FCE7E7',
+    color: colors.red200,
+    trackColor: colors.neutral200,
   },
 };

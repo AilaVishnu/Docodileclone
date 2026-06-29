@@ -10,7 +10,9 @@ import { DataGrid, GridColumn } from "../../components/DataGrid/DataGrid";
 import { SearchField } from "../../components/SearchField";
 import { BillStatusBadge, billStatusOf } from "../../components/BillStatusBadge";
 import { BillModal } from "../../components/BillCard/BillModal";
+import { ViewToggle, ViewMode } from "../../components/ViewToggle/ViewToggle";
 import { BillReadModal, parseLines } from "./BillReadModal";
+import { BillTile } from "./BillTile";
 import type { Bill } from "../../api/bills";
 import { colors, spacing } from "../../styles/theme";
 import { styles } from "./BillsView.styles";
@@ -26,8 +28,10 @@ const fmtDate = (iso: string) => {
   return y && m && d ? `${d}${ORD(d)} ${MONTHS[m - 1]} ${y}` : iso;
 };
 
+// primary100 fill — a hair lighter than the cream page, so the KPI cards lift
+// off it subtly while staying clearly softer than the bright white bill tiles.
 const Kpi =({ label, value, tone }: { label: string; value: string; tone?: string }) => (
-  <Card variant="surface" elevation="none" padding="l" style={{ flex: 1, display: "flex", flexDirection: "column", gap: spacing["2xs"] }}>
+  <Card variant="surface" elevation="none" padding="l" style={{ flex: 1, display: "flex", flexDirection: "column", gap: spacing["2xs"], backgroundColor: colors.primary100 }}>
     <span style={styles.kpiLabel}>{label}</span>
     <span style={{ ...styles.kpiValue, ...(tone ? { color: tone } : {}) }}>{value}</span>
   </Card>
@@ -71,6 +75,7 @@ export function BillsView({ bills, loading = false, onOpenBill, onPrintBill, onN
   const [customStart, setCustomStart] = React.useState("");
   const [customEnd, setCustomEnd] = React.useState("");
   const [query, setQuery] = React.useState("");
+  const [view, setView] = React.useState<ViewMode>("list");
   // Row-click / "View bill" opens the bill: an unpaid draft → the editable
   // BillModal (seeded); anything settled → the read-only BillReadModal.
   const [openBill, setOpenBill] = React.useState<ClinicBill | null>(null);
@@ -157,12 +162,15 @@ export function BillsView({ bills, loading = false, onOpenBill, onPrintBill, onN
             <SearchField value={query} onChange={setQuery} placeholder="Search patient or invoice no…" />
             <Tabs variant="block" size="sm" inline items={STATUS_TABS} activeId={status} onSelect={setStatus} />
           </div>
+          <ViewToggle value={view} onChange={setView} />
         </div>
 
-        <Card variant="cream" padding="xl">
-          {shown.length === 0 ? (
+        {shown.length === 0 ? (
+          <Card variant="cream" padding="xl">
             <div style={styles.emptyWrap}>{loading ? "Loading bills…" : "No bills match these filters."}</div>
-          ) : (
+          </Card>
+        ) : view === "list" ? (
+          <Card variant="cream" padding="xl">
             <DataGrid
               columns={columns}
               rows={shown}
@@ -173,13 +181,19 @@ export function BillsView({ bills, loading = false, onOpenBill, onPrintBill, onN
               onRowClick={openBillModal}
               rowStyle={() => ({ cursor: "pointer" })}
             />
-          )}
-        </Card>
+          </Card>
+        ) : (
+          <div style={styles.grid}>
+            {shown.map((b) => <BillTile key={b.id} bill={b} onClick={openBillModal} />)}
+          </div>
+        )}
       </div>
 
-      {/* An unpaid bill is still a draft → the editable BillModal (seeded with
-          its line items); a settled bill → the read-only BillReadModal. */}
-      {openBill && (openBill.paid === 0 ? (
+      {/* Only a genuine unpaid draft — nothing collected AND not waived — opens
+          the editable BillModal (seeded with its line items). Every settled bill
+          (paid, partial, refunded, and WAIVED) opens the read-only BillReadModal,
+          where the line items are frozen. */}
+      {openBill && (openBill.paid === 0 && openBill.payStatus !== "WAIVED" ? (
         <BillModal
           isOpen
           onClose={() => setOpenBill(null)}

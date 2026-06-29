@@ -3,7 +3,7 @@ import { InsetLabelBar } from './index';
 import { withSize } from '../../sb/decorators';
 
 const meta = {
-  title: 'Components/Charts/InsetLabelBar',
+  title: 'Components/Charts/Comparison/InsetLabelBar',
   component: InsetLabelBar,
   tags: ['autodocs'],
   decorators: [withSize(440, 200)],

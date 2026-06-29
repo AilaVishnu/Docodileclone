@@ -3,7 +3,7 @@ import { ThemedVerticalBar } from './index';
 import { withSize } from '../../sb/decorators';
 
 const meta = {
-  title: 'Components/Charts/ThemedVerticalBar',
+  title: 'Components/Charts/Comparison/ThemedVerticalBar',
   component: ThemedVerticalBar,
   tags: ['autodocs'],
   decorators: [withSize(480, 280)],

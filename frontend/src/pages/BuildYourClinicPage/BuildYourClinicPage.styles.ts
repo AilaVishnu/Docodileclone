@@ -1,7 +1,20 @@
 import { CSSProperties } from "react";
-import { colors, fonts, spacing } from "../../styles/theme";
+import { colors, fonts, radii, spacing } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
+  // A pane surface — the form (left) and the tabs+house (right) are now two
+  // distinct white cards on the page, separated by the workspace gap.
+  pane: {
+    backgroundColor: colors.primary200,
+    borderRadius: radii.l,
+    padding: spacing.xl,
+    boxSizing: "border-box",
+    // Drop the form so its top aligns with the right pane's house panel — the
+    // right column's tabs sit above its panel, so offset by the tab-bar height
+    // (12+12 vertical padding = spacing.xl, plus the size-m line-height).
+    marginTop: `calc(${spacing.xl} + ${fonts.lineHeight.m})`,
+  },
+
   page: {
     width: "100%",
     // Fill the viewport exactly and DON'T scroll — the workspace below flexes
@@ -38,13 +51,24 @@ export const styles: Record<string, CSSProperties> = {
     minHeight: 0,
   },
 
+  // Wrapper for the right column: the department tabs sit on top, attached to
+  // the house panel below (the active tab shares the panel's fill).
   rightContainer: {
     display: "flex",
     flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 0,
-    paddingLeft: "2%",
+  },
+  // The panel the tabs attach to — top-left corner squared so the (leftmost)
+  // active tab connects into it, like the existing clinic-tab system.
+  housePanel: {
+    backgroundColor: colors.primary200,
+    borderRadius: `0 ${radii.l}px ${radii.l}px ${radii.l}px`,
+    padding: `${spacing["7xl"]} ${spacing.xl}`,
+    boxSizing: "border-box",
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: spacing.m,
   },
 
   footer: {
@@ -59,10 +83,10 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    width: "105%",
-    maxWidth: 680,
+    width: "100%",
+    maxWidth: 600,
+    alignSelf: "center",
     position: "relative" as const,
-    marginLeft: -60,
   },
 
   roofImage: {
@@ -160,50 +184,10 @@ export const styles: Record<string, CSSProperties> = {
   bushRight: {
     position: "absolute" as const,
     bottom: -5,
-    right: -40,
-    width: 65,
-    height: 55,
+    right: -20,
+    width: 60,
+    height: 50,
     zIndex: 3,
     transform: "scaleX(-1)",
-  },
-
-  deactivatedSection: {
-    marginTop: spacing.l,
-    width: "100%",
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: spacing.s,
-  },
-  deactivatedTitle: {
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.xs,
-    fontWeight: fonts.weight.medium,
-    color: colors.neutral700,
-    textTransform: "uppercase" as const,
-    letterSpacing: 0.5,
-  },
-  deactivatedRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.m,
-    padding: `${spacing.s} ${spacing.m}`,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.5)",
-  },
-  deactivatedInfo: {
-    display: "flex",
-    flexDirection: "column" as const,
-  },
-  deactivatedName: {
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.s,
-    fontWeight: fonts.weight.medium,
-    color: colors.neutral900,
-  },
-  deactivatedRole: {
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.xs,
-    color: colors.neutral700,
   },
 };

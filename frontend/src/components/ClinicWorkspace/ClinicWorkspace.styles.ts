@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, radii, spacing } from "../../styles/theme";
+import { spacing } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
   container: {
@@ -9,19 +9,20 @@ export const styles: Record<string, CSSProperties> = {
     // top/bottom padding (min 80px) is what stretches to absorb the slack.
     flex: 1,
     minHeight: 0,
-    border: `0px solid ${colors.neutral900}`,
-    borderRadius: `0 ${radii["2xl"]}px ${radii["2xl"]}px ${radii["2xl"]}px`,
     display: "flex",
-    // Vertical: 80 (7xl) min. Horizontal: 48 (4xl). Gap: 80 (7xl).
+    // Vertical padding gives the centering slack; the two panes carry their own
+    // surfaces now, so the container itself is transparent (no unifying box).
     padding: `${spacing["7xl"]} ${spacing["4xl"]}`,
-    gap: spacing["7xl"],
+    gap: spacing["2xl"],
     boxSizing: "border-box",
-    backgroundColor: colors.primary200,
-    alignItems: "center",
+    // Top-align both columns. The right column's tabs sit above its panel, so
+    // the form (left) is offset down by the tab-bar height to line its top up
+    // with the panel's top edge (see BuildYourClinicPage.styles `pane`).
+    alignItems: "flex-start",
   },
 
   leftPanel: {
-    flex: 1,
+    flex: 0.8,
     display: "flex",
     flexDirection: "column",
     // Form anchored to panel top; only its bottom moves as content grows.
@@ -29,7 +30,7 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   rightPanel: {
-    flex: 1.2,
+    flex: 1.6,
     display: "flex",
     flexDirection: "column",
   },

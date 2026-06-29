@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { ThemedDonut } from './index';
 import { withSize } from '../../sb/decorators';
+import { colors } from '../../styles/theme';
 
 const meta = {
-  title: 'Components/Charts/ThemedDonut',
+  title: 'Components/Charts/Radial/ThemedDonut',
   component: ThemedDonut,
   tags: ['autodocs'],
   decorators: [withSize(220, 200)],
@@ -22,10 +23,10 @@ const meta = {
     size: 180,
     centerLabel: 'Visits',
     segments: [
-      { label: 'General', value: 420, color: '#2563EB' },
-      { label: 'Dental', value: 180, color: '#16A34A' },
-      { label: 'Pediatric', value: 140, color: '#F59E0B' },
-      { label: 'Dermatology', value: 90, color: '#EF4444' },
+      { label: 'General', value: 420, color: colors.active.shade600 },
+      { label: 'Dental', value: 180, color: colors.active.shade400 },
+      { label: 'Pediatric', value: 140, color: colors.secondary500 },
+      { label: 'Dermatology', value: 90, color: colors.active.shade700 },
     ],
   },
 } satisfies Meta<typeof ThemedDonut>;
@@ -41,9 +42,9 @@ export const PaymentMix: Story = {
     centerLabel: 'Collected',
     centerValue: '₹4.2L',
     segments: [
-      { label: 'UPI', value: 220, color: '#7C3AED' },
-      { label: 'Cash', value: 130, color: '#0891B2' },
-      { label: 'Card', value: 90, color: '#DB2777' },
+      { label: 'UPI', value: 220, color: colors.active.shade600 },
+      { label: 'Cash', value: 130, color: colors.secondary500 },
+      { label: 'Card', value: 90, color: colors.active.shade400 },
     ],
   },
 };

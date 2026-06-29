@@ -133,20 +133,27 @@ export function useChat(currentUserId: string) {
 
   const loadDmHistory = useCallback(async (partnerId: string) => {
     const token = localStorage.getItem("docodile_token") ?? "";
-    const res = await fetch(`${API_BASE_URL}/api/chat/messages/dm/${partnerId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) return;
-    const msgs: ChatMessage[] = await res.json();
-    setMessages(prev => {
-      const existing = prev.dms[partnerId] ?? [];
-      const restIds = new Set(msgs.map(m => m.id));
-      const wsOnly = existing.filter(m => !restIds.has(m.id));
-      const merged = [...msgs, ...wsOnly].sort(
-        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      );
-      return { ...prev, dms: { ...prev.dms, [partnerId]: merged } };
-    });
+    // Swallow network/parse errors like the other fetches here: a transient
+    // failure on opening a DM (or no backend, e.g. in Storybook) must not throw
+    // an unhandled rejection that crashes the panel — the live WS still feeds it.
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/chat/messages/dm/${partnerId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const msgs: ChatMessage[] = await res.json();
+      setMessages(prev => {
+        const existing = prev.dms[partnerId] ?? [];
+        const restIds = new Set(msgs.map(m => m.id));
+        const wsOnly = existing.filter(m => !restIds.has(m.id));
+        const merged = [...msgs, ...wsOnly].sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+        return { ...prev, dms: { ...prev.dms, [partnerId]: merged } };
+      });
+    } catch {
+      /* offline / no backend — keep whatever the websocket has delivered */
+    }
   }, []);
 
   const markSeen = useCallback((conversationKey: string) => {

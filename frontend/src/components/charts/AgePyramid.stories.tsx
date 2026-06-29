@@ -3,7 +3,7 @@ import { AgePyramid } from './index';
 import { withSize } from '../../sb/decorators';
 
 const meta = {
-  title: 'Components/Charts/AgePyramid',
+  title: 'Components/Charts/Comparison/AgePyramid',
   component: AgePyramid,
   tags: ['autodocs'],
   decorators: [withSize(440, 220)],

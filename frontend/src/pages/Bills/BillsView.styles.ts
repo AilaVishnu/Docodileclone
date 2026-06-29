@@ -29,7 +29,8 @@ export const styles: Record<string, CSSProperties> = {
   // convention: a plain medium label, and the value in the secondary serif
   // display font (no bold) — not semibold sans.
   kpis: { display: "flex", gap: spacing.m },
-  kpiLabel: { fontSize: fonts.size.s, fontWeight: fonts.weight.regular, color: colors.neutral500 },
+  // Darker + medium weight so it stays legible on the warm-tan KPI fill (AA).
+  kpiLabel: { fontSize: fonts.size.s, fontWeight: fonts.weight.medium, color: colors.neutral700 },
   kpiValue: { fontFamily: fonts.family.secondary, fontSize: fonts.size.h4, lineHeight: 1.1, color: colors.neutral900 },
 
   // Toolbar — search + status Tabs (left), period DateRangeDropdown (right).
@@ -46,4 +47,8 @@ export const styles: Record<string, CSSProperties> = {
   actions: { display: "flex", alignItems: "center", justifyContent: "flex-end", gap: spacing.xs },
   invCell: { display: "flex", flexDirection: "column", gap: 2 },
   emptyWrap: { padding: "48px 8px", textAlign: "center", color: colors.neutral500, fontSize: fonts.size.s },
+
+  // Grid view — responsive receipt tiles; rows stay top-aligned (tiles vary in
+  // height with their content).
+  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: spacing.m, alignItems: "start" },
 };

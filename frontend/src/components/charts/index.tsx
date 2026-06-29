@@ -181,7 +181,8 @@ export function ThemedDonut({
             nameKey="label"
             innerRadius={inner}
             outerRadius={outer}
-            paddingAngle={2}
+            paddingAngle={3}
+            cornerRadius={Math.max(3, Math.round(size * 0.03))}
             stroke="none"
             isAnimationActive={false}
             onMouseEnter={(_, idx) => setActiveIdx(idx)}
@@ -302,7 +303,7 @@ export function RadialStacked({
           margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
         >
           <PolarAngleAxis type="number" domain={[0, maxTotal]} tick={false} />
-          {segments.map((s) => (
+          {segments.map((s, i) => (
             <RadialBar
               key={s.key}
               dataKey={s.key}
@@ -311,6 +312,9 @@ export function RadialStacked({
               fill={s.color}
               stroke={colors.neutral100}
               strokeWidth={2}
+              // A faint track on the first bar shows the unfilled remainder, so
+              // it reads as "score out of max" — pairs with RadialScore.
+              background={i === 0 ? { fill: colors.neutral150 } : undefined}
             />
           ))}
           <Tooltip
@@ -367,33 +371,37 @@ export function RadialScore({
   score,
   size = 180,
   color,
-  trackColor = colors.primary100,
+  trackColor = colors.neutral200,
 }: {
   score: number;
   size?: number;
   color: string;
   trackColor?: string;
 }) {
-  const data = [{ name: "score", value: score, fill: color }];
+  // Flat solid-ring gauge: a single solid score arc (rounded cap) over a flat
+  // track. No gradients/glow — solid theme fills only. Starts at 12 o'clock.
+  const cx = size / 2;
+  const cy = size / 2;
+  const sw = Math.max(8, Math.round(size * 0.068)); // ring thickness
+  const r = size / 2 - sw / 2 - 1;
+  const circ = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(100, score)) / 100;
   return (
     <div style={{ position: "relative", width: size, height: size }}>
-      <ResponsiveContainer width={size} height={size}>
-        <RadialBarChart
-          innerRadius="74%"
-          outerRadius="100%"
-          startAngle={90}
-          endAngle={90 - 360}
-          data={data}
-        >
-          <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-          <RadialBar
-            dataKey="value"
-            cornerRadius={size / 2}
-            background={{ fill: trackColor }}
-            isAnimationActive
-          />
-        </RadialBarChart>
-      </ResponsiveContainer>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke={trackColor} strokeWidth={sw} />
+        <circle
+          cx={cx}
+          cy={cy}
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth={sw}
+          strokeLinecap="round"
+          strokeDasharray={`${pct * circ} ${circ}`}
+          transform={`rotate(-90 ${cx} ${cy})`}
+        />
+      </svg>
       <div
         style={{
           position: "absolute",

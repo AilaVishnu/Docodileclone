@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { RadialStacked } from './index';
 import { withSize } from '../../sb/decorators';
+import { colors } from '../../styles/theme';
 
 const meta = {
-  title: 'Components/Charts/RadialStacked',
+  title: 'Components/Charts/Radial/RadialStacked',
   component: RadialStacked,
   tags: ['autodocs'],
   decorators: [withSize(240, 220)],
@@ -21,9 +22,9 @@ const meta = {
     centerValue: '86',
     centerLabel: 'In queue',
     segments: [
-      { key: 'waiting', value: 42, color: '#F59E0B', label: 'Waiting' },
-      { key: 'inProgress', value: 28, color: '#2563EB', label: 'In progress' },
-      { key: 'done', value: 16, color: '#16A34A', label: 'Done' },
+      { key: 'waiting', value: 42, color: colors.active.shade400, label: 'Waiting' },
+      { key: 'inProgress', value: 28, color: colors.active.shade600, label: 'In progress' },
+      { key: 'done', value: 16, color: colors.secondary500, label: 'Done' },
     ],
   },
 } satisfies Meta<typeof RadialStacked>;

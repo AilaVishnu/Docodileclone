@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Docodile — The clinic operating system for modern Indian practices</title>
+<meta name="description" content="Docodile is a multi-tenant Electronic Medical Records and clinic operations platform built for small and mid-sized clinics in India." />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          /* Docodile primary palette (from styles/theme.ts) */
+          p100: '#F9F9ED', p200: '#F3F3DC', p300: '#EDDFBA', p400: '#EDCA99',
+          p500: '#ECA66D', p600: '#E48647', p700: '#CF6F2F', p800: '#AE561A',
+          /* Secondary (green) */
+          s100: '#E3EAD7', s200: '#C8D4B0', s300: '#ACBF88', s400: '#98B06C',
+          s500: '#849D54', s600: '#6C8145', s700: '#556536',
+          /* Neutrals */
+          n100:'#FFFFFF', n150:'#F5F5F5', n200:'#E3E3E3', n300:'#C7C7C7',
+          n400:'#ABABAB', n500:'#8F8F8F', n600:'#747474', n700:'#585858',
+          n800:'#3C3C3C', n900:'#202020', n1000:'#040404',
+          ink: '#202020',
+          paper: '#FFFDF7',
+          line: '#EDDFBA',
+        },
+        fontFamily: {
+          sans:    ['Inter', 'ui-sans-serif', 'system-ui'],
+          serif:   ['"Libertinus Serif"', '"Source Serif Pro"', 'Georgia', 'serif'],
+        }
+      }
+    }
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Libertinus+Serif:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; min-height: 100vh; color: #202020;
+    font-family: 'Inter', ui-sans-serif, system-ui;
+    background: linear-gradient(180deg, #F9F9ED 0%, #FFD0BF 100%);
+  }
+  .serif { font-family: 'Libertinus Serif', 'Source Serif Pro', Georgia, serif; }
+  .display { font-family: 'Libertinus Serif', 'Source Serif Pro', Georgia, serif; font-weight: 400; letter-spacing: -0.01em; line-height: 1.05; }
+  .pill {
+    display: inline-flex; align-items: center; gap: .5rem;
+    border-radius: 9999px; padding: .35rem .85rem;
+    background: #F3F3DC; color: #AE561A; font-size: .72rem;
+    font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+  }
+  .pill::before { content:""; width:8px; height:8px; border-radius:9999px; background:#CF6F2F; }
+  .btn-primary {
+    background: #E48647; color: #fff; font-weight: 600;
+    border-radius: 9999px; padding: .7rem 1.25rem;
+    box-shadow: 0 1px 0 rgba(0,0,0,.04);
+    transition: background .15s ease, transform .15s ease;
+  }
+  .btn-primary:hover { background: #CF6F2F; transform: translateY(-1px); }
+  .btn-ghost {
+    border-radius: 9999px; padding: .7rem 1.25rem; font-weight: 500;
+    color: #202020; border: 1px solid #EDDFBA; background: #FFFDF7;
+  }
+  .btn-ghost:hover { border-color: #ECA66D; }
+  .card { background: #FFFDF7; border: 1px solid #EDDFBA; border-radius: 1.25rem; }
+  .soft { box-shadow: 0 1px 0 rgba(0,0,0,.02), 0 18px 50px -22px rgba(174,86,26,.22); }
+  .dot-bg {
+    background-image: radial-gradient(rgba(174,86,26,.18) 1px, transparent 1.2px);
+    background-size: 14px 14px;
+  }
+  .marquee { display: flex; gap: 4rem; animation: scroll 40s linear infinite; }
+  @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  .tab-active { background: #F9F9ED; border-color:#ECA66D; color:#AE561A; }
+  details > summary { list-style:none; }
+  details > summary::-webkit-details-marker { display:none; }
+  /* Sticky note shape */
+  .sticky {
+    position: relative; padding: 14px 14px 16px; border-radius: 4px;
+    box-shadow: 0 6px 16px -8px rgba(0,0,0,.18);
+  }
+  .sticky::after {
+    content:""; position:absolute; right:0; bottom:0; width:18px; height:18px;
+    background: linear-gradient(135deg, transparent 50%, rgba(0,0,0,.08) 50%);
+    border-bottom-right-radius: 4px;
+  }
+  .pin {
+    position:absolute; top:-6px; left:50%; transform:translateX(-50%);
+    width:10px; height:10px; border-radius:9999px;
+    box-shadow: 0 0 0 2px rgba(255,255,255,.7), 0 2px 4px rgba(0,0,0,.2);
+  }
+</style>
+</head>
+<body class="antialiased">
+
+<!-- Announce bar -->
+<div class="border-b border-line/60 bg-p200/60">
+  <div class="max-w-6xl mx-auto px-6 py-2 text-center text-xs text-n800">
+    <span class="inline-flex items-center gap-2">
+      <span class="h-1.5 w-1.5 rounded-full bg-p700"></span>
+      Onboarding clinics across India — get 30 days free.
+    </span>
+  </div>
+</div>
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 backdrop-blur bg-p100/80 border-b border-line/60">
+  <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2">
+      <span class="serif text-2xl font-semibold tracking-tight">Docodile</span>
+      <span class="h-2 w-2 rounded-full bg-p700 -ml-0.5 mb-1"></span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-sm text-n800">
+      <a href="#features" class="hover:text-ink">Product</a>
+      <a href="#modules" class="hover:text-ink">Modules</a>
+      <a href="#pricing" class="hover:text-ink">Pricing</a>
+      <a href="#faq" class="hover:text-ink">FAQ</a>
+    </nav>
+    <div class="flex items-center gap-3">
+      <a href="#contact" class="hidden sm:inline text-sm text-n800 hover:text-ink">Login</a>
+      <a href="#contact" class="btn-primary text-sm">Try for free</a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="relative">
+  <div class="max-w-6xl mx-auto px-6 pt-20 md:pt-28 pb-10 text-center">
+    <span class="pill">The clinic operating system</span>
+    <h1 class="display mt-6 text-5xl sm:text-6xl md:text-7xl lg:text-[6.5rem]">
+      Run your clinic <em class="serif italic text-p700">beautifully.</em>
+    </h1>
+    <p class="mt-6 max-w-2xl mx-auto text-n700 text-lg">
+      Docodile brings appointments, patient records, prescriptions, pharmacy and analytics into one warm, calm platform — built for small and mid-sized clinics in India.
+    </p>
+    <div class="mt-8 flex items-center justify-center gap-3 flex-wrap">
+      <a href="#contact" class="btn-primary">Try it free</a>
+      <a href="#contact" class="btn-ghost">Book a demo →</a>
+    </div>
+  </div>
+
+  <!-- The desk — pinboard + computer + clock -->
+  <div class="max-w-6xl mx-auto px-6 pb-20">
+    <div class="card soft overflow-hidden">
+      <!-- Window chrome -->
+      <div class="flex items-center justify-between px-5 py-3 border-b border-line/70 bg-paper">
+        <div class="flex items-center gap-1.5">
+          <span class="h-2.5 w-2.5 rounded-full bg-p500/70"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-p400"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-s300"></span>
+        </div>
+        <span class="text-xs text-n600">app.docodile.in / today</span>
+        <span class="text-xs text-n600">Dr. Mehta</span>
+      </div>
+
+      <div class="grid md:grid-cols-12 gap-0">
+        <!-- Sidebar mock -->
+        <aside class="md:col-span-3 border-r border-line/70 bg-p200/40 p-4 text-sm">
+          <div class="px-3 py-2 rounded-lg bg-p300/60 text-ink font-medium flex items-center gap-2">🏠 Home</div>
+          <div class="px-3 py-2 rounded-lg text-n700 hover:bg-p100 flex items-center gap-2">📅 Appointments</div>
+          <div class="px-3 py-2 rounded-lg text-n700 hover:bg-p100 flex items-center gap-2">📝 Prescription</div>
+          <div class="px-3 py-2 rounded-lg text-n700 hover:bg-p100 flex items-center gap-2">📁 Patient Files</div>
+          <div class="px-3 py-2 rounded-lg text-n700 hover:bg-p100 flex items-center gap-2">🩺 Services</div>
+          <div class="px-3 py-2 rounded-lg text-n700 hover:bg-p100 flex items-center gap-2">🧾 Billing</div>
+          <div class="px-3 py-2 rounded-lg text-n700 hover:bg-p100 flex items-center gap-2">📊 Business</div>
+          <div class="px-3 py-2 rounded-lg text-n700 hover:bg-p100 flex items-center gap-2">💊 Pharmacy</div>
+        </aside>
+
+        <!-- Desk area -->
+        <div class="md:col-span-9 relative p-6 md:p-8">
+          <h2 class="text-center serif text-2xl md:text-3xl">Hello, Admin <span aria-hidden>👋</span></h2>
+
+          <!-- Pinboard -->
+          <div class="relative mt-6 rounded-2xl border-4 border-p300 bg-paper p-6 dot-bg">
+            <div class="grid grid-cols-2 gap-6">
+              <div class="sticky bg-[#E1DCF2]" style="transform:rotate(-2deg);">
+                <span class="pin bg-[#D03A4B]"></span>
+                <div class="serif italic text-xs text-n600">05 May</div>
+                <div class="mt-2 font-medium text-sm leading-snug">Have to pay clinic rent by this saturday</div>
+              </div>
+              <div class="sticky bg-[#D9E5DC]" style="transform:rotate(2deg);">
+                <span class="pin bg-[#E1B400]"></span>
+                <div class="serif italic text-xs text-n600">06 May</div>
+                <div class="mt-2 text-sm text-n700 italic">Type your thoughts...</div>
+              </div>
+            </div>
+            <button class="absolute -bottom-4 right-6 w-10 h-10 rounded-full bg-p600 text-white text-xl flex items-center justify-center shadow-md">+</button>
+          </div>
+
+          <!-- Computer + clock -->
+          <div class="mt-10 grid grid-cols-12 items-end gap-4">
+            <!-- Paper stack -->
+            <div class="col-span-2 hidden md:block">
+              <div class="space-y-[2px]">
+                <div class="h-1.5 bg-white border border-line/80"></div>
+                <div class="h-1.5 bg-white border border-line/80"></div>
+                <div class="h-1.5 bg-white border border-line/80"></div>
+                <div class="h-1.5 bg-white border border-line/80"></div>
+                <div class="h-1.5 bg-white border border-line/80"></div>
+                <div class="h-1.5 bg-white border border-line/80"></div>
+                <div class="h-1.5 bg-white border border-line/80"></div>
+                <div class="h-1.5 bg-white border border-line/80"></div>
+              </div>
+            </div>
+
+            <!-- Computer SVG -->
+            <div class="col-span-12 md:col-span-7 relative">
+              <svg viewBox="0 0 456 340" class="w-full h-auto block" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                <path d="M398.281 12C398.281 5.3726 392.909 0 386.281 0H12.0006C5.3732 0 0.000610352 5.37258 0.000610352 12V259.175C0.000610352 265.803 5.3732 271.175 12.0006 271.175H386.281C392.909 271.175 398.281 265.803 398.281 259.175V12Z" fill="#EECB99"/>
+                <path d="M398.281 12C398.281 5.3726 392.909 0 386.281 0H70.0349C63.4075 0 58.0349 5.37258 58.0349 12V259.175C58.0349 265.803 63.4075 271.175 70.0349 271.175H386.281C392.909 271.175 398.281 265.803 398.281 259.175V12Z" fill="#EDDFBA"/>
+                <rect width="92.9593" height="68.624" transform="matrix(-1 0 0 1 245.625 271.175)" fill="#EECB99"/>
+                <rect width="79.414" height="68.624" transform="matrix(-1 0 0 1 245.625 271.175)" fill="#EDDFBA"/>
+                <path d="M435.763 294.367C434.816 292.166 432.649 290.74 430.253 290.74H35.9209L57.0475 339.799H455.328L435.763 294.367Z" fill="#EDDFBA"/>
+                <path d="M35.9202 290.74L57.0469 339.799H35.9202V290.74Z" fill="#EECB99"/>
+                <path d="M385.414 26.97C385.414 20.342 380.041 14.97 373.414 14.97H85.94C79.313 14.97 73.94 20.342 73.94 26.97V237.77C73.94 244.398 79.313 249.77 85.94 249.77H373.414C380.041 249.77 385.414 244.398 385.414 237.77V26.97Z" fill="white"/>
+              </svg>
+              <!-- Screen overlay -->
+              <div class="absolute" style="left:16.2%; top:4.4%; width:68.3%; height:69%;">
+                <div class="h-full p-[10%] flex flex-col justify-center gap-[6%] font-mono text-[10px] md:text-[12px] text-n900">
+                  <div class="flex items-baseline gap-1.5"><span>Total Appointments</span><span class="flex-1 border-b border-dotted border-n400"></span><span class="font-bold">13</span></div>
+                  <div class="flex items-baseline gap-1.5"><span>New Patients</span><span class="flex-1 border-b border-dotted border-n400"></span><span class="font-bold">10</span></div>
+                  <div class="flex items-baseline gap-1.5"><span>Reviews</span><span class="flex-1 border-b border-dotted border-n400"></span><span class="font-bold">2</span></div>
+                  <div class="flex items-baseline gap-1.5"><span>Procedures</span><span class="flex-1 border-b border-dotted border-n400"></span><span class="font-bold">1</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Clock -->
+            <div class="col-span-3 hidden md:flex justify-center">
+              <div class="relative w-32 h-40">
+                <svg viewBox="0 0 140 167" class="w-full h-full block" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                  <path d="M85.1992 1.66506C80.2788 0.574958 75.1637 0 69.9136 0C64.6636 0 59.5483 0.574958 54.6279 1.66506C24.8339 8.26601 2.18347 33.7564 0 64.8664V74.7447V167H140V69.8056C140 36.482 116.556 8.61215 85.1992 1.66506Z" fill="#EDDFBA"/>
+                  <ellipse cx="69.9137" cy="69.8057" rx="62.4195" ry="62.1694" fill="#F9F9ED"/>
+                  <!-- ticks -->
+                  <g stroke="#CF6F2F" stroke-width="2" stroke-linecap="round">
+                    <line x1="70" y1="14" x2="70" y2="22"/>
+                    <line x1="126" y1="70" x2="118" y2="70"/>
+                    <line x1="70" y1="126" x2="70" y2="118"/>
+                    <line x1="14" y1="70" x2="22" y2="70"/>
+                  </g>
+                  <!-- hands -->
+                  <line x1="70" y1="70" x2="70" y2="32" stroke="#202020" stroke-width="3" stroke-linecap="round"/>
+                  <line x1="70" y1="70" x2="100" y2="80" stroke="#202020" stroke-width="2.5" stroke-linecap="round"/>
+                  <circle cx="70" cy="70" r="3" fill="#202020"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Desk band -->
+          <div class="absolute left-0 right-0 -bottom-px h-6 bg-p400"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Logos -->
+<section class="py-10 border-y border-line/60 bg-p100/70">
+  <div class="max-w-6xl mx-auto px-6">
+    <p class="text-center text-xs uppercase tracking-[0.22em] text-n600">Trusted by clinics across India</p>
+    <div class="mt-6 overflow-hidden">
+      <div class="marquee whitespace-nowrap text-2xl text-n500 serif italic">
+        <div class="flex gap-16 px-8">
+          <span>SunriseCare</span><span>Asha Clinic</span><span>Medora Health</span><span>NovaCare</span><span>Vaidya+</span><span>BlueLeaf</span><span>OrchidMed</span>
+        </div>
+        <div class="flex gap-16 px-8" aria-hidden="true">
+          <span>SunriseCare</span><span>Asha Clinic</span><span>Medora Health</span><span>NovaCare</span><span>Vaidya+</span><span>BlueLeaf</span><span>OrchidMed</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT IT DOES -->
+<section id="features" class="py-24">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center max-w-2xl mx-auto">
+      <span class="pill">What Docodile does</span>
+      <h2 class="display mt-5 text-4xl md:text-6xl">Your clinic, always on.</h2>
+      <p class="mt-4 text-n700">From the front desk to the pharmacy, Docodile keeps every part of your day moving — quietly in the background.</p>
+    </div>
+
+    <div class="mt-14 grid md:grid-cols-2 gap-6">
+      <!-- Feature 1: insights chart -->
+      <div class="card soft p-7">
+        <div class="rounded-xl p-5 bg-p200/70 border border-line/60">
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-n700">Footfall this quarter</div>
+            <span class="text-[10px] rounded-full bg-paper px-2 py-0.5 border border-line">+8 pts</span>
+          </div>
+          <div class="serif text-4xl mt-2">24%</div>
+          <svg viewBox="0 0 300 90" class="mt-3 w-full h-24">
+            <defs><linearGradient id="g1" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#CF6F2F" stop-opacity=".25"/><stop offset="1" stop-color="#CF6F2F" stop-opacity="0"/></linearGradient></defs>
+            <path d="M0 70 C 30 60, 60 75, 90 65 S 150 35, 180 40 S 240 15, 300 5 L300 90 L0 90 Z" fill="url(#g1)"/>
+            <path d="M0 70 C 30 60, 60 75, 90 65 S 150 35, 180 40 S 240 15, 300 5" stroke="#CF6F2F" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+          <div class="mt-2 flex justify-between text-[10px] text-n600">
+            <span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span>
+          </div>
+        </div>
+        <h3 class="serif text-2xl mt-6">Real-time clinic insights</h3>
+        <p class="mt-2 text-n700 text-sm">Track footfall, revenue and doctor productivity as the day unfolds — no spreadsheets required.</p>
+      </div>
+
+      <!-- Feature 2: paper vs digital -->
+      <div class="card soft p-7">
+        <div class="rounded-xl p-5 border border-line/60" style="background: linear-gradient(135deg,#F9F9ED 0%, #EDDFBA 100%);">
+          <div class="text-xs text-n700">Paper vs Docodile · time per patient</div>
+          <div class="mt-4 grid grid-cols-6 items-end gap-3 h-28">
+            <div class="bg-n400 rounded-t-sm" style="height:80%"></div>
+            <div class="bg-p600 rounded-t-sm" style="height:30%"></div>
+            <div class="bg-n400 rounded-t-sm" style="height:65%"></div>
+            <div class="bg-p600 rounded-t-sm" style="height:25%"></div>
+            <div class="bg-n400 rounded-t-sm" style="height:90%"></div>
+            <div class="bg-p600 rounded-t-sm" style="height:35%"></div>
+          </div>
+          <div class="mt-2 flex gap-4 text-[10px] text-n600">
+            <span class="flex items-center gap-1"><span class="h-2 w-2 bg-n400"></span> Paper</span>
+            <span class="flex items-center gap-1"><span class="h-2 w-2 bg-p600"></span> Docodile</span>
+          </div>
+        </div>
+        <h3 class="serif text-2xl mt-6">Less paperwork, more medicine</h3>
+        <p class="mt-2 text-n700 text-sm">Doctors spend up to 60% less time on notes and prescriptions, and front desks check patients in with one tap.</p>
+      </div>
+
+      <!-- Feature 3: pharmacy -->
+      <div class="card soft p-7 md:col-span-2">
+        <div class="grid md:grid-cols-2 gap-7 items-center">
+          <div class="rounded-xl p-5 border border-line/60 bg-s100/60">
+            <div class="text-xs text-n700">Pharmacy · stock health</div>
+            <div class="mt-3 grid grid-cols-3 gap-3">
+              <div class="bg-paper rounded-lg p-3 border border-line">
+                <div class="text-xs text-n600">In stock</div>
+                <div class="serif text-2xl">412</div>
+              </div>
+              <div class="bg-paper rounded-lg p-3 border border-line">
+                <div class="text-xs text-n600">Low</div>
+                <div class="serif text-2xl text-p700">14</div>
+              </div>
+              <div class="bg-paper rounded-lg p-3 border border-line">
+                <div class="text-xs text-n600">Expiring</div>
+                <div class="serif text-2xl text-p700">7</div>
+              </div>
+            </div>
+            <div class="mt-3 bg-paper rounded-lg divide-y divide-line text-sm border border-line">
+              <div class="flex items-center justify-between px-3 py-2"><span>Paracetamol 500mg</span><span class="text-xs text-n600">Batch B-2241 · exp Aug</span></div>
+              <div class="flex items-center justify-between px-3 py-2"><span>Amoxicillin 250mg</span><span class="text-xs text-n600">Batch B-1109 · exp Jul</span></div>
+              <div class="flex items-center justify-between px-3 py-2"><span>ORS sachets</span><span class="text-xs text-n600">Low · reorder</span></div>
+            </div>
+          </div>
+          <div>
+            <h3 class="serif text-3xl">Pharmacy that runs itself.</h3>
+            <p class="mt-3 text-n700">Track batches, expiries and reorder points. Stock auto-deducts on dispense and you'll never be caught short of essentials again.</p>
+            <ul class="mt-5 grid grid-cols-2 gap-y-2 text-sm">
+              <li class="flex items-center gap-2"><span class="text-p700">●</span> Batch & expiry tracking</li>
+              <li class="flex items-center gap-2"><span class="text-p700">●</span> Auto-deduct on dispense</li>
+              <li class="flex items-center gap-2"><span class="text-p700">●</span> GST-aware billing</li>
+              <li class="flex items-center gap-2"><span class="text-p700">●</span> Low-stock alerts</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TABBED MODULES -->
+<section id="modules" class="py-24 bg-p100/80 border-y border-line/60">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center max-w-2xl mx-auto">
+      <span class="pill">One platform, every module</span>
+      <h2 class="display mt-5 text-4xl md:text-6xl">A modern clinic stack.</h2>
+      <p class="mt-4 text-n700">Click through the tools your team uses every day.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-5 gap-2 text-sm">
+      <button data-tab="appointments" class="tab-btn tab-active border rounded-xl px-4 py-3 text-left">📅 Appointments</button>
+      <button data-tab="emr" class="tab-btn border border-line rounded-xl px-4 py-3 text-left text-n700 hover:bg-p100">📝 Doctor EMR</button>
+      <button data-tab="pharmacy" class="tab-btn border border-line rounded-xl px-4 py-3 text-left text-n700 hover:bg-p100">💊 Pharmacy</button>
+      <button data-tab="billing" class="tab-btn border border-line rounded-xl px-4 py-3 text-left text-n700 hover:bg-p100">🧾 Billing</button>
+      <button data-tab="analytics" class="tab-btn border border-line rounded-xl px-4 py-3 text-left text-n700 hover:bg-p100">📊 Business</button>
+    </div>
+
+    <div class="mt-6 rounded-2xl p-8 md:p-10 border border-line" style="background: linear-gradient(135deg, #F3F3DC 0%, #EDCA99 100%);">
+      <div id="tab-appointments" class="tab-panel grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h3 class="serif text-3xl md:text-4xl">Smart, calm scheduling.</h3>
+          <p class="mt-3 text-n800">Slot, double-booking and follow-up logic that match how Indian OPDs actually run — with reminders patients won't miss.</p>
+        </div>
+        <div class="card p-4">
+          <div class="text-xs text-n600">Mon · Aug 18</div>
+          <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
+            <div class="bg-s200 rounded-md p-2">10:00 · Aarav</div>
+            <div class="bg-p300 rounded-md p-2">10:30 · Priya</div>
+            <div class="bg-p200 rounded-md p-2">11:00 · Open</div>
+            <div class="bg-s200 rounded-md p-2">11:30 · Rohan</div>
+            <div class="bg-p300 rounded-md p-2">12:00 · Sneha</div>
+            <div class="bg-p200 rounded-md p-2">12:30 · Open</div>
+          </div>
+        </div>
+      </div>
+      <div id="tab-emr" class="tab-panel hidden grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h3 class="serif text-3xl md:text-4xl">EMR that doctors actually use.</h3>
+          <p class="mt-3 text-n800">Templated notes, vitals and digital prescriptions — fast on a tablet, fast on a desktop, fast even on a slow connection.</p>
+        </div>
+        <div class="card p-4 font-mono text-xs">
+          <div class="text-n600"># Visit · 18 Aug 2026</div>
+          <div class="mt-1">Vitals · BP 120/80 · Pulse 76 · Temp 98.4°F</div>
+          <div class="mt-1">Cx · sore throat 3 days, mild fever</div>
+          <div class="mt-1">Dx · Acute pharyngitis</div>
+          <div class="mt-1">Rx · Amoxicillin 500mg · 1-0-1 · 5d</div>
+        </div>
+      </div>
+      <div id="tab-pharmacy" class="tab-panel hidden grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h3 class="serif text-3xl md:text-4xl">Pharmacy with eyes wide open.</h3>
+          <p class="mt-3 text-n800">Stock that updates itself, expiries you see weeks in advance, and a counter that doesn't slow at peak hours.</p>
+        </div>
+        <div class="card p-4 text-sm">
+          <div class="flex items-center justify-between"><span>Paracetamol 500</span><span class="text-s700">in stock</span></div>
+          <div class="flex items-center justify-between mt-1"><span>Amoxicillin 250</span><span class="text-p700">low</span></div>
+          <div class="flex items-center justify-between mt-1"><span>ORS sachets</span><span class="text-p700">expiring</span></div>
+        </div>
+      </div>
+      <div id="tab-billing" class="tab-panel hidden grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h3 class="serif text-3xl md:text-4xl">Billing without the back-and-forth.</h3>
+          <p class="mt-3 text-n800">GST-aware invoices, UPI-ready payments and clean ledgers your CA will quietly thank you for.</p>
+        </div>
+        <div class="card p-4 text-sm">
+          <div class="flex justify-between"><span>Consultation</span><span>₹500</span></div>
+          <div class="flex justify-between mt-1"><span>Lab · CBC</span><span>₹350</span></div>
+          <div class="flex justify-between mt-1"><span>GST 5%</span><span>₹42.50</span></div>
+          <div class="flex justify-between mt-2 pt-2 border-t border-line font-semibold"><span>Total</span><span>₹892.50</span></div>
+        </div>
+      </div>
+      <div id="tab-analytics" class="tab-panel hidden grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h3 class="serif text-3xl md:text-4xl">Your clinic in one chart.</h3>
+          <p class="mt-3 text-n800">Footfall, revenue, doctor performance and inventory turnover — all on one screen, every morning.</p>
+        </div>
+        <div class="card p-4">
+          <svg viewBox="0 0 300 100" class="w-full h-28">
+            <path d="M0 80 C 30 70, 60 60, 90 65 S 150 30, 180 25 S 240 50, 300 20" stroke="#CF6F2F" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          </svg>
+          <div class="grid grid-cols-3 text-center text-xs mt-2">
+            <div><div class="serif text-xl">2.1K</div><div class="text-n600">Visits</div></div>
+            <div><div class="serif text-xl">₹12L</div><div class="text-n600">Revenue</div></div>
+            <div><div class="serif text-xl">96%</div><div class="text-n600">Show-up</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INTEGRATIONS -->
+<section class="py-24">
+  <div class="max-w-6xl mx-auto px-6 text-center">
+    <span class="pill">Integrations</span>
+    <h2 class="display mt-5 text-4xl md:text-6xl">Connects to what you already use.</h2>
+    <p class="mt-4 text-n700 max-w-xl mx-auto">From WhatsApp reminders to UPI payments and lab partners — Docodile plays well with the tools your clinic already runs on.</p>
+
+    <div class="mt-12 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+      <div class="card p-5 flex items-center justify-center aspect-square text-sm font-medium">WhatsApp</div>
+      <div class="card p-5 flex items-center justify-center aspect-square text-sm font-medium">Razorpay</div>
+      <div class="card p-5 flex items-center justify-center aspect-square text-sm font-medium" style="background:#F3F3DC;">UPI</div>
+      <div class="card p-5 flex items-center justify-center aspect-square text-sm font-medium">SMS Gateway</div>
+      <div class="card p-5 flex items-center justify-center aspect-square text-sm font-medium">Tally</div>
+      <div class="card p-5 flex items-center justify-center aspect-square text-sm font-medium" style="background:#EDDFBA;">Zoho</div>
+      <div class="card p-5 flex items-center justify-center aspect-square text-sm font-medium">Google Cal</div>
+      <div class="card p-5 flex items-center justify-center aspect-square text-sm font-medium">Practo</div>
+      <div class="card p-5 flex items-center justify-center aspect-square text-sm font-medium">Lab API</div>
+      <div class="card p-5 flex items-center justify-center aspect-square text-sm font-medium" style="background:#E3EAD7;">ABDM</div>
+      <div class="card p-5 flex items-center justify-center aspect-square text-sm font-medium">Email</div>
+      <div class="card p-5 flex items-center justify-center aspect-square text-sm font-medium" style="background:#C8D4B0;">+ more</div>
+    </div>
+
+    <a href="#" class="mt-8 inline-flex items-center gap-2 text-sm text-ink hover:underline">See all integrations →</a>
+  </div>
+</section>
+
+<!-- METRICS -->
+<section class="py-20 bg-p100/70 border-y border-line/60">
+  <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-3 gap-10 text-center">
+    <div>
+      <div class="serif text-6xl text-p700">98%</div>
+      <p class="mt-2 text-n700 text-sm">Patients checked in within 90 seconds</p>
+    </div>
+    <div>
+      <div class="serif text-6xl text-p700">2.4×</div>
+      <p class="mt-2 text-n700 text-sm">Faster prescriptions vs paper-based clinics</p>
+    </div>
+    <div>
+      <div class="serif text-6xl text-p700">120+</div>
+      <p class="mt-2 text-n700 text-sm">Clinics across India running on Docodile</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="py-24">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center max-w-2xl mx-auto">
+      <span class="pill">Pricing</span>
+      <h2 class="display mt-5 text-4xl md:text-6xl">Simple. Honest.</h2>
+      <p class="mt-4 text-n700">Start free. Pay only when your clinic grows. No setup fees.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-3 gap-6">
+      <div class="card p-7">
+        <div class="text-sm font-semibold text-p700">Solo</div>
+        <div class="serif text-5xl mt-2">₹0<span class="text-base text-n600">/mo</span></div>
+        <p class="mt-2 text-sm text-n700">For single-doctor clinics getting started.</p>
+        <ul class="mt-6 space-y-2 text-sm">
+          <li>✓ Up to 100 patients</li>
+          <li>✓ Appointments & EMR</li>
+          <li>✓ Email support</li>
+        </ul>
+        <a href="#contact" class="mt-7 inline-flex w-full justify-center btn-ghost">Get started</a>
+      </div>
+      <div class="card p-7 relative" style="background:linear-gradient(180deg,#F9F9ED 0%, #EDDFBA 100%); border-color:#ECA66D;">
+        <span class="absolute -top-3 left-6 text-[10px] uppercase tracking-widest bg-p600 text-white px-2 py-1 rounded-full">Most popular</span>
+        <div class="text-sm font-semibold text-p700">Clinic</div>
+        <div class="serif text-5xl mt-2">₹2,499<span class="text-base text-n600">/mo</span></div>
+        <p class="mt-2 text-sm text-n700">For growing clinics with a small team.</p>
+        <ul class="mt-6 space-y-2 text-sm">
+          <li>✓ Unlimited patients</li>
+          <li>✓ Pharmacy & inventory</li>
+          <li>✓ Roles & permissions</li>
+          <li>✓ Priority support</li>
+        </ul>
+        <a href="#contact" class="mt-7 inline-flex w-full justify-center btn-primary">Start free trial</a>
+      </div>
+      <div class="card p-7">
+        <div class="text-sm font-semibold text-p700">Network</div>
+        <div class="serif text-5xl mt-2">Custom</div>
+        <p class="mt-2 text-sm text-n700">For multi-location clinics and chains.</p>
+        <ul class="mt-6 space-y-2 text-sm">
+          <li>✓ Multi-branch analytics</li>
+          <li>✓ SSO & audit logs</li>
+          <li>✓ Dedicated onboarding</li>
+        </ul>
+        <a href="#contact" class="mt-7 inline-flex w-full justify-center btn-ghost">Talk to us</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="py-24 bg-p100/80 border-y border-line/60">
+  <div class="max-w-3xl mx-auto px-6">
+    <div class="text-center">
+      <span class="pill">FAQ</span>
+      <h2 class="display mt-5 text-4xl md:text-6xl">Questions, answered.</h2>
+    </div>
+    <div class="mt-10 divide-y divide-line border border-line rounded-2xl overflow-hidden bg-paper">
+      <details class="group p-6" open>
+        <summary class="flex cursor-pointer items-center justify-between font-medium">
+          Is Docodile compliant with Indian healthcare practices?
+          <span class="text-p700 transition group-open:rotate-45 text-2xl leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-n700 text-sm">Yes — Docodile is built around Indian OPD workflows: digital prescriptions, GST-aware billing, ABDM-ready records and bilingual patient cards.</p>
+      </details>
+      <details class="group p-6">
+        <summary class="flex cursor-pointer items-center justify-between font-medium">
+          How is patient data protected?
+          <span class="text-p700 transition group-open:rotate-45 text-2xl leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-n700 text-sm">Each clinic's data is logically isolated. We use JWT-based auth, role-based access, encrypted database connections and full audit trails.</p>
+      </details>
+      <details class="group p-6">
+        <summary class="flex cursor-pointer items-center justify-between font-medium">
+          Can we migrate from our current system?
+          <span class="text-p700 transition group-open:rotate-45 text-2xl leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-n700 text-sm">Yes. We help import patient lists, history and inventory from spreadsheets or your existing software during onboarding.</p>
+      </details>
+      <details class="group p-6">
+        <summary class="flex cursor-pointer items-center justify-between font-medium">
+          Does it work in low-bandwidth areas?
+          <span class="text-p700 transition group-open:rotate-45 text-2xl leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-n700 text-sm">Docodile is optimised for poor networks and gracefully handles intermittent connectivity, queueing local changes when needed.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="contact" class="py-24">
+  <div class="max-w-5xl mx-auto px-6">
+    <div class="rounded-3xl p-10 md:p-16 relative overflow-hidden text-center border border-line" style="background:linear-gradient(135deg,#EDDFBA 0%, #FFD0BF 100%);">
+      <h2 class="display text-4xl md:text-6xl">Run your clinic on Docodile.</h2>
+      <p class="mt-4 text-n800 max-w-xl mx-auto">A 20-minute demo is usually enough to see how much smoother your day could be. We'll help you migrate, free.</p>
+      <form class="mt-8 flex flex-col sm:flex-row gap-3 max-w-lg mx-auto" onsubmit="event.preventDefault(); alert('Thanks! We\'ll be in touch.');">
+        <input required type="email" placeholder="you@clinic.in" class="flex-1 rounded-full px-5 py-3 bg-paper border border-line focus:outline-none focus:ring-2 focus:ring-p500" />
+        <button class="btn-primary whitespace-nowrap">Book a demo</button>
+      </form>
+      <p class="mt-3 text-xs text-n600">Free 30-day trial. No credit card.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t border-line/60 py-12 bg-p100/70">
+  <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-4 gap-10 text-sm">
+    <div>
+      <a href="#" class="flex items-center gap-2">
+        <span class="serif text-2xl font-semibold tracking-tight">Docodile</span>
+        <span class="h-2 w-2 rounded-full bg-p700 -ml-0.5 mb-1"></span>
+      </a>
+      <p class="mt-3 text-n700">The clinic operating system for modern Indian practices.</p>
+    </div>
+    <div>
+      <div class="font-semibold">Product</div>
+      <ul class="mt-3 space-y-2 text-n700">
+        <li><a href="#features" class="hover:text-ink">Features</a></li>
+        <li><a href="#modules" class="hover:text-ink">Modules</a></li>
+        <li><a href="#pricing" class="hover:text-ink">Pricing</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="font-semibold">Company</div>
+      <ul class="mt-3 space-y-2 text-n700">
+        <li><a href="#" class="hover:text-ink">About</a></li>
+        <li><a href="#" class="hover:text-ink">Careers</a></li>
+        <li><a href="mailto:hello@docodile.in" class="hover:text-ink">Contact</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="font-semibold">Legal</div>
+      <ul class="mt-3 space-y-2 text-n700">
+        <li><a href="#" class="hover:text-ink">Privacy</a></li>
+        <li><a href="#" class="hover:text-ink">Terms</a></li>
+        <li><a href="#" class="hover:text-ink">DPA</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="max-w-6xl mx-auto px-6 mt-10 text-xs text-n600 flex justify-between">
+    <span>© <span id="yr"></span> Docodile</span>
+    <span>Made in India</span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('yr').textContent = new Date().getFullYear();
+  const tabs = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('.tab-panel');
+  tabs.forEach(btn => btn.addEventListener('click', () => {
+    tabs.forEach(b => b.classList.remove('tab-active'));
+    btn.classList.add('tab-active');
+    panels.forEach(p => p.classList.add('hidden'));
+    const panel = document.getElementById('tab-' + btn.dataset.tab);
+    if (panel) panel.classList.remove('hidden');
+  }));
+</script>
+</body>
+</html>

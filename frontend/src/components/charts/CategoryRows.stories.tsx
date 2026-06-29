@@ -3,7 +3,7 @@ import { CategoryRows } from './index';
 import { withSize } from '../../sb/decorators';
 
 const meta = {
-  title: 'Components/Charts/CategoryRows',
+  title: 'Components/Charts/Comparison/CategoryRows',
   component: CategoryRows,
   tags: ['autodocs'],
   decorators: [withSize(360, 90)],

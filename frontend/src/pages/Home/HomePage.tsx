@@ -8,6 +8,7 @@ import { StatsPage } from "../Stats";
 import { PharmacyView } from "../Pharmacy";
 import { BillsView } from "../Bills";
 import { sampleBills } from "../Bills/sampleBills";
+import { DocsView } from "../Docs/DocsView";
 import { SettingsPage, DEFAULT_SETTINGS_SECTION, SettingsSection } from "../Settings";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
@@ -316,6 +317,8 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
         return <StatsPage />;
       case "Pharmacy":
         return <PharmacyView />;
+      case "Docs":
+        return <DocsView />;
       case "Settings":
         return <SettingsPage section={settingsSection} />;
       case "Billing":

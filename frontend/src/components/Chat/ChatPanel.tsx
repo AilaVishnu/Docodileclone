@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import { ChatMessage, useChat } from "../../hooks/useChat";
 import { IconButton } from "../IconButton";
+import { Croc } from "./Croc";
 import { chatWithAssistant, AIChatTurn } from "../../api/ai";
 
 type Props = {
@@ -200,11 +201,11 @@ export function ChatPanel({ currentUserId, currentUserName, onUnreadChange, onCl
       <div style={styles.sidebar}>
         <div style={styles.listHeader}>Chats</div>
         <ConvItem
-          label="✨ AI Assistant"
+          label="Croc"
           subtitle="Ask about patients, queue, reviews…"
           active={active.type === "ai"}
           unread={0}
-          isGroup
+          avatarNode={<Croc size={32} />}
           onClick={() => { setActive({ type: "ai" }); setViewMode("thread"); }}
         />
         <ConvItem
@@ -265,7 +266,7 @@ export function ChatPanel({ currentUserId, currentUserName, onUnreadChange, onCl
             {active.type === "dm" ? (
               <Avatar name={active.partnerName} size={28} online={onlineIds.has(active.partnerId)} />
             ) : active.type === "ai" ? (
-              <div style={{ ...styles.avatar, width: 28, height: 28, fontSize: 15, backgroundColor: colors.active.shade600 }}>✨</div>
+              <Croc size={28} />
             ) : (
               <div style={{ ...styles.avatar, width: 28, height: 28, fontSize: 13, backgroundColor: colors.active.shade400 }}>
                 #
@@ -273,7 +274,7 @@ export function ChatPanel({ currentUserId, currentUserName, onUnreadChange, onCl
             )}
             <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
               <span style={styles.threadTitle}>
-                {active.type === "group" ? "Clinic" : active.type === "ai" ? "AI Assistant" : active.partnerName}
+                {active.type === "group" ? "Clinic" : active.type === "ai" ? "Croc" : active.partnerName}
               </span>
               {active.type === "dm" && (
                 <span style={styles.threadStatus}>
@@ -450,20 +451,23 @@ export function ChatPanel({ currentUserId, currentUserName, onUnreadChange, onCl
 
 // ── Subcomponents ───────────────────────────────────────────────────────────
 
-function ConvItem({ label, subtitle, time, active, unread, onClick, isGroup, role, online }: {
+function ConvItem({ label, subtitle, time, active, unread, onClick, isGroup, role, online, avatarNode }: {
   label: string; subtitle?: string; time?: string;
   active: boolean; unread: number; onClick: () => void;
-  isGroup?: boolean; role?: string; online?: boolean;
+  isGroup?: boolean; role?: string; online?: boolean; avatarNode?: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
       style={{
         ...styles.convItem,
-        backgroundColor: active ? colors.neutral100 : "transparent",
+        // Selected row gets a soft neutral wash on the white list.
+        backgroundColor: active ? colors.neutral150 : "transparent",
       }}
     >
-      {isGroup ? (
+      {avatarNode ? (
+        avatarNode
+      ) : isGroup ? (
         <div style={{ ...styles.avatar, backgroundColor: colors.active.shade400 }}>#</div>
       ) : (
         <Avatar name={label} online={online} />
@@ -779,11 +783,11 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     flexShrink: 0,
   },
-  // Sidebar uses a warm cream tint (primary200) to separate from the white
-  // thread by color rather than a divider line.
+  // Conversation list shares the white panel surface; neutral ink with a soft
+  // neutral-150 selection wash (the thread view is white too).
   sidebar: {
     flex: 1,
-    backgroundColor: colors.primary200,
+    backgroundColor: colors.neutral100,
     display: "flex",
     flexDirection: "column",
     overflowY: "auto" as const,

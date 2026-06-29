@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { AreaTrend } from './index';
 import { withSize } from '../../sb/decorators';
+import { colors } from '../../styles/theme';
 
 const meta = {
-  title: 'Components/Charts/AreaTrend',
+  title: 'Components/Charts/Trends/AreaTrend',
   component: AreaTrend,
   tags: ['autodocs'],
   decorators: [withSize(480, 200)],
@@ -51,8 +52,8 @@ export const Stacked: Story = {
       { label: 'Sun', walkin: 40, appt: 55 },
     ],
     series: [
-      { key: 'walkin', label: 'Walk-ins', color: '#2563EB' },
-      { key: 'appt', label: 'Appointments', color: '#16A34A' },
+      { key: 'walkin', label: 'Walk-ins', color: colors.active.shade600 },
+      { key: 'appt', label: 'Appointments', color: colors.secondary500 },
     ],
   },
 };

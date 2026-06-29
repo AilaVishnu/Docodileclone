@@ -24,6 +24,8 @@ export type HoursVariant =
   | "agenda"
   | "agendaBars"
   | "agendaChips"
+  | "weekColumns"
+  | "weekHeatRows"
   | "timeline";
 
 const WD = ["M", "T", "W", "T", "F", "S", "S"];
@@ -96,12 +98,14 @@ export function HoursWidget({ variant = "week", now = new Date(), style }: Hours
   const liveNow = isLiveNow(today, now);
 
   return (
-    <Card variant="surface" elevation="raised" padding="s" style={{ ...styles.card, ...style }}>
+    <Card variant="surface" elevation="raised" padding={variant === "week" ? "xs" : "s"} style={{ ...styles.card, ...style }}>
       {variant === "week" && <WeekView state={state} week={week} todayIdx={todayIdx} now={now} liveNow={liveNow} />}
       {variant === "today" && <TodayView today={today} now={now} liveNow={liveNow} state={state} week={week} todayIdx={todayIdx} />}
       {variant === "agenda" && <AgendaView state={state} week={week} todayIdx={todayIdx} liveNow={liveNow} mode="text" />}
       {variant === "agendaBars" && <AgendaView state={state} week={week} todayIdx={todayIdx} liveNow={liveNow} mode="bars" />}
       {variant === "agendaChips" && <AgendaView state={state} week={week} todayIdx={todayIdx} liveNow={liveNow} mode="chips" />}
+      {variant === "weekColumns" && <WeekColumnsView state={state} week={week} todayIdx={todayIdx} liveNow={liveNow} />}
+      {variant === "weekHeatRows" && <WeekHeatRowsView state={state} week={week} todayIdx={todayIdx} liveNow={liveNow} />}
       {variant === "timeline" && <TimelineView today={today} now={now} liveNow={liveNow} />}
     </Card>
   );
@@ -281,7 +285,8 @@ function AgendaView({
               <span
                 style={{
                   ...styles.agendaDay,
-                  color: isToday ? colors.primary700 : colors.neutral700,
+                  // Weekends sit back a touch (neutral500) so the work week reads first.
+                  color: isToday ? colors.primary700 : i >= 5 ? colors.neutral500 : colors.neutral700,
                   fontWeight: isToday ? fonts.weight.semibold : fonts.weight.medium,
                 }}
               >
@@ -292,7 +297,6 @@ function AgendaView({
                   style={{
                     ...styles.agendaHours,
                     color: isToday ? colors.primary700 : off ? colors.neutral400 : colors.neutral800,
-                    fontStyle: off ? "italic" : "normal",
                   }}
                 >
                   {compactDaySummary(day)}
@@ -323,6 +327,125 @@ function AgendaView({
           <span>9p</span>
         </div>
       )}
+    </>
+  );
+}
+
+// ─── Variant: week columns — a flat bar chart of each day's hours ─────────────
+//   Glance the week's shape: tallest = busiest. Today's column is filled
+//   primary600; the rest primary300. Tracks (neutral150) hint each day's slot.
+function WeekColumnsView({
+  state,
+  week,
+  todayIdx,
+  liveNow,
+}: {
+  state: ScheduleState;
+  week: Date[];
+  todayIdx: number;
+  liveNow: boolean;
+}) {
+  const minutes = week.map((d) => dayMinutes(scheduleForDate(state, d)));
+  const max = Math.max(60, ...minutes); // floor the scale at 1h so light days still read
+  const todayDay = scheduleForDate(state, week[todayIdx]);
+  return (
+    <>
+      <Header title="This week" liveNow={liveNow} />
+      <div style={styles.colChart}>
+        {week.map((d, i) => {
+          const isToday = i === todayIdx;
+          const pct = Math.round((minutes[i] / max) * 100);
+          return (
+            <div
+              key={i}
+              style={styles.colItem}
+              title={`${DAY_LABEL[i]} · ${formatDaySummary(scheduleForDate(state, d))}`}
+            >
+              <span style={styles.colTrack}>
+                {minutes[i] > 0 && (
+                  <span
+                    style={{
+                      ...styles.colBar,
+                      height: `${pct}%`,
+                      backgroundColor: isToday ? colors.primary600 : colors.primary300,
+                    }}
+                  />
+                )}
+              </span>
+              <span
+                style={{
+                  ...styles.colLabel,
+                  color: isToday ? colors.primary600 : i >= 5 ? colors.neutral400 : colors.neutral500,
+                  fontWeight: isToday ? fonts.weight.semibold : fonts.weight.medium,
+                }}
+              >
+                {WD[i]}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div style={styles.hours}>
+        <Icon name="clock" size={14} tone="muted" />
+        <span style={styles.hoursLabel}>Today</span>
+        <span style={styles.hoursValue}>{formatDaySummary(todayDay)}</span>
+      </div>
+    </>
+  );
+}
+
+// ─── Variant: week heat rows — the day list as a warm workload heatmap ─────────
+//   Each row's fill = that day's workload (intensityFill ramp); Today carries a
+//   flat accent bar. The week's rhythm reads as a gradient down the card.
+function WeekHeatRowsView({
+  state,
+  week,
+  todayIdx,
+  liveNow,
+}: {
+  state: ScheduleState;
+  week: Date[];
+  todayIdx: number;
+  liveNow: boolean;
+}) {
+  return (
+    <>
+      <Header title="This week" liveNow={liveNow} />
+      <div style={styles.heatList}>
+        {week.map((d, i) => {
+          const day = scheduleForDate(state, d);
+          const isToday = i === todayIdx;
+          const off = day.off || day.sessions.length === 0;
+          return (
+            <div
+              key={i}
+              style={{
+                ...styles.heatRow,
+                backgroundColor: off ? colors.neutral150 : intensityFill(dayMinutes(day)),
+                ...(isToday ? styles.heatToday : null),
+              }}
+            >
+              <span
+                style={{
+                  ...styles.agendaDay,
+                  color: isToday ? colors.primary800 : i >= 5 ? colors.neutral500 : colors.neutral700,
+                  fontWeight: isToday ? fonts.weight.semibold : fonts.weight.medium,
+                }}
+              >
+                {isToday ? "Today" : DAY_LABEL[i]}
+              </span>
+              <span
+                style={{
+                  ...styles.agendaHours,
+                  color: off ? colors.neutral400 : colors.neutral800,
+                }}
+              >
+                {compactDaySummary(day)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </>
   );
 }
@@ -440,10 +563,15 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "flex-start",
     gap: spacing.xs,
-    padding: "3px 8px",
+    padding: "4px 8px",
     borderRadius: radii.s,
   },
-  agendaToday: { backgroundColor: colors.primary100 },
+  // Today is the focal row: tinted fill plus a flat left accent bar (inset
+  // shadow, so it hugs the rounded corner without nudging the content).
+  agendaToday: {
+    backgroundColor: colors.primary100,
+    boxShadow: `inset 3px 0 0 0 ${colors.primary600}`,
+  },
   agendaDot: {
     width: 7,
     height: 7,
@@ -477,6 +605,49 @@ const styles: Record<string, React.CSSProperties> = {
     paddingRight: 6,
     marginTop: 4,
   },
+  // weekColumns — flat bar chart of daily hours
+  colChart: {
+    flex: 1,
+    display: "flex",
+    alignItems: "stretch",
+    justifyContent: "space-between",
+    gap: 6,
+    paddingTop: spacing.xs,
+    minHeight: 0,
+  },
+  colItem: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 5,
+    minWidth: 0,
+  },
+  colTrack: {
+    width: "100%",
+    maxWidth: 18,
+    flex: 1,
+    display: "flex",
+    alignItems: "flex-end",
+    backgroundColor: colors.neutral150,
+    borderRadius: radii.s,
+    overflow: "hidden",
+  },
+  colBar: { width: "100%", borderRadius: radii.s, minHeight: 3 },
+  colLabel: { fontSize: fonts.size.caption, fontFamily: fonts.family.primary },
+
+  // weekHeatRows — tinted workload list
+  heatList: { display: "flex", flexDirection: "column", flex: 1, gap: 2 },
+  heatRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.xs,
+    padding: "5px 8px",
+    borderRadius: radii.s,
+    flex: 1,
+  },
+  heatToday: { boxShadow: `inset 3px 0 0 0 ${colors.primary700}` },
+
   // agendaChips pills
   chipRow: { flex: 1, display: "flex", gap: 4, justifyContent: "flex-end", flexWrap: "wrap" },
   chip: {

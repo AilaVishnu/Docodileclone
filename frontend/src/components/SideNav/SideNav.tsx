@@ -13,6 +13,7 @@ export type NavTab =
   | 'Billing'
   | 'Stats'
   | 'Pharmacy'
+  | 'Docs'
   | 'Settings';
 
 type SideNavProps = {
@@ -70,6 +71,7 @@ export function SideNav({ activeTab, onTabChange }: SideNavProps) {
     { label: 'Billing', display: 'Bills', icon: <Icon name="billing" tone="inherit" /> },
     { label: 'Stats', display: 'Stats', icon: <Icon name="business" tone="inherit" /> },
     { label: 'Pharmacy', display: 'Meds', icon: <Icon name="pill" tone="inherit" /> },
+    { label: 'Docs', display: 'Docs', icon: <Icon name="document-school" tone="inherit" /> },
     { label: 'Settings', display: 'Config', icon: <SettingsIcon /> },
   ];
 

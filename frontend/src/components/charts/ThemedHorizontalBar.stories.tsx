@@ -3,7 +3,7 @@ import { ThemedHorizontalBar } from './index';
 import { withSize } from '../../sb/decorators';
 
 const meta = {
-  title: 'Components/Charts/ThemedHorizontalBar',
+  title: 'Components/Charts/Comparison/ThemedHorizontalBar',
   component: ThemedHorizontalBar,
   tags: ['autodocs'],
   decorators: [withSize(440, 200)],
