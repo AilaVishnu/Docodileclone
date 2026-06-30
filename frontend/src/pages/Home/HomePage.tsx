@@ -7,6 +7,7 @@ import { HomeView } from "./HomeView";
 import { StatsPage } from "../Stats";
 import { PharmacyView } from "../Pharmacy";
 import { BillsView } from "../Bills";
+import { NewBillView } from "../Bills/NewBillView";
 import { sampleBills } from "../Bills/sampleBills";
 import { DocsView } from "../Docs/DocsView";
 import { SettingsPage, DEFAULT_SETTINGS_SECTION, SettingsSection } from "../Settings";
@@ -53,6 +54,7 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [patientFileNavId] = useState<string | null>(null);
   const [showNewRxModal, setShowNewRxModal] = useState(false);
+  const [showNewBill, setShowNewBill] = useState(false);
   // Bumped after a walk-in is created so the Prescription queue refetches
   // and shows the new "At Doc" card without a manual reload.
   const [prescriptionRefreshKey, setPrescriptionRefreshKey] = useState(0);
@@ -338,7 +340,12 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
         return <SettingsPage section={settingsSection} />;
       case "Billing":
         // TODO: swap sampleBills for a clinic-wide bills fetch once /api/bills exists.
-        return <BillsView bills={sampleBills} />;
+        // "New bill" opens the consolidated bill page inline over the Bills list.
+        return showNewBill ? (
+          <NewBillView onBack={() => setShowNewBill(false)} />
+        ) : (
+          <BillsView bills={sampleBills} onNewBill={() => setShowNewBill(true)} />
+        );
       default:
         return (
           <div>
