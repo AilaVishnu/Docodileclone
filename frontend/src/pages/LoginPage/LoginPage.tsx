@@ -1,7 +1,8 @@
 import React, { useEffect } from "react";
 import { LoginCard } from "../../components/LoginCard";
 import { styles } from "./LoginPage.styles";
-import AdminBg from "../../assets/admin-illo.svg";
+import { colors } from "../../styles/theme";
+import StaffBg from "../../assets/staff-illo.svg";
 
 type LoginPageProps = {
   onLoginSuccess?: () => void;
@@ -16,8 +17,8 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
     <div
       style={{
         ...styles.page,
-        backgroundColor: "#556536",
-        backgroundImage: `url(${AdminBg})`,
+        backgroundColor: colors.primary300,
+        backgroundImage: `url(${StaffBg})`,
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
         backgroundSize: "100% auto",

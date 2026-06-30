@@ -10,9 +10,6 @@ import { Tabs } from "../../components/Tabs";
 import { Icon } from "../../components/Icon";
 import { DirectoryView } from "../Catalog/DirectoryView";
 import { Category } from "../Catalog/catalogData";
-
-// Catalog categories — Services (this view) + the directory of external parties.
-const CATALOG_CATS: Category[] = ["Services", "Referral doctors", "Labs", "Suppliers", "Contacts"];
 import {
   listServices,
   createService,
@@ -20,6 +17,9 @@ import {
   deleteService,
   ServiceDTO,
 } from "../../api/services";
+
+// Catalog categories — Services (this view) + the directory of external parties.
+const CATALOG_CATS: Category[] = ["Services", "Referral doctors", "Labs", "Suppliers", "Contacts"];
 
 const formatPrice = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 const formatDuration = (m: number) => (m > 0 ? `${m} min` : "—");

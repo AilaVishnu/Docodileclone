@@ -341,7 +341,7 @@ class StatsController(
         val cancelled  = apts.count { it.status?.uppercase() == "CANCELLED" }
         val noShow     = apts.count { it.status?.uppercase() == "NO_SHOW" }
         val paid       = apts.filter { it.payStatus?.uppercase() == "PAID" }
-        val unpaid     = apts.filter { it.payStatus?.uppercase() != "PAID" && (it.fee ?: BigDecimal.ZERO) > BigDecimal.ZERO }
+        val unpaid     = apts.filter { val ps = it.payStatus?.uppercase(); ps != "PAID" && ps != "WAIVED" && (it.fee ?: BigDecimal.ZERO) > BigDecimal.ZERO }
         val totalFee   = apts.mapNotNull { it.fee }.fold(BigDecimal.ZERO, BigDecimal::add)
         val paidFee    = paid.mapNotNull { it.fee }.fold(BigDecimal.ZERO, BigDecimal::add)
         val collectionRate = if (totalFee > BigDecimal.ZERO) (paidFee.toDouble() / totalFee.toDouble() * 100).toInt() else 100

@@ -5,7 +5,7 @@ import { IconButton } from "../IconButton";
 import { Icon } from "../Icon";
 import { DataGrid, GridColumn } from "../DataGrid/DataGrid";
 import type { Bill } from "../../api/bills";
-import { colors, fonts, spacing } from "../../styles/theme";
+import { colors, fonts, radii, shadows, spacing, strokes } from "../../styles/theme";
 
 // RecentBills — the patient's invoice history, shown when the queue's kebab is
 // "View Bills" (a bill already exists today). A row per invoice with its totals
@@ -35,23 +35,26 @@ export function RecentBills({ isOpen, onClose, patientName, bills, loading = fal
   /** Print a past bill. */
   onPrint?: (bill: Bill) => void;
 }) {
+  // Columns mirror the clinic-wide Bills table (BillsView): sentence-case
+  // headers, money + actions right-aligned, a positive Due in red and zero
+  // Due/Refund as a muted dash.
   const columns: GridColumn<Bill>[] = [
     { key: "no", header: "#", width: 56, align: "left", render: (_b, i) => <span style={styles.muted}>{i + 1}</span> },
     {
-      key: "inv", header: "BILL NO & DATE", align: "left", render: (b) => (
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      key: "inv", header: "Invoice & date", align: "left", render: (b) => (
+        <div style={styles.invCell}>
           <button type="button" style={styles.invLink} onClick={() => onView?.(b)}>{b.invoiceNo}</button>
           <span style={styles.muted}>{fmtDate(b.billDate)}</span>
         </div>
       ),
     },
-    { key: "billed", header: "BILLED", align: "left", render: (b) => inr(b.billed) },
-    { key: "paid", header: "PAID", align: "left", render: (b) => inr2(b.paid) },
-    { key: "due", header: "DUE", align: "left", render: (b) => inr(b.due) },
-    { key: "refund", header: "REFUND", align: "left", render: (b) => (b.refund > 0 ? inr(b.refund) : <span style={styles.muted}>–</span>) },
+    { key: "billed", header: "Billed", align: "right", render: (b) => inr(b.billed) },
+    { key: "paid", header: "Paid", align: "right", render: (b) => inr2(b.paid) },
+    { key: "due", header: "Due", align: "right", render: (b) => (b.due > 0 ? <span style={styles.due}>{inr(b.due)}</span> : <span style={styles.muted}>–</span>) },
+    { key: "refund", header: "Refund", align: "right", render: (b) => (b.refund > 0 ? inr(b.refund) : <span style={styles.muted}>–</span>) },
     {
-      key: "action", header: "ACTION", width: 120, align: "left", render: (b) => (
-        <div style={{ display: "flex", alignItems: "center", gap: spacing.xs }}>
+      key: "action", header: "Action", width: 120, align: "right", render: (b) => (
+        <div style={styles.actions}>
           <IconButton ariaLabel="Print bill" onClick={() => onPrint?.(b)} color={colors.neutral900}>
             <Icon name="printer" size={20} tone="inherit" />
           </IconButton>
@@ -64,7 +67,7 @@ export function RecentBills({ isOpen, onClose, patientName, bills, loading = fal
   ];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} surface="transparent" shadow="none" width={1000} padding={0} radius={16}>
+    <Modal isOpen={isOpen} onClose={onClose} surface="transparent" shadow="none" width={1000} padding={0} radius={radii["2xl"]}>
       <div style={styles.card}>
         <div style={styles.header}>
           <div style={styles.headerLeft}>
@@ -93,8 +96,8 @@ export function RecentBills({ isOpen, onClose, patientName, bills, loading = fal
 const styles: Record<string, React.CSSProperties> = {
   card: {
     backgroundColor: colors.neutral100,
-    borderRadius: 16,
-    boxShadow: "0 12px 40px rgba(0,0,0,0.12)",
+    borderRadius: radii["2xl"],
+    boxShadow: shadows.modal,
     overflow: "hidden",
     fontFamily: fonts.family.primary,
   },
@@ -104,13 +107,16 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "space-between",
     gap: spacing.m,
     padding: `${spacing.m} ${spacing.xl}`,
-    borderBottom: `1px solid ${colors.neutral200}`,
+    borderBottom: `${strokes.xs} solid ${colors.neutral200}`,
   },
   headerLeft: { display: "flex", alignItems: "center", gap: spacing.s, minWidth: 0 },
   title: { fontSize: fonts.size.l, fontWeight: fonts.weight.semibold, color: colors.neutral900 },
   body: { padding: spacing.l, maxHeight: "70vh", overflowY: "auto" },
   empty: { padding: "48px 8px", textAlign: "center", color: colors.neutral500, fontSize: fonts.size.s },
-  muted: { color: colors.neutral500 },
+  muted: { color: colors.neutral500, fontSize: fonts.size.s },
+  due: { color: colors.red200, fontWeight: fonts.weight.medium },
+  actions: { display: "flex", alignItems: "center", justifyContent: "flex-end", gap: spacing.xs },
+  invCell: { display: "flex", flexDirection: "column", gap: 2 },
   invLink: {
     border: "none",
     background: "transparent",

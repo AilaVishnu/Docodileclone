@@ -19,6 +19,7 @@ import { getActiveSessions } from "../../api/visits";
 import { recordPatientDeposit } from "../../api/patientSearch";
 import { listBills, chargeAppointment, type Bill } from "../../api/bills";
 import { RecentBills } from "../BillCard/RecentBills";
+import { BillReadModal } from "../../pages/Bills/BillReadModal";
 
 type Doctor = {
   id: string;
@@ -78,6 +79,9 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
   const [billsHistoryApt, setBillsHistoryApt] = useState<Appointment | null>(null);
   const [historyBills, setHistoryBills] = useState<Bill[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  // A bill opened from the history → the read-only detail (BillReadModal). It
+  // swaps in over the history; closing it (or its "View bills" link) returns.
+  const [viewBill, setViewBill] = useState<Bill | null>(null);
 
   const openBillsHistory = (apt: Appointment) => {
     if (apt.patientArchived) {
@@ -594,16 +598,21 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
       <BillModal
         isOpen={!!medsBillingApt}
         onClose={() => setMedsBillingApt(null)}
-        onBilled={async ({ method, lineItems }) => {
+        // "View bills" (header) → drop back to the Recent Bills history. Only an
+        // additional bill has prior invoices to show; on a first bill the link
+        // stays hidden (onViewBills omitted).
+        onViewBills={additionalBill ? () => { const apt = medsBillingApt; setMedsBillingApt(null); if (apt) openBillsHistory(apt); } : undefined}
+        onBilled={async ({ method, lineItems, paid }) => {
           // ONE atomic call: the server recomputes the totals from these line
           // items, writes payment, creates the invoice, auto-covers from the
           // deposit and deducts stock — so money + inventory never drift apart.
+          // `paid` is what was collected now; the server records any shortfall as due.
           const aptId = medsBillingApt?.id;
           const who = medsBillingApt?.patientName;
           const isWaive = method === "Waive";
           if (!aptId) { setToastMessage("No appointment to bill"); return; }
           try {
-            const result = await chargeAppointment(aptId, { method, items: lineItems });
+            const result = await chargeAppointment(aptId, { method, paidAmount: paid, items: lineItems });
             const inr = result.bill.billed.toLocaleString("en-IN", { minimumFractionDigits: 2 });
             const baseMsg = isWaive ? `Bill waived for ${who}` : `₹${inr} billed via ${method} for ${who}`;
             setRefreshKey((k) => k + 1);
@@ -669,11 +678,13 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
       />
 
       <RecentBills
-        isOpen={!!billsHistoryApt}
+        isOpen={!!billsHistoryApt && !viewBill}
         onClose={() => setBillsHistoryApt(null)}
         patientName={billsHistoryApt?.patientName || ""}
         bills={historyBills}
         loading={historyLoading}
+        // Invoice no / pencil → open that bill's read-only detail.
+        onView={(b) => setViewBill(b)}
         // Create New Bill → close the history and open the editor for another
         // invoice. It opens blank automatically because the patient already has
         // a bill for the date (additionalBill = todayBillCount > 0).
@@ -683,6 +694,22 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           if (apt) setMedsBillingApt(apt);
         }}
       />
+
+      {/* Read-only detail of a bill picked from the history (same screen the
+          clinic Bills page opens). patientName comes from the owning apt; the
+          header "View bills" link drops back to the history. */}
+      {viewBill && billsHistoryApt && (
+        <BillReadModal
+          key={viewBill.id}
+          isOpen
+          onClose={() => setViewBill(null)}
+          bill={{ ...viewBill, patientName: billsHistoryApt.patientName, today: false }}
+          onViewBills={() => setViewBill(null)}
+          // Refund updates the history row behind the detail (the detail itself
+          // flips to Refunded in place).
+          onRefunded={(u) => setHistoryBills((list) => list.map((x) => (x.id === u.id ? u : x)))}
+        />
+      )}
 
     </div>
   );

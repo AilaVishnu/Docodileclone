@@ -1,9 +1,8 @@
 import type { ClinicBill } from "./BillsView";
 
-// TEMP placeholder data. There is no clinic-wide bills endpoint yet — `listBills`
-// in api/bills.ts is per-patient — so the Bills page renders this sample set
-// until a `/api/bills` (date-range + patient name) route exists. Swap `sampleBills`
-// for that fetch when it lands.
+// Storybook fixture for BillsView only. The live Bills page now self-fetches
+// from GET /api/tenant/bills (listClinicBills); this static set is used solely
+// by the stories so they render without the network.
 const B = (p: Partial<ClinicBill>): ClinicBill => ({
   id: p.invoiceNo!, invoiceNo: "", billDate: "", billed: 0, paid: 0, due: 0, refund: 0,
   depositApplied: null, payStatus: null, paymentMethod: null, items: null, appointmentId: null,

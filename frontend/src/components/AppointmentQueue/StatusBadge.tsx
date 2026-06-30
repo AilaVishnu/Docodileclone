@@ -71,6 +71,13 @@ const PAY_CONFIG: Record<
     label: "Due",
     icon: <Icon name="danger-triangle" size={24} />,
   },
+  // WAIVED — the charge was written off, so nothing is owed. It's settled, so it
+  // reads like Paid (check icon) with its own "Waived" tooltip — never the Due ⚠.
+  WAIVED: {
+    color: colors.neutral900,
+    label: "Waived",
+    icon: <Icon name="check-circle" size={24} />,
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

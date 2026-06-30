@@ -10,6 +10,9 @@ import java.time.LocalDate
 data class ChargeRequest(
     val method: String = "Cash",          // "Waive" => waived (₹0 collected)
     val discountAmount: BigDecimal? = null, // optional bill-level discount
+    // Amount actually collected now. Null => collect the full amount (the prior
+    // behaviour). When less than the total, the shortfall is recorded as due.
+    val paidAmount: BigDecimal? = null,
     val billDate: LocalDate? = null,
     val items: List<ChargeLine> = emptyList(),
 )

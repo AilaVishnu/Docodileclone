@@ -44,6 +44,32 @@ export async function listBills(patientId: string): Promise<Bill[]> {
   return res.json();
 }
 
+// Clinic-wide bills (joined with patient name + a today flag) for the Bills
+// page. Optional ISO yyyy-mm-dd from/to bound the period filter.
+export type ClinicBill = Bill & { patientName: string; today: boolean };
+export async function listClinicBills(from?: string, to?: string): Promise<ClinicBill[]> {
+  const params = new URLSearchParams();
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  const qs = params.toString();
+  const res = await fetch(`${API_BASE_URL}/api/tenant/bills${qs ? `?${qs}` : ""}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// Refund a settled bill: the full received amount is returned and the invoice
+// flips to REFUNDED. Returns the updated bill.
+export async function refundBill(billId: string): Promise<ClinicBill> {
+  const res = await fetch(`${API_BASE_URL}/api/tenant/bills/${billId}/refund`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
 export async function createBill(patientId: string, payload: CreateBillPayload): Promise<Bill> {
   const res = await fetch(`${API_BASE_URL}/api/patients/${patientId}/bills`, {
     method: "POST",
@@ -75,7 +101,7 @@ export type ChargeResult = {
 };
 export async function chargeAppointment(
   appointmentId: string,
-  payload: { method: string; discountAmount?: number; billDate?: string; items: ChargeLine[] },
+  payload: { method: string; discountAmount?: number; paidAmount?: number; billDate?: string; items: ChargeLine[] },
 ): Promise<ChargeResult> {
   const res = await fetch(`${API_BASE_URL}/api/tenant/appointments/${appointmentId}/charge`, {
     method: "POST",

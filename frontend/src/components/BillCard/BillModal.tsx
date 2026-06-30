@@ -9,6 +9,7 @@ import { Field } from "../Field";
 import { MeasureField } from "../MeasureField";
 import { MedicineAutocomplete } from "../MedicineAutocomplete/MedicineAutocomplete";
 import { listServices } from "../../api/services";
+import { listBills } from "../../api/bills";
 import { getBillFooter, type BillFooter } from "../../api/patientSearch";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 import { Icon } from "../Icon";
@@ -22,7 +23,7 @@ import { Icon } from "../Icon";
 //     into the total, supports split payments + Waive, and on "Charge & Bill"
 //     calls `onBilled(method, total, items)` so the host records the payment and
 //     deducts pharmacy inventory.
-type Line = { id: number; name: string; qty: number; unit: number; gst: number; disc: number; discUnit: "%" | "₹"; inStock?: boolean; kind?: "service" | "medicine" };
+type Line = { id: number; name: string; qty: number; unit: number; gst: number; disc: number; discUnit: "%" | "₹"; inStock?: boolean; kind?: "service" | "medicine" | "pastdue" };
 type Patient = { code: string; name: string; meta: string };
 type BillMedicine = { id?: string; name: string; dosage?: string; unitPrice: number; qty: number; inStock?: boolean };
 type BillCatalogItem = { id: string; name: string; unitPrice: number };
@@ -57,6 +58,18 @@ const fmtRegistered = (iso: string): string => {
 
 const trailing = (id: number): Line => ({ id, name: "", qty: 1, unit: 0, gst: 0, disc: 0, discUnit: "₹" });
 
+// "Past Due Amount: ₹X  Add to Bill" callout, shown atop the Bill summary when
+// the patient carries an outstanding balance from earlier invoices.
+const PAST_DUE_BOX: React.CSSProperties = {
+  display: "flex", justifyContent: "space-between", alignItems: "center", gap: spacing.s,
+  padding: `${spacing.xs} ${spacing.s}`, marginBottom: spacing.xs,
+  backgroundColor: colors.yellowAlpha20, borderRadius: radii.m,
+};
+const PAST_DUE_LINK: React.CSSProperties = {
+  border: "none", background: "transparent", cursor: "pointer", whiteSpace: "nowrap",
+  color: colors.active.shade700, fontSize: fonts.size.s, fontWeight: fonts.weight.medium, textDecoration: "underline",
+};
+
 // Cream-box style for the medicine picker's input so it matches the grid's
 // other Field cells (Qty / Unit). Mirrors the Rx pad's rxMedicineInput.
 const BILL_ITEM_INPUT_STYLE: React.CSSProperties = {
@@ -76,7 +89,7 @@ const BILL_ITEM_INPUT_STYLE: React.CSSProperties = {
 
 export function BillModal({
   isOpen, onClose, patient, initialServices,
-  patientName, invoiceNo, medicines, onBilled,
+  patientName, invoiceNo, onViewBills, medicines, onBilled,
   serviceName, serviceFee = 0, catalog, loading = false, patientId,
 }: {
   isOpen: boolean;
@@ -87,6 +100,9 @@ export function BillModal({
   patientName?: string;
   /** Existing-bill: invoice no, shown muted beside the patient in the header. */
   invoiceNo?: string;
+  /** Open the patient's bill history (the header "View bills" link). Omit to
+   *  hide the link — e.g. a first bill, with no prior invoices to view. */
+  onViewBills?: () => void;
   /** Wired-bill mode: prescribed medicines seeded as line items. */
   medicines?: BillMedicine[];
   /** Wired-bill mode: called on Charge & Bill / Mark Waived. Buckets stay
@@ -211,6 +227,19 @@ export function BillModal({
     getBillFooter(patientId).then(setFooter).catch(() => setFooter(null));
   }, [isOpen, patientId]);
 
+  // Carry-forward due: the patient's outstanding balance across earlier bills.
+  // The "Add to Bill" callout rolls it into this invoice as a `pastdue` line; on
+  // Charge the server clears those old dues so the balance isn't counted twice.
+  const [pastDue, setPastDue] = useState(0);
+  const [pastDueAdded, setPastDueAdded] = useState(false);
+  useEffect(() => {
+    if (!isOpen || !patientId) { setPastDue(0); setPastDueAdded(false); return; }
+    setPastDueAdded(false);
+    listBills(patientId)
+      .then((bs) => setPastDue(bs.reduce((s, b) => s + (b.due || 0), 0)))
+      .catch(() => setPastDue(0));
+  }, [isOpen, patientId]);
+
   const setPayment = (i: number, patch: Partial<{ mode: string; amount: number | "" }>) => {
     if ("amount" in patch) setAmountTouched(true);
     setPayments((ps) => ps.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
@@ -240,6 +269,11 @@ export function BillModal({
     return next.some(isTrailing) ? next : [...next, emptyLine()];
   });
 
+  // Roll the patient's outstanding past due into this bill — shown as a Bill
+  // summary line (not an editable item); on Charge it rides along as a `pastdue`
+  // line so the server folds it into the total and clears the old dues.
+  const addPastDue = () => setPastDueAdded(true);
+
   // Discount per line is either a flat ₹ amount or a % of that line's subtotal.
   const discAmt = (l: Line) => (l.discUnit === "%" ? (l.qty * l.unit * (l.disc || 0)) / 100 : (l.disc || 0));
   const lineTotal = (l: Line) => l.qty * l.unit - discAmt(l);
@@ -264,10 +298,14 @@ export function BillModal({
   const methodLabel = isWaived ? "Waive" : Array.from(new Set(payments.map((p) => p.mode))).join(" + ");
 
   const displayFinal = isWaived ? 0 : finalAmt;
-  // Nothing is pre-received on a fresh bill — the full amount is collected via
-  // the payment lines below. Explicit refunds aren't part of creating a bill.
-  const received = 0;
-  const balance = isWaived ? 0 : finalAmt;
+  // What the desk is collecting now (sum of the payment lines). Whatever the
+  // bill total exceeds it becomes due — Received + Balance update live as the
+  // amount is typed. Explicit refunds aren't part of creating a bill.
+  const paidEntered = isWaived ? 0 : payments.reduce((s, p) => s + (p.amount === "" ? 0 : Number(p.amount)), 0);
+  // Current bill + any carried past due = the full amount owed this visit.
+  const dueTotal = finalAmt + (pastDueAdded ? pastDue : 0);
+  const received = isWaived ? 0 : Math.min(paidEntered, dueTotal);
+  const balance = isWaived ? 0 : Math.max(0, dueTotal - paidEntered);
   const refund = 0;
 
   // Auto-fill the single payment line with the full amount to collect, so the
@@ -368,17 +406,22 @@ export function BillModal({
     const lineItems = lines
       .filter((l) => !isTrailing(l))
       .map((l) => ({ name: l.name, qty: l.qty, unit: l.unit, gst: l.gst, disc: l.disc, discUnit: l.discUnit, kind: l.kind ?? "medicine", inStock: l.inStock !== false }));
+    // The carried past due rides along as a `pastdue` line (not an editable row)
+    // so the server folds it into the total + clears the patient's old dues.
+    if (pastDueAdded && pastDue > 0) {
+      lineItems.push({ name: "Previous due", qty: 1, unit: pastDue, gst: 0, disc: 0, discUnit: "₹", kind: "pastdue", inStock: false });
+    }
     onBilled?.({
       method: methodLabel,
       pharmacyAmount: isWaived ? 0 : pharmacyTotal,
       serviceAmount: isWaived ? 0 : serviceTotal,
       items,
       billed: finalAmt,
-      paid: isWaived ? 0 : finalAmt,
-      due: 0,
+      paid: received,
+      due: balance,
       refund: 0,
       depositApplied: 0,
-      payStatus: isWaived ? "WAIVED" : "PAID",
+      payStatus: isWaived ? "WAIVED" : balance > 0 ? "DUE" : "PAID",
       lineItems,
     });
     onClose();
@@ -406,7 +449,7 @@ export function BillModal({
       }
       headerActions={
         <>
-          <button onClick={() => {}} style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, fontSize: fonts.size.s, textDecoration: "underline", whiteSpace: "nowrap" }}>View bills</button>
+          {onViewBills && <button onClick={onViewBills} style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, fontSize: fonts.size.s, textDecoration: "underline", whiteSpace: "nowrap" }}>View bills</button>}
           <IconButton ariaLabel="Print" onClick={() => {}} color={colors.neutral900}><Icon name="printer" size={24} tone="inherit" /></IconButton>
           <IconButton ariaLabel="Share" onClick={() => {}} color={colors.neutral900}><Icon name="share" size={24} tone="inherit" /></IconButton>
         </>
@@ -440,12 +483,32 @@ export function BillModal({
       }
       summary={
         <>
+          {pastDue > 0 && !pastDueAdded && (
+            <div style={PAST_DUE_BOX}>
+              <span style={{ fontSize: fonts.size.s, color: colors.neutral700, whiteSpace: "nowrap" }}>
+                Past Due: <strong style={{ color: colors.red200 }}>{inr(pastDue)}</strong>
+              </span>
+              <button type="button" onClick={addPastDue} style={PAST_DUE_LINK}>Add to Bill</button>
+            </div>
+          )}
           {sumRow("Total billed", inr(billed))}
-          {sumRow("Discount", `− ${inr(discount)}`)}
-          {sumRow("Tax", inr(tax))}
+          {/* A waive is a full write-off → show it as a 100% discount so the
+              Final amount drops cleanly to ₹0 (Total − 100% = 0). */}
+          {sumRow(isWaived ? "Discount (100%)" : "Discount", `− ${inr(isWaived ? billed : discount)}`)}
+          {sumRow("Tax", inr(isWaived ? 0 : tax))}
           {sumRow("Final amount", inr(displayFinal), true)}
           {sumRow("Received", inr(received))}
           {sumRow("Refund", `− ${inr(refund)}`)}
+          {pastDueAdded && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: fonts.size.m, fontFamily: fonts.family.primary }}>
+              <span style={{ color: colors.neutral600 }}>Past Due Amount</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: spacing.xs, color: colors.neutral900 }}>
+                {inr(pastDue)}
+                <button type="button" onClick={() => setPastDueAdded(false)} aria-label="Remove past due"
+                  style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral500, fontSize: fonts.size.m, lineHeight: 1, padding: 0 }}>✕</button>
+              </span>
+            </div>
+          )}
         </>
       }
       payment={
@@ -474,6 +537,13 @@ export function BillModal({
               </div>
             );
           })}
+
+          {/* Partial collection → the rest is recorded as due on the bill. */}
+          {!isWaived && balance > 0 && (
+            <span style={{ fontSize: fonts.size.s, color: colors.neutral600 }}>
+              <strong style={{ color: colors.neutral900 }}>{inr(balance)}</strong> will be added to due
+            </span>
+          )}
 
           {/* Free-text note for this payment. */}
           <div style={{ "--input-h": "40px" } as React.CSSProperties}>

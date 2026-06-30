@@ -22,6 +22,26 @@ data class BillDTO(
     val createdAt: Instant,
 )
 
+// One bill for the clinic-wide Bills page — the invoice plus the patient name
+// and a "today" flag, so the page's KPIs + table don't have to re-derive them.
+data class ClinicBillDTO(
+    val id: UUID,
+    val invoiceNo: String,
+    val billDate: LocalDate,
+    val billed: BigDecimal,
+    val paid: BigDecimal,
+    val due: BigDecimal,
+    val refund: BigDecimal,
+    val depositApplied: BigDecimal?,
+    val payStatus: String?,
+    val paymentMethod: String?,
+    val items: String?,
+    val appointmentId: UUID?,
+    val createdAt: Instant,
+    val patientName: String,
+    val today: Boolean,
+)
+
 // Charge & Bill posts this to snapshot one invoice. Totals are computed by the
 // bill editor; `items` is the JSON line-item snapshot.
 data class CreateBillRequest(

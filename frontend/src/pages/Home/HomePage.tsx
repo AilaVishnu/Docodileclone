@@ -8,7 +8,6 @@ import { StatsPage } from "../Stats";
 import { PharmacyView } from "../Pharmacy";
 import { BillsView } from "../Bills";
 import { NewBillView } from "../Bills/NewBillView";
-import { sampleBills } from "../Bills/sampleBills";
 import { DocsView } from "../Docs/DocsView";
 import { SettingsPage, DEFAULT_SETTINGS_SECTION, SettingsSection } from "../Settings";
 import { colors, fonts, ThemeMode } from "../../styles/theme";
@@ -339,12 +338,12 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
       case "Settings":
         return <SettingsPage section={settingsSection} />;
       case "Billing":
-        // TODO: swap sampleBills for a clinic-wide bills fetch once /api/bills exists.
-        // "New bill" opens the consolidated bill page inline over the Bills list.
+        // BillsView self-fetches clinic-wide bills from /api/tenant/bills for its
+        // period. "New bill" opens the consolidated bill page inline over the list.
         return showNewBill ? (
           <NewBillView onBack={() => setShowNewBill(false)} />
         ) : (
-          <BillsView bills={sampleBills} onNewBill={() => setShowNewBill(true)} />
+          <BillsView onNewBill={() => setShowNewBill(true)} />
         );
       default:
         return (

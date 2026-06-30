@@ -127,6 +127,7 @@ export function DataGrid<T>({ columns, rows, rowKey, size = "m", tdPadding, thPa
               tabIndex={c.sortAccessor ? 0 : undefined}
               onKeyDown={c.sortAccessor ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort(c); } } : undefined}
               aria-sort={c.sortAccessor ? (sort?.key === c.key ? (sort.dir === "asc" ? "ascending" : "descending") : "none") : undefined}
+              title={c.sortAccessor ? (sort?.key === c.key ? (sort.dir === "asc" ? "Click to sort descending" : "Click to clear sort") : "Click to sort ascending") : undefined}
             >
               {headerInner(c)}
             </th>

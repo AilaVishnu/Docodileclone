@@ -13,6 +13,10 @@ type DomainInputProps = {
   /** Display-only (e.g. on a ClinicCard): the input bg goes transparent and
    *  the availability check is skipped. */
   readOnly?: boolean;
+  /** Whether to run the debounced availability check. Defaults to `true`
+   *  (onboarding: confirm a domain is free). Set `false` on the login flow,
+   *  where the clinic is expected to already exist and "taken" is the goal. */
+  checkAvailability?: boolean;
 };
 
 export function DomainInput({
@@ -23,12 +27,13 @@ export function DomainInput({
   onKeyDown,
   disabled = false,
   readOnly = false,
+  checkAvailability = true,
 }: DomainInputProps) {
   const [availability, setAvailability] = useState<"idle" | "checking" | "available" | "taken">("idle");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!value || value.trim().length < 2 || disabled || readOnly) {
+    if (!value || value.trim().length < 2 || disabled || readOnly || !checkAvailability) {
       setAvailability("idle");
       return;
     }
@@ -60,7 +65,7 @@ export function DomainInput({
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [value, disabled, readOnly]);
+  }, [value, disabled, readOnly, checkAvailability]);
 
   const statusText =
     availability === "checking" ? "Checking..." :

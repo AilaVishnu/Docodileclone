@@ -27,4 +27,18 @@ interface BillRepository : JpaRepository<Bill, UUID> {
             "WHERE b.billDate = :date GROUP BY b.patient.id",
     )
     fun countByPatientForDate(@Param("date") date: LocalDate): List<Array<Any>>
+
+    // All bills within a date range, newest invoice first — drives the clinic-wide
+    // Bills page (schema-scoped — no clinic_id). Both bounds are always bound to
+    // real dates (the service substitutes a safe sentinel for an unbounded side):
+    // a `:param IS NULL OR …` form leaves the parameter in no typed context, so
+    // Postgres can't infer its type ("could not determine data type of parameter").
+    @Query(
+        "SELECT b FROM Bill b WHERE b.billDate >= :from AND b.billDate <= :to " +
+            "ORDER BY b.seq DESC",
+    )
+    fun findClinicBills(
+        @Param("from") from: LocalDate,
+        @Param("to") to: LocalDate,
+    ): List<Bill>
 }
