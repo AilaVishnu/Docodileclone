@@ -2,14 +2,19 @@
 
 A **multi-tenant Electronic Medical Records (EMR) and Clinic Operations platform** designed for small to mid-sized clinics in India.
 
-## 🧠 Memory Bank
-This project uses a "Memory Bank" located in the `memory-bank/` directory to maintain system context. AI assistants should refer to these files to understand the project's architecture, patterns, and current state.
+## 🧠 Source of truth (read these first)
 
-- [Project Brief](memory-bank/projectBrief.md)
-- [Product Context](memory-bank/productContext.md)
-- [System Patterns](memory-bank/systemPatterns.md)
-- [Tech Context](memory-bank/techContext.md)
-- [Active Context](memory-bank/activeContext.md)
+- **Backend / architecture / multi-tenancy:** [`docs/architecture.md`](docs/architecture.md)
+- **Frontend / design system:** [`frontend/CLAUDE.md`](frontend/CLAUDE.md) (rules, component
+  inventory, canon, responsiveness) + Storybook (`npm run storybook`)
+- **Design decisions history:** [`docs/ds-cleanup-log.md`](docs/ds-cleanup-log.md)
+- **Standards / Definition of Done:** [`docs/contributing.md`](docs/contributing.md)
+- **Outstanding work:** [`docs/backlog.md`](docs/backlog.md)
+
+> The `memory-bank/` files ([Project Brief](memory-bank/projectBrief.md) ·
+> [Product Context](memory-bank/productContext.md)) hold high-level product vision and predate the
+> schema-per-clinic redesign — use the sources above for current technical truth. (The stale
+> `systemPatterns` / `techContext` / `activeContext` files were removed 2026-06-30.)
 
 ---
 
