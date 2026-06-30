@@ -1,47 +1,43 @@
 import React from "react";
 import type { CSSProperties } from "react";
-import { Field } from "../../components/Field";
+import { AutocompleteTags } from "../../components/Autocomplete/AutocompleteTags";
 import { colors, fonts, spacing } from "../../styles/theme";
 
-// HistoryBlock — the four history fields in a 2-column grid.
-export type HistoryData = {
-  familyHistory: string;
-  allergies: string;
-  personalHistory: string;
-  pastMedicalHistory: string;
-};
-export const emptyHistory = (): HistoryData => ({ familyHistory: "", allergies: "", personalHistory: "", pastMedicalHistory: "" });
-
-const gridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing.m };
-const wrapStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: spacing["2xs"], minWidth: 0 };
-const labelStyle: CSSProperties = {
-  fontFamily: fonts.family.primary,
-  fontSize: fonts.control.sm,
-  fontWeight: fonts.weight.medium,
-  color: colors.neutral700,
-};
-
-const FIELDS: { key: keyof HistoryData; label: string }[] = [
-  { key: "familyHistory", label: "Family history" },
-  { key: "allergies", label: "Allergies" },
-  { key: "personalHistory", label: "Personal history" },
-  { key: "pastMedicalHistory", label: "Past medical history" },
+// HistoryBlock — the four history fields as per-field AutocompleteTags chip
+// inputs (each with its own suggestion catalog), in the page's 2-col grid.
+// Lifted from PrescriptionPage (HISTORY_FIELDS + historyGrid).
+const HISTORY_FIELDS = [
+  { label: "Family History", field: "family_history", placeholder: "Type here..." },
+  { label: "Allergies", field: "allergies", placeholder: "Type here..." },
+  { label: "Personal History", field: "personal_history", placeholder: "Type here..." },
+  { label: "Past Medical History", field: "past_medical_history", placeholder: "Type here..." },
 ];
+
+export type HistoryData = Record<string, string[]>;
+export const emptyHistory = (): HistoryData => {
+  const d: HistoryData = {};
+  HISTORY_FIELDS.forEach((f) => { d[f.field] = []; });
+  return d;
+};
+
+const gridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: spacing.l, rowGap: spacing.s, width: "100%" };
+const fieldGroupStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: spacing.xs };
+const fieldLabelStyle: CSSProperties = { fontSize: fonts.control.xs, lineHeight: fonts.lineHeight.xs, color: colors.neutral500, fontFamily: fonts.family.primary };
 
 export function HistoryBlock({ value, onChange }: { value: HistoryData; onChange: (next: HistoryData) => void }) {
   return (
     <div style={gridStyle}>
-      {FIELDS.map((f) => (
-        <label key={f.key} style={wrapStyle}>
-          <span style={labelStyle}>{f.label}</span>
-          <Field
-            variant="box"
-            fill="filled"
-            value={value[f.key]}
-            onChange={(v) => onChange({ ...value, [f.key]: v } as HistoryData)}
-            placeholder="Type here…"
+      {HISTORY_FIELDS.map((f) => (
+        <div key={f.label} style={fieldGroupStyle}>
+          <span style={fieldLabelStyle}>{f.label}</span>
+          <AutocompleteTags
+            field={f.field}
+            value={value[f.field] ?? []}
+            onChange={(next) => onChange({ ...value, [f.field]: next })}
+            placeholder={f.placeholder}
+            ariaLabel={f.label}
           />
-        </label>
+        </div>
       ))}
     </div>
   );
