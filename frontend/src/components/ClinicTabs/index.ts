@@ -1,1 +1,1 @@
-export * from "./ClinicTabs";
+export * from "./types";

@@ -213,7 +213,6 @@ export const radii = {
   xl: 12,
   "2xl": 16,
   xxl: 16,     // legacy alias for 2xl (do not remove — in use)
-  primary: 20, // legacy (off-system) — retired from all real components (→16, Cards/Login/Hint phases); only the AuditGallery dev pages still reference it.
   pill: 999,   // legacy alias for full
   full: 999,
 };
