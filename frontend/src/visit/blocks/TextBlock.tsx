@@ -1,22 +1,15 @@
 import React from "react";
-import { Field } from "../../components/Field";
+import { noteCardField, noteCardTextarea } from "./noteCardStyles";
 
-// TextBlock — a single free-text section body (Complaints, Diagnosis, Notes for
-// patient, Private notes). One auto-growing textarea; the section title/chrome
-// comes from <SectionBlock>.
+// TextBlock — a plain note (Private notes): the exact cream note-card textarea,
+// no dictate icons (matching the page's private-notes card).
 export type TextData = { text: string };
 export const emptyText = (): TextData => ({ text: "" });
 
 export function TextBlock({ value, onChange }: { value: TextData; onChange: (next: TextData) => void }) {
   return (
-    <Field
-      variant="box"
-      fill="filled"
-      multiline
-      value={value.text}
-      onChange={(t) => onChange({ text: t })}
-      placeholder="Type here…"
-      inputStyle={{ minHeight: 76 }}
-    />
+    <div style={noteCardField(true)}>
+      <textarea style={noteCardTextarea} placeholder="Type here..." value={value.text} onChange={(e) => onChange({ text: e.target.value })} />
+    </div>
   );
 }

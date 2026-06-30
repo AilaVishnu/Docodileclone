@@ -20,9 +20,9 @@ export function ReviewBlock({ value, onChange }: { value: ReviewData; onChange: 
         <DateField value={value.date} onChange={(d) => set({ date: d })} placeholder="Select date" />
       </div>
       <span style={orStyle}>or</span>
-      <Field variant="box" fill="filled" value={value.days} onChange={(v) => set({ days: v })} placeholder="0" style={{ width: 64 }} align="center" />
+      <div style={{ width: 64 }}><Field variant="box" fill="filled" value={value.days} onChange={(v) => set({ days: v })} placeholder="0" align="center" /></div>
       <span style={daysLabel}>days</span>
-      <Field variant="box" fill="filled" value={value.notes} onChange={(v) => set({ notes: v })} placeholder="Notes for Review…" style={{ flex: 1, minWidth: 160 }} />
+      <div style={{ flex: 1, minWidth: 160 }}><Field variant="box" fill="filled" value={value.notes} onChange={(v) => set({ notes: v })} placeholder="Notes for Review…" /></div>
     </div>
   );
 }

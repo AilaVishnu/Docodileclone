@@ -110,9 +110,9 @@ export function ProcedureCard({ value, onChange }: ProcedureCardProps) {
         {value.params.length === 0 ? <p style={styles.empty}>None added.</p> : null}
         {value.params.map((p) => (
           <div key={p.id} style={styles.paramRow}>
-            <Field variant="box" fill="filled" value={p.label} onChange={(v) => setParam(p.id, { label: v })} placeholder="Parameter" style={styles.paramLabel} />
-            <Field variant="box" fill="filled" align="right" value={p.value} onChange={(v) => setParam(p.id, { value: v })} placeholder="Value" style={styles.paramValue} />
-            <Field variant="box" fill="filled" value={p.unit} onChange={(v) => setParam(p.id, { unit: v })} placeholder="Unit" style={styles.paramUnit} />
+            <div style={styles.paramLabel}><Field variant="box" fill="filled" value={p.label} onChange={(v) => setParam(p.id, { label: v })} placeholder="Parameter" /></div>
+            <div style={styles.paramValue}><Field variant="box" fill="filled" align="right" value={p.value} onChange={(v) => setParam(p.id, { value: v })} placeholder="Value" /></div>
+            <div style={styles.paramUnit}><Field variant="box" fill="filled" value={p.unit} onChange={(v) => setParam(p.id, { unit: v })} placeholder="Unit" /></div>
             <IconButton ariaLabel="Remove parameter" title="Remove" size={30} onClick={() => removeParam(p.id)}>
               <Icon name="trash" tone="inherit" size={16} />
             </IconButton>
