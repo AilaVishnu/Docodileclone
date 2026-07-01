@@ -20,6 +20,7 @@ import { recordPatientDeposit } from "../../api/patientSearch";
 import { listBills, chargeAppointment, payBill, type Bill } from "../../api/bills";
 import { RecentBills } from "../BillCard/RecentBills";
 import { BillReadModal } from "../../pages/Bills/BillReadModal";
+import { printBill } from "../../pages/Bills/printBill";
 
 type Doctor = {
   id: string;
@@ -707,6 +708,17 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           onClose={() => setViewBill(null)}
           bill={{ ...viewBill, patientName: billsHistoryApt.patientName, today: false }}
           onViewBills={() => setViewBill(null)}
+          // Print the receipt with the patient meta the appointment already
+          // carries (age in months → years, gender, mobile, T-id).
+          onPrint={(b) => {
+            const digits = (billsHistoryApt.patientPhone ?? "").replace(/\D/g, "").slice(-10);
+            printBill(b, {
+              age: billsHistoryApt.patientAge != null && billsHistoryApt.patientAge > 0 ? Math.floor(billsHistoryApt.patientAge / 12) : undefined,
+              gender: billsHistoryApt.patientGender ?? undefined,
+              mobile: digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : (billsHistoryApt.patientPhone || undefined),
+              id: billsHistoryApt.patientDisplayNo != null ? `T${String(billsHistoryApt.patientDisplayNo).padStart(3, "0")}` : undefined,
+            });
+          }}
           // Collect the (possibly partial) balance: record it, then update both
           // the open detail and the history row behind it in place.
           onRecordPayment={async (b, amount, method) => {
