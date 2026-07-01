@@ -9,7 +9,6 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import org.hibernate.annotations.SQLRestriction
-import org.springframework.data.annotation.LastModifiedBy
 import org.springframework.data.annotation.LastModifiedDate
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.Instant
@@ -58,11 +57,11 @@ class RxRow(
     @Column(name = "deleted_at")
     var deletedAt: Instant? = null,
 
-    @Column(name = "deleted_by")
-    var deletedBy: UUID? = null,
-
+    // Provenance columns (deleted_by / updated_by) are intentionally NOT mapped:
+    // tenant schemas exclude created_by/updated_by/deleted_by per "rule 6"
+    // (enforced by TenantMigratorTest). Mapping them made Hibernate SELECT a
+    // non-existent column → every /visits read 500'd. Soft-delete uses deleted_at
+    // (+ @SQLRestriction) and audit uses updated_at only.
     @LastModifiedDate
     @Column(name = "updated_at") var updatedAt: Instant? = null,
-    @LastModifiedBy
-    @Column(name = "updated_by") var updatedBy: UUID? = null,
 )
