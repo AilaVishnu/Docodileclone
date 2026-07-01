@@ -17,7 +17,7 @@ import { API_BASE_URL } from "../../apiConfig";
 import { listPharmacyStock } from "../../api/pharmacy";
 import { getActiveSessions } from "../../api/visits";
 import { recordPatientDeposit } from "../../api/patientSearch";
-import { listBills, chargeAppointment, type Bill } from "../../api/bills";
+import { listBills, chargeAppointment, payBill, type Bill } from "../../api/bills";
 import { RecentBills } from "../BillCard/RecentBills";
 import { BillReadModal } from "../../pages/Bills/BillReadModal";
 
@@ -700,11 +700,25 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           header "View bills" link drops back to the history. */}
       {viewBill && billsHistoryApt && (
         <BillReadModal
-          key={viewBill.id}
+          // Key on paid too, so recording a payment remounts the detail with a
+          // fresh "Collect balance" input rather than a stale typed amount.
+          key={`${viewBill.id}:${viewBill.paid}`}
           isOpen
           onClose={() => setViewBill(null)}
           bill={{ ...viewBill, patientName: billsHistoryApt.patientName, today: false }}
           onViewBills={() => setViewBill(null)}
+          // Collect the (possibly partial) balance: record it, then update both
+          // the open detail and the history row behind it in place.
+          onRecordPayment={async (b, amount, method) => {
+            if (amount <= 0) return;
+            try {
+              const updated = await payBill(b.id, { paidAmount: amount, method });
+              setHistoryBills((list) => list.map((x) => (x.id === updated.id ? updated : x)));
+              setViewBill(updated);
+            } catch (e) {
+              setToastMessage((e as Error).message || "Couldn't record the payment");
+            }
+          }}
           // Refund updates the history row behind the detail (the detail itself
           // flips to Refunded in place).
           onRefunded={(u) => setHistoryBills((list) => list.map((x) => (x.id === u.id ? u : x)))}
