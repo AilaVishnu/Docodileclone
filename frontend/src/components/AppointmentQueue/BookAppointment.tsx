@@ -648,6 +648,12 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             onDiscountModeChange={setDiscountMode}
             services={form.services.map(svc => ({ name: svc, price: SERVICE_PRICES[svc] || 0 }))}
             isPaid={editingAppointment?.payStatus?.toUpperCase() === "PAID"}
+            patientName={form.name}
+            patientMeta={{
+              age: form.age ? (parseInt(form.age.split("/")[0]?.trim() || "", 10) || undefined) : undefined,
+              gender: form.gender || undefined,
+              mobile: form.phone || undefined,
+            }}
           />
         </div>
 

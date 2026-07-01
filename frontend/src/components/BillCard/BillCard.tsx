@@ -3,6 +3,8 @@ import { styles } from "./BillCard.styles";
 import { colors, spacing } from "../../styles/theme";
 import { RadioGroup } from "../Radio";
 import { Icon } from "../Icon";
+import { printBill, type PrintPatientMeta } from "../../pages/Bills/printBill";
+import type { Bill } from "../../api/bills";
 
 type BillCardProps = {
   paymentMethod: string;
@@ -20,6 +22,10 @@ type BillCardProps = {
   onTaxModeChange?: (mode: "%" | "₹") => void;
   onDiscountModeChange?: (mode: "%" | "₹") => void;
   services?: { name: string; price: number }[];
+  /** Print context — the patient the receipt is for. */
+  patientName?: string;
+  patientMeta?: PrintPatientMeta;
+  invoiceNo?: string;
 };
 
 export function BillCard({
@@ -38,9 +44,36 @@ export function BillCard({
   onDiscountModeChange,
   services = [],
   isPaid = false,
+  patientName,
+  patientMeta,
+  invoiceNo,
 }: BillCardProps) {
   const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
   const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
+
+  // Print this bill card as the standard "Bill cum Receipt" (same renderer as
+  // the Bills page / queue). Builds a synthetic bill from the card's live
+  // numbers: services become line items; a bill-level discount is folded onto a
+  // single subtotal line so the printed total matches what the card shows.
+  const printReceipt = () => {
+    const discountAmt = discountMode === "%" ? Math.round((subtotal * discount) / 100) : discount;
+    const isWaive = paymentMethod === "Waive";
+    const lineItems = (discountAmt > 0 || services.length === 0)
+      ? [{ name: services.length ? services.map((s) => s.name).join(", ") : "Consultation", qty: 1, unit: subtotal, gst: 0, disc: discountAmt, discUnit: "₹" }]
+      : services.map((s) => ({ name: s.name, qty: 1, unit: s.price, gst: 0, disc: 0, discUnit: "₹" }));
+    const now = new Date();
+    const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const draft: Bill & { patientName: string } = {
+      id: "", invoiceNo: invoiceNo ?? "", billDate: iso,
+      billed: subtotal, paid: isWaive ? 0 : total, due: 0, refund: 0, depositApplied: null,
+      payStatus: isWaive ? "WAIVED" : "PAID",
+      paymentMethod: isWaive ? "Waive" : paymentMethod,
+      items: JSON.stringify(lineItems), note: note.trim() || null,
+      appointmentId: null, createdAt: "",
+      patientName: patientName?.trim() || "Patient",
+    };
+    Promise.resolve(printBill(draft, patientMeta)).catch(() => {});
+  };
 
   const handleTaxMode = (mode: "%" | "₹") => {
     setTaxMode(mode);
@@ -70,7 +103,7 @@ export function BillCard({
         <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <h3 style={styles.title}>Bill</h3>
           <div style={{ position: "absolute", right: 0, display: "flex", alignItems: "center", gap: spacing.s }}>
-            <Icon name="printer" size={20} tone="inherit" style={{ cursor: "pointer" }} />
+            <Icon name="printer" size={20} tone="inherit" style={{ cursor: "pointer" }} onClick={printReceipt} />
             <Icon name="scale" size={20} tone="inherit" style={{ cursor: "pointer" }} />
           </div>
         </div>
