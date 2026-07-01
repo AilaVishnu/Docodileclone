@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { styles } from "./ServicesView.styles";
 import { DataGrid } from "../../components/DataGrid/DataGrid";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
@@ -53,7 +53,7 @@ const toRequest = (s: Omit<Service, "id">) => ({
   gst: s.gst,
 });
 
-export function ServicesView() {
+export function ServicesView({ openCreateSignal }: { openCreateSignal?: number } = {}) {
   const [services, setServices] = useState<Service[]>([]);
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -88,6 +88,17 @@ export function ServicesView() {
   const openAdd = () => { setEditing(null); setModalOpen(true); };
   const openEdit = (s: Service) => { setEditing(s); setModalOpen(true); };
   const closeModal = () => { setModalOpen(false); setEditing(null); };
+
+  // The top-nav "New service" CTA bumps this signal → open the Add Service modal.
+  // Ref seeded to the incoming value so a tab-switch remount doesn't auto-open.
+  const lastCreateSignal = useRef(openCreateSignal ?? 0);
+  useEffect(() => {
+    if (openCreateSignal !== undefined && openCreateSignal !== lastCreateSignal.current) {
+      lastCreateSignal.current = openCreateSignal;
+      setEditing(null);
+      setModalOpen(true);
+    }
+  }, [openCreateSignal]);
 
   const handleSave = async (data: Omit<Service, "id">) => {
     // Let errors propagate so the modal can show them inline. The modal also

@@ -18,15 +18,18 @@ type TopNavProps = {
   // though the action still opens the booking flow.
   primaryActionLabel?: string;
   // Colour treatment for the primary CTA. Defaults to the peach "primary"
-  // button; the Prescription page passes "secondary" so "New Prescription"
-  // reads green (secondary/700) and distinguishes itself from booking.
-  primaryActionVariant?: "primary" | "secondary";
+  // button; the Prescription/Bills pages pass "secondary" (green), and the
+  // Catalog/Meds pages pass "dark" so their CTA matches the section's own
+  // "Add Service" / "Add Stock" button.
+  primaryActionVariant?: "primary" | "secondary" | "dark";
+  // Hide the primary CTA entirely (e.g. Settings/Config has no create action).
+  hidePrimaryAction?: boolean;
   // Switches the active home tab. Passed from HomePage so the SessionTray
   // can route the doctor back to the Prescription form on click.
   onNavigate?: (tab: NavTab) => void;
 };
 
-export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, isBooking, primaryActionLabel, primaryActionVariant = "primary", onNavigate }: TopNavProps) {
+export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, isBooking, primaryActionLabel, primaryActionVariant = "primary", hidePrimaryAction, onNavigate }: TopNavProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -228,12 +231,12 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       <HeaderPatientSearch onNavigate={onNavigate} />
 
       <div style={styles.actions}>
-        {!isBooking && (
+        {!isBooking && !hidePrimaryAction && (
           <Button
-            // "secondary" = green resting at secondary/700 with a darken-on-hover
-            // to /800 (so the New Prescription CTA gets the same hover feedback as
-            // the peach New Appointment CTA).
-            variant={primaryActionVariant === "secondary" ? "secondary" : "primary"}
+            // Peach "primary" by default; "secondary" = green (New Prescription /
+            // New Bill), "dark" = the section's own create colour (New service /
+            // Add Stock). White icon+label read on all three.
+            variant={primaryActionVariant}
             size="sm"
             iconLeft={<Icon name="plus" tone="inverse" style={{ width: 'var(--topnav-cta-icon)', height: 'var(--topnav-cta-icon)' }} />}
             style={{ padding: '0 var(--topnav-cta-padx)' }}

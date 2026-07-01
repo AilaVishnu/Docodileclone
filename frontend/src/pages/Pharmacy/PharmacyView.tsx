@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { styles } from "./Pharmacy.styles";
 import { PharmacyListView } from "./PharmacyListView";
 import { PharmacyShelfView } from "./PharmacyShelfView";
@@ -25,7 +25,7 @@ import { resolveToastIcon } from "../../components/Toast/toastIcon";
 
 type ViewMode = "list" | "shelf";
 
-export function PharmacyView() {
+export function PharmacyView({ openCreateSignal }: { openCreateSignal?: number } = {}) {
   const [view, setView] = useState<ViewMode>("shelf");
   const [groupBy, setGroupBy] = useState<GroupBy>("form");
   const [query, setQuery] = useState("");
@@ -42,6 +42,17 @@ export function PharmacyView() {
   // editing === <med>                    → Edit Batch mode
   const [editing, setEditing] = useState<Med | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+
+  // The top-nav "Add Stock" CTA bumps this signal → open the Add Stock form.
+  // Ref seeded to the incoming value so a tab-switch remount doesn't auto-open.
+  const lastCreateSignal = useRef(openCreateSignal ?? 0);
+  useEffect(() => {
+    if (openCreateSignal !== undefined && openCreateSignal !== lastCreateSignal.current) {
+      lastCreateSignal.current = openCreateSignal;
+      setEditing(null);
+      setAddOpen(true);
+    }
+  }, [openCreateSignal]);
   // Quantity-adjust + delete confirmation. Native window.prompt/.confirm
   // look out of place against the rest of the UI, so each one opens a
   // styled modal instead.
@@ -119,19 +130,11 @@ export function PharmacyView() {
       <PageHeader
         title="Pharmacy Stocks"
         actions={
-          <>
-            <Button variant="light" size="md" onClick={() => setImportOpen(true)}>
-              Import CSV
-            </Button>
-            <Button
-              variant="dark"
-              size="md"
-              iconLeft={<Icon name="plus" size={16} tone="inherit" />}
-              onClick={() => { setEditing(null); setAddOpen(true); }}
-            >
-              Add Stock
-            </Button>
-          </>
+          // "Add Stock" now lives in the top-nav CTA (see HomePage primaryCta);
+          // only the CSV import stays here.
+          <Button variant="light" size="md" onClick={() => setImportOpen(true)}>
+            Import CSV
+          </Button>
         }
       />
 

@@ -49,6 +49,10 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
   const [themeMode] = useState<ThemeMode>("primary");
 
   const [bookingKey, setBookingKey] = useState(0);
+  // Bumped when the top-nav CTA is clicked on a section that owns its own
+  // create flow (Catalog/Meds). The mounted view watches this and opens its
+  // "Add …" modal — see ServicesView / PharmacyView `openCreateSignal`.
+  const [createNonce, setCreateNonce] = useState(0);
   const [, setIsEditing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [patientFileNavId] = useState<string | null>(null);
@@ -328,22 +332,22 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
       case "Patient Files":
         return <PatientFilesView onNavigate={setActiveTab} initialSelectedId={patientFileNavId} />;
       case "Services":
-        return <ServicesView />;
+        return <ServicesView openCreateSignal={createNonce} />;
       case "Stats":
         return <StatsPage />;
       case "Pharmacy":
-        return <PharmacyView />;
+        return <PharmacyView openCreateSignal={createNonce} />;
       case "Docs":
         return <DocsView />;
       case "Settings":
         return <SettingsPage section={settingsSection} />;
       case "Billing":
-        // BillsView self-fetches clinic-wide bills from /api/tenant/bills for its
-        // period. "New bill" opens the consolidated bill page inline over the list.
+        // BillsView self-fetches clinic-wide bills for its period. "New Bill" now
+        // lives in the top-nav CTA (primaryCta) → toggles the NewBillView page.
         return showNewBill ? (
           <NewBillView onBack={() => setShowNewBill(false)} />
         ) : (
-          <BillsView onNewBill={() => setShowNewBill(true)} />
+          <BillsView />
         );
       default:
         return (
@@ -354,6 +358,26 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
         );
     }
   };
+
+  // The Bills "New Bill" CTA toggles the consolidated NewBillView page inline
+  // over the clinic bills list.
+  const handleNewBill = () => setShowNewBill(true);
+
+  // Context-aware top-nav CTA. Sections that own a create flow switch the label
+  // + colour and trigger that flow (Catalog "New service" / Meds "Add Stock" via
+  // createNonce; Bills "New Bill"); Prescription/Patient Files keep a custom
+  // label but still open the booking flow; everywhere else it's "New Appointment".
+  const primaryCta: { label?: string; variant: "primary" | "secondary" | "dark"; onClick: () => void; hidden?: boolean } = (() => {
+    switch (activeTab) {
+      case "Services":      return { label: "New service", variant: "dark", onClick: () => setCreateNonce((n) => n + 1) };
+      case "Pharmacy":      return { label: "Add Stock", variant: "dark", onClick: () => setCreateNonce((n) => n + 1) };
+      case "Billing":       return { label: "New Bill", variant: "secondary", onClick: handleNewBill };
+      case "Prescription":  return { label: "New Prescription", variant: "secondary", onClick: handleNewAppointment };
+      case "Patient Files": return { label: "New Patient", variant: "primary", onClick: handleNewAppointment };
+      case "Settings":      return { variant: "primary", onClick: handleNewAppointment, hidden: true }; // Config has no create action
+      default:              return { label: undefined, variant: "primary", onClick: handleNewAppointment };
+    }
+  })();
 
   return (
     <>
@@ -369,10 +393,11 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
           <TopNav
             onBuildClinic={onViewClinic}
             onLogout={onLogout}
-            onNewAppointment={handleNewAppointment}
+            onNewAppointment={primaryCta.onClick}
             isBooking={isBooking}
-            primaryActionLabel={activeTab === "Prescription" ? "New Prescription" : undefined}
-            primaryActionVariant={activeTab === "Prescription" ? "secondary" : "primary"}
+            primaryActionLabel={primaryCta.label}
+            primaryActionVariant={primaryCta.variant}
+            hidePrimaryAction={primaryCta.hidden}
             onNavigate={setActiveTab}
           />
           <main style={styles.mainContent}>

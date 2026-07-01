@@ -89,7 +89,6 @@ export interface BillsViewProps {
   loading?: boolean;
   onOpenBill?: (bill: ClinicBill) => void;
   onPrintBill?: (bill: ClinicBill) => void;
-  onNewBill?: () => void;
   onExport?: () => void;
 }
 
@@ -98,7 +97,7 @@ export interface BillsViewProps {
  * → search + status/period filters → invoice table. Composed from existing
  * components (Card, Tabs, DateRangeDropdown, DataGrid, PageHeader, Button).
  */
-export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, onPrintBill, onNewBill, onExport }: BillsViewProps) {
+export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, onPrintBill, onExport }: BillsViewProps) {
   const [status, setStatus] = React.useState("all");
   const [period, setPeriod] = React.useState("thisMonth");
   const [customStart, setCustomStart] = React.useState("");
@@ -194,7 +193,6 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
         actions={
           <>
             <Button variant="light" size="md" iconLeft={<Icon name="download" size={16} tone="inherit" />} onClick={onExport}>Export</Button>
-            <Button variant="dark" size="md" iconLeft={<Icon name="plus" size={16} tone="inherit" />} onClick={onNewBill}>New bill</Button>
           </>
         }
       />
