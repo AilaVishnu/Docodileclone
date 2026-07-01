@@ -13,12 +13,12 @@ import { Icon } from "../../components/Icon";
 import { MedicineAutocomplete } from "../../components/MedicineAutocomplete/MedicineAutocomplete";
 import { listServices } from "../../api/services";
 import { listPharmacyStock } from "../../api/pharmacy";
-import { createBill } from "../../api/bills";
+import { createBill, listClinicBills } from "../../api/bills";
 import { createPatient } from "../../api/patients";
 import { Toast } from "../../components/Toast";
 import { resolveToastIcon } from "../../components/Toast/toastIcon";
 import { pickAvatar } from "../../utils/avatar";
-import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
+import { colors, fonts, spacing, radii } from "../../styles/theme";
 import { usePatients, type Patient } from "../../hooks/usePatients";
 
 /**
@@ -82,6 +82,20 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
   useEffect(() => {
     listServices().then((svcs) => setServiceCatalog(svcs.map((s) => ({ name: s.name, price: Number(s.price) || 0 })))).catch(() => {});
     listPharmacyStock().then((meds) => setMedCatalog(meds.map((m) => ({ name: m.name, price: m.unitPrice })))).catch(() => {});
+  }, []);
+
+  // Preview the invoice number this bill will get: the next sequence after the
+  // clinic's highest existing INV_#### — the same numbering the backend assigns
+  // on save. A live preview (like the T### patient id); it can shift if another
+  // bill is written first, so it isn't final until the bill is saved.
+  const [invoicePreview, setInvoicePreview] = useState<string | null>(null);
+  useEffect(() => {
+    listClinicBills()
+      .then((bs) => {
+        const maxSeq = bs.reduce((m, b) => Math.max(m, Number((b.invoiceNo || "").replace(/^\D+/, "")) || 0), 0);
+        setInvoicePreview(`INV_${String(maxSeq + 1).padStart(4, "0")}`);
+      })
+      .catch(() => setInvoicePreview(null));
   }, []);
   const priceOf = (name: string): number | undefined => {
     const q = name.trim().toLowerCase();
@@ -242,7 +256,7 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
         onBack={onBack}
         backLabel="Back to Bills"
         innerStyle={{ maxWidth: "none", paddingRight: spacing.xl }}
-        title={<span style={{ display: "inline-flex", alignItems: "baseline", gap: spacing.s }}>New Bill <span style={{ fontSize: fonts.size.s, color: colors.neutral500 }}>INV-2026-0042</span></span>}
+        title={<span style={{ display: "inline-flex", alignItems: "baseline", gap: spacing.s }}>New Bill <span style={{ fontSize: fonts.size.s, color: colors.neutral500 }}>{invoicePreview ?? "INV_—"}</span></span>}
         actions={<><IconButton ariaLabel="Print"><Icon name="printer" tone="inherit" size={22} /></IconButton><IconButton ariaLabel="Share"><Icon name="share" tone="inherit" size={22} /></IconButton></>}
       />
 
