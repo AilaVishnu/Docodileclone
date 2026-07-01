@@ -50,8 +50,13 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
   const [patientId, setPatientId] = useState("—");
   const idRef = useRef(2);
   const [lines, setLines] = useState<Line[]>([blankLine(1)]);
-  const [method, setMethod] = useState("Cash");
-  const [amount, setAmount] = useState("");
+  // One payment line by default; the "+" splits the bill across modes (Cash + UPI…).
+  const [payments, setPayments] = useState<{ mode: string; amount: number | "" }[]>([{ mode: "Cash", amount: "" }]);
+  const [billNote, setBillNote] = useState("");
+  const setPayment = (i: number, patch: Partial<{ mode: string; amount: number | "" }>) =>
+    setPayments((ps) => ps.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
+  const addPayment = () => setPayments((ps) => [...ps, { mode: "Cash", amount: "" }]);
+  const removePayment = (i: number) => setPayments((ps) => (ps.length === 1 ? ps : ps.filter((_, idx) => idx !== i)));
   // The picked patient's real id — required to POST the bill (a bill belongs to
   // a patient). Null until an existing patient is selected from the picker.
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
@@ -60,7 +65,14 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
   const [errors, setErrors] = useState<{ name?: boolean; phone?: boolean; dob?: boolean }>({});
   // Real clinic patients for the name/phone autocomplete (same source as the
   // appointment booking form).
-  const { data: patients } = usePatients();
+  const { data: patients, loading: patientsLoading } = usePatients();
+  // The T### shown on the id card: a picked patient's own number, else the next
+  // free one (max existing display_no + 1) — the same code the backend assigns
+  // on create, so a new patient previews the id it will get.
+  const nextPatientNo = patients.reduce((m, p) => Math.max(m, p.displayNo ?? 0), 0) + 1;
+  const shownPatientId = locked
+    ? patientId
+    : patientsLoading ? "T—" : `T${String(nextPatientNo).padStart(3, "0")}`;
 
   // Item autocomplete + auto-pricing sources — the medicines come from the
   // MedicineAutocomplete's own inventory fetch; services are passed in. `priceOf`
@@ -97,8 +109,11 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
   const discAmt = real.reduce((s, l) => s + (l.discUnit === "%" ? l.qty * l.unit * (l.disc / 100) : l.disc), 0);
   const gstAmt = real.reduce((s, l) => s + (l.qty * l.unit - (l.discUnit === "%" ? l.qty * l.unit * (l.disc / 100) : l.disc)) * (l.gst / 100), 0);
   const final = Math.round(subtotal - discAmt + gstAmt);
-  const received = Number(amount) || 0;
-  const balance = Math.max(0, final - received);
+  // Waive = no charge collected; otherwise the received amount is the sum of the
+  // payment lines and the leftover becomes due.
+  const isWaive = payments.some((p) => p.mode === "Waive");
+  const received = isWaive ? 0 : payments.reduce((s, p) => s + (p.amount === "" ? 0 : Number(p.amount)), 0);
+  const balance = isWaive ? 0 : Math.max(0, final - received);
 
   // Autofill every identity field from the picked patient (mirrors the booking
   // form): formatted phone, ISO dob → dd-mm-yyyy + digit buffer, age, and the
@@ -149,7 +164,8 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
       null;
     if (firstError) { setToastMessage(firstError); return; }
 
-    const isWaive = method === "Waive";
+    // Payment method label: the distinct modes joined ("Cash", or "Cash + UPI").
+    const methodLabel = isWaive ? "Waive" : Array.from(new Set(payments.map((p) => p.mode))).join(" + ");
     setCharging(true);
     try {
       // Use the selected existing patient, or find-or-create one from the typed
@@ -175,8 +191,9 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
         paid: isWaive ? 0 : received,
         due: isWaive ? 0 : balance,
         payStatus: isWaive ? "WAIVED" : balance > 0 ? "DUE" : "PAID",
-        paymentMethod: method,
+        paymentMethod: methodLabel,
         items: JSON.stringify(real.map((l) => ({ name: l.name, qty: l.qty, unit: l.unit, gst: l.gst, disc: l.disc, discUnit: l.discUnit }))),
+        note: billNote.trim() || undefined,
       });
       onBack?.(); // back to the Bills list, which refetches and shows the new invoice
     } catch (e) {
@@ -233,7 +250,7 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
         {/* Row 1 — avatar | name card | bill */}
         <Card style={{ ...appt.card, ...appt.patientIdCard, alignSelf: "start" }}>
           <img src={pickAvatar({ gender: form.gender, ageYears: form.age ? parseInt(form.age.split("/")[0]?.trim() || "", 10) : null })} alt="" style={appt.patientAvatar} />
-          <h1 style={appt.patientIdText}>{patientId}</h1>
+          <h1 style={appt.patientIdText}>{shownPatientId}</h1>
         </Card>
 
         <PatientDetailsForm
@@ -267,10 +284,35 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
 
           <div style={sx.paymentCard}>
             <h3 style={sx.cardTitle}>Payment</h3>
-            <div style={{ display: "flex", alignItems: "center", gap: spacing.s }}>
-              <div style={{ flex: 1, minWidth: 0 }}><Select options={["Cash", "Card", "UPI", "Advance / credit", "Waive"]} value={method} onChange={setMethod} /></div>
-              <div style={{ flex: 1, minWidth: 0 }}><MeasureField box prefix="₹" placeholder={String(final)} inputMode="decimal" ariaLabel="Amount" value={amount} onChange={setAmount} /></div>
-              <IconButton ariaLabel="Add payment mode (split)" size={32}><Icon name="plus" tone="inherit" size={18} /></IconButton>
+            <div style={{ display: "flex", flexDirection: "column", gap: spacing.s, "--input-h": "32px" } as CSSProperties}>
+              {payments.map((p, i) => {
+                const last = i === payments.length - 1;
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: spacing.s }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <Select options={["Cash", "Card", "UPI", "Advance / credit", "Waive"]} value={p.mode} onChange={(m) => setPayment(i, { mode: m })} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <MeasureField box prefix="₹" placeholder={i === 0 ? String(final) : "0"} inputMode="decimal" ariaLabel="Amount"
+                        value={p.amount === "" ? "" : String(p.amount)} onChange={(v) => setPayment(i, { amount: v === "" ? "" : Number(v) })} />
+                    </div>
+                    {last ? (
+                      <IconButton ariaLabel="Add payment mode (split)" size={32} onClick={addPayment}><Icon name="plus" tone="inherit" size={18} /></IconButton>
+                    ) : (
+                      <IconButton ariaLabel="Remove payment mode" size={32} onClick={() => removePayment(i)}><Icon name="trash" tone="inherit" size={18} /></IconButton>
+                    )}
+                  </div>
+                );
+              })}
+              {/* Partial collection → the remainder is recorded as due on the bill. */}
+              {!isWaive && balance > 0 && (
+                <span style={{ fontSize: fonts.size.s, color: colors.neutral600 }}>
+                  <strong style={{ color: colors.neutral900 }}>{inr(balance)}</strong> will be added to due
+                </span>
+              )}
+              <div style={{ "--input-h": "40px" } as CSSProperties}>
+                <Field variant="box" ariaLabel="Bill details" placeholder="Add Details" value={billNote} onChange={setBillNote} />
+              </div>
             </div>
           </div>
         </div>
