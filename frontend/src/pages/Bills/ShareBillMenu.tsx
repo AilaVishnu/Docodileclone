@@ -1,7 +1,7 @@
 import React from "react";
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 import { Icon } from "../../components/Icon";
-import { shareBill, type PrintPatientMeta } from "./printBill";
+import { shareBill, billPdfFile, type PrintPatientMeta } from "./printBill";
 import type { Bill } from "../../api/bills";
 import { colors } from "../../styles/theme";
 
@@ -39,6 +39,29 @@ function waNumber(phone?: string): string {
   return digits.length === 10 ? `91${digits}` : digits;
 }
 
+// Can this browser share an actual file (Web Share API level 2)? When yes, the
+// native share sheet hands the PDF to WhatsApp / Email / etc. with the file
+// attached — the real "share the PDF, not just text". Probed with a dummy PDF.
+function supportsFileShare(): boolean {
+  try {
+    if (typeof navigator === "undefined" || typeof navigator.canShare !== "function") return false;
+    const probe = new File([new Blob([""], { type: "application/pdf" })], "probe.pdf", { type: "application/pdf" });
+    return navigator.canShare({ files: [probe] });
+  } catch {
+    return false;
+  }
+}
+
+function downloadFile(file: File): void {
+  const url = URL.createObjectURL(file);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = file.name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+}
+
 export interface ShareBillMenuProps {
   bill: ShareBill;
   /** Patient demographics for the PDF receipt's meta block. */
@@ -54,36 +77,47 @@ export interface ShareBillMenuProps {
 }
 
 export function ShareBillMenu({ bill, patient, phone, email, onError, trigger }: ShareBillMenuProps) {
-  const items = [
-    {
-      label: "WhatsApp",
-      icon: <Icon name="message" size={18} tone="inherit" />,
-      onClick: () => {
-        const num = waNumber(phone);
-        const url = `https://wa.me/${num}?text=${encodeURIComponent(billSummary(bill))}`;
-        window.open(url, "_blank", "noopener,noreferrer");
-      },
-    },
-    {
-      label: "Email",
-      icon: <Icon name="mail" size={18} tone="inherit" />,
-      onClick: () => {
-        const subject = `Bill ${bill.invoiceNo}`;
-        window.location.href = `mailto:${email ?? ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(billSummary(bill))}`;
-      },
-    },
-    {
-      label: "Download PDF",
-      icon: <Icon name="download" size={18} tone="inherit" />,
-      onClick: () => {
-        Promise.resolve(shareBill(bill, patient)).catch((e) => onError?.((e as Error).message || "Couldn't generate the PDF"));
-      },
-    },
-    {
-      label: "Copy details",
-      onClick: () => { void navigator.clipboard?.writeText(billSummary(bill))?.catch(() => {}); },
-    },
-  ];
+  // Send the actual PDF via the OS share sheet (WhatsApp / Email / … get the
+  // file attached). Falls back to a plain download if the platform can't share
+  // files; a dismissed sheet (AbortError) isn't a failure.
+  const sharePdf = async () => {
+    try {
+      const file = await billPdfFile(bill, patient);
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: `Bill ${bill.invoiceNo}`, text: billSummary(bill) });
+      } else {
+        downloadFile(file);
+      }
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") onError?.((e as Error).message || "Couldn't share the PDF");
+    }
+  };
+  const whatsapp = {
+    label: "WhatsApp",
+    icon: <Icon name="message" size={18} tone="inherit" />,
+    onClick: () => window.open(`https://wa.me/${waNumber(phone)}?text=${encodeURIComponent(billSummary(bill))}`, "_blank", "noopener,noreferrer"),
+  };
+  const emailItem = {
+    label: "Email",
+    icon: <Icon name="mail" size={18} tone="inherit" />,
+    onClick: () => { window.location.href = `mailto:${email ?? ""}?subject=${encodeURIComponent(`Bill ${bill.invoiceNo}`)}&body=${encodeURIComponent(billSummary(bill))}`; },
+  };
+  const downloadPdf = {
+    label: "Download PDF",
+    icon: <Icon name="download" size={18} tone="inherit" />,
+    onClick: () => { Promise.resolve(shareBill(bill, patient)).catch((e) => onError?.((e as Error).message || "Couldn't generate the PDF")); },
+  };
+  const copyDetails = {
+    label: "Copy details",
+    onClick: () => { void navigator.clipboard?.writeText(billSummary(bill))?.catch(() => {}); },
+  };
+
+  // Where the platform can share a file, lead with "Share PDF" (the native sheet
+  // carries the actual PDF to WhatsApp/Email). Otherwise offer the text-only
+  // WhatsApp/Email links + a manual PDF download.
+  const items = supportsFileShare()
+    ? [{ label: "Share PDF", icon: <Icon name="share" size={18} tone="inherit" />, onClick: sharePdf }, downloadPdf, copyDetails]
+    : [whatsapp, emailItem, downloadPdf, copyDetails];
 
   return (
     <PopoverMenu

@@ -1,7 +1,7 @@
 import React from "react";
 import { BillPrint, BillPrintItem } from "../../components/BillPrint/BillPrint";
 import { billStatusOf } from "../../components/BillStatusBadge";
-import { openPrintWindow, downloadAsPdf } from "../Settings";
+import { openPrintWindow, downloadAsPdf, htmlToPdfBlob } from "../Settings";
 import { parseLines } from "./BillReadModal";
 import type { Bill } from "../../api/bills";
 
@@ -72,4 +72,13 @@ export async function printBill(bill: Bill & { patientName: string }, patient?: 
 export async function shareBill(bill: Bill & { patientName: string }, patient?: PrintPatientMeta): Promise<void> {
   const safeInvoice = (bill.invoiceNo || "receipt").replace(/[^\w-]+/g, "_");
   await downloadAsPdf(await buildBillHtml(bill, patient), `Bill-${safeInvoice}`);
+}
+
+// The receipt as an actual PDF File — for the Web Share API (navigator.share),
+// which hands the file to WhatsApp / Email / etc. with the PDF attached (not
+// just a text link). Same rendering as print/download.
+export async function billPdfFile(bill: Bill & { patientName: string }, patient?: PrintPatientMeta): Promise<File> {
+  const safeInvoice = (bill.invoiceNo || "receipt").replace(/[^\w-]+/g, "_");
+  const blob = await htmlToPdfBlob(await buildBillHtml(bill, patient), `Bill-${safeInvoice}`);
+  return new File([blob], `Bill-${safeInvoice}.pdf`, { type: "application/pdf" });
 }
