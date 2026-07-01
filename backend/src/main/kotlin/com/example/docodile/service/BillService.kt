@@ -48,6 +48,7 @@ class BillService(
             payStatus = req.payStatus,
             paymentMethod = req.paymentMethod,
             items = req.items,
+            note = req.note,
             createdAt = Instant.now(),
         )
         return billRepository.save(bill).toDTO()
@@ -110,6 +111,24 @@ class BillService(
         return saved.toClinicDTO(LocalDate.now())
     }
 
+    // Record a payment against a bill ("Mark paid" / "Pay ₹X" / "Record payment").
+    // Adds to what's collected (capped at the billed total), re-derives the due
+    // and the pay status. Refunded/waived bills can't take a payment.
+    @Transactional
+    fun payBill(billId: UUID, paidAmount: BigDecimal, method: String?): ClinicBillDTO {
+        val bill = billRepository.findById(billId).orElse(null)
+            ?: throw IllegalArgumentException("Bill not found")
+        require(paidAmount > zero) { "Enter an amount to record" }
+        require(bill.payStatus?.uppercase() != "REFUNDED") { "A refunded bill can't take a payment" }
+        require(bill.payStatus?.uppercase() != "WAIVED") { "A waived bill has no balance to pay" }
+
+        bill.paid = (bill.paid + paidAmount).min(bill.billed) // never collect past the billed total
+        bill.due = (bill.billed - bill.paid).max(zero)
+        bill.payStatus = if (bill.due > zero) "DUE" else "PAID"
+        if (!method.isNullOrBlank()) bill.paymentMethod = method
+        return billRepository.save(bill).toClinicDTO(LocalDate.now())
+    }
+
     // Bill → the clinic-wide DTO (invoice + patient name + a today flag).
     private fun Bill.toClinicDTO(today: LocalDate) = ClinicBillDTO(
         id = this.id,
@@ -123,6 +142,7 @@ class BillService(
         payStatus = this.payStatus,
         paymentMethod = this.paymentMethod,
         items = this.items,
+        note = this.note,
         appointmentId = this.appointment?.id,
         createdAt = this.createdAt,
         patientName = this.patient?.name ?: "",
@@ -141,6 +161,7 @@ class BillService(
         payStatus = this.payStatus,
         paymentMethod = this.paymentMethod,
         items = this.items,
+        note = this.note,
         appointmentId = this.appointment?.id,
         createdAt = this.createdAt,
     )

@@ -15,6 +15,7 @@ data class ChargeRequest(
     val paidAmount: BigDecimal? = null,
     val billDate: LocalDate? = null,
     val items: List<ChargeLine> = emptyList(),
+    val note: String? = null,             // "Add Details" free-text, stored on the bill
 )
 
 data class ChargeLine(

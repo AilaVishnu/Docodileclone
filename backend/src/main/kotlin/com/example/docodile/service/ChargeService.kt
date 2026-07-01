@@ -98,6 +98,7 @@ class ChargeService(
                 payStatus = payStatus,
                 paymentMethod = req.method,
                 items = itemsJson,
+                note = req.note,
             ),
         )
 
