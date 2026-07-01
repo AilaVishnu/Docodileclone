@@ -1,7 +1,7 @@
 import React from "react";
 import { BillPrint, BillPrintItem } from "../../components/BillPrint/BillPrint";
 import { billStatusOf } from "../../components/BillStatusBadge";
-import { openPrintWindow } from "../Settings";
+import { openPrintWindow, downloadAsPdf } from "../Settings";
 import { parseLines } from "./BillReadModal";
 import type { Bill } from "../../api/bills";
 
@@ -17,10 +17,10 @@ const fmtDate = (iso: string) => {
 // the patient can't be resolved unambiguously, leaving just the name.
 export type PrintPatientMeta = { age?: number; gender?: string; mobile?: string; id?: string };
 
-// Print a clinic bill as the "Bill cum Receipt" — the shared BillPrint component
-// rendered to static HTML and sent to the browser print dialog via the same
-// off-screen iframe the prescription print uses (openPrintWindow).
-export async function printBill(bill: Bill & { patientName: string }, patient?: PrintPatientMeta): Promise<void> {
+// Render a clinic bill to the "Bill cum Receipt" HTML document — the shared
+// BillPrint component to static markup, wrapped in an A4 page. Used by both the
+// print (browser dialog) and share (PDF download) paths so they stay identical.
+async function buildBillHtml(bill: Bill & { patientName: string }, patient?: PrintPatientMeta): Promise<string> {
   // Lazy-load the server renderer so it only ships when someone actually prints
   // (keeps ~50kB of react-dom/server out of the main bundle).
   const { renderToStaticMarkup } = await import("react-dom/server");
@@ -53,11 +53,23 @@ export async function printBill(bill: Bill & { patientName: string }, patient?: 
     />,
   );
 
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff}body{display:flex;justify-content:center}@media screen{body{padding:16px;background:#e5e5e5}}@page{size:A4;margin:12mm}</style>
 </head><body>${markup}</body></html>`;
+}
 
-  openPrintWindow(html);
+// Print a clinic bill as the "Bill cum Receipt" — sent to the browser print
+// dialog via the same off-screen iframe the prescription print uses.
+export async function printBill(bill: Bill & { patientName: string }, patient?: PrintPatientMeta): Promise<void> {
+  openPrintWindow(await buildBillHtml(bill, patient));
+}
+
+// Share a clinic bill: render the same receipt and download it as a real PDF
+// (via the backend /api/print/pdf service the prescription download uses), so
+// the desk gets a file it can send to the patient (WhatsApp / email).
+export async function shareBill(bill: Bill & { patientName: string }, patient?: PrintPatientMeta): Promise<void> {
+  const safeInvoice = (bill.invoiceNo || "receipt").replace(/[^\w-]+/g, "_");
+  await downloadAsPdf(await buildBillHtml(bill, patient), `Bill-${safeInvoice}`);
 }

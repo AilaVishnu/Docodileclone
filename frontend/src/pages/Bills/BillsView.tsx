@@ -11,7 +11,7 @@ import { SearchField } from "../../components/SearchField";
 import { BillStatusBadge, billStatusOf } from "../../components/BillStatusBadge";
 import { BillModal } from "../../components/BillCard/BillModal";
 import { BillReadModal, parseLines } from "./BillReadModal";
-import { printBill } from "./printBill";
+import { printBill, shareBill } from "./printBill";
 import { RecentBills } from "../../components/BillCard/RecentBills";
 import { listClinicBills, payBill, createBill, type Bill } from "../../api/bills";
 import { usePatients } from "../../hooks/usePatients";
@@ -168,6 +168,9 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
     };
   };
   const doPrint = (b: ClinicBill) => (onPrintBill ? onPrintBill(b) : printBill(b, patientMetaFor(b)));
+  // Share downloads the receipt PDF; surface a failure as a toast.
+  const doShare = (b: ClinicBill) =>
+    shareBill(b, patientMetaFor(b)).catch((e) => setToastMessage((e as Error).message || "Couldn't share the bill"));
 
   // Record a payment against a bill (Mark paid / Pay ₹X / Record payment), then
   // refresh the row in place and close. Surfaces the failure as a toast (and
@@ -194,6 +197,29 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
     const queryOk = !q || b.patientName.toLowerCase().includes(q) || b.invoiceNo.toLowerCase().includes(q);
     return statusOk && queryOk;
   });
+
+  // Export the rows currently shown (respects the status/search/period filters)
+  // as a CSV the desk can open in Excel. A cell is quoted + its quotes doubled
+  // so a comma or quote in a name/method can't break the columns.
+  const exportCsv = () => {
+    const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const header = ["S.No", "Patient", "Invoice", "Date", "Billed", "Paid", "Due", "Status", "Method"];
+    const rows = shown.map((b, i) => [
+      i + 1, b.patientName, b.invoiceNo, b.billDate, b.billed, b.paid, b.due,
+      billStatusOf(b), b.paymentMethod ?? "",
+    ]);
+    const csv = [header, ...rows].map((r) => r.map(cell).join(",")).join("\r\n");
+    const { from, to } = rangeFor(period, customStart, customEnd);
+    const stamp = period === "custom" ? `${from || "start"}_${to || "end"}` : period;
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `bills-${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+  };
 
   const columns: GridColumn<ClinicBill>[] = [
     { key: "sno", header: "S.NO", width: 64, align: "left", render: (_b, i) => <span style={styles.muted}>{String(i + 1).padStart(2, "0")}</span> },
@@ -247,7 +273,7 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
         }
         actions={
           <>
-            <Button variant="light" size="md" iconLeft={<Icon name="download" size={16} tone="inherit" />} onClick={onExport}>Export</Button>
+            <Button variant="light" size="md" iconLeft={<Icon name="download" size={16} tone="inherit" />} onClick={onExport ?? exportCsv}>Export</Button>
           </>
         }
       />
@@ -305,6 +331,7 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
           onClose={() => setOpenBill(null)}
           bill={openBill}
           onPrint={doPrint}
+          onShare={doShare}
           onRecordPayment={(b, amount, method) => recordPayment(b, amount, method)}
           onViewBills={(b) => { setHistoryFor(b.patientName); setOpenBill(null); }}
           onRefunded={(u) => setFetched((list) => list.map((x) => (x.id === u.id ? u : x)))}
