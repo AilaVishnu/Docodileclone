@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { MeasureField } from './MeasureField';
 
 const meta = {
-  title: 'Components/MeasureField',
+  title: 'Components/Input/MeasureField',
   component: MeasureField,
   tags: ['autodocs'],
   parameters: {

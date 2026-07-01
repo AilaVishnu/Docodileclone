@@ -26,7 +26,7 @@ const savedClinic: Clinic = {
 const noop = () => {};
 
 const meta = {
-  title: 'Components/ClinicInfoCard',
+  title: 'Components/Clinic/ClinicInfoCard',
   component: ClinicInfoCard,
   tags: ['autodocs'],
   decorators: [

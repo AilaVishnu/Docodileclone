@@ -9,7 +9,7 @@ const Panel = ({ title, tint }: { title: string; tint: string }) => (
 );
 
 const meta = {
-  title: 'Components/ClinicWorkspace',
+  title: 'Components/Clinic/ClinicWorkspace',
   component: ClinicWorkspace,
   tags: ['autodocs'],
   parameters: {

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { RangeCalendar } from './RangeCalendar';
 
 const meta = {
-  title: 'Components/RangeCalendar',
+  title: 'Components/DateTime/RangeCalendar',
   component: RangeCalendar,
   tags: ['autodocs'],
   parameters: {

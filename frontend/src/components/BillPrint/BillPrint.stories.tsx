@@ -20,7 +20,7 @@ const TSKIN = {
 };
 
 const meta = {
-  title: "Components/BillPrint",
+  title: 'Components/Bills/BillPrint',
   component: BillPrint,
   parameters: { layout: "fullscreen" },
   decorators: [

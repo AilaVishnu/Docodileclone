@@ -5,7 +5,7 @@ import { DomainInput } from './DomainInput';
 import { withClinicSession } from '../../../sb/decorators';
 
 const meta = {
-  title: 'Components/DomainInput',
+  title: 'Components/Input/DomainInput',
   component: DomainInput,
   tags: ['autodocs'],
   parameters: {

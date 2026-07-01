@@ -7,7 +7,7 @@ const Label = ({ children }: { children: React.ReactNode }) => (
 );
 
 const meta = {
-  title: 'Components/StaffWindow',
+  title: 'Components/Staff/StaffWindow',
   component: StaffWindow,
   tags: ['autodocs'],
   parameters: {

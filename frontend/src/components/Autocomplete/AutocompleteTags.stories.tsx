@@ -4,7 +4,7 @@ import { AutocompleteTags } from './AutocompleteTags';
 import { withClinicSession } from '../../sb/decorators';
 
 const meta = {
-  title: 'Components/AutocompleteTags',
+  title: 'Components/Input/AutocompleteTags',
   component: AutocompleteTags,
   tags: ['autodocs'],
   parameters: {

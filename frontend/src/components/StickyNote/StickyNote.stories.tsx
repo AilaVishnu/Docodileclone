@@ -12,7 +12,7 @@ function NoteBox({ children }: { children: React.ReactNode }) {
 }
 
 const meta = {
-  title: "Components/StickyNote",
+  title: 'Components/Board/StickyNote',
   component: StickyNote,
   tags: ["autodocs"],
   decorators: [

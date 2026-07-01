@@ -6,7 +6,7 @@ import { Card } from "../Card";
 import { Switch } from "../Switch";
 
 const meta = {
-  title: "Components/BoardItem",
+  title: 'Components/Board/BoardItem',
   component: BoardItem,
   tags: ["autodocs"],
   parameters: {

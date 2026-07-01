@@ -21,7 +21,7 @@ const sampleStaff: StaffData = {
 const noop = () => {};
 
 const meta = {
-  title: 'Components/AddStaffModal',
+  title: 'Components/Staff/AddStaffModal',
   component: AddStaffModal,
   tags: ['autodocs'],
   parameters: {

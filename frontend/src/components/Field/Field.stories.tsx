@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { Field } from './Field';
 
 const meta = {
-  title: 'Components/Field',
+  title: 'Components/Input/Field',
   component: Field,
   tags: ['autodocs'],
   parameters: {

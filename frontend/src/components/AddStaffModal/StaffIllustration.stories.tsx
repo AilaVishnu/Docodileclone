@@ -4,7 +4,7 @@ import { StaffIllustration } from './StaffIllustration';
 const ROLES = ['Doctor', 'Nurse', 'Pharmacy', 'Front Desk', 'Lab'] as const;
 
 const meta = {
-  title: 'Components/StaffIllustration',
+  title: 'Components/Staff/StaffIllustration',
   component: StaffIllustration,
   tags: ['autodocs'],
   parameters: {

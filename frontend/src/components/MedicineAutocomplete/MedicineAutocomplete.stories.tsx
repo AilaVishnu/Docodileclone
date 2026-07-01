@@ -35,7 +35,7 @@ const medicineHandlers = [
 ];
 
 const meta = {
-  title: 'Components/MedicineAutocomplete',
+  title: 'Components/Rx/MedicineAutocomplete',
   component: MedicineAutocomplete,
   tags: ['autodocs'],
   parameters: {

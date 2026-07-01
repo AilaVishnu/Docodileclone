@@ -4,7 +4,7 @@ import { DepositPanel } from './DepositPanel';
 const noop = () => {};
 
 const meta = {
-  title: 'Components/DepositPanel',
+  title: 'Components/Bills/DepositPanel',
   component: DepositPanel,
   tags: ['autodocs'],
   parameters: {

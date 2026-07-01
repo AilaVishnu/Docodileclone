@@ -40,7 +40,7 @@ const withSeededMemos = withLocalStorage({
 });
 
 const meta = {
-  title: 'Components/MemoBoard',
+  title: 'Components/Board/MemoBoard',
   component: MemoBoard,
   tags: ['autodocs'],
   // No props — seed the storage keys, then give it a sized stage so the board

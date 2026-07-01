@@ -5,7 +5,7 @@ import { StaffDetailsCard } from './StaffDetailsCard';
 type Gender = 'male' | 'female' | 'other' | '';
 
 const meta = {
-  title: 'Components/StaffDetailsCard',
+  title: 'Components/Staff/StaffDetailsCard',
   component: StaffDetailsCard,
   tags: ['autodocs'],
   parameters: {

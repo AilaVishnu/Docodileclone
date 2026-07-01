@@ -5,7 +5,7 @@ import { AdditionalStaffDetailsCard } from './AdditionalStaffDetailsCard';
 const CLINIC_DEPARTMENTS = ['Dermatology', 'Pediatrics', 'General Medicine', 'Cardiology'];
 
 const meta = {
-  title: 'Components/AdditionalStaffDetailsCard',
+  title: 'Components/Staff/AdditionalStaffDetailsCard',
   component: AdditionalStaffDetailsCard,
   tags: ['autodocs'],
   parameters: {

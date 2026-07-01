@@ -15,7 +15,7 @@ const sampleClinic: Clinic = {
 const noop = () => {};
 
 const meta = {
-  title: 'Components/ClinicDisplayCard',
+  title: 'Components/Clinic/ClinicDisplayCard',
   component: ClinicDisplayCard,
   tags: ['autodocs'],
   parameters: {

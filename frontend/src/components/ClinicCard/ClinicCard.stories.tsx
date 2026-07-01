@@ -4,7 +4,7 @@ import { ClinicCard } from './ClinicCard';
 const noop = () => {};
 
 const meta = {
-  title: 'Components/ClinicCard',
+  title: 'Components/Clinic/ClinicCard',
   component: ClinicCard,
   tags: ['autodocs'],
   parameters: {

@@ -12,7 +12,7 @@ import { colors } from '../../styles/theme';
  * with the BillModal's bill content (line items, summary, split payments).
  */
 const meta = {
-  title: 'Pages/New Bill',
+  title: 'Pages/Bills/New Bill',
   component: NewBillView,
   tags: ['autodocs'],
   parameters: { layout: 'fullscreen' },

@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { WhenPicker } from './WhenPicker';
 
 const meta = {
-  title: 'Components/WhenPicker',
+  title: 'Components/Rx/WhenPicker',
   component: WhenPicker,
   tags: ['autodocs'],
   parameters: {

@@ -11,7 +11,7 @@ const MEDS: Med[] = [
 ];
 
 const meta = {
-  title: 'Patterns/PharmacyListView',
+  title: 'Patterns/Pharmacy/List View',
   component: PharmacyListView,
   parameters: {
     layout: 'padded',

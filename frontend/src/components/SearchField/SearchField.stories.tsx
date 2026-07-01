@@ -4,7 +4,7 @@ import { SearchField, SearchFieldProps } from "./SearchField";
 import { colors, spacing } from "../../styles/theme";
 
 const meta = {
-  title: "Components/SearchField",
+  title: 'Components/Input/SearchField',
   component: SearchField,
   tags: ["autodocs"],
   decorators: [

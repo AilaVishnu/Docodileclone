@@ -4,7 +4,7 @@ import { BillModal } from './BillModal';
 const noop = () => {};
 
 const meta = {
-  title: 'Components/BillModal',
+  title: 'Components/Bills/BillModal',
   component: BillModal,
   tags: ['autodocs'],
   parameters: {

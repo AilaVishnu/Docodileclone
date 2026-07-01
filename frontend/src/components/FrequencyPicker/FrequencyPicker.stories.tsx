@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { FrequencyPicker } from './FrequencyPicker';
 
 const meta = {
-  title: 'Components/FrequencyPicker',
+  title: 'Components/Rx/FrequencyPicker',
   component: FrequencyPicker,
   tags: ['autodocs'],
   parameters: {

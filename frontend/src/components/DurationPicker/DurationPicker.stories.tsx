@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { DurationPicker } from './DurationPicker';
 
 const meta = {
-  title: 'Components/DurationPicker',
+  title: 'Components/Rx/DurationPicker',
   component: DurationPicker,
   tags: ['autodocs'],
   parameters: {

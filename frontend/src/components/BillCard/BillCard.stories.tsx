@@ -11,7 +11,7 @@ const SERVICES = [
 const noop = () => {};
 
 const meta = {
-  title: 'Components/BillCard',
+  title: 'Components/Bills/BillCard',
   component: BillCard,
   tags: ['autodocs'],
   parameters: {

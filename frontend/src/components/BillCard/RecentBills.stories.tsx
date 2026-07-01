@@ -11,7 +11,7 @@ const SAMPLE: Bill[] = [
 ];
 
 const meta = {
-  title: 'Components/RecentBills',
+  title: 'Components/Bills/RecentBills',
   component: RecentBills,
   tags: ['autodocs'],
   parameters: {

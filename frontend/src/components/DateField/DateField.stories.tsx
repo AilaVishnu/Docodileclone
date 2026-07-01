@@ -4,7 +4,7 @@ import { DateField } from './DateField';
 import { colors } from '../../styles/theme';
 
 const meta = {
-  title: 'Components/DateField',
+  title: 'Components/DateTime/DateField',
   component: DateField,
   tags: ['autodocs'],
   parameters: {

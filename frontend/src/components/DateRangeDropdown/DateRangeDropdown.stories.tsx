@@ -11,7 +11,7 @@ const PRESETS: RangePreset[] = [
 ];
 
 const meta = {
-  title: 'Components/DateRangeDropdown',
+  title: 'Components/DateTime/DateRangeDropdown',
   component: DateRangeDropdown,
   tags: ['autodocs'],
   parameters: {

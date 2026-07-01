@@ -7,7 +7,7 @@ import { colors, spacing } from "../../styles/theme";
 const ALL: BillStatus[] = ["paid", "due", "refunded", "waived"];
 
 const meta = {
-  title: "Components/BillStatusBadge",
+  title: 'Components/Bills/BillStatusBadge',
   component: BillStatusBadge,
   tags: ["autodocs"],
   decorators: [

@@ -32,7 +32,7 @@ const withSeededSchedule = withLocalStorage({
 });
 
 const meta = {
-  title: 'Components/AnalogClock',
+  title: 'Components/DateTime/AnalogClock',
   component: AnalogClock,
   tags: ['autodocs'],
   // Seed the auth/identity keys + a working schedule so the clock draws its

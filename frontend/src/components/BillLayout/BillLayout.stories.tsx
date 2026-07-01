@@ -5,7 +5,7 @@ import { Button } from '../Button';
 import { colors, fonts } from '../../styles/theme';
 
 const meta = {
-  title: 'Components/BillLayout',
+  title: 'Components/Bills/BillLayout',
   component: BillLayout,
   tags: ['autodocs'],
   parameters: {

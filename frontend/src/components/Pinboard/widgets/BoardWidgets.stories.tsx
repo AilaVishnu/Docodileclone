@@ -11,7 +11,7 @@ import { withSchedule } from "../../../sb/decorators";
 // notes. Each is shown at roughly the size it takes inside a BoardItem.
 
 const meta = {
-  title: "Patterns/Board widgets",
+  title: 'Patterns/Pinboard/Widgets',
   tags: ["autodocs"],
   decorators: [
     withSchedule,

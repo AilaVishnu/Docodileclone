@@ -5,7 +5,7 @@ import { DatePicker } from './DatePicker';
 const TODAY = new Date('2026-06-13');
 
 const meta = {
-  title: 'Components/DatePicker',
+  title: 'Components/DateTime/DatePicker',
   component: DatePicker,
   tags: ['autodocs'],
   parameters: {
