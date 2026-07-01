@@ -1778,7 +1778,9 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     width: 28,
-    height: 28,
+    // Match the field height so the icon centres on the field line (the row is
+    // top-aligned so Notes can grow downward — a 28px button would ride high).
+    height: "var(--input-h, 40px)",
     lineHeight: 1,
     color: colors.neutral500,
     background: "transparent",
