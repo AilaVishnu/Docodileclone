@@ -21,7 +21,7 @@ const medHandlers = [
 ];
 
 const meta = {
-  title: 'Patterns/VisitForm',
+  title: 'Patterns/Visit/Form',
   component: VisitForm,
   tags: ['autodocs'],
   parameters: {

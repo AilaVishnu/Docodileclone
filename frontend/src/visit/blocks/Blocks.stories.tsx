@@ -134,7 +134,7 @@ function Demo({ Comp, make, title, icon }: { Comp: React.ComponentType<{ value: 
 }
 
 const meta = {
-  title: 'Visit/Blocks',
+  title: 'Patterns/Visit/Blocks',
   parameters: {
     layout: 'fullscreen',
     msw: { handlers: [...medHandlers, ...sbHandlers] },
@@ -146,12 +146,12 @@ export default meta;
 type Story = StoryObj;
 
 export const Vitals: Story = { render: () => <Demo Comp={VitalsBlock} make={emptyVitals} title="Vitals" icon="heart-pulse" /> };
-export const History: Story = { render: () => <Demo Comp={HistoryBlock} make={emptyHistory} title="History" icon="history" /> };
+export const History: Story = { render: () => <Demo Comp={HistoryBlock} make={emptyHistory} title="History" icon="hourglass-line" /> };
 export const Complaints: Story = { render: () => <Demo Comp={ComplaintsBlock} make={emptyTags} title="Complaints" icon="chat-dots" /> };
-export const Diagnosis: Story = { render: () => <Demo Comp={DiagnosisBlock} make={emptyTags} title="Diagnosis" icon="stethoscope" /> };
+export const Diagnosis: Story = { render: () => <Demo Comp={DiagnosisBlock} make={emptyTags} title="Diagnosis" icon="magnifer-bug" /> };
 export const Rx: Story = { render: () => <RxDemo /> };
-export const NotesForPatient: Story = { render: () => <Demo Comp={NotesBlock} make={emptyNotes} title="Notes for patient" icon="pen" /> };
-export const PrivateNotes: Story = { render: () => <Demo Comp={TextBlock} make={emptyText} title="Private notes" icon="eye-closed" /> };
+export const NotesForPatient: Story = { render: () => <Demo Comp={NotesBlock} make={emptyNotes} title="Notes for Patient" icon="document-school" /> };
+export const PrivateNotes: Story = { render: () => <Demo Comp={TextBlock} make={emptyText} title="Private Notes" icon="users-group-rounded" /> };
 export const Tests: Story = { render: () => <TestsDemo /> };
 export const Refer: Story = { render: () => <ReferDemo /> };
 export const Review: Story = { render: () => <ReviewDemo /> };
