@@ -4,6 +4,7 @@ import com.example.docodile.domain.Appointment
 import com.example.docodile.domain.Patient
 import com.example.docodile.repo.AppointmentRepository
 import com.example.docodile.repo.AppUserRepository
+import com.example.docodile.repo.BillRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.web.AppointmentDTO
 import com.example.docodile.web.BookAppointmentRequest
@@ -26,13 +27,19 @@ class AppointmentService(
     private val appUserRepository: AppUserRepository,
     private val patientRepository: PatientRepository,
     private val patientDepositService: PatientDepositService,
+    private val billRepository: BillRepository,
 ) {
     fun getAppointmentsForClinic(date: LocalDate): List<AppointmentDTO> {
         val startOfDay = date.atStartOfDay()
         val endOfDay = date.atTime(23, 59, 59)
 
+        // Bills each patient already has on this date → drives the queue kebab's
+        // "Create Bill" vs "View/Create Bills" branch (one query, no N+1).
+        val billCountByPatient: Map<UUID, Int> = billRepository.countByPatientForDate(date)
+            .associate { (it[0] as UUID) to (it[1] as Number).toInt() }
+
         return appointmentRepository.findAllByScheduledTimeBetween(startOfDay, endOfDay)
-            .map { it.toDTO() }
+            .map { it.toDTO(todayBillCount = billCountByPatient[it.patient?.id] ?: 0) }
     }
 
     @Transactional
@@ -230,7 +237,7 @@ class AppointmentService(
         return digits.takeLast(10)
     }
 
-    private fun Appointment.toDTO(): AppointmentDTO {
+    private fun Appointment.toDTO(todayBillCount: Int = 0): AppointmentDTO {
         return AppointmentDTO(
             id = this.id,
             patientId = this.patient?.id ?: UUID.randomUUID(),
@@ -252,7 +259,14 @@ class AppointmentService(
             notes = this.notes,
             fee = this.fee,
             patientArchived = this.patient?.deletedAt != null,
-            createdAt = this.createdAt
+            createdAt = this.createdAt,
+            // Amounts the queue's Bill editor seeds from the appointment/patient
+            // (pharmacy total, bill-level discount, and the patient's advance so
+            // it can auto-cover). Dropped in the schema-per-tenant rebase.
+            pharmacyAmount = this.pharmacyAmount,
+            discountAmount = this.discountAmount,
+            patientDeposit = this.patient?.deposit,
+            todayBillCount = todayBillCount,
         )
     }
 }
