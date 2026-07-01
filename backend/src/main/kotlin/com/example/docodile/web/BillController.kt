@@ -21,6 +21,10 @@ import java.util.UUID
 data class PayBillRequest(
     val paidAmount: BigDecimal,
     val method: String? = null,
+    // Optional updated free-text note. Null/blank leaves the existing note as-is
+    // (so a plain pay never wipes it); a value overwrites it — the desk can edit
+    // the note when reopening a due bill to collect.
+    val note: String? = null,
 )
 
 // Clinic-wide bills for the Bills page (sidebar "Billing"). Per-patient bill
@@ -49,7 +53,7 @@ class BillController(
     @PostMapping("/{id}/pay")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun pay(@PathVariable id: UUID, @RequestBody req: PayBillRequest): ClinicBillDTO =
-        billService.payBill(id, req.paidAmount, req.method)
+        billService.payBill(id, req.paidAmount, req.method, req.note)
 
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgument(e: IllegalArgumentException): ResponseEntity<Map<String, String>> =

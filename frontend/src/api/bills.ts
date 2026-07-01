@@ -74,7 +74,7 @@ export async function refundBill(billId: string): Promise<ClinicBill> {
 
 // Record a payment against a bill ("Mark paid" / "Pay ₹X" / "Record payment").
 // Adds to what's collected and re-settles due/payStatus. Returns the updated bill.
-export async function payBill(billId: string, payload: { paidAmount: number; method?: string }): Promise<ClinicBill> {
+export async function payBill(billId: string, payload: { paidAmount: number; method?: string; note?: string }): Promise<ClinicBill> {
   const res = await fetch(`${API_BASE_URL}/api/tenant/bills/${billId}/pay`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },

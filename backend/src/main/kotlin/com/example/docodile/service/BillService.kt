@@ -115,7 +115,7 @@ class BillService(
     // Adds to what's collected (capped at the billed total), re-derives the due
     // and the pay status. Refunded/waived bills can't take a payment.
     @Transactional
-    fun payBill(billId: UUID, paidAmount: BigDecimal, method: String?): ClinicBillDTO {
+    fun payBill(billId: UUID, paidAmount: BigDecimal, method: String?, note: String? = null): ClinicBillDTO {
         val bill = billRepository.findById(billId).orElse(null)
             ?: throw IllegalArgumentException("Bill not found")
         require(paidAmount > zero) { "Enter an amount to record" }
@@ -126,6 +126,9 @@ class BillService(
         bill.due = (bill.billed - bill.paid).max(zero)
         bill.payStatus = if (bill.due > zero) "DUE" else "PAID"
         if (!method.isNullOrBlank()) bill.paymentMethod = method
+        // Only overwrite the note when the desk supplied one (edited on reopen);
+        // a plain pay leaves the original note intact.
+        if (!note.isNullOrBlank()) bill.note = note
         return billRepository.save(bill).toClinicDTO(LocalDate.now())
     }
 

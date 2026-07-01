@@ -170,6 +170,24 @@ class BillServiceTest {
         assertThrows(IllegalArgumentException::class.java) { billService.payBill(waived.id, BigDecimal.ZERO, "Cash") }
     }
 
+    @Test
+    fun `payBill overwrites the note when supplied and preserves it otherwise`() {
+        // A supplied note (desk edited it while collecting on reopen) overwrites.
+        val edited = bill(billed = BigDecimal("500"), paid = BigDecimal.ZERO, due = BigDecimal("500"), payStatus = "DUE")
+            .also { it.note = "old note" }
+        `when`(billRepository.findById(edited.id)).thenReturn(Optional.of(edited))
+        `when`(billRepository.save(any(Bill::class.java))).thenAnswer { it.arguments[0] }
+        val dto = billService.payBill(edited.id, BigDecimal("200"), "Cash", "new note")
+        assertEquals("new note", dto.note)
+
+        // A plain pay (null/blank note) leaves the original note intact.
+        val kept = bill(billed = BigDecimal("500"), paid = BigDecimal.ZERO, due = BigDecimal("500"), payStatus = "DUE")
+            .also { it.note = "keep me" }
+        `when`(billRepository.findById(kept.id)).thenReturn(Optional.of(kept))
+        assertEquals("keep me", billService.payBill(kept.id, BigDecimal("200"), "Cash", null).note)
+        assertEquals("keep me", billService.payBill(kept.id, BigDecimal("50"), "Cash", "   ").note)
+    }
+
     // ---- settleOtherDues ---------------------------------------------------
 
     @Test
