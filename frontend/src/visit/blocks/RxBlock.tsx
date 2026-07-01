@@ -1,5 +1,4 @@
 import React from "react";
-import type { CSSProperties } from "react";
 import { MedicineAutocomplete } from "../../components/MedicineAutocomplete/MedicineAutocomplete";
 import { FrequencyPicker } from "../../components/FrequencyPicker/FrequencyPicker";
 import { WhenPicker } from "../../components/WhenPicker/WhenPicker";
@@ -8,116 +7,204 @@ import { DurationPicker } from "../../components/DurationPicker/DurationPicker";
 import { Field } from "../../components/Field";
 import { Icon } from "../../components/Icon";
 import { IconButton } from "../../components/IconButton";
-import { colors, fonts, radii, spacing } from "../../styles/theme";
+import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
+import { styles } from "../../pages/PrescriptionPage/PrescriptionPage.styles";
+import { fonts, spacing } from "../../styles/theme";
 
-// RxBlock — the prescription rows, composed from the REAL Rx-pad components, the
-// same pieces the PrescriptionPage uses inline: MedicineAutocomplete (cream box),
-// the frequency/when/interval/duration pickers, generic-name line, tapering
-// ("then…") sub-rows, and the auto-trailing empty row (no "Add" button — a new
-// row appears as you fill the last).
-export type RxThen = { id: string; frequency: string; whenToTake: string; frequencyInterval: string; duration: string; notes: string };
-export type RxRow = RxThen & { medicine: string; genericName: string; thenRows: RxThen[] };
-export type RxData = { rows: RxRow[] };
+// RxBlock — the prescription rows, lifted VERBATIM from PrescriptionPage's inline
+// Rx section: MedicineAutocomplete (cream box), the frequency/when/interval/
+// duration pickers, the generic-name overlay input, tapering ("then…") sub-rows,
+// the drug-interaction banner, the auto-trailing empty row, and the Rx-actions
+// row (copy from previous + load/save template). The page owns rxRows + every
+// page-state-dependent handler; the block receives them as props and only owns
+// the markup. Rendered inside a <SectionBlock title="Rx" surface="card"> whose
+// header supplies the icon + collapse chevron.
 
-let _n = 0;
-const uid = (p: string) => `${p}-${(_n += 1)}`;
-const newThen = (): RxThen => ({ id: uid("then"), frequency: "", whenToTake: "", frequencyInterval: "", duration: "", notes: "" });
-const newRow = (): RxRow => ({ ...newThen(), id: uid("rx"), medicine: "", genericName: "", thenRows: [] });
-export const emptyRx = (): RxData => ({ rows: [newRow()] });
-
-// Always keep exactly one trailing empty row — fill the last and a new one appears.
-const withTrailing = (rows: RxRow[]): RxRow[] => {
-  const filled = rows.filter((r) => r.medicine.trim() !== "");
-  const empty = rows.find((r) => r.medicine.trim() === "");
-  return [...filled, empty ?? newRow()];
+// The Rx row shapes mirror the page's RxRowDraft / ThenRow. Kept structural so
+// the page can pass its own state straight through without a data adapter.
+export type RxThenRow = {
+  dosage: string;
+  whenToTake: string;
+  frequency: string;
+  frequencyInterval: string;
+  duration: string;
+  notes: string;
+};
+export type RxRow = {
+  id: string | null;
+  position: number;
+  medicine: string;
+  genericName: string;
+  medicineNote: string;
+  dosage: string;
+  whenToTake: string;
+  frequency: string;
+  frequencyInterval: string;
+  duration: string;
+  notes: string;
+  thenRows: RxThenRow[];
 };
 
-const medicineInputStyle: CSSProperties = {
-  backgroundColor: colors.primary100,
-  border: "none",
-  borderRadius: radii.m,
-  height: 40,
-  padding: `0 ${spacing.s}`,
-  fontSize: fonts.control.sm,
-  color: colors.neutral900,
-  boxSizing: "border-box",
+export type RxInteraction = { drug: string; interactsWith: string; comment: string };
+
+export type RxBlockProps = {
+  rows: RxRow[];
+  interactions: RxInteraction[];
+  /** Patch a single field on the row at `index` (medicine cell + generic name). */
+  onUpdateField: (index: number, key: keyof RxRow, value: string) => void;
+  /** Edit the medicine on the row at `index` (also runs autofill on the page). */
+  onMedicineChange: (index: number, value: string) => void;
+  onMedicineSelect: (index: number, name: string, genericName: string) => void;
+  onAddThenRow: (index: number) => void;
+  onRemoveRxRow: (index: number) => void;
+  onUpdateThenField: (index: number, thenIndex: number, key: keyof RxThenRow, value: string) => void;
+  onRemoveThenRow: (index: number, thenIndex: number) => void;
+  /** Copy the previous visit's prescriptions into the pad (rewind icon). */
+  onCopyPrev?: () => void;
+  copyPrevDisabled?: boolean;
+  /** Load a saved Rx template (mic icon). */
+  onLoadTemplate?: () => void;
+  /** Save the current Rx as a template (kebab). */
+  onSaveTemplate?: () => void;
 };
 
-const listStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: spacing.m };
-const groupStyle: CSSProperties = { display: "flex", gap: spacing.s, alignItems: "flex-start", flexWrap: "wrap" };
-const leftStyle: CSSProperties = { display: "flex", gap: spacing.s, alignItems: "flex-start", flex: "1 1 240px", minWidth: 220 };
-const serialStyle: CSSProperties = { fontFamily: fonts.family.primary, fontSize: fonts.control.sm, color: colors.neutral500, width: 14, flexShrink: 0, paddingTop: 10 };
-const medColStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: spacing["2xs"], flex: 1, minWidth: 0 };
-const taperRowStyle: CSSProperties = { display: "flex", justifyContent: "flex-end" };
-const taperBtnStyle: CSSProperties = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 24, height: 24, background: "transparent", border: "none", cursor: "pointer", color: colors.neutral500, padding: 0 };
-const rightStyle: CSSProperties = { flex: "999 1 320px", display: "flex", flexDirection: "column", gap: spacing.s, minWidth: 0 };
-const dataRowStyle: CSSProperties = { display: "flex", gap: spacing.s, alignItems: "flex-start", flexWrap: "wrap" };
-const cellStyle: CSSProperties = { minWidth: 0 };
-
-// One dose line (the main row's schedule, or a tapering "then" row).
-function DoseRow({ data, onChange, onRemove }: { data: RxThen; onChange: (patch: Partial<RxThen>) => void; onRemove?: () => void }) {
+export function RxBlock({
+  rows,
+  interactions,
+  onUpdateField,
+  onMedicineChange,
+  onMedicineSelect,
+  onAddThenRow,
+  onRemoveRxRow,
+  onUpdateThenField,
+  onRemoveThenRow,
+  onCopyPrev,
+  copyPrevDisabled,
+  onLoadTemplate,
+  onSaveTemplate,
+}: RxBlockProps) {
   return (
-    <div style={dataRowStyle}>
-      <div style={cellStyle}><FrequencyPicker value={data.frequency} onChange={(v) => onChange({ frequency: v })} /></div>
-      <div style={cellStyle}><WhenPicker value={data.whenToTake} onChange={(v) => onChange({ whenToTake: v })} /></div>
-      <div style={cellStyle}><FrequencyIntervalPicker value={data.frequencyInterval} onChange={(v) => onChange({ frequencyInterval: v })} /></div>
-      <div style={cellStyle}><DurationPicker value={data.duration} onChange={(v) => onChange({ duration: v })} /></div>
-      <div style={{ flex: 1, minWidth: 120 }}>
-        <Field variant="box" fill="filled" value={data.notes} onChange={(v) => onChange({ notes: v })} placeholder="Notes" />
-      </div>
-      {onRemove ? (
-        <IconButton ariaLabel="Remove" title="Remove" size={32} onClick={onRemove}><Icon name="trash" tone="inherit" size={16} /></IconButton>
-      ) : (
-        <span style={{ width: 32, flexShrink: 0 }} />
+    <div style={styles.rxTable}>
+      {interactions.length > 0 && (
+        <div style={styles.rxInteractionBanner}>
+          {interactions.map((w, i) => (
+            <div key={i} style={styles.rxInteractionRow}>
+              <span style={styles.rxInteractionIcon}>⚠</span>
+              <span style={styles.rxInteractionText}>
+                <strong style={{ textTransform: "capitalize" }}>{w.drug}</strong>
+                {" + "}
+                <strong style={{ textTransform: "capitalize" }}>{w.interactsWith}</strong>
+                {w.comment ? `: ${w.comment}` : ""}
+              </span>
+            </div>
+          ))}
+        </div>
       )}
-    </div>
-  );
-}
-
-export function RxBlock({ value, onChange }: { value: RxData; onChange: (next: RxData) => void }) {
-  const commit = (rows: RxRow[]) => onChange({ rows: withTrailing(rows) });
-  const patchRow = (id: string, patch: Partial<RxRow>) => commit(value.rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-  const removeRow = (id: string) => commit(value.rows.filter((r) => r.id !== id));
-  const addThen = (row: RxRow) => patchRow(row.id, { thenRows: [...row.thenRows, newThen()] });
-  const patchThen = (row: RxRow, thenId: string, patch: Partial<RxThen>) =>
-    patchRow(row.id, { thenRows: row.thenRows.map((t) => (t.id === thenId ? { ...t, ...patch } : t)) });
-  const removeThen = (row: RxRow, thenId: string) => patchRow(row.id, { thenRows: row.thenRows.filter((t) => t.id !== thenId) });
-
-  return (
-    <div style={listStyle}>
-      {value.rows.map((r, i) => {
-        const filled = r.medicine.trim() !== "";
+      {rows.map((row, i) => {
+        const updateField = (key: keyof RxRow, value: string) => onUpdateField(i, key, value);
         return (
-          <div key={r.id} style={groupStyle}>
-            <div style={leftStyle}>
-              <span style={serialStyle}>{i + 1}</span>
-              <div style={medColStyle}>
-                <MedicineAutocomplete
-                  value={r.medicine}
-                  placeholder="Medicine"
-                  inputStyle={medicineInputStyle}
-                  onChange={(v) => patchRow(r.id, { medicine: v })}
-                  onSelect={(name, generic) => patchRow(r.id, { medicine: name, genericName: generic })}
-                />
-                {filled ? <Field variant="underline" value={r.genericName} onChange={(v) => patchRow(r.id, { genericName: v })} placeholder="Unknown" /> : null}
-                {filled ? (
-                  <div style={taperRowStyle}>
-                    <button type="button" style={taperBtnStyle} title="Add tapering dose" onClick={() => addThen(r)}>
-                      <Icon name="plus" tone="inherit" size={14} />
-                    </button>
-                  </div>
-                ) : null}
+          <div key={row.id ?? `draft-${i}`} style={{ ...styles.rxGroup, zIndex: rows.length + 5 - i }}>
+            {/* Left: serial + medicine cell — visually anchors for all tapering rows */}
+            <div style={styles.rxGroupLeft}>
+              <span style={styles.rxSerial}>{i + 1}</span>
+              <div style={{ ...styles.rxMedicineCell, flex: 1, position: "relative" }}>
+                <div style={styles.rxMedicineInputCol}>
+                  <MedicineAutocomplete
+                    inputStyle={styles.rxMedicineInput}
+                    placeholder="Medicine"
+                    value={row.medicine}
+                    onChange={(v) => onMedicineChange(i, v)}
+                    onSelect={(name, genericName) => onMedicineSelect(i, name, genericName)}
+                  />
+                </div>
+                {row.medicine.trim() && (
+                  <input
+                    type="text"
+                    style={{
+                      ...styles.rxGenericName,
+                      position: "absolute",
+                      left: spacing.s,
+                      top: "calc(100% + 2px)",
+                      width: "auto",
+                      right: 8,
+                    }}
+                    placeholder="Unknown"
+                    value={row.genericName}
+                    onChange={(e) => updateField("genericName", e.target.value)}
+                  />
+                )}
+                <div style={styles.rxGenericRow}>
+                  <button
+                    type="button"
+                    style={styles.rxAddNoteBtn}
+                    title="Add tapering dose"
+                    onClick={() => onAddThenRow(i)}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
-            <div style={rightStyle}>
-              <DoseRow data={r} onChange={(patch) => patchRow(r.id, patch)} onRemove={filled ? () => removeRow(r.id) : undefined} />
-              {r.thenRows.map((t) => (
-                <DoseRow key={t.id} data={t} onChange={(patch) => patchThen(r, t.id, patch)} onRemove={() => removeThen(r, t.id)} />
+            {/* Right: stacked tapering rows */}
+            <div style={styles.rxGroupRight}>
+              <div style={styles.rxDataRow}>
+                <div style={styles.rxDataCell}><FrequencyPicker value={row.frequency} onChange={(v) => updateField("frequency", v)} /></div>
+                <div style={styles.rxDataCell}><WhenPicker value={row.whenToTake} onChange={(v) => updateField("whenToTake", v)} /></div>
+                <div style={styles.rxDataCell}><FrequencyIntervalPicker value={row.frequencyInterval} onChange={(v) => updateField("frequencyInterval", v)} /></div>
+                <div style={styles.rxDataCell}><DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} /></div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Field multiline variant="box" fill="filled" placeholder="Notes" value={row.notes} onChange={(v) => updateField("notes", v)} style={{ minHeight: 40, padding: `${spacing.xs} ${spacing.s}` }} inputStyle={{ fontSize: fonts.control.sm }} />
+                </div>
+                {row.medicine.trim() && (
+                  <button type="button" style={styles.rxDeleteBtn} onClick={() => onRemoveRxRow(i)} title="Remove medicine">
+                    <Icon name="trash" size={16} tone="inherit" />
+                  </button>
+                )}
+              </div>
+              {row.thenRows.map((thenRow, ti) => (
+                <div key={`then-${i}-${ti}`} style={styles.rxDataRow}>
+                  <div style={styles.rxDataCell}><FrequencyPicker value={thenRow.frequency} onChange={(v) => onUpdateThenField(i, ti, "frequency", v)} /></div>
+                  <div style={styles.rxDataCell}><WhenPicker value={thenRow.whenToTake} onChange={(v) => onUpdateThenField(i, ti, "whenToTake", v)} /></div>
+                  <div style={styles.rxDataCell}><FrequencyIntervalPicker value={thenRow.frequencyInterval} onChange={(v) => onUpdateThenField(i, ti, "frequencyInterval", v)} /></div>
+                  <div style={styles.rxDataCell}><DurationPicker value={thenRow.duration} onChange={(v) => onUpdateThenField(i, ti, "duration", v)} /></div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Field multiline variant="box" fill="filled" placeholder="Notes" value={thenRow.notes} onChange={(v) => onUpdateThenField(i, ti, "notes", v)} style={{ minHeight: 40, padding: `${spacing.xs} ${spacing.s}` }} inputStyle={{ fontSize: fonts.control.sm }} />
+                  </div>
+                  <button type="button" style={styles.rxDeleteBtn} onClick={() => onRemoveThenRow(i, ti)} title="Remove tapering row">
+                    <Icon name="trash" size={16} tone="inherit" />
+                  </button>
+                </div>
               ))}
             </div>
           </div>
         );
       })}
+      {/* Rx-level actions row — copy from previous visit, load /
+          save template. (Adding a row is now the trailing empty
+          row: type a medicine and the next empty appears.) */}
+      <div style={styles.addMedicineRow}>
+        <span style={styles.dictateIcons}>
+          <IconButton
+            ariaLabel="Copy Rx from previous visit"
+            size={28}
+            disabled={copyPrevDisabled ?? !onCopyPrev}
+            onClick={onCopyPrev}
+          >
+            <Icon name="rewind-back-circle" size={20} tone="inherit" />
+          </IconButton>
+          <IconButton ariaLabel="Load template" size={28} onClick={onLoadTemplate ?? (() => {})}>
+            <Icon name="microphone" size={20} tone="inherit" />
+          </IconButton>
+                                  </span>
+        <PopoverMenu
+        trigger={<Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />}
+        items={[{ label: "Save as template", onClick: onSaveTemplate ?? (() => {}) }]}
+        ariaLabel="Template options"
+      />
+      </div>
     </div>
   );
 }

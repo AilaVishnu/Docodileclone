@@ -5,18 +5,20 @@ import { Icon } from "../../components/Icon";
 import { VisitTabs } from "../../components/VisitTabs";
 import { Card } from "../../components/Card";
 import { IconButton } from "../../components/IconButton";
-import { MeasureField } from "../../components/MeasureField";
-import { Field } from "../../components/Field";
-import { DatePicker } from "../../components/DatePicker/DatePicker";
+// MeasureField now renders only inside VitalsBlock (vitals cut over to the block).
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 import { Toast } from "../../components/Toast";
 import { resolveToastIcon } from "../../components/Toast/toastIcon";
-import { MedicineAutocomplete } from "../../components/MedicineAutocomplete/MedicineAutocomplete";
-import { FrequencyPicker } from "../../components/FrequencyPicker/FrequencyPicker";
-import { WhenPicker } from "../../components/WhenPicker/WhenPicker";
-import { FrequencyIntervalPicker } from "../../components/FrequencyIntervalPicker/FrequencyIntervalPicker";
-import { DurationPicker } from "../../components/DurationPicker/DurationPicker";
-import { AutocompleteTags } from "../../components/Autocomplete/AutocompleteTags";
+// Field + MedicineAutocomplete + the Rx pickers now render only inside RxBlock.
+import { SectionBlock } from "../../components/SectionBlock";
+import { VitalsBlock } from "../../visit/blocks/VitalsBlock";
+import { HistoryBlock } from "../../visit/blocks/HistoryBlock";
+import { ComplaintsBlock, DiagnosisBlock, TestsBlock } from "../../visit/blocks/TagsBlock";
+import { NotesBlock } from "../../visit/blocks/NotesBlock";
+import { TextBlock } from "../../visit/blocks/TextBlock";
+import { RxBlock } from "../../visit/blocks/RxBlock";
+import { ReferBlock } from "../../visit/blocks/ReferBlock";
+import { ReviewBlock } from "../../visit/blocks/ReviewBlock";
 import { useDoctors } from "../../hooks/useDoctors";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import {
@@ -162,46 +164,12 @@ const splitTags = (raw: string): string[] =>
     .map((s) => s.trim())
     .filter(Boolean);
 
-// Override AutocompleteTags' default cream pill — the host already provides
-// the cream noteCardField wrapper, so the inner box stays transparent and
-// reserves room on the right for the absolute-positioned dictate icons.
-const NOTE_CARD_TAGBOX_STYLE: React.CSSProperties = {
-  backgroundColor: "transparent",
-  borderRadius: 0,
-  padding: 0,
-  alignItems: "flex-start",
-  alignContent: "flex-start",
-  paddingRight: 64,
-  width: "100%",
-  minHeight: 80,
-};
+// AutocompleteTags tagbox overrides now live inside the block components:
+// Complaints/Diagnosis in TagsBlock (noteTagbox), Tests in TestsBlock
+// (TESTS_TAGBOX_STYLE, in bottomRowStyles.ts).
 
-// Tests row — single-line field that grows vertically as chips wrap.
-const TESTS_TAGBOX_STYLE: React.CSSProperties = {
-  backgroundColor: "transparent",
-  borderRadius: 0,
-  padding: 0,
-  width: "100%",
-};
-
-// Unit toggles for clickable vital pills. Clicking a unit swaps to the
-// alternative unit and converts the displayed value. Units without an entry
-// in this map (BMI/kg/m², Pulse/bpm, SPO2/%) are non-toggleable.
-const convertNum = (v: string, factor: number, decimals = 1): string => {
-  const n = parseFloat(v);
-  return Number.isNaN(n) ? v : (n * factor).toFixed(decimals);
-};
-const convertTemp = (v: string, to: "F" | "C"): string => {
-  const n = parseFloat(v);
-  if (Number.isNaN(n)) return v;
-  return (to === "F" ? n * 9 / 5 + 32 : (n - 32) * 5 / 9).toFixed(1);
-};
-const convertBp = (v: string, to: "mmHg" | "kPa"): string =>
-  v.split("/").map((p) => {
-    const n = parseFloat(p.trim());
-    if (Number.isNaN(n)) return p;
-    return to === "kPa" ? (n * 0.133322).toFixed(1) : Math.round(n / 0.133322).toString();
-  }).join("/");
+// Vital unit-conversion helpers + the UNIT_TOGGLES map now live in VitalsBlock
+// (the page no longer renders the clickable unit pills directly).
 // Realistic human-range bounds per (vital, unit). Values outside these get a
 // visual warning state. BP sys/dia get separate keys ("BP_sys" / "BP_dia").
 type VitalRange = { min: number; max: number };
@@ -228,16 +196,6 @@ const isVitalValid = (rangeKey: string, value: string, unit: string): boolean =>
   return n >= r.min && n <= r.max;
 };
 
-const UNIT_TOGGLES: Record<string, { altUnit: string; convert: (v: string) => string }> = {
-  mmHg: { altUnit: "kPa", convert: (v) => convertBp(v, "kPa") },
-  kPa: { altUnit: "mmHg", convert: (v) => convertBp(v, "mmHg") },
-  cm: { altUnit: "in", convert: (v) => convertNum(v, 0.393701) },
-  in: { altUnit: "cm", convert: (v) => convertNum(v, 2.54) },
-  kg: { altUnit: "lb", convert: (v) => convertNum(v, 2.20462) },
-  lb: { altUnit: "kg", convert: (v) => convertNum(v, 0.453592) },
-  "°C": { altUnit: "°F", convert: (v) => convertTemp(v, "F") },
-  "°F": { altUnit: "°C", convert: (v) => convertTemp(v, "C") },
-};
 
 // Build per-cell vital state from the active visit's DTO. Keyed by
 // `${columnIndex}-${rowIndex}` so the duplicate "Hip" cell gets its own slot.
@@ -631,7 +589,6 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // buttons to pull the previous prescription's data into the current form.
   const prevVisit: VisitDTO | undefined = activeTab > 0 ? visits[activeTab - 1] : undefined;
   const [reviewDate, setReviewDate] = React.useState<Date | null>(null);
-  const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
   // Tracks unsaved edits since the visit loaded / was last saved. Surfaces
   // the "Save changes" button on an already-completed visit only after the
   // doctor actually edits. Set on form input + rx mutations, cleared on save
@@ -880,20 +837,10 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   // selected doctor's UUID; the visible label comes from the matching row
   // in the `doctors` list fetched via useDoctors().
   const [referDoctorId, setReferDoctorId] = React.useState<string | null>(null);
-  const [referOpen, setReferOpen] = React.useState(false);
-  const referWrapRef = React.useRef<HTMLDivElement>(null);
   const { data: doctors } = useDoctors();
+  // The visible label for the save path (referredBy). The Refer-To dropdown
+  // itself — open state, click-outside, doctor list — now lives in ReferBlock.
   const referDoctorName = doctors.find((d) => d.id === referDoctorId)?.name ?? "";
-  React.useEffect(() => {
-    if (!referOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (referWrapRef.current && !referWrapRef.current.contains(e.target as Node)) {
-        setReferOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [referOpen]);
 
   // Next-Review date <-> days are linked. Picking a date computes the
   // whole-day delta from today; typing days computes today + days. Both
@@ -915,7 +862,6 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   const pickReviewDate = (d: Date) => {
     setReviewDate(d);
     setReviewDays(String(Math.max(0, daysFromToday(d))));
-    setShowReviewDatePicker(false);
     flagDirty();
   };
   const changeReviewDays = (raw: string) => {
@@ -972,7 +918,6 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       });
     }
 
-    setShowReviewDatePicker(false);
     setVitalState(buildVitalState(activeVisit));
     // Load — raw setters so populating the form is not treated as an edit.
     _setHistoryValues({
@@ -987,7 +932,6 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     setNotesForPatientValue(activeVisit?.notesForPatient ?? "");
     setPrivateNotesValue(activeVisit?.privateNotes ?? "");
     setReferDoctorId(activeVisit?.referDoctorId ?? null);
-    setReferOpen(false);
     // Loading a visit is not an edit — clear any pending-edit state in the same
     // effect that pours the data in, so the footer button reads "Complete visit"
     // (not "Save changes") the instant a pre-filled pad opens. (editedSinceLoadRef
@@ -1207,38 +1151,8 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   const showToast = (message: string) => setToast({ visible: true, message });
   const closeToast = () => setToast({ visible: false, message: "" });
 
-  const setVitalValue = (key: string, value: string) => {
-    setVitalState((prev) => ({ ...prev, [key]: { ...prev[key], value } }));
-    flagDirty();
-  };
-  const validateVitalOnEnter = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    label: string,
-    value: string,
-    unit: string,
-    isBp = false,
-  ) => {
-    if (e.key !== "Enter") return;
-    if (isBp) {
-      const [sys = "", dia = ""] = value.split("/");
-      const sysOk = isVitalValid("BP_sys", sys, unit);
-      const diaOk = isVitalValid("BP_dia", dia, unit);
-      if (!sysOk || !diaOk) showToast(`Please enter a valid blood pressure (${unit})`);
-    } else {
-      if (!isVitalValid(label, value, unit)) {
-        showToast(`Please enter a valid ${label.toLowerCase()} (${unit})`);
-      }
-    }
-  };
-  const toggleVitalUnit = (key: string) => {
-    setVitalState((prev) => {
-      const cell = prev[key];
-      const toggle = UNIT_TOGGLES[cell.unit];
-      if (!toggle) return prev;
-      return { ...prev, [key]: { value: toggle.convert(cell.value), unit: toggle.altUnit } };
-    });
-    flagDirty();
-  };
+  // Vitals editing (setVitalValue / toggleVitalUnit / validateVitalOnEnter)
+  // now lives inside VitalsBlock — the page only owns vitalState + setVitalState.
 
   // BMI auto-calc, one half of the Height/Weight ⇄ BMI mutual exclusion. When
   // Height or Weight is present, BMI is DERIVED from them (and locked). We only
@@ -1273,9 +1187,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   //  • everything empty → nothing locked (pick either method).
   const vitalsHaveHeightWeight =
     (heightCellValue ?? "").trim() !== "" || (weightCellValue ?? "").trim() !== "";
-  const vitalsHaveBmi = (vitalState[BMI_KEY]?.value ?? "").trim() !== "";
   const lockBmiField = vitalsHaveHeightWeight;
-  const lockHeightWeightFields = vitalsHaveBmi && !vitalsHaveHeightWeight;
 
   // List-view tab state — shared across Reports / Files. Defaults to the
   // first tab ("All Reports" / "All Files").
@@ -1573,9 +1485,6 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
   });
   const toggleSection = (key: string) =>
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
-
-  const formatReviewDate = (d: Date): string =>
-    d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
   // Build a SaveVisitRequest from the current form state. Vitals are
   // re-split for BP (sys/dia from the combined "sys/dia" cell value) and
@@ -2512,602 +2421,184 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
               <section key={`visit-${activeTab}-${revertNonce}`} style={styles.rightColumn}>
 
                 {/* Vitals */}
-                <div style={styles.sectionCard}>
-                  <div style={styles.sectionHeader}>
-                    <div style={styles.sectionTitleWrap}>
-                      <Icon name="heart-pulse" tone="inherit" style={styles.sectionIcon} />
-                      <h3 style={styles.sectionTitle}>Vitals</h3>
-                    </div>
-                    <button
-                      type="button"
-                      style={styles.sectionToggle}
-                      onClick={() => toggleSection("vitals")}
-                      aria-label={openSections.vitals ? "Collapse Vitals" : "Expand Vitals"}
-                    >
-                      <Icon
-                        name="chevron-up"
-                        tone="inherit"
-                        style={{
-                          ...styles.sectionIcon,
-                          transform: openSections.vitals ? "rotate(0deg)" : "rotate(180deg)",
-                          transition: "transform 0.15s ease",
-                        }}
-                      />
-                    </button>
-                  </div>
-                  {openSections.vitals && (
-                    <div style={styles.vitalsGrid}>
-                      {VITAL_CELLS.map(({ cell: v, cellKey }) => {
-                            const cell = vitalState[cellKey];
-                            const canToggle = !!UNIT_TOGGLES[cell.unit];
-                            // BP is rendered as two inputs separated by a fixed `/`.
-                            // The combined "sys/dia" string still lives in vitalState
-                            // so unit conversion (mmHg↔kPa) keeps working.
-                            const isBp = v.label === "BP";
-                            // Height/Weight ⇄ BMI mutual exclusion: BMI is locked
-                            // while Height/Weight carry a value (it auto-calculates);
-                            // Height + Weight are locked while a BMI was typed
-                            // directly. A locked cell is read-only, can't toggle its
-                            // unit, and its edit handler is a no-op.
-                            const isBmi = v.label === "BMI";
-                            const isHeightOrWeight = v.label === "Height" || v.label === "Weight";
-                            const cellLocked =
-                              (isBmi && lockBmiField) || (isHeightOrWeight && lockHeightWeightFields);
-                            const [bpSys = "", bpDia = ""] = isBp ? cell.value.split("/") : [];
-                            const setBpPart = (sys: string, dia: string) =>
-                              setVitalValue(cellKey, `${sys}/${dia}`);
-                            // Range validation per (label, unit). Out-of-range values
-                            // get a soft red tint; empty values stay neutral. A
-                            // locked (derived) BMI never shows an error — its inputs do.
-                            const sysValid = isBp ? isVitalValid("BP_sys", bpSys, cell.unit) : true;
-                            const diaValid = isBp ? isVitalValid("BP_dia", bpDia, cell.unit) : true;
-                            const valueValid = isBmi && lockBmiField
-                              ? true
-                              : isBp ? sysValid && diaValid : isVitalValid(v.label, cell.value, cell.unit);
-                            const rangeForLabel = isBp ? VITAL_RANGES.BP_sys?.[cell.unit] : VITAL_RANGES[v.label]?.[cell.unit];
-                            const rangeHint = rangeForLabel
-                              ? `Valid: ${rangeForLabel.min}–${rangeForLabel.max} ${cell.unit}`
-                              : undefined;
-                            return (
-                              <div key={cellKey} style={styles.vitalCell}>
-                                <span style={styles.vitalLabel}>{v.label}</span>
-                                <div style={styles.vitalInputRow} title={!valueValid ? rangeHint : undefined}>
-                                  <MeasureField
-                                    bp={isBp}
-                                    value={isBp ? bpSys : cell.value}
-                                    readOnly={cellLocked}
-                                    onChange={isBp ? (val) => setBpPart(val, bpDia) : cellLocked ? () => {} : (val) => setVitalValue(cellKey, val)}
-                                    value2={isBp ? bpDia : undefined}
-                                    onChange2={isBp ? (val) => setBpPart(bpSys, val) : undefined}
-                                    unit={cell.unit}
-                                    unitWidth={v.unitWidth}
-                                    onToggleUnit={canToggle && !cellLocked ? () => toggleVitalUnit(cellKey) : undefined}
-                                    invalid={!valueValid}
-                                    dense
-                                    placeholder={v.placeholder ?? ""}
-                                    onKeyDown={(e) => validateVitalOnEnter(e, v.label, cell.value, cell.unit, isBp)}
-                                    ariaLabel={isBp ? "Systolic" : v.label}
-                                    ariaLabel2={isBp ? "Diastolic" : undefined}
-                                  />
-                                </div>
-                                {!valueValid && (
-                                  <span style={styles.vitalErrorMessage}>
-                                    {rangeForLabel
-                                      ? `Enter valid details (${rangeForLabel.min}–${rangeForLabel.max} ${cell.unit})`
-                                      : "Enter valid details"}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                      })}
-                    </div>
-                  )}
-                </div>
+                <SectionBlock title="Vitals" icon="heart-pulse" surface="card" collapsible open={openSections.vitals} onToggle={() => toggleSection("vitals")}>
+                  <VitalsBlock value={vitalState} onChange={setVitalState} />
+                </SectionBlock>
 
                 {/* History — Figma node 2073:3030 (2×2 grid, cream-filled fields) */}
-                <div style={styles.sectionCard}>
-                  <div style={styles.sectionHeader}>
-                    <div style={styles.sectionTitleWrap}>
-                      <Icon name="hourglass-line" tone="inherit" style={styles.sectionIcon} />
-                      <h3 style={styles.sectionTitle}>History</h3>
-                    </div>
-                    <button
-                      type="button"
-                      style={styles.sectionToggle}
-                      onClick={() => toggleSection("history")}
-                      aria-label={openSections.history ? "Collapse History" : "Expand History"}
-                    >
-                      <Icon
-                        name="chevron-up"
-                        tone="inherit"
-                        style={{
-                          ...styles.sectionIcon,
-                          transform: openSections.history ? "rotate(0deg)" : "rotate(180deg)",
-                          transition: "transform 0.15s ease",
-                        }}
-                      />
-                    </button>
-                  </div>
-                  {openSections.history && (
-                    <div style={styles.historyGrid}>
-                      {HISTORY_FIELDS.map((f) => {
-                        const raw = historyValues[f.field] ?? "";
-                        const tags = splitTags(raw);
-                        return (
-                          // Plain <div> instead of <label>: a label forwards clicks
-                          // to the first focusable child, and once chips exist the
-                          // first focusable child is the leftmost chip's ✕ button —
-                          // so clicking the label text would silently remove a tag.
-                          <div key={f.label} style={styles.fieldGroup}>
-                            <span style={styles.fieldLabel}>{f.label}</span>
-                            <AutocompleteTags
-                              field={f.field}
-                              value={tags}
-                              onChange={(next) =>
-                                setHistoryValues((prev) => ({
-                                  ...prev,
-                                  [f.field]: next.join(", "),
-                                }))
-                              }
-                              placeholder={f.placeholder}
-                              ariaLabel={f.label}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                <SectionBlock title="History" icon="hourglass-line" surface="card" collapsible open={openSections.history} onToggle={() => toggleSection("history")}>
+                  <HistoryBlock
+                    value={{
+                      family_history: splitTags(historyValues.family_history ?? ""),
+                      allergies: splitTags(historyValues.allergies ?? ""),
+                      personal_history: splitTags(historyValues.personal_history ?? ""),
+                      past_medical_history: splitTags(historyValues.past_medical_history ?? ""),
+                    }}
+                    onChange={(next) =>
+                      setHistoryValues((prev) => ({
+                        ...prev,
+                        family_history: (next.family_history ?? []).join(", "),
+                        allergies: (next.allergies ?? []).join(", "),
+                        personal_history: (next.personal_history ?? []).join(", "),
+                        past_medical_history: (next.past_medical_history ?? []).join(", "),
+                      }))
+                    }
+                  />
+                </SectionBlock>
 
-                {/* Figma node 2057:6283 — Complaints + Diagnosis cards laid out
-              side-by-side. Each card is a multi-line cream textarea with the
-              dictate icons docked at the bottom-right corner and a kebab
-              handle in the section header. */}
+                {/* Complaints + Diagnosis — side-by-side bento cards (block components) */}
                 <div style={styles.noteCardsRow}>
-                  <div style={styles.noteCard}>
-                    <div style={styles.noteCardHeader}>
-                      <div style={styles.sectionTitleWrap}>
-                        <Icon name="chat-dots" tone="inherit" style={styles.sectionIcon} />
-                        <h3 style={styles.sectionTitle}>Complaints</h3>
-                      </div>
+                  <SectionBlock
+                    title="Complaints"
+                    icon="chat-dots"
+                    surface="card"
+                    collapsible={false}
+                    actions={
                       <PopoverMenu
                         trigger={<Icon name="menu" size={24} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "complaints") }]}
                         ariaLabel="Template options"
                       />
-                    </div>
-                    <div style={styles.noteCardField}>
-                      <AutocompleteTags
-                        field="complaints"
-                        value={splitTags(complaintsValue)}
-                        onChange={(next) => setComplaintsValue(next.join(", "))}
-                        placeholder="Type here..."
-                        ariaLabel="Complaints"
-                        containerStyle={NOTE_CARD_TAGBOX_STYLE}
-                      />
-                      <span style={styles.noteCardDictate}>
-                        <IconButton
-                          ariaLabel="Copy complaints from previous visit"
-                          size={28}
-                          disabled={!prevVisit?.complaints || !canEditForm}
-                          onClick={() => prevVisit?.complaints && setComplaintsValue(prevVisit.complaints)}
-                        >
-                          <Icon name="rewind-back-circle" size={20} tone="inherit" />
-                        </IconButton>
-                        <IconButton ariaLabel="Load template" size={28} onClick={() => openTemplates("load", "complaints")}>
-                          <Icon name="microphone" size={20} tone="inherit" />
-                        </IconButton>
-                                              </span>
-                    </div>
-                  </div>
-                  <div style={styles.noteCard}>
-                    <div style={styles.noteCardHeader}>
-                      <div style={styles.sectionTitleWrap}>
-                        <Icon name="magnifer-bug" tone="inherit" style={styles.sectionIcon} />
-                        <h3 style={styles.sectionTitle}>Diagnosis</h3>
-                      </div>
+                    }
+                  >
+                    <ComplaintsBlock
+                      value={{ tags: splitTags(complaintsValue) }}
+                      onChange={(next) => setComplaintsValue(next.tags.join(", "))}
+                      onCopyPrev={() => prevVisit?.complaints && setComplaintsValue(prevVisit.complaints)}
+                      copyPrevDisabled={!prevVisit?.complaints || !canEditForm}
+                      onLoadTemplate={() => openTemplates("load", "complaints")}
+                    />
+                  </SectionBlock>
+                  <SectionBlock
+                    title="Diagnosis"
+                    icon="magnifer-bug"
+                    surface="card"
+                    collapsible={false}
+                    actions={
                       <PopoverMenu
                         trigger={<Icon name="menu" size={24} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "diagnosis") }]}
                         ariaLabel="Template options"
                       />
-                    </div>
-                    <div style={styles.noteCardField}>
-                      <AutocompleteTags
-                        field="diagnosis"
-                        value={splitTags(diagnosisValue)}
-                        onChange={(next) => setDiagnosisValue(next.join(", "))}
-                        placeholder="Type here..."
-                        ariaLabel="Diagnosis"
-                        containerStyle={NOTE_CARD_TAGBOX_STYLE}
-                      />
-                      <span style={styles.noteCardDictate}>
-                        <IconButton
-                          ariaLabel="Copy diagnosis from previous visit"
-                          size={28}
-                          disabled={!prevVisit?.diagnosis || !canEditForm}
-                          onClick={() => prevVisit?.diagnosis && setDiagnosisValue(prevVisit.diagnosis)}
-                        >
-                          <Icon name="rewind-back-circle" size={20} tone="inherit" />
-                        </IconButton>
-                        <IconButton ariaLabel="Load template" size={28} onClick={() => openTemplates("load", "diagnosis")}>
-                          <Icon name="microphone" size={20} tone="inherit" />
-                        </IconButton>
-                                              </span>
-                    </div>
-                  </div>
+                    }
+                  >
+                    <DiagnosisBlock
+                      value={{ tags: splitTags(diagnosisValue) }}
+                      onChange={(next) => setDiagnosisValue(next.tags.join(", "))}
+                      onCopyPrev={() => prevVisit?.diagnosis && setDiagnosisValue(prevVisit.diagnosis)}
+                      copyPrevDisabled={!prevVisit?.diagnosis || !canEditForm}
+                      onLoadTemplate={() => openTemplates("load", "diagnosis")}
+                    />
+                  </SectionBlock>
                 </div>
 
                 {/* Prescription table */}
-                <div style={styles.sectionCard}>
-                  <div style={styles.sectionHeader}>
-                    <div style={styles.sectionTitleWrap}>
-                      <Icon name="pills" tone="inherit" style={styles.sectionIcon} />
-                      <h3 style={styles.sectionTitle}>Rx</h3>
-                    </div>
-                    <button
-                      type="button"
-                      style={styles.sectionToggle}
-                      onClick={() => toggleSection("rx")}
-                      aria-label={openSections.rx ? "Collapse Rx" : "Expand Rx"}
-                    >
-                      <Icon
-                        name="chevron-up"
-                        tone="inherit"
-                        style={{
-                          ...styles.sectionIcon,
-                          transform: openSections.rx ? "rotate(0deg)" : "rotate(180deg)",
-                          transition: "transform 0.15s ease",
-                        }}
-                      />
-                    </button>
-                  </div>
-                  {openSections.rx && (
-                    <div style={styles.rxTable}>
-                      {rxInteractions.length > 0 && (
-                        <div style={styles.rxInteractionBanner}>
-                          {rxInteractions.map((w, i) => (
-                            <div key={i} style={styles.rxInteractionRow}>
-                              <span style={styles.rxInteractionIcon}>⚠</span>
-                              <span style={styles.rxInteractionText}>
-                                <strong style={{ textTransform: "capitalize" }}>{w.drug}</strong>
-                                {" + "}
-                                <strong style={{ textTransform: "capitalize" }}>{w.interactsWith}</strong>
-                                {w.comment ? `: ${w.comment}` : ""}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {rxRows.map((row, i) => {
-                        const updateField = (key: keyof RxRowDraft, value: string) =>
-                          setRxRows((prev) => prev.map((r, ix) => (ix === i ? { ...r, [key]: value } : r)));
-                        return (
-                          <div key={row.id ?? `draft-${i}`} style={{ ...styles.rxGroup, zIndex: rxRows.length + 5 - i }}>
-                            {/* Left: serial + medicine cell — visually anchors for all tapering rows */}
-                            <div style={styles.rxGroupLeft}>
-                              <span style={styles.rxSerial}>{i + 1}</span>
-                              <div style={{ ...styles.rxMedicineCell, flex: 1, position: "relative" }}>
-                                <div style={styles.rxMedicineInputCol}>
-                                  <MedicineAutocomplete
-                                    inputStyle={styles.rxMedicineInput}
-                                    placeholder="Medicine"
-                                    value={row.medicine}
-                                    onChange={(v) => { setRxRows((prev) => withTrailingRx(prev.map((r, ix) => ix === i ? { ...r, medicine: v, genericName: "" } : r))); autofillRxFromHistory(i, v); }}
-                                    onSelect={(name, genericName) => { setRxRows((prev) => withTrailingRx(prev.map((r, ix) => ix === i ? { ...r, medicine: name, genericName } : r))); autofillRxFromHistory(i, name); }}
-                                  />
-                                </div>
-                                {row.medicine.trim() && (
-                                  <input
-                                    type="text"
-                                    style={{
-                                      ...styles.rxGenericName,
-                                      position: "absolute",
-                                      left: spacing.s,
-                                      top: "calc(100% + 2px)",
-                                      width: "auto",
-                                      right: 8,
-                                    }}
-                                    placeholder="Unknown"
-                                    value={row.genericName}
-                                    onChange={(e) => updateField("genericName", e.target.value)}
-                                  />
-                                )}
-                                <div style={styles.rxGenericRow}>
-                                  <button
-                                    type="button"
-                                    style={styles.rxAddNoteBtn}
-                                    title="Add tapering dose"
-                                    onClick={() => addThenRow(i)}
-                                  >
-                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                      <line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                                      <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                                    </svg>
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                            {/* Right: stacked tapering rows */}
-                            <div style={styles.rxGroupRight}>
-                              <div style={styles.rxDataRow}>
-                                <div style={styles.rxDataCell}><FrequencyPicker value={row.frequency} onChange={(v) => updateField("frequency", v)} /></div>
-                                <div style={styles.rxDataCell}><WhenPicker value={row.whenToTake} onChange={(v) => updateField("whenToTake", v)} /></div>
-                                <div style={styles.rxDataCell}><FrequencyIntervalPicker value={row.frequencyInterval} onChange={(v) => updateField("frequencyInterval", v)} /></div>
-                                <div style={styles.rxDataCell}><DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} /></div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <Field multiline variant="box" fill="filled" placeholder="Notes" value={row.notes} onChange={(v) => updateField("notes", v)} style={{ minHeight: 40, padding: `${spacing.xs} ${spacing.s}` }} inputStyle={{ fontSize: fonts.control.sm }} />
-                                </div>
-                                {row.medicine.trim() && (
-                                  <button type="button" style={styles.rxDeleteBtn} onClick={() => removeRxRow(i)} title="Remove medicine">
-                                    <Icon name="trash" size={16} tone="inherit" />
-                                  </button>
-                                )}
-                              </div>
-                              {row.thenRows.map((thenRow, ti) => (
-                                <div key={`then-${i}-${ti}`} style={styles.rxDataRow}>
-                                  <div style={styles.rxDataCell}><FrequencyPicker value={thenRow.frequency} onChange={(v) => updateThenField(i, ti, "frequency", v)} /></div>
-                                  <div style={styles.rxDataCell}><WhenPicker value={thenRow.whenToTake} onChange={(v) => updateThenField(i, ti, "whenToTake", v)} /></div>
-                                  <div style={styles.rxDataCell}><FrequencyIntervalPicker value={thenRow.frequencyInterval} onChange={(v) => updateThenField(i, ti, "frequencyInterval", v)} /></div>
-                                  <div style={styles.rxDataCell}><DurationPicker value={thenRow.duration} onChange={(v) => updateThenField(i, ti, "duration", v)} /></div>
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <Field multiline variant="box" fill="filled" placeholder="Notes" value={thenRow.notes} onChange={(v) => updateThenField(i, ti, "notes", v)} style={{ minHeight: 40, padding: `${spacing.xs} ${spacing.s}` }} inputStyle={{ fontSize: fonts.control.sm }} />
-                                  </div>
-                                  <button type="button" style={styles.rxDeleteBtn} onClick={() => removeThenRow(i, ti)} title="Remove tapering row">
-                                    <Icon name="trash" size={16} tone="inherit" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {/* Rx-level actions row — copy from previous visit, load /
-                          save template. (Adding a row is now the trailing empty
-                          row: type a medicine and the next empty appears.) */}
-                      <div style={styles.addMedicineRow}>
-                        <span style={styles.dictateIcons}>
-                          <IconButton
-                            ariaLabel="Copy Rx from previous visit"
-                            size={28}
-                            disabled={!prevVisit?.prescriptions?.length || !canEditForm}
-                            onClick={() => {
-                              if (prevVisit?.prescriptions?.length) {
-                                setRxRows(withTrailingRx(prevVisit.prescriptions.map((dto, i) => ({ ...fromRxDTO(dto), id: null, position: i + 1 }))));
-                              }
-                            }}
-                          >
-                            <Icon name="rewind-back-circle" size={20} tone="inherit" />
-                          </IconButton>
-                          <IconButton ariaLabel="Load template" size={28} onClick={() => openTemplates("load", "rx")}>
-                            <Icon name="microphone" size={20} tone="inherit" />
-                          </IconButton>
-                                                  </span>
-                        <PopoverMenu
-                        trigger={<Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />}
-                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "rx") }]}
-                        ariaLabel="Template options"
-                      />
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <SectionBlock title="Rx" icon="pills" surface="card" collapsible open={openSections.rx} onToggle={() => toggleSection("rx")}>
+                  <RxBlock
+                    rows={rxRows}
+                    interactions={rxInteractions}
+                    onUpdateField={(index, key, value) =>
+                      setRxRows((prev) => prev.map((r, ix) => (ix === index ? { ...r, [key]: value } : r)))
+                    }
+                    onMedicineChange={(index, v) => {
+                      setRxRows((prev) => withTrailingRx(prev.map((r, ix) => ix === index ? { ...r, medicine: v, genericName: "" } : r)));
+                      autofillRxFromHistory(index, v);
+                    }}
+                    onMedicineSelect={(index, name, genericName) => {
+                      setRxRows((prev) => withTrailingRx(prev.map((r, ix) => ix === index ? { ...r, medicine: name, genericName } : r)));
+                      autofillRxFromHistory(index, name);
+                    }}
+                    onAddThenRow={addThenRow}
+                    onRemoveRxRow={removeRxRow}
+                    onUpdateThenField={updateThenField}
+                    onRemoveThenRow={removeThenRow}
+                    copyPrevDisabled={!prevVisit?.prescriptions?.length || !canEditForm}
+                    onCopyPrev={() => {
+                      if (prevVisit?.prescriptions?.length) {
+                        setRxRows(withTrailingRx(prevVisit.prescriptions.map((dto, i) => ({ ...fromRxDTO(dto), id: null, position: i + 1 }))));
+                      }
+                    }}
+                    onLoadTemplate={() => openTemplates("load", "rx")}
+                    onSaveTemplate={() => openTemplates("save", "rx")}
+                  />
+                </SectionBlock>
 
                 {/* Notes for Patient + Private Notes — same card pattern as
               Complaints/Diagnosis, but Private Notes uses a neutral grey fill
               to visually separate "patient-facing" from "internal" notes. */}
                 <div style={styles.noteCardsRow}>
-                  <div style={styles.noteCard}>
-                    <div style={styles.noteCardHeader}>
-                      <div style={styles.sectionTitleWrap}>
-                        <Icon name="document-school" tone="inherit" style={styles.sectionIcon} />
-                        <h3 style={styles.sectionTitle}>Notes for Patient</h3>
-                      </div>
+                  <SectionBlock
+                    title="Notes for Patient"
+                    icon="document-school"
+                    surface="card"
+                    collapsible={false}
+                    actions={
                       <PopoverMenu
                         trigger={<Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "notes_for_patient") }]}
                         ariaLabel="Template options"
                       />
-                    </div>
-                    <div style={styles.noteCardField}>
-                      <textarea
-                        style={styles.noteCardTextarea}
-                        placeholder="Type here..."
-                        value={notesForPatientValue}
-                        onChange={(e) => setNotesForPatientValue(e.target.value)}
-                      />
-                      <span style={styles.noteCardDictate}>
-                        <IconButton
-                          ariaLabel="Copy notes from previous visit"
-                          size={28}
-                          disabled={!prevVisit?.notesForPatient || !canEditForm}
-                          onClick={() => prevVisit?.notesForPatient && setNotesForPatientValue(prevVisit.notesForPatient)}
-                        >
-                          <Icon name="rewind-back-circle" size={20} tone="inherit" />
-                        </IconButton>
-                        <IconButton ariaLabel="Load template" size={28} onClick={() => openTemplates("load", "notes_for_patient")}>
-                          <Icon name="microphone" size={20} tone="inherit" />
-                        </IconButton>
-                                              </span>
-                    </div>
-                  </div>
-                  <div style={{ ...styles.noteCard, ...styles.noteCardPrivate }}>
-                    <div style={styles.noteCardHeader}>
-                      <div style={styles.sectionTitleWrap}>
-                        <Icon name="users-group-rounded" tone="inherit" style={styles.sectionIcon} />
-                        <h3 style={styles.sectionTitle}>Private Notes</h3>
-                      </div>
+                    }
+                  >
+                    <NotesBlock
+                      value={{ text: notesForPatientValue }}
+                      onChange={(next) => setNotesForPatientValue(next.text)}
+                      onCopyPrev={() => prevVisit?.notesForPatient && setNotesForPatientValue(prevVisit.notesForPatient)}
+                      copyPrevDisabled={!prevVisit?.notesForPatient || !canEditForm}
+                      onLoadTemplate={() => openTemplates("load", "notes_for_patient")}
+                    />
+                  </SectionBlock>
+                  <SectionBlock
+                    title="Private Notes"
+                    icon="users-group-rounded"
+                    surface="card"
+                    collapsible={false}
+                    actions={
                       <PopoverMenu
                         trigger={<Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />}
                         items={[{ label: "Save as template", onClick: () => openTemplates("save", "private_notes") }]}
                         ariaLabel="Template options"
                       />
-                    </div>
-                    <div style={{ ...styles.noteCardField, ...styles.noteCardFieldPrivate }}>
-                      <textarea
-                        style={styles.noteCardTextarea}
-                        placeholder="Type here..."
-                        value={privateNotesValue}
-                        onChange={(e) => setPrivateNotesValue(e.target.value)}
-                      />
-                    </div>
-                  </div>
+                    }
+                  >
+                    <TextBlock
+                      value={{ text: privateNotesValue }}
+                      onChange={(next) => setPrivateNotesValue(next.text)}
+                      variant="private"
+                    />
+                  </SectionBlock>
                 </div>
 
                 {/* Bottom rows — Figma node 2057:6494 */}
                 <div style={styles.bottomRows}>
                   {/* Tests — dictatable with mic/rewind */}
-                  <div style={styles.noteRow}>
-                    <div style={styles.noteLabel}>
-                      <Icon name="document-school" tone="inherit" style={styles.sectionIcon} />
-                      <span style={styles.noteLabelText}>Tests</span>
-                    </div>
-                    <div style={styles.noteFieldWrap}>
-                      <AutocompleteTags
-                        field="tests"
-                        value={splitTags(testsValue)}
-                        onChange={(next) => setTestsValue(next.join(", "))}
-                        placeholder="Add tests..."
-                        ariaLabel="Tests"
-                        containerStyle={TESTS_TAGBOX_STYLE}
-                      />
-                      <span style={styles.dictateIcons}>
-                        <IconButton
-                          ariaLabel="Copy tests from previous visit"
-                          size={28}
-                          disabled={!prevVisit?.tests || !canEditForm}
-                          onClick={() => prevVisit?.tests && setTestsValue(prevVisit.tests)}
-                        >
-                          <Icon name="rewind-back-circle" size={20} tone="inherit" />
-                        </IconButton>
-                        <IconButton ariaLabel="Load template" size={28} onClick={() => openTemplates("load", "tests")}>
-                          <Icon name="microphone" size={20} tone="inherit" />
-                        </IconButton>
-                                              </span>
-                    </div>
-                    <PopoverMenu
-                        trigger={<Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />}
-                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "tests") }]}
-                        ariaLabel="Template options"
-                      />
-                  </div>
+                  <TestsBlock
+                    value={{ tags: splitTags(testsValue) }}
+                    onChange={(next) => setTestsValue(next.tags.join(", "))}
+                    onCopyPrev={() => prevVisit?.tests && setTestsValue(prevVisit.tests)}
+                    copyPrevDisabled={!prevVisit?.tests || !canEditForm}
+                    onLoadTemplate={() => openTemplates("load", "tests")}
+                    onSaveTemplate={() => openTemplates("save", "tests")}
+                  />
                   {/* Refer to — dropdown of doctors in the current clinic
                 (fetched from /api/doctors, which filters by the caller's
                 clinicId via the JWT). Click the pill to open; selecting a
                 doctor sets referDoctorId and closes the menu. */}
-                  <div style={styles.noteRow}>
-                    <div style={styles.noteLabel}>
-                      <Icon name="users-group-rounded" tone="inherit" style={styles.sectionIcon} />
-                      <span style={styles.noteLabelText}>Refer to</span>
-                    </div>
-                    <div ref={referWrapRef} style={{ position: "relative" }}>
-                      <div
-                        style={styles.referDropdown}
-                        onClick={() => setReferOpen((v) => !v)}
-                        role="button"
-                        aria-haspopup="listbox"
-                        aria-expanded={referOpen}
-                      >
-                        <span
-                          style={{
-                            ...styles.referText,
-                            ...(referDoctorName ? { color: colors.neutral900 } : {}),
-                          }}
-                        >
-                          {referDoctorName || "Select doctor"}
-                        </span>
-                        <span style={styles.referChevron}>
-                          <Icon
-                            name="chevron-up"
-                            size={16}
-                            tone="inherit"
-                            style={{ transform: referOpen ? "rotate(0deg)" : "rotate(180deg)" }}
-                          />
-                        </span>
-                      </div>
-                      {referOpen && (() => {
-                        // Hide the doctor who's already treating this visit
-                        // — referring to yourself isn't a referral.
-                        const referableDoctors = doctors.filter((d) => d.id !== appointmentDoctorId);
-                        return (
-                          <div style={styles.referMenu}>
-                            {referableDoctors.length === 0 ? (
-                              <div style={styles.referMenuEmpty}>No other doctors in this clinic</div>
-                            ) : (
-                              referableDoctors.map((d) => (
-                                <button
-                                  key={d.id}
-                                  type="button"
-                                  style={styles.referMenuItem}
-                                  onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    setReferDoctorId(d.id);
-                                    setReferOpen(false);
-                                    flagDirty();
-                                  }}
-                                >
-                                  <span style={styles.referMenuItemName}>{d.name}</span>
-                                  {(d.specialty || d.department) && (
-                                    <span style={styles.referMenuItemMeta}>{d.specialty || d.department}</span>
-                                  )}
-                                </button>
-                              ))
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
+                  <ReferBlock
+                    doctors={doctors}
+                    value={referDoctorId}
+                    excludeDoctorId={appointmentDoctorId}
+                    onChange={(id) => { setReferDoctorId(id); flagDirty(); }}
+                  />
                   {/* Next Review — date picker + "or ___ days" + notes field */}
-                  <div style={styles.noteRow}>
-                    <div style={styles.noteLabel}>
-                      <Icon name="restart" tone="inherit" style={styles.sectionIcon} />
-                      <span style={styles.noteLabelText}>Review</span>
-                    </div>
-                    <div style={styles.reviewRow}>
-                      <div style={{ position: "relative", flexShrink: 0 }}>
-                        <div
-                          style={styles.reviewDate}
-                          onClick={() => setShowReviewDatePicker((v) => !v)}
-                        >
-                          <Icon name="calendar" size={24} tone="inherit" />
-                          <span
-                            style={{
-                              ...styles.reviewDateText,
-                              color: reviewDate ? "inherit" : styles.reviewDateText.color,
-                            }}
-                          >
-                            {reviewDate ? formatReviewDate(reviewDate) : "Select Date"}
-                          </span>
-                        </div>
-                        {showReviewDatePicker && (
-                          <DatePicker
-                            selectedDate={reviewDate ?? new Date()}
-                            onSelect={pickReviewDate}
-                            onClose={() => setShowReviewDatePicker(false)}
-                            disablePast
-                          />
-                        )}
-                      </div>
-                      <span style={styles.reviewOr}>or</span>
-                      <div style={styles.reviewDaysWrap}>
-                        <input
-                          style={styles.reviewDaysInput}
-                          value={reviewDays}
-                          onChange={(e) => changeReviewDays(e.target.value)}
-                          inputMode="numeric"
-                          placeholder=""
-                        />
-                        <span style={styles.reviewDaysLabel}>days</span>
-                      </div>
-                      <input
-                        style={styles.reviewLong}
-                        placeholder="Notes for Review..."
-                        value={reviewNotesValue}
-                        onChange={(e) => setReviewNotesValue(e.target.value)}
-                      />
-                    </div>
-                  </div>
+                  <ReviewBlock
+                    date={reviewDate}
+                    days={reviewDays}
+                    notes={reviewNotesValue}
+                    onPickDate={pickReviewDate}
+                    onDaysChange={changeReviewDays}
+                    onNotesChange={setReviewNotesValue}
+                  />
                 </div>
               </section>
             </>

@@ -1,28 +1,91 @@
 import React from "react";
-import type { CSSProperties } from "react";
-import { DateField } from "../../components/DateField";
-import { Field } from "../../components/Field";
-import { colors, fonts, spacing } from "../../styles/theme";
+import { Icon } from "../../components/Icon";
+import { DatePicker } from "../../components/DatePicker/DatePicker";
+import {
+  noteRow,
+  noteLabel,
+  noteLabelText,
+  sectionIcon,
+  reviewRow,
+  reviewDate as reviewDateStyle,
+  reviewDateText,
+  reviewOr,
+  reviewDaysWrap,
+  reviewDaysInput,
+  reviewDaysLabel,
+  reviewLong,
+} from "./bottomRowStyles";
 
-// ReviewBlock — the next review: a date, or a number of days, plus notes.
-export type ReviewData = { date: Date | null; days: string; notes: string };
-export const emptyReview = (): ReviewData => ({ date: null, days: "", notes: "" });
+// ReviewBlock — the next review, lifted VERBATIM from PrescriptionPage's inline
+// "Review" row: a custom DatePicker popup (NOT a generic DateField) triggered by
+// the calendar chip, an "or ___ days" segment linked to the date, and a notes
+// field. The picker-open state lives INSIDE the block; the page owns date/days/
+// notes and the date⇄days linkage (pickDate / daysChange), passed as callbacks.
+const formatReviewDate = (d: Date): string =>
+  d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
-const rowStyle: CSSProperties = { display: "flex", alignItems: "center", gap: spacing.s, flexWrap: "wrap" };
-const orStyle: CSSProperties = { fontFamily: fonts.family.primary, fontSize: fonts.control.md, color: colors.neutral500 };
-const daysLabel: CSSProperties = { fontFamily: fonts.family.primary, fontSize: fonts.control.md, color: colors.neutral700 };
+export type ReviewBlockProps = {
+  date: Date | null;
+  days: string;
+  notes: string;
+  /** Pick a review date (page keeps date⇄days in sync + flags dirty). */
+  onPickDate: (d: Date) => void;
+  /** Edit the "days" input (page recomputes the date). */
+  onDaysChange: (raw: string) => void;
+  onNotesChange: (value: string) => void;
+};
 
-export function ReviewBlock({ value, onChange }: { value: ReviewData; onChange: (next: ReviewData) => void }) {
-  const set = (patch: Partial<ReviewData>) => onChange({ ...value, ...patch });
+export function ReviewBlock({ date, days, notes, onPickDate, onDaysChange, onNotesChange }: ReviewBlockProps) {
+  const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
   return (
-    <div style={rowStyle}>
-      <div style={{ width: 184 }}>
-        <DateField value={value.date} onChange={(d) => set({ date: d })} placeholder="Select date" />
+    <div style={noteRow}>
+      <div style={noteLabel}>
+        <Icon name="restart" tone="inherit" style={sectionIcon} />
+        <span style={noteLabelText}>Review</span>
       </div>
-      <span style={orStyle}>or</span>
-      <div style={{ width: 64 }}><Field variant="box" fill="filled" value={value.days} onChange={(v) => set({ days: v })} placeholder="0" align="center" /></div>
-      <span style={daysLabel}>days</span>
-      <div style={{ flex: 1, minWidth: 160 }}><Field variant="box" fill="filled" value={value.notes} onChange={(v) => set({ notes: v })} placeholder="Notes for Review…" /></div>
+      <div style={reviewRow}>
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <div
+            style={reviewDateStyle}
+            onClick={() => setShowReviewDatePicker((v) => !v)}
+          >
+            <Icon name="calendar" size={24} tone="inherit" />
+            <span
+              style={{
+                ...reviewDateText,
+                color: date ? "inherit" : reviewDateText.color,
+              }}
+            >
+              {date ? formatReviewDate(date) : "Select Date"}
+            </span>
+          </div>
+          {showReviewDatePicker && (
+            <DatePicker
+              selectedDate={date ?? new Date()}
+              onSelect={(d) => { onPickDate(d); setShowReviewDatePicker(false); }}
+              onClose={() => setShowReviewDatePicker(false)}
+              disablePast
+            />
+          )}
+        </div>
+        <span style={reviewOr}>or</span>
+        <div style={reviewDaysWrap}>
+          <input
+            style={reviewDaysInput}
+            value={days}
+            onChange={(e) => onDaysChange(e.target.value)}
+            inputMode="numeric"
+            placeholder=""
+          />
+          <span style={reviewDaysLabel}>days</span>
+        </div>
+        <input
+          style={reviewLong}
+          placeholder="Notes for Review..."
+          value={notes}
+          onChange={(e) => onNotesChange(e.target.value)}
+        />
+      </div>
     </div>
   );
 }

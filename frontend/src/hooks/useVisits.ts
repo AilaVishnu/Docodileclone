@@ -44,8 +44,16 @@ export function useVisits(patientId: string | null): UseVisitsResult {
       setVisits(data);
       setLoadedFor(patientId);
     } catch (e) {
+      // Degrade gracefully: a failed visits fetch (e.g. a backend error on
+      // GET /patients/{id}/visits) is treated as "loaded, zero visits" so the
+      // Rx Pad opens a fresh empty visit form instead of hanging forever on
+      // "Loading patient file…". `loadedFor` is set so the page's gate opens;
+      // `error` stays populated so callers can show a non-blocking notice.
+      // NOTE: this intentionally masks the failure — see the known backend
+      // `rx_row.deleted_by` bug. Remove once the backend is fixed.
       setError((e as Error).message);
       setVisits([]);
+      setLoadedFor(patientId);
     } finally {
       setLoading(false);
     }

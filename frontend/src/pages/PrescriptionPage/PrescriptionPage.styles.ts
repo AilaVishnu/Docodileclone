@@ -704,7 +704,7 @@ export const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     gap: spacing.xl,
     minWidth: 0,
-    backgroundColor: colors.neutral100,
+    backgroundColor: colors.primary200,
     padding: spacing.xl,
     borderRadius: radii.xl,
   },
@@ -748,8 +748,9 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: spacing.l,
-    padding: `${spacing.m} 0`,
-    borderBottom: `${strokes.xs} solid ${colors.primary300}`,
+    padding: spacing.l,
+    background: colors.neutral100,
+    borderRadius: radii["2xl"],
   },
   sectionHeader: {
     display: "flex",
@@ -992,8 +993,9 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,
-    // No left inset — Tests / Diet / Treatment Plan / Next Review align
-    // flush with the section strips above.
+    padding: spacing.l,
+    background: colors.neutral100,
+    borderRadius: radii["2xl"],
   },
   noteRow: {
     display: "flex",
@@ -1520,14 +1522,15 @@ export const styles: Record<string, CSSProperties> = {
   noteCardsRow: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    columnGap: spacing.m,
-    padding: `${spacing.m} 0`,
-    borderBottom: `${strokes.xs} solid ${colors.primary300}`,
+    columnGap: spacing.xl,
   },
   noteCard: {
     display: "flex",
     flexDirection: "column",
     gap: spacing.s,
+    padding: spacing.l,
+    background: colors.neutral100,
+    borderRadius: radii["2xl"],
   },
   noteCardPrivate: {
     // Private Notes uses a neutral grey instead of cream so it reads as
