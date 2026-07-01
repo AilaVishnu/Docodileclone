@@ -155,7 +155,7 @@ export function RxBlock({
                 <div style={styles.rxDataCell}><WhenPicker value={row.whenToTake} onChange={(v) => updateField("whenToTake", v)} /></div>
                 <div style={styles.rxDataCell}><FrequencyIntervalPicker value={row.frequencyInterval} onChange={(v) => updateField("frequencyInterval", v)} /></div>
                 <div style={styles.rxDataCell}><DurationPicker value={row.duration} onChange={(v) => updateField("duration", v)} /></div>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ flex: "1 1 96px", minWidth: 84 }}>
                   <Field multiline variant="box" fill="filled" placeholder="Notes" value={row.notes} onChange={(v) => updateField("notes", v)} style={{ minHeight: 40, padding: `${spacing.xs} ${spacing.s}` }} inputStyle={{ fontSize: fonts.control.sm }} />
                 </div>
                 {row.medicine.trim() && (
@@ -170,7 +170,7 @@ export function RxBlock({
                   <div style={styles.rxDataCell}><WhenPicker value={thenRow.whenToTake} onChange={(v) => onUpdateThenField(i, ti, "whenToTake", v)} /></div>
                   <div style={styles.rxDataCell}><FrequencyIntervalPicker value={thenRow.frequencyInterval} onChange={(v) => onUpdateThenField(i, ti, "frequencyInterval", v)} /></div>
                   <div style={styles.rxDataCell}><DurationPicker value={thenRow.duration} onChange={(v) => onUpdateThenField(i, ti, "duration", v)} /></div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ flex: "1 1 96px", minWidth: 84 }}>
                     <Field multiline variant="box" fill="filled" placeholder="Notes" value={thenRow.notes} onChange={(v) => onUpdateThenField(i, ti, "notes", v)} style={{ minHeight: 40, padding: `${spacing.xs} ${spacing.s}` }} inputStyle={{ fontSize: fonts.control.sm }} />
                   </div>
                   <button type="button" style={styles.rxDeleteBtn} onClick={() => onRemoveThenRow(i, ti)} title="Remove tapering row">

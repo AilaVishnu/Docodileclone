@@ -2407,7 +2407,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
               visit / pre-Start state) — the doctor must always be able to
               navigate back to today to start the session. */}
               <VisitTabs
-                style={{ ...styles.tabsBar, pointerEvents: "auto" }}
+                style={{ ...styles.tabsBar, pointerEvents: "auto", paddingLeft: spacing.xl, paddingRight: spacing.xl }}
                 tabs={visits.map((v) => ({ id: v.id, label: formatVisitLabel(v.visitDate) }))}
                 activeIndex={activeTab}
                 onSelect={setActiveTab}

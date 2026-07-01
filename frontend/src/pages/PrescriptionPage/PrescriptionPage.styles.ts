@@ -702,7 +702,7 @@ export const styles: Record<string, CSSProperties> = {
   rightColumn: {
     display: "flex",
     flexDirection: "column",
-    gap: spacing.xl,
+    gap: spacing.m,
     minWidth: 0,
     backgroundColor: colors.primary200,
     padding: spacing.xl,
@@ -1714,7 +1714,11 @@ export const styles: Record<string, CSSProperties> = {
     paddingBottom: 22,
   },
   rxGroupLeft: {
-    flex: "0 0 360px" as const,
+    // Medicine column: capped at ~320 and does NOT grow, so the "+" stays near
+    // the name instead of drifting to a far-right edge; squeezes to 160 when
+    // tight. All extra row width flows to the pickers + notes on the right.
+    flex: "0 1 320px" as const,
+    minWidth: 160,
     display: "flex",
     flexDirection: "row" as const,
     gap: spacing["2xs"],
@@ -1737,9 +1741,10 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "flex-start",
   },
   rxDataCell: {
-    width: 120,
-    flexShrink: 0,
-    minWidth: 0,
+    // Pickers hold ~116px but squeeze down to 72 before the row would overflow
+    // (was a hard 120 / flexShrink:0, which forced horizontal overflow).
+    flex: "0 1 116px" as const,
+    minWidth: 72,
   },
   rxMedicineTypeBadge: {
     display: "inline-flex",
@@ -1817,7 +1822,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "row",
     alignItems: "stretch",
-    gap: spacing.xs,
+    gap: spacing["2xs"],
     minHeight: 40,
     minWidth: 0,
   },
@@ -1846,7 +1851,7 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "flex-end",
     justifyContent: "flex-end",
     gap: spacing["2xs"],
-    padding: `2px ${spacing["2xs"]}`,
+    padding: "2px 0",
     flexShrink: 0,
     minWidth: 0,
   },

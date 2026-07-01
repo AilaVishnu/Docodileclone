@@ -123,6 +123,21 @@ function AutoGrowTextarea({ value, onChange, placeholder, maxLength, disabled, i
   }, []);
 
   useEffect(() => { resize(); }, [value, resize]);
+  // Also re-measure once layout has settled and whenever the box is resized.
+  // Measuring only on value-change wedged empty rows at max height when the
+  // first measure ran before flex layout settled. rAF-debounced to avoid the
+  // "ResizeObserver loop" warning and any self-trigger from our own height set.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let raf = 0;
+    const run = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(resize); };
+    run();
+    if (typeof ResizeObserver === "undefined") return () => cancelAnimationFrame(raf);
+    const ro = new ResizeObserver(run);
+    ro.observe(el);
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); };
+  }, [resize]);
 
   return (
     <textarea
