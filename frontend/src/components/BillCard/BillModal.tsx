@@ -90,7 +90,7 @@ const BILL_ITEM_INPUT_STYLE: React.CSSProperties = {
 export function BillModal({
   isOpen, onClose, patient, initialServices,
   patientName, invoiceNo, onViewBills, medicines, onBilled, onPaid,
-  serviceName, serviceFee = 0, catalog, loading = false, patientId,
+  serviceName, serviceFee = 0, catalog, loading = false, patientId, initialNote,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -104,8 +104,9 @@ export function BillModal({
    *  hide the link — e.g. a first bill, with no prior invoices to view. */
   onViewBills?: () => void;
   /** Reopened-bill mode: record a payment against an existing bill ("Mark paid"
-   *  / "Pay ₹X"). Given the amount collected now + the method. */
-  onPaid?: (amount: number, method: string) => void;
+   *  / "Pay ₹X"). Given the amount collected now, the method, and the (possibly
+   *  edited) Details note so a reopen can update it. */
+  onPaid?: (amount: number, method: string, note?: string) => void;
   /** Wired-bill mode: prescribed medicines seeded as line items. */
   medicines?: BillMedicine[];
   /** Wired-bill mode: called on Charge & Bill / Mark Waived. Buckets stay
@@ -135,6 +136,9 @@ export function BillModal({
   loading?: boolean;
   /** Patient id — used to load the bottom footer (last payment / registered on). */
   patientId?: string;
+  /** Reopened-bill mode: the bill's existing Details note, seeded into the
+   *  editor so a reopen shows it (and can edit + re-save it on pay). */
+  initialNote?: string;
   /** @deprecated The standalone deposit field was removed — an advance is now
    *  applied as an "Advance / credit" payment mode. Still accepted so existing
    *  callers compile; ignored until the credit-mode wiring lands. */
@@ -198,7 +202,9 @@ export function BillModal({
     if (!isOpen) return;
     setPayments([{ mode: "Cash", amount: "" }]);
     setAmountTouched(false);
-    setBillNote("");
+    // Seed the reopened bill's existing note so it shows (and stays editable);
+    // a fresh bill has none → empty.
+    setBillNote(initialNote ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
@@ -565,7 +571,7 @@ export function BillModal({
             {isWaived ? "Mark Waived" : "Charge & Bill"}
           </Button>
         ) : (
-          <Button variant="dark" size="md" onClick={() => { if (onPaid) onPaid(paidEntered, methodLabel); else onClose(); }} style={{ flex: 1 }}
+          <Button variant="dark" size="md" onClick={() => { if (onPaid) onPaid(paidEntered, methodLabel, billNote.trim() || undefined); else onClose(); }} style={{ flex: 1 }}
             disabled={!!onPaid && paidEntered <= 0}
             iconLeft={<Icon name="verified-badge" size={20} tone="inverse" />}>
             {balance > 0 ? `Pay ${inr(balance)}` : "Mark paid"}

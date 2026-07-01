@@ -150,13 +150,32 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
   }, []);
   const openBillModal = (b: ClinicBill) => { setOpenBill(b); onOpenBill?.(b); };
 
+  // Print a receipt. The bill carries only the patient's name, so resolve the
+  // rest of the meta block (age/gender/mobile/T-id) from the loaded patient list
+  // — but only on an unambiguous single name match, else print name-only. An
+  // external onPrintBill override (stories) still wins and gets just the bill.
+  const patientMetaFor = (b: ClinicBill) => {
+    const q = b.patientName.trim().toLowerCase();
+    const matches = allPatients.filter((p) => p.name.trim().toLowerCase() === q);
+    if (matches.length !== 1) return undefined;
+    const p = matches[0];
+    const digits = (p.phone ?? "").replace(/\D/g, "").slice(-10);
+    return {
+      age: p.age != null ? Math.floor(p.age / 12) : undefined, // stored in months
+      gender: p.gender ?? undefined,
+      mobile: digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : (p.phone ?? undefined),
+      id: p.displayNo != null ? `T${String(p.displayNo).padStart(3, "0")}` : undefined,
+    };
+  };
+  const doPrint = (b: ClinicBill) => (onPrintBill ? onPrintBill(b) : printBill(b, patientMetaFor(b)));
+
   // Record a payment against a bill (Mark paid / Pay ₹X / Record payment), then
   // refresh the row in place and close. Surfaces the failure as a toast (and
   // keeps the modal open) so the desk isn't left guessing.
-  const recordPayment = async (b: ClinicBill, amount: number, method: string) => {
+  const recordPayment = async (b: ClinicBill, amount: number, method: string, note?: string) => {
     if (amount <= 0) return;
     try {
-      const updated = await payBill(b.id, { paidAmount: amount, method });
+      const updated = await payBill(b.id, { paidAmount: amount, method, note });
       setFetched((list) => list.map((x) => (x.id === updated.id ? updated : x)));
       setOpenBill(null);
     } catch (e) {
@@ -201,7 +220,7 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
             trigger={<Icon name="menu" size={20} tone="inherit" style={{ color: colors.neutral700 }} />}
             items={[
               { label: "View bill", onClick: () => openBillModal(b) },
-              { label: "Print", onClick: () => (onPrintBill ?? printBill)(b) },
+              { label: "Print", onClick: () => doPrint(b) },
               ...(b.due > 0 ? [{ label: "Record payment", onClick: () => openBillModal(b) }] : []),
             ]}
           />
@@ -275,7 +294,8 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
           patientName={openBill.patientName}
           invoiceNo={openBill.invoiceNo}
           initialServices={parseLines(openBill.items).map((l) => ({ name: l.name, price: l.unit }))}
-          onPaid={(amount, method) => recordPayment(openBill, amount, method)}
+          initialNote={openBill.note ?? undefined}
+          onPaid={(amount, method, note) => recordPayment(openBill, amount, method, note)}
           onViewBills={() => { setHistoryFor(openBill.patientName); setOpenBill(null); }}
         />
       ) : (
@@ -284,8 +304,8 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
           isOpen
           onClose={() => setOpenBill(null)}
           bill={openBill}
-          onPrint={onPrintBill ?? printBill}
-          onRecordPayment={(b) => recordPayment(b, b.due, b.paymentMethod || "Cash")}
+          onPrint={doPrint}
+          onRecordPayment={(b, amount, method) => recordPayment(b, amount, method)}
           onViewBills={(b) => { setHistoryFor(b.patientName); setOpenBill(null); }}
           onRefunded={(u) => setFetched((list) => list.map((x) => (x.id === u.id ? u : x)))}
         />
@@ -326,7 +346,7 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
             else onNewBill?.(); // can't resolve the patient → fall back to the New Bill page
           }}
           onView={(b) => { const cb = bills.find((x) => x.id === b.id); setHistoryFor(null); if (cb) openBillModal(cb); }}
-          onPrint={(b) => { const cb = bills.find((x) => x.id === b.id); if (cb) (onPrintBill ?? printBill)(cb); }}
+          onPrint={(b) => { const cb = bills.find((x) => x.id === b.id); if (cb) doPrint(cb); }}
         />
       )}
 

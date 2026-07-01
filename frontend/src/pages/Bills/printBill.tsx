@@ -11,10 +11,16 @@ const fmtDate = (iso: string) => {
   return y && m && d ? `${d} ${MONTHS[m - 1]} ${y}` : iso;
 };
 
+// Optional patient demographics printed in the receipt's meta block. The bill
+// record itself carries only the patient's name, so the caller (the Bills page)
+// resolves these from its loaded patient list and passes them in — omitted when
+// the patient can't be resolved unambiguously, leaving just the name.
+export type PrintPatientMeta = { age?: number; gender?: string; mobile?: string; id?: string };
+
 // Print a clinic bill as the "Bill cum Receipt" — the shared BillPrint component
 // rendered to static HTML and sent to the browser print dialog via the same
 // off-screen iframe the prescription print uses (openPrintWindow).
-export async function printBill(bill: Bill & { patientName: string }): Promise<void> {
+export async function printBill(bill: Bill & { patientName: string }, patient?: PrintPatientMeta): Promise<void> {
   // Lazy-load the server renderer so it only ships when someone actually prints
   // (keeps ~50kB of react-dom/server out of the main bundle).
   const { renderToStaticMarkup } = await import("react-dom/server");
@@ -36,7 +42,7 @@ export async function printBill(bill: Bill & { patientName: string }): Promise<v
   const markup = renderToStaticMarkup(
     <BillPrint
       clinic={{ name: localStorage.getItem("docodile_clinic_name") || "Your Clinic", address: "" }}
-      patient={{ name: bill.patientName }}
+      patient={{ name: bill.patientName, age: patient?.age, gender: patient?.gender, mobile: patient?.mobile, id: patient?.id }}
       invoiceNo={bill.invoiceNo}
       billDate={fmtDate(bill.billDate)}
       status={billStatusOf(bill)}

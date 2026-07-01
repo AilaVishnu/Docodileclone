@@ -87,8 +87,9 @@ export interface BillReadModalProps {
   isOpen: boolean;
   onClose: () => void;
   bill: ClinicBill;
-  /** Collect the outstanding balance on a Due bill. */
-  onRecordPayment?: (bill: ClinicBill) => void;
+  /** Collect against a Due bill's outstanding balance — the amount + mode the
+   *  desk entered in the "Collect balance" row (a partial pay is allowed). */
+  onRecordPayment?: (bill: ClinicBill, amount: number, method: string) => void;
   /** Called after a successful refund with the updated bill, so the caller can
    *  refresh its list. The confirm prompt + API call are handled in here. */
   onRefunded?: (updated: ClinicBill) => void;
@@ -130,7 +131,11 @@ export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefund
   // appends a fresh one. New lines push up Total billed + Balance. (Local only
   // for now — persistence lands with the clinic bills API.)
   const [extra, setExtra] = React.useState<GLine[]>([emptyNew()]);
-  React.useEffect(() => { setExtra([emptyNew()]); }, [bill.id]);
+  // "Collect balance" inputs — the desk can pick the mode and edit the amount to
+  // record a PARTIAL payment (blank = collect the whole balance). Reset per bill.
+  const [collectMode, setCollectMode] = React.useState("Cash");
+  const [collectAmt, setCollectAmt] = React.useState<number | "">("");
+  React.useEffect(() => { setExtra([emptyNew()]); setCollectMode("Cash"); setCollectAmt(""); }, [bill.id]);
   const setExtraName = (i: number, v: string) => setExtra((xs) => {
     const next = xs.map((l, idx) => (idx === i ? { ...l, name: v } : l));
     return [...next.filter((l) => l.name.trim() !== ""), emptyNew()];
@@ -149,6 +154,9 @@ export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefund
   // The bill record keeps one method + amount, not a per-mode split.
   const payments = bill.paid > 0 ? [{ mode: bill.paymentMethod || "—", amount: bill.paid }] : [];
   const addable = status === "due";
+  // Amount to record now: the typed figure, else the full balance; never more
+  // than what's owed (the server caps too, but keep the UI honest).
+  const collectNow = Math.min(collectAmt === "" ? balance : Number(collectAmt) || 0, balance);
 
   const n = committed.length;
   const gridRows: GLine[] = addable ? [...committed, ...extra] : committed;
@@ -218,39 +226,57 @@ export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefund
         </>
       }
       payment={
-        isWaived ? (
-          <span style={st.muted}>This bill was waived — no charge.</span>
-        ) : (
-          <div style={{ ...st.payWrap, "--input-h": "32px" } as React.CSSProperties}>
-            {payments.map((p, i) => (
-              <div key={i} style={st.payLine}>
-                <div style={{ flex: 1, minWidth: 0 }}><Frozen>{p.mode}</Frozen></div>
-                <div style={{ flex: 1, minWidth: 0 }}><Frozen>₹ {p.amount.toLocaleString("en-IN")}</Frozen></div>
-              </div>
-            ))}
-            {balance > 0 && (
-              <>
-                <span style={st.collect}>Collect balance</span>
-                <div style={st.payLine}>
-                  <div style={{ flex: 1, minWidth: 0 }}><Select options={PAY_MODES} value="Cash" onChange={() => {}} /></div>
-                  <div style={{ flex: 1, minWidth: 0 }}><MeasureField box prefix="₹" ariaLabel="Balance amount" value={String(Math.round(balance))} onChange={() => {}} /></div>
+        <div style={{ ...st.payWrap, "--input-h": "32px" } as React.CSSProperties}>
+          {isWaived ? (
+            <span style={st.muted}>This bill was waived — no charge.</span>
+          ) : (
+            <>
+              {payments.map((p, i) => (
+                <div key={i} style={st.payLine}>
+                  <div style={{ flex: 1, minWidth: 0 }}><Frozen>{p.mode}</Frozen></div>
+                  <div style={{ flex: 1, minWidth: 0 }}><Frozen>₹ {p.amount.toLocaleString("en-IN")}</Frozen></div>
                 </div>
-              </>
-            )}
-            {bill.note && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: spacing.xs }}>
-                <span style={st.muted}>Details</span>
-                <span style={{ color: colors.neutral900, fontSize: fonts.size.s, whiteSpace: "pre-wrap" }}>{bill.note}</span>
-              </div>
-            )}
-          </div>
-        )
+              ))}
+              {balance > 0 && (
+                <>
+                  <span style={st.collect}>Collect balance</span>
+                  <div style={st.payLine}>
+                    <div style={{ flex: 1, minWidth: 0 }}><Select options={PAY_MODES} value={collectMode} onChange={setCollectMode} /></div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <MeasureField box prefix="₹" ariaLabel="Balance amount" inputMode="decimal"
+                        placeholder={String(Math.round(balance))}
+                        value={collectAmt === "" ? "" : String(collectAmt)}
+                        onChange={(v) => setCollectAmt(v === "" ? "" : Number(v))} />
+                    </div>
+                  </div>
+                  {/* Collecting less than the balance leaves the remainder due. */}
+                  {collectNow < balance && (
+                    <span style={{ fontSize: fonts.size.s, color: colors.neutral600 }}>
+                      <strong style={{ color: colors.neutral900 }}>{inr(balance - collectNow)}</strong> stays on due
+                    </span>
+                  )}
+                </>
+              )}
+            </>
+          )}
+          {/* Details note — shown for every status, waived included. */}
+          {bill.note && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: spacing.xs }}>
+              <span style={st.muted}>Details</span>
+              <span style={{ color: colors.neutral900, fontSize: fonts.size.s, whiteSpace: "pre-wrap" }}>{bill.note}</span>
+            </div>
+          )}
+        </div>
       }
       action={
         // Payment-only CTA: collect the balance, or refund a paid bill. Print
         // lives in the header. Refunded / Waived have no action.
         balance > 0 ? (
-          <Button variant="dark" size="md" style={{ flex: 1 }} onClick={() => onRecordPayment?.(bill)} iconLeft={<Icon name="bill-check" size={18} tone="inverse" />}>Record payment</Button>
+          <Button variant="dark" size="md" style={{ flex: 1 }} disabled={collectNow <= 0}
+            onClick={() => { if (collectNow > 0) onRecordPayment?.(bill, collectNow, collectMode); }}
+            iconLeft={<Icon name="bill-check" size={18} tone="inverse" />}>
+            {collectNow < balance ? `Record ${inr(collectNow)}` : "Record payment"}
+          </Button>
         ) : effRefund === 0 && status !== "waived" ? (
           <Button variant="light" size="md" style={{ flex: 1 }} onClick={() => setConfirmRefund(true)}>Refund</Button>
         ) : null
