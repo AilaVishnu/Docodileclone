@@ -89,7 +89,7 @@ const BILL_ITEM_INPUT_STYLE: React.CSSProperties = {
 
 export function BillModal({
   isOpen, onClose, patient, initialServices,
-  patientName, invoiceNo, onViewBills, medicines, onBilled,
+  patientName, invoiceNo, onViewBills, medicines, onBilled, onPaid,
   serviceName, serviceFee = 0, catalog, loading = false, patientId,
 }: {
   isOpen: boolean;
@@ -103,6 +103,9 @@ export function BillModal({
   /** Open the patient's bill history (the header "View bills" link). Omit to
    *  hide the link — e.g. a first bill, with no prior invoices to view. */
   onViewBills?: () => void;
+  /** Reopened-bill mode: record a payment against an existing bill ("Mark paid"
+   *  / "Pay ₹X"). Given the amount collected now + the method. */
+  onPaid?: (amount: number, method: string) => void;
   /** Wired-bill mode: prescribed medicines seeded as line items. */
   medicines?: BillMedicine[];
   /** Wired-bill mode: called on Charge & Bill / Mark Waived. Buckets stay
@@ -121,6 +124,7 @@ export function BillModal({
     depositApplied: number;
     payStatus: string;
     lineItems: { name: string; qty: number; unit: number; gst: number; disc: number; discUnit: string; kind: string; inStock: boolean }[];
+    note?: string;
   }) => void;
   /** Pending consultation/service for this appointment — seeded as the first
    *  line item (its total bills the consultation fee, kept out of pharmacy). */
@@ -183,7 +187,8 @@ export function BillModal({
   const [payments, setPayments] = useState<{ mode: string; amount: number | "" }[]>([{ mode: "Cash", amount: "" }]);
   // Once the desk types in / clears the amount themselves, stop auto-filling it.
   const [amountTouched, setAmountTouched] = useState(false);
-  // Free-text note for this bill's payment. UI-only for now — not persisted.
+  // Free-text "Add Details" note — saved on the bill (via onBilled → charge) and
+  // shown again when the invoice is reopened (BillReadModal).
   const [billNote, setBillNote] = useState("");
 
   // Reset the desk's collection inputs ONLY when the modal opens — never on the
@@ -423,6 +428,7 @@ export function BillModal({
       depositApplied: 0,
       payStatus: isWaived ? "WAIVED" : balance > 0 ? "DUE" : "PAID",
       lineItems,
+      note: billNote.trim() || undefined,
     });
     onClose();
   };
@@ -559,7 +565,9 @@ export function BillModal({
             {isWaived ? "Mark Waived" : "Charge & Bill"}
           </Button>
         ) : (
-          <Button variant="dark" size="md" onClick={onClose} style={{ flex: 1 }} iconLeft={<Icon name="verified-badge" size={20} tone="inverse" />}>
+          <Button variant="dark" size="md" onClick={() => { if (onPaid) onPaid(paidEntered, methodLabel); else onClose(); }} style={{ flex: 1 }}
+            disabled={!!onPaid && paidEntered <= 0}
+            iconLeft={<Icon name="verified-badge" size={20} tone="inverse" />}>
             {balance > 0 ? `Pay ${inr(balance)}` : "Mark paid"}
           </Button>
         )

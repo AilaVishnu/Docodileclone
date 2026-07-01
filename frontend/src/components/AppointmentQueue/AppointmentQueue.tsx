@@ -602,7 +602,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
         // additional bill has prior invoices to show; on a first bill the link
         // stays hidden (onViewBills omitted).
         onViewBills={additionalBill ? () => { const apt = medsBillingApt; setMedsBillingApt(null); if (apt) openBillsHistory(apt); } : undefined}
-        onBilled={async ({ method, lineItems, paid }) => {
+        onBilled={async ({ method, lineItems, paid, note }) => {
           // ONE atomic call: the server recomputes the totals from these line
           // items, writes payment, creates the invoice, auto-covers from the
           // deposit and deducts stock — so money + inventory never drift apart.
@@ -612,7 +612,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           const isWaive = method === "Waive";
           if (!aptId) { setToastMessage("No appointment to bill"); return; }
           try {
-            const result = await chargeAppointment(aptId, { method, paidAmount: paid, items: lineItems });
+            const result = await chargeAppointment(aptId, { method, paidAmount: paid, items: lineItems, note });
             const inr = result.bill.billed.toLocaleString("en-IN", { minimumFractionDigits: 2 });
             const baseMsg = isWaive ? `Bill waived for ${who}` : `₹${inr} billed via ${method} for ${who}`;
             setRefreshKey((k) => k + 1);

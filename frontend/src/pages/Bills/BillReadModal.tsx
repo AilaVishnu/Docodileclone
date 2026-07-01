@@ -237,6 +237,12 @@ export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefund
                 </div>
               </>
             )}
+            {bill.note && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: spacing.xs }}>
+                <span style={st.muted}>Details</span>
+                <span style={{ color: colors.neutral900, fontSize: fonts.size.s, whiteSpace: "pre-wrap" }}>{bill.note}</span>
+              </div>
+            )}
           </div>
         )
       }
