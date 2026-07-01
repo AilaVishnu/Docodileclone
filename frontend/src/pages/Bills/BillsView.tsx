@@ -11,7 +11,10 @@ import { SearchField } from "../../components/SearchField";
 import { BillStatusBadge, billStatusOf } from "../../components/BillStatusBadge";
 import { BillModal } from "../../components/BillCard/BillModal";
 import { BillReadModal, parseLines } from "./BillReadModal";
-import { listClinicBills, type Bill } from "../../api/bills";
+import { printBill } from "./printBill";
+import { listClinicBills, payBill, type Bill } from "../../api/bills";
+import { Toast } from "../../components/Toast";
+import { resolveToastIcon } from "../../components/Toast/toastIcon";
 import { colors, spacing } from "../../styles/theme";
 import { styles } from "./BillsView.styles";
 
@@ -126,7 +129,22 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
   // Row-click / "View bill" opens the bill: an unpaid draft → the editable
   // BillModal (seeded); anything settled → the read-only BillReadModal.
   const [openBill, setOpenBill] = React.useState<ClinicBill | null>(null);
+  const [toastMessage, setToastMessage] = React.useState("");
   const openBillModal = (b: ClinicBill) => { setOpenBill(b); onOpenBill?.(b); };
+
+  // Record a payment against a bill (Mark paid / Pay ₹X / Record payment), then
+  // refresh the row in place and close. Surfaces the failure as a toast (and
+  // keeps the modal open) so the desk isn't left guessing.
+  const recordPayment = async (b: ClinicBill, amount: number, method: string) => {
+    if (amount <= 0) return;
+    try {
+      const updated = await payBill(b.id, { paidAmount: amount, method });
+      setFetched((list) => list.map((x) => (x.id === updated.id ? updated : x)));
+      setOpenBill(null);
+    } catch (e) {
+      setToastMessage((e as Error).message || "Couldn't record the payment");
+    }
+  };
 
   const collectedToday = bills.filter((b) => b.today).reduce((s, b) => s + b.paid, 0);
   const outstanding = bills.reduce((s, b) => s + b.due, 0);
@@ -165,7 +183,7 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
             trigger={<Icon name="menu" size={20} tone="inherit" style={{ color: colors.neutral700 }} />}
             items={[
               { label: "View bill", onClick: () => openBillModal(b) },
-              { label: "Print", onClick: () => onPrintBill?.(b) },
+              { label: "Print", onClick: () => (onPrintBill ?? printBill)(b) },
               ...(b.due > 0 ? [{ label: "Record payment", onClick: () => openBillModal(b) }] : []),
             ]}
           />
@@ -239,6 +257,8 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
           patientName={openBill.patientName}
           invoiceNo={openBill.invoiceNo}
           initialServices={parseLines(openBill.items).map((l) => ({ name: l.name, price: l.unit }))}
+          onPaid={(amount, method) => recordPayment(openBill, amount, method)}
+          onViewBills={() => { setQuery(openBill.patientName); setOpenBill(null); }}
         />
       ) : (
         <BillReadModal
@@ -246,10 +266,19 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
           isOpen
           onClose={() => setOpenBill(null)}
           bill={openBill}
-          onPrint={onPrintBill}
+          onPrint={onPrintBill ?? printBill}
+          onRecordPayment={(b) => recordPayment(b, b.due, b.paymentMethod || "Cash")}
+          onViewBills={(b) => { setQuery(b.patientName); setOpenBill(null); }}
           onRefunded={(u) => setFetched((list) => list.map((x) => (x.id === u.id ? u : x)))}
         />
       ))}
+
+      <Toast
+        message={toastMessage}
+        {...resolveToastIcon(toastMessage)}
+        isVisible={!!toastMessage}
+        onClose={() => setToastMessage("")}
+      />
     </div>
   );
 }
