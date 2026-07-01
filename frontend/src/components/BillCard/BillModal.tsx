@@ -10,7 +10,8 @@ import { MeasureField } from "../MeasureField";
 import { MedicineAutocomplete } from "../MedicineAutocomplete/MedicineAutocomplete";
 import { listServices } from "../../api/services";
 import { listBills, type Bill } from "../../api/bills";
-import { printBill, shareBill } from "../../pages/Bills/printBill";
+import { printBill } from "../../pages/Bills/printBill";
+import { ShareBillMenu } from "../../pages/Bills/ShareBillMenu";
 import { getBillFooter, type BillFooter } from "../../api/patientSearch";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 import { Icon } from "../Icon";
@@ -441,13 +442,12 @@ export function BillModal({
   };
   const hasBillableLine = lines.some((l) => !isTrailing(l) && l.qty > 0);
 
-  // Print / share a preview receipt of the current bill state, so the header
-  // icons do something. Builds a synthetic Bill from the live lines + totals.
-  const previewReceipt = (mode: "print" | "share") => {
-    if (!hasBillableLine) return;
+  // Build a synthetic Bill from the live lines + totals so the header print /
+  // share controls have something to render (a preview before the bill saves).
+  const buildDraft = (): Bill & { patientName: string } => {
     const iso = `${billDate.getFullYear()}-${String(billDate.getMonth() + 1).padStart(2, "0")}-${String(billDate.getDate()).padStart(2, "0")}`;
     const lineItems = lines.filter((l) => !isTrailing(l)).map((l) => ({ name: l.name, qty: l.qty, unit: l.unit, gst: l.gst, disc: l.disc, discUnit: l.discUnit }));
-    const draft: Bill & { patientName: string } = {
+    return {
       id: "", invoiceNo: invoiceNo ?? "", billDate: iso,
       billed: displayFinal, paid: received, due: balance, refund: 0, depositApplied: null,
       payStatus: isWaived ? "WAIVED" : balance > 0 ? "DUE" : "PAID",
@@ -456,9 +456,8 @@ export function BillModal({
       appointmentId: null, createdAt: "",
       patientName: patientName ?? pt.name,
     };
-    const run = mode === "print" ? printBill : shareBill;
-    Promise.resolve(run(draft)).catch(() => {});
   };
+  const printPreview = () => { if (hasBillableLine) Promise.resolve(printBill(buildDraft())).catch(() => {}); };
 
   // Bottom strip: last payment (left) + registered-on (right). Rendered only
   // once the footer data has loaded for this patient.
@@ -482,8 +481,8 @@ export function BillModal({
       headerActions={
         <>
           {onViewBills && <button onClick={onViewBills} style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, fontSize: fonts.size.s, textDecoration: "underline", whiteSpace: "nowrap" }}>View bills</button>}
-          <IconButton ariaLabel="Print" onClick={() => previewReceipt("print")} color={colors.neutral900}><Icon name="printer" size={24} tone="inherit" /></IconButton>
-          <IconButton ariaLabel="Share" onClick={() => previewReceipt("share")} color={colors.neutral900}><Icon name="share" size={24} tone="inherit" /></IconButton>
+          <IconButton ariaLabel="Print" onClick={printPreview} color={colors.neutral900}><Icon name="printer" size={24} tone="inherit" /></IconButton>
+          <ShareBillMenu bill={buildDraft()} trigger={<Icon name="share" size={24} tone="inherit" style={{ color: colors.neutral900 }} />} />
         </>
       }
       billTitle="Bill"

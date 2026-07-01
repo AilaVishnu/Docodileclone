@@ -11,7 +11,7 @@ import { SearchField } from "../../components/SearchField";
 import { BillStatusBadge, billStatusOf } from "../../components/BillStatusBadge";
 import { BillModal } from "../../components/BillCard/BillModal";
 import { BillReadModal, parseLines } from "./BillReadModal";
-import { printBill, shareBill } from "./printBill";
+import { printBill } from "./printBill";
 import { RecentBills } from "../../components/BillCard/RecentBills";
 import { listClinicBills, payBill, createBill, type Bill } from "../../api/bills";
 import { usePatients } from "../../hooks/usePatients";
@@ -168,9 +168,14 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
     };
   };
   const doPrint = (b: ClinicBill) => (onPrintBill ? onPrintBill(b) : printBill(b, patientMetaFor(b)));
-  // Share downloads the receipt PDF; surface a failure as a toast.
-  const doShare = (b: ClinicBill) =>
-    shareBill(b, patientMetaFor(b)).catch((e) => setToastMessage((e as Error).message || "Couldn't share the bill"));
+  // Share context for the bill detail's channel menu — patient contact (to
+  // pre-fill WhatsApp/Email) + demographics (for the PDF), on a single name match.
+  const shareCtxFor = (b: ClinicBill) => {
+    const q = b.patientName.trim().toLowerCase();
+    const matches = allPatients.filter((p) => p.name.trim().toLowerCase() === q);
+    const p = matches.length === 1 ? matches[0] : undefined;
+    return { patient: patientMetaFor(b), phone: p?.phone ?? undefined, email: p?.email ?? undefined, onError: setToastMessage };
+  };
 
   // Record a payment against a bill (Mark paid / Pay ₹X / Record payment), then
   // refresh the row in place and close. Surfaces the failure as a toast (and
@@ -331,7 +336,7 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
           onClose={() => setOpenBill(null)}
           bill={openBill}
           onPrint={doPrint}
-          onShare={doShare}
+          share={shareCtxFor(openBill)}
           onRecordPayment={(b, amount, method) => recordPayment(b, amount, method)}
           onViewBills={(b) => { setHistoryFor(b.patientName); setOpenBill(null); }}
           onRefunded={(u) => setFetched((list) => list.map((x) => (x.id === u.id ? u : x)))}

@@ -20,7 +20,7 @@ import { recordPatientDeposit } from "../../api/patientSearch";
 import { listBills, chargeAppointment, payBill, type Bill } from "../../api/bills";
 import { RecentBills } from "../BillCard/RecentBills";
 import { BillReadModal } from "../../pages/Bills/BillReadModal";
-import { printBill, shareBill, type PrintPatientMeta } from "../../pages/Bills/printBill";
+import { printBill, type PrintPatientMeta } from "../../pages/Bills/printBill";
 
 type Doctor = {
   id: string;
@@ -721,10 +721,11 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           onClose={() => setViewBill(null)}
           bill={{ ...viewBill, patientName: billsHistoryApt.patientName, today: false }}
           onViewBills={() => setViewBill(null)}
-          // Print / share the receipt with the patient meta the appointment
-          // already carries (age in months → years, gender, mobile, T-id).
+          // Print / share the receipt with the patient meta + contact the
+          // appointment already carries (age in months → years, gender, phone,
+          // email, T-id).
           onPrint={(b) => printBill(b, aptReceiptMeta(billsHistoryApt))}
-          onShare={(b) => { shareBill(b, aptReceiptMeta(billsHistoryApt)).catch((e) => setToastMessage((e as Error).message || "Couldn't share the bill")); }}
+          share={{ patient: aptReceiptMeta(billsHistoryApt), phone: billsHistoryApt.patientPhone, email: billsHistoryApt.patientEmail, onError: setToastMessage }}
           // Collect the (possibly partial) balance: record it, then update both
           // the open detail and the history row behind it in place.
           onRecordPayment={async (b, amount, method) => {

@@ -8,6 +8,8 @@ import { Button } from "../../components/Button";
 import { Icon } from "../../components/Icon";
 import { ConfirmDialog } from "../../components/ConfirmDialog/ConfirmDialog";
 import { refundBill } from "../../api/bills";
+import { ShareBillMenu } from "./ShareBillMenu";
+import type { PrintPatientMeta } from "./printBill";
 import type { ClinicBill } from "./BillsView";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 
@@ -93,11 +95,12 @@ export interface BillReadModalProps {
   /** Open the patient's full bill history (header link). */
   onViewBills?: (bill: ClinicBill) => void;
   onPrint?: (bill: ClinicBill) => void;
-  /** Share the receipt (downloads it as a PDF). */
-  onShare?: (bill: ClinicBill) => void;
+  /** Share context — patient contact used to pre-fill the share channels
+   *  (WhatsApp/Email) and demographics for the PDF receipt. */
+  share?: { patient?: PrintPatientMeta; phone?: string; email?: string; onError?: (message: string) => void };
 }
 
-export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefunded, onViewBills, onPrint, onShare }: BillReadModalProps) {
+export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefunded, onViewBills, onPrint, share }: BillReadModalProps) {
   const committed = React.useMemo(() => parseLines(bill.items), [bill.items]);
 
   // Refund flow: Refund button → confirm → POST → reflect REFUNDED in place
@@ -175,7 +178,7 @@ export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefund
         <>
           <button style={st.linkBtn} onClick={() => onViewBills?.(bill)}>View bills</button>
           <Icon name="printer" size={24} tone="inherit" style={{ color: colors.neutral900, cursor: "pointer" }} onClick={() => onPrint?.(bill)} />
-          <Icon name="share" size={24} tone="inherit" style={{ color: colors.neutral900, cursor: "pointer" }} onClick={() => onShare?.(bill)} />
+          <ShareBillMenu bill={bill} patient={share?.patient} phone={share?.phone} email={share?.email} onError={share?.onError} />
         </>
       }
       billTitle="Bill"

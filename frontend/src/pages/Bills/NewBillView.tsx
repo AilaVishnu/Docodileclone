@@ -14,7 +14,8 @@ import { MedicineAutocomplete } from "../../components/MedicineAutocomplete/Medi
 import { listServices } from "../../api/services";
 import { listPharmacyStock } from "../../api/pharmacy";
 import { createBill, listClinicBills, type Bill } from "../../api/bills";
-import { printBill, shareBill, type PrintPatientMeta } from "./printBill";
+import { printBill, type PrintPatientMeta } from "./printBill";
+import { ShareBillMenu } from "./ShareBillMenu";
 import { createPatient } from "../../api/patients";
 import { Toast } from "../../components/Toast";
 import { resolveToastIcon } from "../../components/Toast/toastIcon";
@@ -244,10 +245,9 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
       id: shownPatientId && shownPatientId !== "—" && shownPatientId !== "T—" ? shownPatientId : undefined,
     };
   };
-  const previewReceipt = (mode: "print" | "share") => {
+  const printPreview = () => {
     if (real.length === 0) { setToastMessage("Add at least one item to preview the bill"); return; }
-    const run = mode === "print" ? printBill : shareBill;
-    Promise.resolve(run(draftBill(), draftMeta())).catch((e) => setToastMessage((e as Error).message || "Couldn't generate the receipt"));
+    Promise.resolve(printBill(draftBill(), draftMeta())).catch((e) => setToastMessage((e as Error).message || "Couldn't generate the receipt"));
   };
 
   // Editable line-item cells (mirrors BillModal).
@@ -290,7 +290,7 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
         backLabel="Back to Bills"
         innerStyle={{ maxWidth: "none", paddingRight: spacing.xl }}
         title={<span style={{ display: "inline-flex", alignItems: "baseline", gap: spacing.s }}>New Bill <span style={{ fontSize: fonts.size.s, color: colors.neutral500 }}>{invoicePreview ?? "INV_—"}</span></span>}
-        actions={<><IconButton ariaLabel="Print" onClick={() => previewReceipt("print")}><Icon name="printer" tone="inherit" size={22} /></IconButton><IconButton ariaLabel="Share" onClick={() => previewReceipt("share")}><Icon name="share" tone="inherit" size={22} /></IconButton></>}
+        actions={<><IconButton ariaLabel="Print" onClick={printPreview}><Icon name="printer" tone="inherit" size={22} /></IconButton><ShareBillMenu bill={draftBill()} patient={draftMeta()} phone={form.phone} email={form.email} onError={setToastMessage} trigger={<Icon name="share" tone="inherit" size={22} style={{ color: colors.neutral900 }} />} /></>}
       />
 
       <div style={appt.grid}>
