@@ -347,7 +347,7 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
         return showNewBill ? (
           <NewBillView onBack={() => setShowNewBill(false)} />
         ) : (
-          <BillsView />
+          <BillsView onNewBill={() => setShowNewBill(true)} />
         );
       default:
         return (

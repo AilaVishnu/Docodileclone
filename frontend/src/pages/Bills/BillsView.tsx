@@ -12,7 +12,10 @@ import { BillStatusBadge, billStatusOf } from "../../components/BillStatusBadge"
 import { BillModal } from "../../components/BillCard/BillModal";
 import { BillReadModal, parseLines } from "./BillReadModal";
 import { printBill } from "./printBill";
-import { listClinicBills, payBill, type Bill } from "../../api/bills";
+import { RecentBills } from "../../components/BillCard/RecentBills";
+import { listClinicBills, payBill, createBill, type Bill } from "../../api/bills";
+import { usePatients } from "../../hooks/usePatients";
+import { listPharmacyStock } from "../../api/pharmacy";
 import { Toast } from "../../components/Toast";
 import { resolveToastIcon } from "../../components/Toast/toastIcon";
 import { colors, spacing } from "../../styles/theme";
@@ -93,6 +96,8 @@ export interface BillsViewProps {
   onOpenBill?: (bill: ClinicBill) => void;
   onPrintBill?: (bill: ClinicBill) => void;
   onExport?: () => void;
+  /** Open the New Bill page (e.g. the history modal's "Create New Bill"). */
+  onNewBill?: () => void;
 }
 
 /**
@@ -100,7 +105,7 @@ export interface BillsViewProps {
  * → search + status/period filters → invoice table. Composed from existing
  * components (Card, Tabs, DateRangeDropdown, DataGrid, PageHeader, Button).
  */
-export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, onPrintBill, onExport }: BillsViewProps) {
+export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, onPrintBill, onExport, onNewBill }: BillsViewProps) {
   const [status, setStatus] = React.useState("all");
   const [period, setPeriod] = React.useState("thisMonth");
   const [customStart, setCustomStart] = React.useState("");
@@ -111,6 +116,7 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
   // passed in (stories). Re-fetches whenever the period / custom range changes.
   const [fetched, setFetched] = React.useState<ClinicBill[]>([]);
   const [fetching, setFetching] = React.useState(false);
+  const [refreshKey, setRefreshKey] = React.useState(0);
   React.useEffect(() => {
     if (billsProp) return;
     const { from, to } = rangeFor(period, customStart, customEnd);
@@ -122,7 +128,7 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
       .catch(() => { if (!cancelled) setFetched([]); })
       .finally(() => { if (!cancelled) setFetching(false); });
     return () => { cancelled = true; };
-  }, [billsProp, period, customStart, customEnd]);
+  }, [billsProp, period, customStart, customEnd, refreshKey]);
 
   const bills = billsProp ?? fetched;
   const loading = loadingProp ?? fetching;
@@ -130,6 +136,18 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
   // BillModal (seeded); anything settled → the read-only BillReadModal.
   const [openBill, setOpenBill] = React.useState<ClinicBill | null>(null);
   const [toastMessage, setToastMessage] = React.useState("");
+  // Patient whose bill history the "View bills" link is showing (null = closed).
+  const [historyFor, setHistoryFor] = React.useState<string | null>(null);
+  // Patient the "Create New Bill" editor is open for (resolved to a real id so
+  // the charge can be saved). Null = closed.
+  const [newBillFor, setNewBillFor] = React.useState<{ name: string; id: string } | null>(null);
+  const { data: allPatients } = usePatients();
+  // Medicines price catalog so a picked stock item auto-fills its unit price in
+  // the "Create New Bill" editor (services price via their own picker path).
+  const [medCatalog, setMedCatalog] = React.useState<{ id: string; name: string; unitPrice: number }[]>([]);
+  React.useEffect(() => {
+    listPharmacyStock().then((meds) => setMedCatalog(meds.map((m) => ({ id: m.id, name: m.name, unitPrice: m.unitPrice })))).catch(() => {});
+  }, []);
   const openBillModal = (b: ClinicBill) => { setOpenBill(b); onOpenBill?.(b); };
 
   // Record a payment against a bill (Mark paid / Pay ₹X / Record payment), then
@@ -258,7 +276,7 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
           invoiceNo={openBill.invoiceNo}
           initialServices={parseLines(openBill.items).map((l) => ({ name: l.name, price: l.unit }))}
           onPaid={(amount, method) => recordPayment(openBill, amount, method)}
-          onViewBills={() => { setQuery(openBill.patientName); setOpenBill(null); }}
+          onViewBills={() => { setHistoryFor(openBill.patientName); setOpenBill(null); }}
         />
       ) : (
         <BillReadModal
@@ -268,10 +286,49 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
           bill={openBill}
           onPrint={onPrintBill ?? printBill}
           onRecordPayment={(b) => recordPayment(b, b.due, b.paymentMethod || "Cash")}
-          onViewBills={(b) => { setQuery(b.patientName); setOpenBill(null); }}
+          onViewBills={(b) => { setHistoryFor(b.patientName); setOpenBill(null); }}
           onRefunded={(u) => setFetched((list) => list.map((x) => (x.id === u.id ? u : x)))}
         />
       ))}
+
+      {newBillFor && (
+        <BillModal
+          isOpen
+          onClose={() => setNewBillFor(null)}
+          patientName={newBillFor.name}
+          patientId={newBillFor.id}
+          catalog={medCatalog}
+          onViewBills={() => { const name = newBillFor.name; setNewBillFor(null); setHistoryFor(name); }}
+          onBilled={async ({ method, billed, paid, due, payStatus, lineItems, note }) => {
+            try {
+              await createBill(newBillFor.id, {
+                billed, paid, due, payStatus, paymentMethod: method,
+                items: JSON.stringify(lineItems), note,
+              });
+              setRefreshKey((k) => k + 1); // pull the new invoice into the list
+            } catch (e) {
+              setToastMessage((e as Error).message || "Couldn't create the bill");
+            }
+          }}
+        />
+      )}
+
+      {historyFor !== null && (
+        <RecentBills
+          isOpen
+          onClose={() => setHistoryFor(null)}
+          patientName={historyFor}
+          bills={bills.filter((b) => b.patientName === historyFor)}
+          onCreateNew={() => {
+            const p = allPatients.find((x) => x.name.trim().toLowerCase() === (historyFor ?? "").trim().toLowerCase());
+            setHistoryFor(null);
+            if (p) setNewBillFor({ name: p.name, id: p.id });
+            else onNewBill?.(); // can't resolve the patient → fall back to the New Bill page
+          }}
+          onView={(b) => { const cb = bills.find((x) => x.id === b.id); setHistoryFor(null); if (cb) openBillModal(cb); }}
+          onPrint={(b) => { const cb = bills.find((x) => x.id === b.id); if (cb) (onPrintBill ?? printBill)(cb); }}
+        />
+      )}
 
       <Toast
         message={toastMessage}
