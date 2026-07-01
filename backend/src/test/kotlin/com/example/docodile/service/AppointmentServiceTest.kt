@@ -14,6 +14,7 @@ import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
@@ -70,12 +71,19 @@ class AppointmentServiceTest {
     fun `getAppointmentsForClinic populates todayBillCount from the day's bills`() {
         val date = LocalDate.of(2023, 10, 10)
         val pid = UUID.randomUUID()
+        // Seed the three Bill-editor fields the schema-per-tenant rebase dropped
+        // (pharmacy total, bill-level discount, patient advance) so the assertions
+        // below guard against them being silently lost again.
+        val patient = Patient(id = pid, name = "Asha").also { it.deposit = BigDecimal("200") }
         val appointment = Appointment(
             id = UUID.randomUUID(),
-            patient = Patient(id = pid, name = "Asha"),
+            patient = patient,
             doctor = AppUser(id = UUID.randomUUID(), name = "Dr. Smith"),
             scheduledTime = LocalDateTime.now(),
-        )
+        ).also {
+            it.pharmacyAmount = BigDecimal("120")
+            it.discountAmount = BigDecimal("30")
+        }
         `when`(appointmentRepository.findAllByScheduledTimeBetween(date.atStartOfDay(), date.atTime(23, 59, 59)))
             .thenReturn(listOf(appointment))
         // Two bills for this patient today → the kebab should offer "View/Create Bills".
@@ -84,5 +92,9 @@ class AppointmentServiceTest {
         val result = appointmentService.getAppointmentsForClinic(date)
 
         assertEquals(2, result[0].todayBillCount)
+        // The Bill editor seeds off these — they must survive the entity→DTO map.
+        assertEquals(BigDecimal("120"), result[0].pharmacyAmount)
+        assertEquals(BigDecimal("30"), result[0].discountAmount)
+        assertEquals(BigDecimal("200"), result[0].patientDeposit)
     }
 }
