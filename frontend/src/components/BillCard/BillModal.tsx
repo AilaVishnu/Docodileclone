@@ -172,7 +172,9 @@ export function BillModal({
     }
     if (medicines != null) {
       medicines.forEach((m) => seed.push({ id: 0, name: m.name, qty: m.qty, unit: m.unitPrice, gst: 0, disc: 0, discUnit: "₹", inStock: m.inStock, kind: "medicine" }));
-    } else if (initialServices && initialServices.length) {
+    } else if (initialServices) {
+      // Provided (even if empty) → seed exactly those; an empty list seeds
+      // nothing. Only the prop-less Storybook mock falls through to the sample.
       initialServices.forEach((s) => seed.push({ id: 0, name: s.name, qty: 1, unit: s.price, gst: 0, disc: 0, discUnit: "₹" }));
     } else if (!wired) {
       seed.push({ id: 0, name: "Ear lobe repair", qty: 1, unit: 6000, gst: 0, disc: 0, discUnit: "₹" });

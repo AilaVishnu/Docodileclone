@@ -4,6 +4,7 @@ import { colors, spacing } from "../../styles/theme";
 import { RadioGroup } from "../Radio";
 import { Icon } from "../Icon";
 import { printBill, type PrintPatientMeta } from "../../pages/Bills/printBill";
+import { BillModal } from "./BillModal";
 import type { Bill } from "../../api/bills";
 
 type BillCardProps = {
@@ -50,6 +51,9 @@ export function BillCard({
 }: BillCardProps) {
   const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
   const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
+  // The full bill editor, opened from the expand icon beside Print. Seeds the
+  // same services this card shows.
+  const [expanded, setExpanded] = useState(false);
 
   // Print this bill card as the standard "Bill cum Receipt" (same renderer as
   // the Bills page / queue). Builds a synthetic bill from the card's live
@@ -104,7 +108,7 @@ export function BillCard({
           <h3 style={styles.title}>Bill</h3>
           <div style={{ position: "absolute", right: 0, display: "flex", alignItems: "center", gap: spacing.s }}>
             <Icon name="printer" size={20} tone="inherit" style={{ cursor: "pointer" }} onClick={printReceipt} />
-            <Icon name="scale" size={20} tone="inherit" style={{ cursor: "pointer" }} />
+            <Icon name="scale" size={20} tone="inherit" style={{ cursor: "pointer" }} onClick={() => setExpanded(true)} />
           </div>
         </div>
 
@@ -184,6 +188,17 @@ export function BillCard({
 
       {/* Zigzag torn receipt edge */}
       <div style={styles.zigzag} />
+
+      {/* Full bill editor — the expand icon opens the same services in the
+          larger BillModal workbench. */}
+      {expanded && (
+        <BillModal
+          isOpen
+          onClose={() => setExpanded(false)}
+          patientName={patientName}
+          initialServices={services}
+        />
+      )}
     </div>
   );
 }
