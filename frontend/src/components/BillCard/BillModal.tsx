@@ -9,7 +9,8 @@ import { Field } from "../Field";
 import { MeasureField } from "../MeasureField";
 import { MedicineAutocomplete } from "../MedicineAutocomplete/MedicineAutocomplete";
 import { listServices } from "../../api/services";
-import { listBills } from "../../api/bills";
+import { listBills, type Bill } from "../../api/bills";
+import { printBill, shareBill } from "../../pages/Bills/printBill";
 import { getBillFooter, type BillFooter } from "../../api/patientSearch";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 import { Icon } from "../Icon";
@@ -440,6 +441,25 @@ export function BillModal({
   };
   const hasBillableLine = lines.some((l) => !isTrailing(l) && l.qty > 0);
 
+  // Print / share a preview receipt of the current bill state, so the header
+  // icons do something. Builds a synthetic Bill from the live lines + totals.
+  const previewReceipt = (mode: "print" | "share") => {
+    if (!hasBillableLine) return;
+    const iso = `${billDate.getFullYear()}-${String(billDate.getMonth() + 1).padStart(2, "0")}-${String(billDate.getDate()).padStart(2, "0")}`;
+    const lineItems = lines.filter((l) => !isTrailing(l)).map((l) => ({ name: l.name, qty: l.qty, unit: l.unit, gst: l.gst, disc: l.disc, discUnit: l.discUnit }));
+    const draft: Bill & { patientName: string } = {
+      id: "", invoiceNo: invoiceNo ?? "", billDate: iso,
+      billed: displayFinal, paid: received, due: balance, refund: 0, depositApplied: null,
+      payStatus: isWaived ? "WAIVED" : balance > 0 ? "DUE" : "PAID",
+      paymentMethod: methodLabel,
+      items: JSON.stringify(lineItems), note: billNote.trim() || null,
+      appointmentId: null, createdAt: "",
+      patientName: patientName ?? pt.name,
+    };
+    const run = mode === "print" ? printBill : shareBill;
+    Promise.resolve(run(draft)).catch(() => {});
+  };
+
   // Bottom strip: last payment (left) + registered-on (right). Rendered only
   // once the footer data has loaded for this patient.
   const footerNode = footer && (footer.registeredAt || footer.lastPaymentAt) ? (
@@ -462,8 +482,8 @@ export function BillModal({
       headerActions={
         <>
           {onViewBills && <button onClick={onViewBills} style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, fontSize: fonts.size.s, textDecoration: "underline", whiteSpace: "nowrap" }}>View bills</button>}
-          <IconButton ariaLabel="Print" onClick={() => {}} color={colors.neutral900}><Icon name="printer" size={24} tone="inherit" /></IconButton>
-          <IconButton ariaLabel="Share" onClick={() => {}} color={colors.neutral900}><Icon name="share" size={24} tone="inherit" /></IconButton>
+          <IconButton ariaLabel="Print" onClick={() => previewReceipt("print")} color={colors.neutral900}><Icon name="printer" size={24} tone="inherit" /></IconButton>
+          <IconButton ariaLabel="Share" onClick={() => previewReceipt("share")} color={colors.neutral900}><Icon name="share" size={24} tone="inherit" /></IconButton>
         </>
       }
       billTitle="Bill"

@@ -13,7 +13,8 @@ import { Icon } from "../../components/Icon";
 import { MedicineAutocomplete } from "../../components/MedicineAutocomplete/MedicineAutocomplete";
 import { listServices } from "../../api/services";
 import { listPharmacyStock } from "../../api/pharmacy";
-import { createBill, listClinicBills } from "../../api/bills";
+import { createBill, listClinicBills, type Bill } from "../../api/bills";
+import { printBill, shareBill, type PrintPatientMeta } from "./printBill";
 import { createPatient } from "../../api/patients";
 import { Toast } from "../../components/Toast";
 import { resolveToastIcon } from "../../components/Toast/toastIcon";
@@ -217,6 +218,38 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
     }
   };
 
+  // Print / share a preview receipt of the bill being drafted (before it's
+  // saved) — builds a synthetic Bill from the current form so the header icons
+  // do something useful instead of nothing. Needs at least one item.
+  const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  const draftBill = (): Bill & { patientName: string } => {
+    const methodLabel = isWaive ? "Waive" : Array.from(new Set(payments.map((p) => p.mode))).join(" + ");
+    return {
+      id: "", invoiceNo: invoicePreview ?? "", billDate: todayIso(),
+      billed: final, paid: received, due: balance, refund: 0, depositApplied: null,
+      payStatus: isWaive ? "WAIVED" : balance > 0 ? "DUE" : "PAID",
+      paymentMethod: methodLabel,
+      items: JSON.stringify(real.map((l) => ({ name: l.name, qty: l.qty, unit: l.unit, gst: l.gst, disc: l.disc, discUnit: l.discUnit }))),
+      note: billNote.trim() || null, appointmentId: null, createdAt: "",
+      patientName: form.name.trim() || "—",
+    };
+  };
+  const draftMeta = (): PrintPatientMeta => {
+    const digits = form.phone.replace(/\D/g, "").slice(-10);
+    const years = form.age ? parseInt(form.age.split("/")[0]?.trim() || "", 10) : NaN;
+    return {
+      age: Number.isFinite(years) && years > 0 ? years : undefined,
+      gender: form.gender || undefined,
+      mobile: digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : (form.phone || undefined),
+      id: shownPatientId && shownPatientId !== "—" && shownPatientId !== "T—" ? shownPatientId : undefined,
+    };
+  };
+  const previewReceipt = (mode: "print" | "share") => {
+    if (real.length === 0) { setToastMessage("Add at least one item to preview the bill"); return; }
+    const run = mode === "print" ? printBill : shareBill;
+    Promise.resolve(run(draftBill(), draftMeta())).catch((e) => setToastMessage((e as Error).message || "Couldn't generate the receipt"));
+  };
+
   // Editable line-item cells (mirrors BillModal).
   const numFill = (l: Line, key: "qty" | "unit") => isTrailing(l) ? null : (
     <Field variant="box" fill="filled" align="center" inputMode="decimal" placeholder={key === "qty" ? "1" : "0"} ariaLabel={key} style={{ padding: "0 6px" }}
@@ -257,7 +290,7 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
         backLabel="Back to Bills"
         innerStyle={{ maxWidth: "none", paddingRight: spacing.xl }}
         title={<span style={{ display: "inline-flex", alignItems: "baseline", gap: spacing.s }}>New Bill <span style={{ fontSize: fonts.size.s, color: colors.neutral500 }}>{invoicePreview ?? "INV_—"}</span></span>}
-        actions={<><IconButton ariaLabel="Print"><Icon name="printer" tone="inherit" size={22} /></IconButton><IconButton ariaLabel="Share"><Icon name="share" tone="inherit" size={22} /></IconButton></>}
+        actions={<><IconButton ariaLabel="Print" onClick={() => previewReceipt("print")}><Icon name="printer" tone="inherit" size={22} /></IconButton><IconButton ariaLabel="Share" onClick={() => previewReceipt("share")}><Icon name="share" tone="inherit" size={22} /></IconButton></>}
       />
 
       <div style={appt.grid}>
