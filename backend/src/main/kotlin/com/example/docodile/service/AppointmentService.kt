@@ -34,12 +34,17 @@ class AppointmentService(
         val endOfDay = date.atTime(23, 59, 59)
 
         // Bills each patient already has on this date → drives the queue kebab's
-        // "Create Bill" vs "View/Create Bills" branch (one query, no N+1).
-        val billCountByPatient: Map<UUID, Int> = billRepository.countByPatientForDate(date)
-            .associate { (it[0] as UUID) to (it[1] as Number).toInt() }
+        // "Create Bill" vs "View/Create Bills" branch AND the Pay badge (count +
+        // outstanding due), in one query, no N+1.
+        val statsByPatient: Map<UUID, Pair<Int, java.math.BigDecimal>> =
+            billRepository.billStatsByPatientForDate(date)
+                .associate { (it[0] as UUID) to Pair((it[1] as Number).toInt(), it[2] as java.math.BigDecimal) }
 
         return appointmentRepository.findAllByScheduledTimeBetween(startOfDay, endOfDay)
-            .map { it.toDTO(todayBillCount = billCountByPatient[it.patient?.id] ?: 0) }
+            .map {
+                val stats = statsByPatient[it.patient?.id]
+                it.toDTO(todayBillCount = stats?.first ?: 0, todayDue = stats?.second ?: java.math.BigDecimal.ZERO)
+            }
     }
 
     @Transactional
@@ -237,7 +242,7 @@ class AppointmentService(
         return digits.takeLast(10)
     }
 
-    private fun Appointment.toDTO(todayBillCount: Int = 0): AppointmentDTO {
+    private fun Appointment.toDTO(todayBillCount: Int = 0, todayDue: java.math.BigDecimal = java.math.BigDecimal.ZERO): AppointmentDTO {
         return AppointmentDTO(
             id = this.id,
             patientId = this.patient?.id ?: UUID.randomUUID(),
@@ -267,6 +272,7 @@ class AppointmentService(
             discountAmount = this.discountAmount,
             patientDeposit = this.patient?.deposit,
             todayBillCount = todayBillCount,
+            todayDue = todayDue,
         )
     }
 }

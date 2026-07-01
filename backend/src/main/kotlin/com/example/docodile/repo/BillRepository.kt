@@ -20,13 +20,15 @@ interface BillRepository : JpaRepository<Bill, UUID> {
     @Query("SELECT COALESCE(MAX(b.seq), 0) FROM Bill b")
     fun maxSeq(): Int
 
-    // How many bills each patient has on a given date — drives the queue's
-    // "Bill" vs "View Bills" branch without an N+1.
+    // Per-patient bill stats for a day: how many bills the patient has + the
+    // total still due across them. Drives the queue's "Bill" vs "View Bills"
+    // branch AND its Pay badge (billed + nothing due → Paid), without an N+1.
+    // Rows: [patientId, count, sumDue].
     @Query(
-        "SELECT b.patient.id, COUNT(b) FROM Bill b " +
+        "SELECT b.patient.id, COUNT(b), COALESCE(SUM(b.due), 0) FROM Bill b " +
             "WHERE b.billDate = :date GROUP BY b.patient.id",
     )
-    fun countByPatientForDate(@Param("date") date: LocalDate): List<Array<Any>>
+    fun billStatsByPatientForDate(@Param("date") date: LocalDate): List<Array<Any>>
 
     // All bills within a date range, newest invoice first — drives the clinic-wide
     // Bills page (schema-scoped — no clinic_id). Both bounds are always bound to

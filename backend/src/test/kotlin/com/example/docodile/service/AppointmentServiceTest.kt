@@ -57,7 +57,7 @@ class AppointmentServiceTest {
 
         `when`(appointmentRepository.findAllByScheduledTimeBetween(startOfDay, endOfDay))
             .thenReturn(listOf(appointment))
-        `when`(billRepository.countByPatientForDate(date)).thenReturn(emptyList())
+        `when`(billRepository.billStatsByPatientForDate(date)).thenReturn(emptyList())
 
         val result = appointmentService.getAppointmentsForClinic(date)
 
@@ -86,12 +86,14 @@ class AppointmentServiceTest {
         }
         `when`(appointmentRepository.findAllByScheduledTimeBetween(date.atStartOfDay(), date.atTime(23, 59, 59)))
             .thenReturn(listOf(appointment))
-        // Two bills for this patient today → the kebab should offer "View/Create Bills".
-        `when`(billRepository.countByPatientForDate(date)).thenReturn(listOf(arrayOf<Any>(pid, 2L)))
+        // Two bills for this patient today, ₹40 still outstanding → the kebab
+        // offers "View/Create Bills" and the Pay badge shows Due.
+        `when`(billRepository.billStatsByPatientForDate(date)).thenReturn(listOf(arrayOf<Any>(pid, 2L, BigDecimal("40"))))
 
         val result = appointmentService.getAppointmentsForClinic(date)
 
         assertEquals(2, result[0].todayBillCount)
+        assertEquals(BigDecimal("40"), result[0].todayDue)
         // The Bill editor seeds off these — they must survive the entity→DTO map.
         assertEquals(BigDecimal("120"), result[0].pharmacyAmount)
         assertEquals(BigDecimal("30"), result[0].discountAmount)

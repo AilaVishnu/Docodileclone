@@ -32,15 +32,15 @@ class BillRepositoryTest @Autowired constructor(
         entityManager.flush()
     }
 
-    private fun bill(patient: Patient, seq: Int, billDate: LocalDate): Bill {
+    private fun bill(patient: Patient, seq: Int, billDate: LocalDate, due: BigDecimal = BigDecimal.ZERO): Bill {
         val b = Bill(
             patient = patient,
             invoiceNo = "INV_" + seq.toString().padStart(4, '0'),
             seq = seq,
             billDate = billDate,
             billed = BigDecimal("100"),
-            paid = BigDecimal("100"),
-            due = BigDecimal.ZERO,
+            paid = BigDecimal("100") - due,
+            due = due,
             refund = BigDecimal.ZERO,
         )
         entityManager.persist(b)
@@ -88,19 +88,21 @@ class BillRepositoryTest @Autowired constructor(
     }
 
     @Test
-    fun `countByPatientForDate groups a day's bills per patient`() {
+    fun `billStatsByPatientForDate groups a day's bills per patient with the outstanding due`() {
         val today = LocalDate.now()
-        bill(asha, seq = 1, billDate = today)
-        bill(asha, seq = 2, billDate = today)
-        bill(ravi, seq = 3, billDate = today)
-        bill(ravi, seq = 4, billDate = today.minusDays(1)) // different day — excluded
+        bill(asha, seq = 1, billDate = today)                          // fully paid
+        bill(asha, seq = 2, billDate = today, due = BigDecimal("40"))  // still owes 40
+        bill(ravi, seq = 3, billDate = today)                          // fully paid
+        bill(ravi, seq = 4, billDate = today.minusDays(1))            // different day — excluded
         entityManager.flush()
         entityManager.clear()
 
-        val counts = billRepository.countByPatientForDate(today)
-            .associate { it[0] as UUID to (it[1] as Number).toLong() }
+        val stats = billRepository.billStatsByPatientForDate(today)
+            .associate { it[0] as UUID to Pair((it[1] as Number).toLong(), it[2] as BigDecimal) }
 
-        assertEquals(2L, counts[asha.id])
-        assertEquals(1L, counts[ravi.id])
+        assertEquals(2L, stats[asha.id]?.first)
+        assertEquals(0, stats[asha.id]!!.second.compareTo(BigDecimal("40")))
+        assertEquals(1L, stats[ravi.id]?.first)
+        assertEquals(0, stats[ravi.id]!!.second.compareTo(BigDecimal.ZERO))
     }
 }

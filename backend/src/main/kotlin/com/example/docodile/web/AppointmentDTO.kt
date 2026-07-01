@@ -37,6 +37,10 @@ data class AppointmentDTO(
     // How many bills the patient already has on this appointment's date — the
     // queue flips the kebab from "Bill" to "View Bills" once this is > 0.
     val todayBillCount: Int = 0,
+    // Total still outstanding across the patient's bills on this date. With
+    // todayBillCount it drives the queue Pay badge: billed + nothing due → Paid,
+    // otherwise Due. Zero when the patient has no bill today.
+    val todayDue: java.math.BigDecimal = java.math.BigDecimal.ZERO,
     // True if the linked patient has been archived. The appointment still
     // appears in the queue (so the receptionist can see who's checked in),
     // but the frontend blocks navigation into the prescription pad and

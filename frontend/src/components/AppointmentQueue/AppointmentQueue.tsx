@@ -335,6 +335,8 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               rawScheduledTime: apt.scheduledTime || undefined,
               isWalkin: apt.isWalkin,
               status: (apt.status || "WAITING") as Appointment["status"],
+              // Raw appointment pay status — kept as-is for the Edit form. The
+              // queue Pay badge is derived from the day's bills in QueueTable.
               payStatus: apt.payStatus || "DUE",
               paymentMethod: apt.paymentMethod || "",
               doctorId: apt.doctorId,
@@ -348,6 +350,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               pharmacyAmount: apt.pharmacyAmount || 0,
               deposit: apt.patientDeposit || 0,
               todayBillCount: apt.todayBillCount || 0,
+              todayDue: Number(apt.todayDue) || 0,
               patientArchived: apt.patientArchived || false,
               createdAt: apt.createdAt || undefined,
             });

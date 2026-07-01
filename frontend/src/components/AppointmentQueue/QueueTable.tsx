@@ -48,6 +48,9 @@ export type Appointment = {
   /** Bills the patient already has for this date. 0 → kebab shows "Bill";
    *  > 0 → it shows "Create Bill" + "View Bills". */
   todayBillCount?: number;
+  /** Total still outstanding across the patient's bills for this date. With
+   *  todayBillCount it drives the Pay badge: billed + nothing due → Paid. */
+  todayDue?: number;
   /** True when the linked patient has been archived. Drives "patient is
    *  archived" toasts in queue/pad navigation. */
   patientArchived?: boolean;
@@ -93,6 +96,15 @@ function formatPhone(raw: string): string {
   if (!raw) return raw;
   const digits = raw.replace(/\D/g, "");
   return digits.length > 10 && digits.startsWith("91") ? digits.slice(2) : digits;
+}
+
+// The Pay badge shown in the queue. Once the patient has a bill for the day, it
+// reflects those bills — settled (nothing due) → Paid, otherwise Due — so a
+// patient paid via a standalone bill no longer shows a false Due. Falls back to
+// the appointment's own payStatus only when there's no bill for today yet.
+function payBadgeFor(apt: Appointment): string {
+  if ((apt.todayBillCount ?? 0) > 0) return (apt.todayDue ?? 0) > 0 ? "DUE" : "PAID";
+  return apt.payStatus || "DUE";
 }
 
 // Empty flexible spacer cells placed between every column. Being the only
@@ -482,7 +494,7 @@ export function QueueTable({
 
                     {/* Pay status */}
                     <td style={{ ...styles.payCell, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
-                      <PayBadge status={apt.payStatus} />
+                      <PayBadge status={payBadgeFor(apt)} />
                     </td>
 
                     <td style={spacerTd} aria-hidden />
