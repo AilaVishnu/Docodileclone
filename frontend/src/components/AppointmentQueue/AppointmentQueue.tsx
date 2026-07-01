@@ -702,6 +702,9 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
         loading={historyLoading}
         // Invoice no / pencil → open that bill's read-only detail.
         onView={(b) => setViewBill(b)}
+        // Row printer → the shared "Bill cum Receipt", with the patient meta the
+        // appointment carries.
+        onPrint={(b) => { if (billsHistoryApt) printBill({ ...b, patientName: billsHistoryApt.patientName }, aptReceiptMeta(billsHistoryApt)); }}
         // Create New Bill → close the history and open the editor for another
         // invoice. It opens blank automatically because the patient already has
         // a bill for the date (additionalBill = todayBillCount > 0).
