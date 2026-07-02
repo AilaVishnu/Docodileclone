@@ -18,6 +18,7 @@ data class BillDTO(
     val payStatus: String?,
     val paymentMethod: String?,
     val items: String?,
+    val note: String?,
     val appointmentId: UUID?,
     val createdAt: Instant,
 )
@@ -36,6 +37,7 @@ data class ClinicBillDTO(
     val payStatus: String?,
     val paymentMethod: String?,
     val items: String?,
+    val note: String?,
     val appointmentId: UUID?,
     val createdAt: Instant,
     val patientName: String,
@@ -55,4 +57,5 @@ data class CreateBillRequest(
     val payStatus: String? = null,
     val paymentMethod: String? = null,
     val items: String? = null,
+    val note: String? = null,
 )

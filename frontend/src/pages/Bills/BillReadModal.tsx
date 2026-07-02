@@ -3,12 +3,13 @@ import { BillLayout } from "../../components/BillLayout/BillLayout";
 import { BillStatusBadge, billStatusOf } from "../../components/BillStatusBadge";
 import { DataGrid, GridColumn } from "../../components/DataGrid/DataGrid";
 import { MeasureField } from "../../components/MeasureField";
-import { Field } from "../../components/Field";
 import { Select } from "../../components/Input/Select/Select";
 import { Button } from "../../components/Button";
 import { Icon } from "../../components/Icon";
 import { ConfirmDialog } from "../../components/ConfirmDialog/ConfirmDialog";
 import { refundBill } from "../../api/bills";
+import { ShareBillMenu } from "./ShareBillMenu";
+import type { PrintPatientMeta } from "./printBill";
 import type { ClinicBill } from "./BillsView";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 
@@ -25,7 +26,6 @@ import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 // ─────────────────────────────────────────────────────────────────────────────
 
 type Line = { name: string; qty: number; unit: number; gst: number; disc: number; discUnit: "%" | "₹" };
-type GLine = Line & { _new?: boolean };
 
 // "Advance / credit" draws from the patient's standing advance — applying credit
 // is just another payment mode (it replaced the old standalone Deposit field).
@@ -38,7 +38,6 @@ const fmtDate = (iso: string) => { const [y, m, d] = iso.split("-").map(Number);
 
 const discAmt = (l: Line) => (l.discUnit === "%" ? (l.qty * l.unit * (l.disc || 0)) / 100 : (l.disc || 0));
 const lineTotal = (l: Line) => l.qty * l.unit - discAmt(l);
-const emptyNew = (): GLine => ({ name: "", qty: 1, unit: 0, gst: 0, disc: 0, discUnit: "₹", _new: true });
 
 /** Parse the stored line-item snapshot (`Bill.items`) into typed rows. */
 export function parseLines(items: string | null): Line[] {
@@ -87,17 +86,24 @@ export interface BillReadModalProps {
   isOpen: boolean;
   onClose: () => void;
   bill: ClinicBill;
-  /** Collect the outstanding balance on a Due bill. */
-  onRecordPayment?: (bill: ClinicBill) => void;
+  /** Collect against a Due bill's outstanding balance — the amount + mode the
+   *  desk entered in the "Collect balance" row (a partial pay is allowed). */
+  onRecordPayment?: (bill: ClinicBill, amount: number, method: string) => void;
   /** Called after a successful refund with the updated bill, so the caller can
    *  refresh its list. The confirm prompt + API call are handled in here. */
   onRefunded?: (updated: ClinicBill) => void;
   /** Open the patient's full bill history (header link). */
   onViewBills?: (bill: ClinicBill) => void;
   onPrint?: (bill: ClinicBill) => void;
+  /** Share context — patient contact used to pre-fill the share channels
+   *  (WhatsApp/Email) and demographics for the PDF receipt. */
+  share?: { patient?: PrintPatientMeta; phone?: string; email?: string; onError?: (message: string) => void };
+  /** Allow refunding a settled bill. False for a synthetic/preview bill that
+   *  isn't persisted (nothing to refund against). Default true. */
+  allowRefund?: boolean;
 }
 
-export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefunded, onViewBills, onPrint }: BillReadModalProps) {
+export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefunded, onViewBills, onPrint, share, allowRefund = true }: BillReadModalProps) {
   const committed = React.useMemo(() => parseLines(bill.items), [bill.items]);
 
   // Refund flow: Refund button → confirm → POST → reflect REFUNDED in place
@@ -125,53 +131,37 @@ export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefund
   const effRefund = refundOverlay?.refund ?? bill.refund;
   const effPayStatus = refundOverlay?.payStatus ?? bill.payStatus;
 
-  // A part-paid bill isn't closed: committed lines stay frozen, but the desk can
-  // append NEW services. A trailing empty row is always present — typing into it
-  // appends a fresh one. New lines push up Total billed + Balance. (Local only
-  // for now — persistence lands with the clinic bills API.)
-  const [extra, setExtra] = React.useState<GLine[]>([emptyNew()]);
-  React.useEffect(() => { setExtra([emptyNew()]); }, [bill.id]);
-  const setExtraName = (i: number, v: string) => setExtra((xs) => {
-    const next = xs.map((l, idx) => (idx === i ? { ...l, name: v } : l));
-    return [...next.filter((l) => l.name.trim() !== ""), emptyNew()];
-  });
-  const setExtraField = (i: number, patch: Partial<GLine>) => setExtra((xs) => xs.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  // "Collect balance" inputs — the desk can pick the mode and edit the amount to
+  // record a PARTIAL payment (blank = collect the whole balance). Reset per bill.
+  const [collectMode, setCollectMode] = React.useState("Cash");
+  const [collectAmt, setCollectAmt] = React.useState<number | "">("");
+  React.useEffect(() => { setCollectMode("Cash"); setCollectAmt(""); }, [bill.id]);
 
+  // A settled/part-paid bill's line items are frozen — the invoice is a snapshot.
+  // More charges go through a NEW bill (which rolls up any past due), not by
+  // editing this one; here the desk only collects the outstanding balance.
   const isWaived = bill.payStatus === "WAIVED";
-  const allLines = [...committed, ...extra.filter((l) => l.name.trim() !== "")];
-  const billed = allLines.reduce((s, l) => s + l.qty * l.unit, 0);
-  const discount = allLines.reduce((s, l) => s + discAmt(l), 0);
-  const tax = allLines.reduce((s, l) => s + (l.qty * l.unit * (l.gst || 0)) / 100, 0);
+  const billed = committed.reduce((s, l) => s + l.qty * l.unit, 0);
+  const discount = committed.reduce((s, l) => s + discAmt(l), 0);
+  const tax = committed.reduce((s, l) => s + (l.qty * l.unit * (l.gst || 0)) / 100, 0);
   const finalAmt = billed - discount + tax;
   const balance = isWaived ? 0 : Math.max(0, finalAmt - bill.paid);
   const status = billStatusOf({ payStatus: effPayStatus, refund: effRefund, due: balance, paid: bill.paid });
 
   // The bill record keeps one method + amount, not a per-mode split.
   const payments = bill.paid > 0 ? [{ mode: bill.paymentMethod || "—", amount: bill.paid }] : [];
-  const addable = status === "due";
+  // Amount to record now: the typed figure, else the full balance; never more
+  // than what's owed (the server caps too, but keep the UI honest).
+  const collectNow = Math.min(collectAmt === "" ? balance : Number(collectAmt) || 0, balance);
 
-  const n = committed.length;
-  const gridRows: GLine[] = addable ? [...committed, ...extra] : committed;
-  const isDraft = (l: GLine) => !!l._new && !l.name.trim();
-
-  const columns: GridColumn<GLine>[] = [
-    { key: "n", header: "#", width: 24, align: "center", render: (l, i) => <div style={st.midCell}><span style={{ color: isDraft(l) ? colors.neutral400 : colors.neutral500 }}>{isDraft(l) ? "+" : i + 1}</span></div> },
-    { key: "item", header: "Item", align: "left", render: (l, i) => l._new
-      ? <Field variant="box" fill="filled" placeholder="Add service…" ariaLabel="New service" style={{ padding: "0 8px" }} value={l.name} onChange={(v) => setExtraName(i - n, v)} />
-      : <Frozen>{l.name}</Frozen> },
-    { key: "qty", header: "Qty", width: 52, render: (l, i) => l._new
-      ? (l.name.trim() ? <Field variant="box" fill="filled" align="center" inputMode="decimal" placeholder="1" ariaLabel="Qty" style={{ padding: "0 8px" }} value={l.qty ? String(l.qty) : ""} onChange={(v) => setExtraField(i - n, { qty: Math.max(1, Math.floor(Number(v)) || 1) })} /> : <span />)
-      : <Frozen center>{l.qty}</Frozen> },
-    { key: "unit", header: "Unit ₹", width: 80, render: (l, i) => l._new
-      ? (l.name.trim() ? <Field variant="box" fill="filled" align="center" inputMode="decimal" placeholder="0" ariaLabel="Unit price" style={{ padding: "0 8px" }} value={l.unit ? String(l.unit) : ""} onChange={(v) => setExtraField(i - n, { unit: Number(v) || 0 })} /> : <span />)
-      : <Frozen center>{l.unit}</Frozen> },
-    { key: "gst", header: "GST", width: 72, render: (l, i) => l._new
-      ? (l.name.trim() ? <MeasureField unit="%" unitWidth={28} inputMode="decimal" ariaLabel="GST percent" value={l.gst ? String(l.gst) : ""} onChange={(v) => setExtraField(i - n, { gst: Number(v) || 0 })} /> : <span />)
-      : <Frozen center>{l.gst ? `${l.gst}%` : "–"}</Frozen> },
-    { key: "disc", header: "Disc", width: 86, render: (l, i) => l._new
-      ? (l.name.trim() ? <MeasureField unit={l.discUnit} unitWidth={28} inputMode="decimal" ariaLabel="Discount" onToggleUnit={() => setExtraField(i - n, { discUnit: l.discUnit === "%" ? "₹" : "%" })} value={l.disc ? String(l.disc) : ""} onChange={(v) => setExtraField(i - n, { disc: Number(v) || 0 })} /> : <span />)
-      : <Frozen center>{l.disc ? (l.discUnit === "%" ? `${l.disc}%` : `₹${l.disc}`) : "–"}</Frozen> },
-    { key: "tot", header: "Total", width: 84, align: "right", render: (l) => isDraft(l) ? <span /> : <div style={st.endCell}><span style={{ fontSize: fonts.size.m, color: colors.neutral900, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{inr(lineTotal(l))}</span></div> },
+  const columns: GridColumn<Line>[] = [
+    { key: "n", header: "#", width: 24, align: "center", render: (_l, i) => <div style={st.midCell}><span style={{ color: colors.neutral500 }}>{i + 1}</span></div> },
+    { key: "item", header: "Item", align: "left", render: (l) => <Frozen>{l.name}</Frozen> },
+    { key: "qty", header: "Qty", width: 52, render: (l) => <Frozen center>{l.qty}</Frozen> },
+    { key: "unit", header: "Unit ₹", width: 80, render: (l) => <Frozen center>{l.unit}</Frozen> },
+    { key: "gst", header: "GST", width: 72, render: (l) => <Frozen center>{l.gst ? `${l.gst}%` : "–"}</Frozen> },
+    { key: "disc", header: "Disc", width: 86, render: (l) => <Frozen center>{l.disc ? (l.discUnit === "%" ? `${l.disc}%` : `₹${l.disc}`) : "–"}</Frozen> },
+    { key: "tot", header: "Total", width: 84, align: "right", render: (l) => <div style={st.endCell}><span style={{ fontSize: fonts.size.m, color: colors.neutral900, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{inr(lineTotal(l))}</span></div> },
   ];
 
   return (
@@ -189,9 +179,9 @@ export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefund
       }
       headerActions={
         <>
-          <button style={st.linkBtn} onClick={() => onViewBills?.(bill)}>View bills</button>
+          {onViewBills && <button style={st.linkBtn} onClick={() => onViewBills(bill)}>View bills</button>}
           <Icon name="printer" size={24} tone="inherit" style={{ color: colors.neutral900, cursor: "pointer" }} onClick={() => onPrint?.(bill)} />
-          <Icon name="share" size={24} tone="inherit" style={{ color: colors.neutral900, cursor: "pointer" }} />
+          <ShareBillMenu bill={bill} patient={share?.patient} phone={share?.phone} email={share?.email} onError={share?.onError} />
         </>
       }
       billTitle="Bill"
@@ -203,7 +193,7 @@ export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefund
             <span style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>Bill date</span>
             <span style={st.datePill}><Icon name="calendar" size={20} color={colors.neutral900} /> {fmtDate(bill.billDate)}</span>
           </div>
-          <DataGrid columns={columns} rows={gridRows} rowKey={(_l, i) => i} size="m" tdPadding="8px 6px" thPadding="8px 6px" />
+          <DataGrid columns={columns} rows={committed} rowKey={(_l, i) => i} size="m" tdPadding="8px 6px" thPadding="8px 6px" />
         </div>
       }
       summary={
@@ -218,34 +208,58 @@ export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefund
         </>
       }
       payment={
-        isWaived ? (
-          <span style={st.muted}>This bill was waived — no charge.</span>
-        ) : (
-          <div style={{ ...st.payWrap, "--input-h": "32px" } as React.CSSProperties}>
-            {payments.map((p, i) => (
-              <div key={i} style={st.payLine}>
-                <div style={{ flex: 1, minWidth: 0 }}><Frozen>{p.mode}</Frozen></div>
-                <div style={{ flex: 1, minWidth: 0 }}><Frozen>₹ {p.amount.toLocaleString("en-IN")}</Frozen></div>
-              </div>
-            ))}
-            {balance > 0 && (
-              <>
-                <span style={st.collect}>Collect balance</span>
-                <div style={st.payLine}>
-                  <div style={{ flex: 1, minWidth: 0 }}><Select options={PAY_MODES} value="Cash" onChange={() => {}} /></div>
-                  <div style={{ flex: 1, minWidth: 0 }}><MeasureField box prefix="₹" ariaLabel="Balance amount" value={String(Math.round(balance))} onChange={() => {}} /></div>
+        <div style={{ ...st.payWrap, "--input-h": "32px" } as React.CSSProperties}>
+          {isWaived ? (
+            <span style={st.muted}>This bill was waived — no charge.</span>
+          ) : (
+            <>
+              {payments.map((p, i) => (
+                <div key={i} style={st.payLine}>
+                  <div style={{ flex: 1, minWidth: 0 }}><Frozen>{p.mode}</Frozen></div>
+                  <div style={{ flex: 1, minWidth: 0 }}><Frozen>₹ {p.amount.toLocaleString("en-IN")}</Frozen></div>
                 </div>
-              </>
-            )}
-          </div>
-        )
+              ))}
+              {balance > 0 && (
+                <>
+                  <span style={st.collect}>Collect balance</span>
+                  <div style={st.payLine}>
+                    <div style={{ flex: 1, minWidth: 0 }}><Select options={PAY_MODES} value={collectMode} onChange={setCollectMode} /></div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <MeasureField box prefix="₹" ariaLabel="Balance amount" inputMode="decimal"
+                        placeholder={String(Math.round(balance))}
+                        value={collectAmt === "" ? "" : String(collectAmt)}
+                        onChange={(v) => setCollectAmt(v === "" ? "" : Number(v))} />
+                    </div>
+                  </div>
+                  {/* Collecting less than the balance leaves the remainder due. */}
+                  {collectNow < balance && (
+                    <span style={{ fontSize: fonts.size.s, color: colors.neutral600 }}>
+                      <strong style={{ color: colors.neutral900 }}>{inr(balance - collectNow)}</strong> stays on due
+                    </span>
+                  )}
+                </>
+              )}
+            </>
+          )}
+          {/* Details note — shown for every status, waived included. */}
+          {bill.note && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: spacing.xs }}>
+              <span style={st.muted}>Details</span>
+              <span style={{ color: colors.neutral900, fontSize: fonts.size.s, whiteSpace: "pre-wrap" }}>{bill.note}</span>
+            </div>
+          )}
+        </div>
       }
       action={
         // Payment-only CTA: collect the balance, or refund a paid bill. Print
         // lives in the header. Refunded / Waived have no action.
         balance > 0 ? (
-          <Button variant="dark" size="md" style={{ flex: 1 }} onClick={() => onRecordPayment?.(bill)} iconLeft={<Icon name="bill-check" size={18} tone="inverse" />}>Record payment</Button>
-        ) : effRefund === 0 && status !== "waived" ? (
+          <Button variant="dark" size="md" style={{ flex: 1 }} disabled={collectNow <= 0}
+            onClick={() => { if (collectNow > 0) onRecordPayment?.(bill, collectNow, collectMode); }}
+            iconLeft={<Icon name="bill-check" size={18} tone="inverse" />}>
+            {collectNow < balance ? `Record ${inr(collectNow)}` : "Record payment"}
+          </Button>
+        ) : allowRefund && effRefund === 0 && status !== "waived" ? (
           <Button variant="light" size="md" style={{ flex: 1 }} onClick={() => setConfirmRefund(true)}>Refund</Button>
         ) : null
       }

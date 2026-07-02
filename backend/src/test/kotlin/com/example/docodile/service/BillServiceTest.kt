@@ -129,6 +129,65 @@ class BillServiceTest {
         verify(billRepository, never()).save(any(Bill::class.java))
     }
 
+    // ---- payBill -----------------------------------------------------------
+
+    @Test
+    fun `payBill records a partial payment and leaves the bill DUE`() {
+        val b = bill(billed = BigDecimal("500"), paid = BigDecimal.ZERO, due = BigDecimal("500"), payStatus = "DUE")
+        `when`(billRepository.findById(b.id)).thenReturn(Optional.of(b))
+        `when`(billRepository.save(any(Bill::class.java))).thenAnswer { it.arguments[0] }
+
+        val dto = billService.payBill(b.id, BigDecimal("200"), "Cash")
+
+        assertEquals(BigDecimal("200"), dto.paid)
+        assertEquals(BigDecimal("300"), dto.due)
+        assertEquals("DUE", dto.payStatus)
+        assertEquals("Cash", dto.paymentMethod)
+    }
+
+    @Test
+    fun `payBill settling the balance flips the bill to PAID (capped at billed)`() {
+        val b = bill(billed = BigDecimal("500"), paid = BigDecimal("300"), due = BigDecimal("200"), payStatus = "DUE")
+        `when`(billRepository.findById(b.id)).thenReturn(Optional.of(b))
+        `when`(billRepository.save(any(Bill::class.java))).thenAnswer { it.arguments[0] }
+
+        val dto = billService.payBill(b.id, BigDecimal("250"), "UPI") // overpay → capped at 500
+
+        assertEquals(BigDecimal("500"), dto.paid)
+        assertEquals(BigDecimal.ZERO, dto.due)
+        assertEquals("PAID", dto.payStatus)
+    }
+
+    @Test
+    fun `payBill rejects a missing bill, a zero amount, and a waived bill`() {
+        val missing = UUID.randomUUID()
+        `when`(billRepository.findById(missing)).thenReturn(Optional.empty())
+        assertThrows(IllegalArgumentException::class.java) { billService.payBill(missing, BigDecimal("100"), "Cash") }
+
+        val waived = bill(payStatus = "WAIVED")
+        `when`(billRepository.findById(waived.id)).thenReturn(Optional.of(waived))
+        assertThrows(IllegalArgumentException::class.java) { billService.payBill(waived.id, BigDecimal("100"), "Cash") }
+        assertThrows(IllegalArgumentException::class.java) { billService.payBill(waived.id, BigDecimal.ZERO, "Cash") }
+    }
+
+    @Test
+    fun `payBill overwrites the note when supplied and preserves it otherwise`() {
+        // A supplied note (desk edited it while collecting on reopen) overwrites.
+        val edited = bill(billed = BigDecimal("500"), paid = BigDecimal.ZERO, due = BigDecimal("500"), payStatus = "DUE")
+            .also { it.note = "old note" }
+        `when`(billRepository.findById(edited.id)).thenReturn(Optional.of(edited))
+        `when`(billRepository.save(any(Bill::class.java))).thenAnswer { it.arguments[0] }
+        val dto = billService.payBill(edited.id, BigDecimal("200"), "Cash", "new note")
+        assertEquals("new note", dto.note)
+
+        // A plain pay (null/blank note) leaves the original note intact.
+        val kept = bill(billed = BigDecimal("500"), paid = BigDecimal.ZERO, due = BigDecimal("500"), payStatus = "DUE")
+            .also { it.note = "keep me" }
+        `when`(billRepository.findById(kept.id)).thenReturn(Optional.of(kept))
+        assertEquals("keep me", billService.payBill(kept.id, BigDecimal("200"), "Cash", null).note)
+        assertEquals("keep me", billService.payBill(kept.id, BigDecimal("50"), "Cash", "   ").note)
+    }
+
     // ---- settleOtherDues ---------------------------------------------------
 
     @Test
@@ -201,9 +260,10 @@ class BillServiceTest {
         `when`(billRepository.maxSeq()).thenReturn(41)
         `when`(billRepository.save(any(Bill::class.java))).thenAnswer { it.arguments[0] }
 
-        val dto = billService.createBill(pid, CreateBillRequest(billed = BigDecimal("100"), paid = BigDecimal("100")))
+        val dto = billService.createBill(pid, CreateBillRequest(billed = BigDecimal("100"), paid = BigDecimal("100"), note = "Paid at counter"))
 
         assertEquals("INV_0042", dto.invoiceNo)
+        assertEquals("Paid at counter", dto.note) // the "Add Details" note round-trips
     }
 
     @Test

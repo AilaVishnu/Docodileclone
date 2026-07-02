@@ -65,6 +65,10 @@ class Bill(
     @Column(columnDefinition = "text")
     var items: String? = null,
 
+    // Free-text note ("Add Details" in the bill editor), shown on reopen.
+    @Column(columnDefinition = "text")
+    var note: String? = null,
+
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant = Instant.now()
 )

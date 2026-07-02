@@ -1,11 +1,14 @@
 package com.example.docodile.service
 
+import com.example.docodile.domain.Patient
 import com.example.docodile.repo.AppointmentRepository
 import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.repo.PatientRepository
 import com.example.docodile.repo.VisitRepository
 import com.example.docodile.web.PatientWithLastVisitDTO
 import org.springframework.stereotype.Service
+import java.time.Instant
+import java.time.LocalDate
 
 @Service
 class PatientService(
@@ -76,5 +79,59 @@ class PatientService(
                 compareByDescending<PatientWithLastVisitDTO> { it.lastVisitDate ?: java.time.LocalDate.MIN }
                     .thenBy { it.name.lowercase() }
             )
+    }
+
+    /**
+     * Find an existing patient (same phone digits + name, case-insensitive) or
+     * create a new one with the next per-clinic T### number. Same find-or-create
+     * rule the appointment booking uses (see AppointmentService), so billing a
+     * walk-in from the New Bill page resolves to the same record instead of
+     * duplicating it. A shared phone with a different name → a new patient
+     * (families share one mobile).
+     */
+    fun findOrCreate(
+        name: String,
+        phone: String?,
+        email: String?,
+        gender: String?,
+        dob: String?,   // ISO yyyy-MM-dd
+        age: Int?,      // months
+    ): Patient {
+        require(name.isNotBlank()) { "Patient name is required" }
+        val parsedDob = dob?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        val reqDigits = normalizePhone(phone)
+        val existing = reqDigits?.let { digits ->
+            patientRepository.findAllByDeletedAtIsNull()
+                .filter { normalizePhone(it.phone) == digits }
+                .filter { it.name.trim().equals(name.trim(), ignoreCase = true) }
+                .minByOrNull { it.createdAt ?: Instant.EPOCH }
+        }
+        return if (existing != null) {
+            existing.name = name.trim()
+            existing.email = email
+            existing.gender = gender
+            existing.dob = parsedDob
+            existing.age = age
+            patientRepository.save(existing)
+        } else {
+            patientRepository.save(
+                Patient(
+                    name = name.trim(),
+                    phone = phone,
+                    email = email,
+                    gender = gender,
+                    dob = parsedDob,
+                    age = age,
+                    createdAt = Instant.now(),
+                    displayNo = patientRepository.findMaxDisplayNo() + 1,
+                )
+            )
+        }
+    }
+
+    private fun normalizePhone(phone: String?): String? {
+        val digits = phone?.filter { it.isDigit() } ?: return null
+        if (digits.isEmpty()) return null
+        return digits.takeLast(10)
     }
 }

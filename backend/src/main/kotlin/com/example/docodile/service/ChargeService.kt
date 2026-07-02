@@ -25,6 +25,7 @@ class ChargeService(
     private val patientDepositService: PatientDepositService,
     private val billService: BillService,
     private val pharmacyStockService: PharmacyStockService,
+    private val billRepository: com.example.docodile.repo.BillRepository,
 ) {
     // Own mapper (the app exposes no ObjectMapper bean) — used only to serialize
     // the line-item snapshot into the bill's `items` JSON. Serialization reads
@@ -48,7 +49,19 @@ class ChargeService(
             ?: throw IllegalArgumentException("Appointment not found")
         val patient = appointment.patient ?: throw IllegalArgumentException("Appointment has no patient")
 
-        val filled = req.items.filter { it.name.isNotBlank() && it.qty > 0 }
+        // Double-billing guard: if this appointment already has an invoice (e.g. a
+        // service was billed at booking when marked Paid), never bill a `service`
+        // line again — this charge covers only medicines / past due. The service
+        // stays on its own booking invoice; the fee already on the appointment is
+        // preserved.
+        val alreadyBilled = billRepository.countByAppointment(appointmentId) > 0
+        val filled = req.items
+            .filter { it.name.isNotBlank() && it.qty > 0 }
+            .filter { !(alreadyBilled && it.kind == "service") }
+        require(filled.isNotEmpty()) {
+            if (alreadyBilled) "This appointment's service is already billed — add items to bill, or refund the existing invoice."
+            else "Nothing to bill."
+        }
         // Separate finance buckets: service/consultation lines -> fee, medicines
         // -> pharmacy. A `pastdue` roll-in is its own bucket: counted in the
         // total, but kept out of the fee + pharmacy figures (and out of stock).
@@ -60,7 +73,9 @@ class ChargeService(
 
         // 1) Payment on the appointment (drives the queue pill + finance).
         appointment.paymentMethod = req.method
-        appointment.fee = if (isWaived) zero else serviceTotal
+        // When the service was already billed at booking, keep that fee — this
+        // charge only added medicines, so serviceTotal here is 0.
+        appointment.fee = if (isWaived) zero else if (alreadyBilled) (appointment.fee ?: zero) else serviceTotal
         appointment.pharmacyAmount = if (isWaived) zero else pharmacyTotal
         // A waive writes off the whole bill — record it as a 100% discount (the
         // full amount), mirroring how the bill editor shows it.
@@ -83,8 +98,9 @@ class ChargeService(
             appointmentRepository.save(saved)
         }
 
-        // 3) Invoice snapshot (additive history).
-        val itemsJson = runCatching { objectMapper.writeValueAsString(req.items) }.getOrNull()
+        // 3) Invoice snapshot (additive history) — the actually-billed lines
+        // (blank/zero rows and any already-billed service line excluded).
+        val itemsJson = runCatching { objectMapper.writeValueAsString(filled) }.getOrNull()
         val bill = billService.createBill(
             patient.id,
             CreateBillRequest(
@@ -98,6 +114,7 @@ class ChargeService(
                 payStatus = payStatus,
                 paymentMethod = req.method,
                 items = itemsJson,
+                note = req.note,
             ),
         )
 

@@ -180,7 +180,10 @@ class StatsController(
         val completed = appointments.filter {
             it.payStatus?.uppercase() == "PAID" || it.status?.uppercase() == "COMPLETED"
         }
-        val revenue = completed.mapNotNull { it.fee }.fold(BigDecimal.ZERO, BigDecimal::add).toLong()
+        // Exclude WAIVED — a write-off collects nothing, so its (now non-null,
+        // pre-waive) service fee must not inflate headline revenue.
+        val revenue = completed.filter { it.payStatus?.uppercase() != "WAIVED" }
+            .mapNotNull { it.fee }.fold(BigDecimal.ZERO, BigDecimal::add).toLong()
 
         val allPatients = patientRepository.findAllByDeletedAtIsNull()
         val newPatients = allPatients.count { p ->
@@ -342,7 +345,9 @@ class StatsController(
         val noShow     = apts.count { it.status?.uppercase() == "NO_SHOW" }
         val paid       = apts.filter { it.payStatus?.uppercase() == "PAID" }
         val unpaid     = apts.filter { val ps = it.payStatus?.uppercase(); ps != "PAID" && ps != "WAIVED" && (it.fee ?: BigDecimal.ZERO) > BigDecimal.ZERO }
-        val totalFee   = apts.mapNotNull { it.fee }.fold(BigDecimal.ZERO, BigDecimal::add)
+        // Exclude WAIVED from the collection-rate denominator — a write-off was
+        // never collectable, so counting it would understate the rate.
+        val totalFee   = apts.filter { it.payStatus?.uppercase() != "WAIVED" }.mapNotNull { it.fee }.fold(BigDecimal.ZERO, BigDecimal::add)
         val paidFee    = paid.mapNotNull { it.fee }.fold(BigDecimal.ZERO, BigDecimal::add)
         val collectionRate = if (totalFee > BigDecimal.ZERO) (paidFee.toDouble() / totalFee.toDouble() * 100).toInt() else 100
 

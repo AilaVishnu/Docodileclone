@@ -93,6 +93,11 @@ repository query run under tenant B.
 **Acceptance:** A green test that fails if search_path routing regresses (e.g. someone removes the
 per-tenant `set_config`).
 
+**Progress (`f24e909`):** The bill/patient data paths now have two-schema isolation coverage
+(`BillTenantIsolationTest`) — but it exercises the **connection layer** (raw SQL through
+`SchemaMultiTenantConnectionProvider`), not Spring Data repositories under `TenantContext.withTenant`.
+The generic JPA-repository-level proof this item asks for is still open.
+
 ---
 
 ## 3. Frontend lint — 14 warnings remaining (0 errors)
@@ -147,6 +152,21 @@ auto-fixed. Sites:
 
 ## Done (recent)
 
+- `b5dcbdf` — Restored `todayBillCount` + `pharmacyAmount`/`discountAmount`/`patientDeposit` on
+  `AppointmentDTO` (the queue kebab's "Create Bill" vs "View/Create Bills" branch and the Bill editor's
+  seed amounts). The schema-per-tenant rebase adapted `countByPatientForDate(clinicId, date)` →
+  `(date)` but dropped the callers; `AppointmentService.toDTO` had stopped populating all four.
+  Regressed by unit tests in `AppointmentServiceTest`.
+- `f24e909` — Two-schema tenant-isolation coverage for the new bill data paths (`BillTenantIsolationTest`,
+  Testcontainers): a pay-bill `UPDATE` under one clinic leaves another clinic's identically-numbered
+  invoice untouched, and find-or-create's phone+name dedup read can't see a same-name patient in another
+  schema. The contributing.md two-schema check for the paths added below.
+- `9161fb2` — Bill `note` column (tenant migration `V2__add_bill_note.sql`) + settle/pay endpoint
+  (`POST /bills/{id}/pay`, `BillService.payBill`): clamps `paid` to `billed`, recomputes `due`/`payStatus`,
+  rejects refunded/waived/zero bills. Note persisted end-to-end (`createBill` → `toDTO`/`toClinicDTO`).
+- `eaa7c7c` — Patient find-or-create endpoint (`POST /api/patients`, `PatientService.findOrCreate`):
+  dedups by normalized phone + name, else creates with the next clinic `displayNo`. Backs the standalone
+  New Bill page.
 - `a382f31` — Scheduled jobs run per active clinic schema (`TenantTaskExecutor`; no-show sweep + purge).
 - `3acbbb6` — STOMP `SUBSCRIBE` rejects cross-clinic `/topic/clinic/*` (`TenantChannelInterceptor`).
 - `1fcc234` — Dropped inventory audit logging (audit scope = sensitive data only: patient records + Rx).

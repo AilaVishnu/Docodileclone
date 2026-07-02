@@ -1,4 +1,4 @@
-import React, { useRef, useState, CSSProperties } from "react";
+import React, { useEffect, useRef, useState, CSSProperties } from "react";
 import { styles as appt } from "../../components/AppointmentQueue/BookAppointment.styles";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { Card } from "../../components/Card";
@@ -10,9 +10,18 @@ import { MeasureField } from "../../components/MeasureField";
 import { Button } from "../../components/Button";
 import { IconButton } from "../../components/IconButton";
 import { Icon } from "../../components/Icon";
+import { MedicineAutocomplete } from "../../components/MedicineAutocomplete/MedicineAutocomplete";
+import { listServices } from "../../api/services";
+import { listPharmacyStock } from "../../api/pharmacy";
+import { createBill, listClinicBills, type Bill } from "../../api/bills";
+import { printBill, type PrintPatientMeta } from "./printBill";
+import { ShareBillMenu } from "./ShareBillMenu";
+import { createPatient } from "../../api/patients";
+import { Toast } from "../../components/Toast";
+import { resolveToastIcon } from "../../components/Toast/toastIcon";
 import { pickAvatar } from "../../utils/avatar";
-import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
-import type { Patient } from "../../hooks/usePatients";
+import { colors, fonts, spacing, radii } from "../../styles/theme";
+import { usePatients, type Patient } from "../../hooks/usePatients";
 
 /**
  * NewBillView — the "New Bill" page (mock). Lays out like New Appointment:
@@ -22,36 +31,90 @@ import type { Patient } from "../../hooks/usePatients";
  * line items, summary + total band, split payment), all from existing
  * components — same card radius (radii.m) and modal styling throughout.
  */
-const MOCK_PATIENTS = [
-  { id: "p1", name: "Aarav Sharma", phone: "+91 98765 43210", gender: "Male", age: 384, dob: "1994-02-10", email: "aarav@example.com" },
-  { id: "p2", name: "Meera Reddy", phone: "+91 90000 11111", gender: "Female", age: 336, dob: "1998-06-01", email: "meera@example.com" },
-] as unknown as Patient[];
-
 type Line = { id: number; name: string; qty: number; unit: number; gst: number; disc: number; discUnit: "%" | "₹" };
 const lineTotal = (l: Line) => Math.round(l.qty * l.unit * (1 - (l.discUnit === "%" ? l.disc / 100 : l.disc / Math.max(1, l.qty * l.unit))) * (1 + l.gst / 100));
 const inr = (n: number) => `₹ ${Math.round(n).toLocaleString("en-IN")}`;
 
 const blankLine = (id: number): Line => ({ id, name: "", qty: 1, unit: 0, gst: 0, disc: 0, discUnit: "₹" });
 
+// Cream-box input for the item picker so it matches the grid's Qty/Unit Fields
+// (mirrors BillModal's BILL_ITEM_INPUT_STYLE).
+const ITEM_INPUT_STYLE: CSSProperties = {
+  border: "none", outline: "none", padding: "0 8px", height: 32, width: "100%",
+  boxSizing: "border-box", fontSize: fonts.size.s, fontFamily: fonts.family.primary,
+  color: colors.neutral900, backgroundColor: colors.primary100, borderRadius: radii.m, minWidth: 0,
+};
+
 export function NewBillView({ onBack }: { onBack?: () => void }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", dob: "", age: "", gender: "Male" });
   const [dobDigits, setDobDigits] = useState("");
   const [locked, setLocked] = useState(false);
-  const [patientId, setPatientId] = useState("T013");
-  const idRef = useRef(5);
-  const [lines, setLines] = useState<Line[]>([
-    { id: 1, name: "Consultation", qty: 1, unit: 500, gst: 0, disc: 0, discUnit: "₹" },
-    { id: 2, name: "Pantoprazole 40mg", qty: 10, unit: 4.2, gst: 12, disc: 0, discUnit: "₹" },
-    { id: 3, name: "Acne scar laser", qty: 1, unit: 3500, gst: 18, disc: 10, discUnit: "%" },
-    blankLine(4),
-  ]);
-  const [method, setMethod] = useState("Cash");
-  const [amount, setAmount] = useState("");
+  const [patientId, setPatientId] = useState("—");
+  const idRef = useRef(2);
+  const [lines, setLines] = useState<Line[]>([blankLine(1)]);
+  // One payment line by default; the "+" splits the bill across modes (Cash + UPI…).
+  const [payments, setPayments] = useState<{ mode: string; amount: number | "" }[]>([{ mode: "Cash", amount: "" }]);
+  const [billNote, setBillNote] = useState("");
+  const setPayment = (i: number, patch: Partial<{ mode: string; amount: number | "" }>) =>
+    setPayments((ps) => ps.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
+  const addPayment = () => setPayments((ps) => [...ps, { mode: "Cash", amount: "" }]);
+  const removePayment = (i: number) => setPayments((ps) => (ps.length === 1 ? ps : ps.filter((_, idx) => idx !== i)));
+  // The picked patient's real id — required to POST the bill (a bill belongs to
+  // a patient). Null until an existing patient is selected from the picker.
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [charging, setCharging] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [errors, setErrors] = useState<{ name?: boolean; phone?: boolean; dob?: boolean }>({});
+  // Real clinic patients for the name/phone autocomplete (same source as the
+  // appointment booking form).
+  const { data: patients, loading: patientsLoading } = usePatients();
+  // The T### shown on the id card: a picked patient's own number, else the next
+  // free one (max existing display_no + 1) — the same code the backend assigns
+  // on create, so a new patient previews the id it will get.
+  const nextPatientNo = patients.reduce((m, p) => Math.max(m, p.displayNo ?? 0), 0) + 1;
+  const shownPatientId = locked
+    ? patientId
+    : patientsLoading ? "T—" : `T${String(nextPatientNo).padStart(3, "0")}`;
+
+  // Item autocomplete + auto-pricing sources — the medicines come from the
+  // MedicineAutocomplete's own inventory fetch; services are passed in. `priceOf`
+  // fills a line's unit price when its name matches a service or stocked medicine.
+  const [serviceCatalog, setServiceCatalog] = useState<{ name: string; price: number }[]>([]);
+  const [medCatalog, setMedCatalog] = useState<{ name: string; price: number }[]>([]);
+  useEffect(() => {
+    listServices().then((svcs) => setServiceCatalog(svcs.map((s) => ({ name: s.name, price: Number(s.price) || 0 })))).catch(() => {});
+    listPharmacyStock().then((meds) => setMedCatalog(meds.map((m) => ({ name: m.name, price: m.unitPrice })))).catch(() => {});
+  }, []);
+
+  // Preview the invoice number this bill will get: the next sequence after the
+  // clinic's highest existing INV_#### — the same numbering the backend assigns
+  // on save. A live preview (like the T### patient id); it can shift if another
+  // bill is written first, so it isn't final until the bill is saved.
+  const [invoicePreview, setInvoicePreview] = useState<string | null>(null);
+  useEffect(() => {
+    listClinicBills()
+      .then((bs) => {
+        const maxSeq = bs.reduce((m, b) => Math.max(m, Number((b.invoiceNo || "").replace(/^\D+/, "")) || 0), 0);
+        setInvoicePreview(`INV_${String(maxSeq + 1).padStart(4, "0")}`);
+      })
+      .catch(() => setInvoicePreview(null));
+  }, []);
+  const priceOf = (name: string): number | undefined => {
+    const q = name.trim().toLowerCase();
+    return [...serviceCatalog, ...medCatalog].find((c) => c.name.toLowerCase() === q)?.price;
+  };
 
   const isTrailing = (l: Line) => l.id === lines[lines.length - 1].id && l.name.trim() === "";
   const setLine = (id: number, patch: Partial<Line>) => setLines((ls) => ls.map((l) => (l.id === id ? { ...l, ...patch } : l)));
   const setName = (id: number, name: string) => setLines((ls) => {
-    const next = ls.map((l) => (l.id === id ? { ...l, name } : l));
+    const next = ls.map((l) => (l.id === id ? { ...l, name, unit: priceOf(name) ?? l.unit } : l));
+    if (next[next.length - 1].name.trim() !== "") next.push(blankLine(idRef.current++));
+    return next;
+  });
+  // Picking a service from the autocomplete's Services section sets the row's
+  // name + unit price in one go.
+  const pickService = (id: number, name: string, price: number) => setLines((ls) => {
+    const next = ls.map((l) => (l.id === id ? { ...l, name, unit: price } : l));
     if (next[next.length - 1].name.trim() !== "") next.push(blankLine(idRef.current++));
     return next;
   });
@@ -62,16 +125,130 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
   const discAmt = real.reduce((s, l) => s + (l.discUnit === "%" ? l.qty * l.unit * (l.disc / 100) : l.disc), 0);
   const gstAmt = real.reduce((s, l) => s + (l.qty * l.unit - (l.discUnit === "%" ? l.qty * l.unit * (l.disc / 100) : l.disc)) * (l.gst / 100), 0);
   const final = Math.round(subtotal - discAmt + gstAmt);
-  const received = Number(amount) || 0;
-  const balance = Math.max(0, final - received);
+  // Waive = no charge collected; otherwise the received amount is the sum of the
+  // payment lines and the leftover becomes due.
+  const isWaive = payments.some((p) => p.mode === "Waive");
+  const received = isWaive ? 0 : payments.reduce((s, p) => s + (p.amount === "" ? 0 : Number(p.amount)), 0);
+  const balance = isWaive ? 0 : Math.max(0, final - received);
 
+  // Autofill every identity field from the picked patient (mirrors the booking
+  // form): formatted phone, ISO dob → dd-mm-yyyy + digit buffer, age, and the
+  // T### code. Fields lock until "Clear" so a stray keystroke can't drift them.
   const fillFromPatient = (p: Patient) => {
-    const age = (p as { age?: number }).age ?? 0;
-    setForm((prev) => ({ ...prev, name: p.name, phone: (p as { phone?: string | null }).phone ?? "", gender: (p as { gender?: string | null }).gender ?? "Male", age: `${Math.floor(age / 12)} / ${age % 12}`, email: (p as { email?: string | null }).email ?? "" }));
+    const clean = (p.phone ?? "").replace(/\D/g, "").slice(-10);
+    const phone = clean.length === 10 ? `+91 ${clean.slice(0, 5)} ${clean.slice(5)}` : (p.phone ?? "");
+    const [y, m, d] = (p.dob ?? "").split("-"); // ISO yyyy-MM-dd
+    const hasDob = Boolean(y && m && d);
+    const age = p.age ?? 0;
+    setForm((prev) => ({
+      ...prev,
+      name: p.name,
+      phone,
+      email: p.email ?? "",
+      gender: p.gender ?? "Male",
+      dob: hasDob ? `${d}-${m}-${y}` : prev.dob,
+      age: `${Math.floor(age / 12)} / ${age % 12}`,
+    }));
+    if (hasDob) setDobDigits(`${d}${m}${y}`);
     setLocked(true);
-    setPatientId((p as { displayNo?: number }).displayNo != null ? `T${String((p as { displayNo?: number }).displayNo).padStart(3, "0")}` : "T—");
+    setSelectedPatientId(p.id);
+    setErrors({});
+    setPatientId(p.displayNo != null ? `T${String(p.displayNo).padStart(3, "0")}` : "T—");
   };
-  const clearLocked = () => { setLocked(false); setPatientId("T013"); setForm((p) => ({ ...p, name: "", phone: "", email: "", age: "", dob: "" })); };
+  const clearLocked = () => { setLocked(false); setPatientId("—"); setSelectedPatientId(null); setForm((p) => ({ ...p, name: "", phone: "", email: "", age: "", dob: "" })); };
+
+  // Persist the bill. createBill records an invoice snapshot for the selected
+  // patient (billed = final net amount; paid/due from the received amount). It
+  // does NOT deduct pharmacy stock or touch the deposit ledger — that's the
+  // appointment-driven charge flow. A bill needs a patient row, so a typed-only
+  // (unsaved) patient can't be billed here yet.
+  const handleCharge = async () => {
+    // Validate before submitting; surface the first problem as a toast + field
+    // highlight (same rules + pattern as the New Appointment form).
+    const phoneDigits = form.phone.replace(/\D/g, "");
+    const newErrors = {
+      name: !form.name.trim(),
+      phone: phoneDigits.length < 10,
+      dob: !form.dob && !form.age,
+    };
+    setErrors(newErrors);
+    const firstError =
+      newErrors.name ? "Please enter patient name" :
+      newErrors.phone ? "Please enter a valid phone number" :
+      newErrors.dob ? "Please enter date of birth or age" :
+      real.length === 0 ? "Please add at least one item to bill" :
+      null;
+    if (firstError) { setToastMessage(firstError); return; }
+
+    // Payment method label: the distinct modes joined ("Cash", or "Cash + UPI").
+    const methodLabel = isWaive ? "Waive" : Array.from(new Set(payments.map((p) => p.mode))).join(" + ");
+    setCharging(true);
+    try {
+      // Use the selected existing patient, or find-or-create one from the typed
+      // details (same as booking an appointment), then bill that patient.
+      let patientId = selectedPatientId;
+      if (!patientId) {
+        const dobIso = dobDigits.length === 8 ? `${dobDigits.slice(4, 8)}-${dobDigits.slice(2, 4)}-${dobDigits.slice(0, 2)}` : null;
+        const ageMonths = form.age
+          ? (parseInt(form.age.split("/")[0]?.trim() || "0", 10) || 0) * 12 + (parseInt(form.age.split("/")[1]?.trim() || "0", 10) || 0)
+          : null;
+        const created = await createPatient({
+          name: form.name.trim(),
+          phone: form.phone || null,
+          email: form.email || null,
+          gender: form.gender || null,
+          dob: dobIso,
+          age: ageMonths,
+        });
+        patientId = created.id;
+      }
+      await createBill(patientId, {
+        billed: final,
+        paid: isWaive ? 0 : received,
+        due: isWaive ? 0 : balance,
+        payStatus: isWaive ? "WAIVED" : balance > 0 ? "DUE" : "PAID",
+        paymentMethod: methodLabel,
+        items: JSON.stringify(real.map((l) => ({ name: l.name, qty: l.qty, unit: l.unit, gst: l.gst, disc: l.disc, discUnit: l.discUnit }))),
+        note: billNote.trim() || undefined,
+      });
+      onBack?.(); // back to the Bills list, which refetches and shows the new invoice
+    } catch (e) {
+      setToastMessage((e as Error).message || "Couldn't create the bill");
+    } finally {
+      setCharging(false);
+    }
+  };
+
+  // Print / share a preview receipt of the bill being drafted (before it's
+  // saved) — builds a synthetic Bill from the current form so the header icons
+  // do something useful instead of nothing. Needs at least one item.
+  const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  const draftBill = (): Bill & { patientName: string } => {
+    const methodLabel = isWaive ? "Waive" : Array.from(new Set(payments.map((p) => p.mode))).join(" + ");
+    return {
+      id: "", invoiceNo: invoicePreview ?? "", billDate: todayIso(),
+      billed: final, paid: received, due: balance, refund: 0, depositApplied: null,
+      payStatus: isWaive ? "WAIVED" : balance > 0 ? "DUE" : "PAID",
+      paymentMethod: methodLabel,
+      items: JSON.stringify(real.map((l) => ({ name: l.name, qty: l.qty, unit: l.unit, gst: l.gst, disc: l.disc, discUnit: l.discUnit }))),
+      note: billNote.trim() || null, appointmentId: null, createdAt: "",
+      patientName: form.name.trim() || "—",
+    };
+  };
+  const draftMeta = (): PrintPatientMeta => {
+    const digits = form.phone.replace(/\D/g, "").slice(-10);
+    const years = form.age ? parseInt(form.age.split("/")[0]?.trim() || "", 10) : NaN;
+    return {
+      age: Number.isFinite(years) && years > 0 ? years : undefined,
+      gender: form.gender || undefined,
+      mobile: digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : (form.phone || undefined),
+      id: shownPatientId && shownPatientId !== "—" && shownPatientId !== "T—" ? shownPatientId : undefined,
+    };
+  };
+  const printPreview = () => {
+    if (real.length === 0) { setToastMessage("Add at least one item to preview the bill"); return; }
+    Promise.resolve(printBill(draftBill(), draftMeta())).catch((e) => setToastMessage((e as Error).message || "Couldn't generate the receipt"));
+  };
 
   // Editable line-item cells (mirrors BillModal).
   const numFill = (l: Line, key: "qty" | "unit") => isTrailing(l) ? null : (
@@ -83,7 +260,16 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
   const columns: GridColumn<Line>[] = [
     { key: "n", header: "#", width: 24, align: "center", render: (l, i) => isTrailing(l) ? "" : mid(<span style={{ color: colors.neutral500 }}>{i + 1}</span>) },
     { key: "item", header: "Item", align: "left", render: (l) => (
-      <Field variant="box" fill="filled" placeholder="Type here" ariaLabel="Item" style={{ padding: "0 8px" }} value={l.name} onChange={(v) => setName(l.id, v)} />
+      <MedicineAutocomplete
+        value={l.name}
+        onChange={(v) => setName(l.id, v)}
+        placeholder="Type here"
+        inputStyle={ITEM_INPUT_STYLE}
+        dropdownPortal
+        inventoryOnly
+        services={serviceCatalog}
+        onPickService={(name, price) => pickService(l.id, name, price)}
+      />
     ) },
     { key: "qty", header: "Qty", width: 52, render: (l) => numFill(l, "qty") },
     { key: "unit", header: "Unit ₹", width: 76, render: (l) => numFill(l, "unit") },
@@ -103,15 +289,15 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
         onBack={onBack}
         backLabel="Back to Bills"
         innerStyle={{ maxWidth: "none", paddingRight: spacing.xl }}
-        title={<span style={{ display: "inline-flex", alignItems: "baseline", gap: spacing.s }}>New Bill <span style={{ fontSize: fonts.size.s, color: colors.neutral500 }}>INV-2026-0042</span></span>}
-        actions={<><IconButton ariaLabel="Print"><Icon name="printer" tone="inherit" size={22} /></IconButton><IconButton ariaLabel="Share"><Icon name="share" tone="inherit" size={22} /></IconButton></>}
+        title={<span style={{ display: "inline-flex", alignItems: "baseline", gap: spacing.s }}>New Bill <span style={{ fontSize: fonts.size.s, color: colors.neutral500 }}>{invoicePreview ?? "INV_—"}</span></span>}
+        actions={<><IconButton ariaLabel="Print" onClick={printPreview}><Icon name="printer" tone="inherit" size={22} /></IconButton><ShareBillMenu bill={draftBill()} patient={draftMeta()} phone={form.phone} email={form.email} onError={setToastMessage} trigger={<Icon name="share" tone="inherit" size={22} style={{ color: colors.neutral900 }} />} /></>}
       />
 
       <div style={appt.grid}>
         {/* Row 1 — avatar | name card | bill */}
         <Card style={{ ...appt.card, ...appt.patientIdCard, alignSelf: "start" }}>
           <img src={pickAvatar({ gender: form.gender, ageYears: form.age ? parseInt(form.age.split("/")[0]?.trim() || "", 10) : null })} alt="" style={appt.patientAvatar} />
-          <h1 style={appt.patientIdText}>{patientId}</h1>
+          <h1 style={appt.patientIdText}>{shownPatientId}</h1>
         </Card>
 
         <PatientDetailsForm
@@ -119,7 +305,8 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
           value={{ name: form.name, email: form.email, phone: form.phone, dob: form.dob, age: form.age, gender: form.gender }}
           onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
           dobDigits={dobDigits} setDobDigits={setDobDigits}
-          patients={MOCK_PATIENTS} onSelectExisting={fillFromPatient}
+          errors={{ name: errors.name, phone: errors.phone, dob: errors.dob }}
+          patients={patients} onSelectExisting={fillFromPatient}
           locked={locked} showClearLink={locked} onClearLocked={clearLocked}
         />
 
@@ -144,10 +331,35 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
 
           <div style={sx.paymentCard}>
             <h3 style={sx.cardTitle}>Payment</h3>
-            <div style={{ display: "flex", alignItems: "center", gap: spacing.s }}>
-              <div style={{ flex: 1, minWidth: 0 }}><Select options={["Cash", "Card", "UPI", "Advance / credit", "Waive"]} value={method} onChange={setMethod} /></div>
-              <div style={{ flex: 1, minWidth: 0 }}><MeasureField box prefix="₹" placeholder={String(final)} inputMode="decimal" ariaLabel="Amount" value={amount} onChange={setAmount} /></div>
-              <IconButton ariaLabel="Add payment mode (split)" size={32}><Icon name="plus" tone="inherit" size={18} /></IconButton>
+            <div style={{ display: "flex", flexDirection: "column", gap: spacing.s, "--input-h": "32px" } as CSSProperties}>
+              {payments.map((p, i) => {
+                const last = i === payments.length - 1;
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: spacing.s }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <Select options={["Cash", "Card", "UPI", "Advance / credit", "Waive"]} value={p.mode} onChange={(m) => setPayment(i, { mode: m })} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <MeasureField box prefix="₹" placeholder={i === 0 ? String(final) : "0"} inputMode="decimal" ariaLabel="Amount"
+                        value={p.amount === "" ? "" : String(p.amount)} onChange={(v) => setPayment(i, { amount: v === "" ? "" : Number(v) })} />
+                    </div>
+                    {last ? (
+                      <IconButton ariaLabel="Add payment mode (split)" size={32} onClick={addPayment}><Icon name="plus" tone="inherit" size={18} /></IconButton>
+                    ) : (
+                      <IconButton ariaLabel="Remove payment mode" size={32} onClick={() => removePayment(i)}><Icon name="trash" tone="inherit" size={18} /></IconButton>
+                    )}
+                  </div>
+                );
+              })}
+              {/* Partial collection → the remainder is recorded as due on the bill. */}
+              {!isWaive && balance > 0 && (
+                <span style={{ fontSize: fonts.size.s, color: colors.neutral600 }}>
+                  <strong style={{ color: colors.neutral900 }}>{inr(balance)}</strong> will be added to due
+                </span>
+              )}
+              <div style={{ "--input-h": "40px" } as CSSProperties}>
+                <Field variant="box" ariaLabel="Bill details" placeholder="Add Details" value={billNote} onChange={setBillNote} />
+              </div>
             </div>
           </div>
         </div>
@@ -159,9 +371,18 @@ export function NewBillView({ onBack }: { onBack?: () => void }) {
 
         {/* CTA — out of the cards, centered under the page */}
         <div style={appt.footerButtonGroup}>
-          <Button variant="dark" size="md" iconLeft={<Icon name="verified-badge" size={18} tone="inverse" />} onClick={onBack}>Charge &amp; Bill</Button>
+          <Button variant="dark" size="md" iconLeft={<Icon name="verified-badge" size={18} tone="inverse" />} onClick={handleCharge} disabled={charging}>
+            {charging ? "Billing…" : "Charge & Bill"}
+          </Button>
         </div>
       </div>
+
+      <Toast
+        message={toastMessage}
+        {...resolveToastIcon(toastMessage)}
+        isVisible={!!toastMessage}
+        onClose={() => setToastMessage("")}
+      />
     </div>
   );
 }

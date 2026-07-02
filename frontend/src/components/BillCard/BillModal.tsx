@@ -9,7 +9,9 @@ import { Field } from "../Field";
 import { MeasureField } from "../MeasureField";
 import { MedicineAutocomplete } from "../MedicineAutocomplete/MedicineAutocomplete";
 import { listServices } from "../../api/services";
-import { listBills } from "../../api/bills";
+import { listBills, type Bill } from "../../api/bills";
+import { printBill } from "../../pages/Bills/printBill";
+import { ShareBillMenu } from "../../pages/Bills/ShareBillMenu";
 import { getBillFooter, type BillFooter } from "../../api/patientSearch";
 import { colors, fonts, spacing, radii, strokes } from "../../styles/theme";
 import { Icon } from "../Icon";
@@ -89,8 +91,8 @@ const BILL_ITEM_INPUT_STYLE: React.CSSProperties = {
 
 export function BillModal({
   isOpen, onClose, patient, initialServices,
-  patientName, invoiceNo, onViewBills, medicines, onBilled,
-  serviceName, serviceFee = 0, catalog, loading = false, patientId,
+  patientName, invoiceNo, onViewBills, medicines, onBilled, onPaid,
+  serviceName, serviceFee = 0, catalog, loading = false, patientId, initialNote, isPaid = false,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -103,6 +105,10 @@ export function BillModal({
   /** Open the patient's bill history (the header "View bills" link). Omit to
    *  hide the link — e.g. a first bill, with no prior invoices to view. */
   onViewBills?: () => void;
+  /** Reopened-bill mode: record a payment against an existing bill ("Mark paid"
+   *  / "Pay ₹X"). Given the amount collected now, the method, and the (possibly
+   *  edited) Details note so a reopen can update it. */
+  onPaid?: (amount: number, method: string, note?: string) => void;
   /** Wired-bill mode: prescribed medicines seeded as line items. */
   medicines?: BillMedicine[];
   /** Wired-bill mode: called on Charge & Bill / Mark Waived. Buckets stay
@@ -121,6 +127,7 @@ export function BillModal({
     depositApplied: number;
     payStatus: string;
     lineItems: { name: string; qty: number; unit: number; gst: number; disc: number; discUnit: string; kind: string; inStock: boolean }[];
+    note?: string;
   }) => void;
   /** Pending consultation/service for this appointment — seeded as the first
    *  line item (its total bills the consultation fee, kept out of pharmacy). */
@@ -131,6 +138,12 @@ export function BillModal({
   loading?: boolean;
   /** Patient id — used to load the bottom footer (last payment / registered on). */
   patientId?: string;
+  /** Reopened-bill mode: the bill's existing Details note, seeded into the
+   *  editor so a reopen shows it (and can edit + re-save it on pay). */
+  initialNote?: string;
+  /** The bill is already settled — hide the "Mark paid" action (there's nothing
+   *  to collect); the modal is just a view/print of what was paid. */
+  isPaid?: boolean;
   /** @deprecated The standalone deposit field was removed — an advance is now
    *  applied as an "Advance / credit" payment mode. Still accepted so existing
    *  callers compile; ignored until the credit-mode wiring lands. */
@@ -162,7 +175,9 @@ export function BillModal({
     }
     if (medicines != null) {
       medicines.forEach((m) => seed.push({ id: 0, name: m.name, qty: m.qty, unit: m.unitPrice, gst: 0, disc: 0, discUnit: "₹", inStock: m.inStock, kind: "medicine" }));
-    } else if (initialServices && initialServices.length) {
+    } else if (initialServices) {
+      // Provided (even if empty) → seed exactly those; an empty list seeds
+      // nothing. Only the prop-less Storybook mock falls through to the sample.
       initialServices.forEach((s) => seed.push({ id: 0, name: s.name, qty: 1, unit: s.price, gst: 0, disc: 0, discUnit: "₹" }));
     } else if (!wired) {
       seed.push({ id: 0, name: "Ear lobe repair", qty: 1, unit: 6000, gst: 0, disc: 0, discUnit: "₹" });
@@ -183,7 +198,8 @@ export function BillModal({
   const [payments, setPayments] = useState<{ mode: string; amount: number | "" }[]>([{ mode: "Cash", amount: "" }]);
   // Once the desk types in / clears the amount themselves, stop auto-filling it.
   const [amountTouched, setAmountTouched] = useState(false);
-  // Free-text note for this bill's payment. UI-only for now — not persisted.
+  // Free-text "Add Details" note — saved on the bill (via onBilled → charge) and
+  // shown again when the invoice is reopened (BillReadModal).
   const [billNote, setBillNote] = useState("");
 
   // Reset the desk's collection inputs ONLY when the modal opens — never on the
@@ -193,7 +209,9 @@ export function BillModal({
     if (!isOpen) return;
     setPayments([{ mode: "Cash", amount: "" }]);
     setAmountTouched(false);
-    setBillNote("");
+    // Seed the reopened bill's existing note so it shows (and stays editable);
+    // a fresh bill has none → empty.
+    setBillNote(initialNote ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
@@ -423,10 +441,28 @@ export function BillModal({
       depositApplied: 0,
       payStatus: isWaived ? "WAIVED" : balance > 0 ? "DUE" : "PAID",
       lineItems,
+      note: billNote.trim() || undefined,
     });
     onClose();
   };
   const hasBillableLine = lines.some((l) => !isTrailing(l) && l.qty > 0);
+
+  // Build a synthetic Bill from the live lines + totals so the header print /
+  // share controls have something to render (a preview before the bill saves).
+  const buildDraft = (): Bill & { patientName: string } => {
+    const iso = `${billDate.getFullYear()}-${String(billDate.getMonth() + 1).padStart(2, "0")}-${String(billDate.getDate()).padStart(2, "0")}`;
+    const lineItems = lines.filter((l) => !isTrailing(l)).map((l) => ({ name: l.name, qty: l.qty, unit: l.unit, gst: l.gst, disc: l.disc, discUnit: l.discUnit }));
+    return {
+      id: "", invoiceNo: invoiceNo ?? "", billDate: iso,
+      billed: displayFinal, paid: received, due: balance, refund: 0, depositApplied: null,
+      payStatus: isWaived ? "WAIVED" : balance > 0 ? "DUE" : "PAID",
+      paymentMethod: methodLabel,
+      items: JSON.stringify(lineItems), note: billNote.trim() || null,
+      appointmentId: null, createdAt: "",
+      patientName: patientName ?? pt.name,
+    };
+  };
+  const printPreview = () => { if (hasBillableLine) Promise.resolve(printBill(buildDraft())).catch(() => {}); };
 
   // Bottom strip: last payment (left) + registered-on (right). Rendered only
   // once the footer data has loaded for this patient.
@@ -450,8 +486,8 @@ export function BillModal({
       headerActions={
         <>
           {onViewBills && <button onClick={onViewBills} style={{ border: "none", background: "transparent", cursor: "pointer", color: colors.neutral900, fontSize: fonts.size.s, textDecoration: "underline", whiteSpace: "nowrap" }}>View bills</button>}
-          <IconButton ariaLabel="Print" onClick={() => {}} color={colors.neutral900}><Icon name="printer" size={24} tone="inherit" /></IconButton>
-          <IconButton ariaLabel="Share" onClick={() => {}} color={colors.neutral900}><Icon name="share" size={24} tone="inherit" /></IconButton>
+          <IconButton ariaLabel="Print" onClick={printPreview} color={colors.neutral900}><Icon name="printer" size={24} tone="inherit" /></IconButton>
+          <ShareBillMenu bill={buildDraft()} trigger={<Icon name="share" size={24} tone="inherit" style={{ color: colors.neutral900 }} />} />
         </>
       }
       billTitle="Bill"
@@ -558,8 +594,13 @@ export function BillModal({
             iconLeft={<Icon name="verified-badge" size={20} tone="inverse" />}>
             {isWaived ? "Mark Waived" : "Charge & Bill"}
           </Button>
-        ) : (
-          <Button variant="dark" size="md" onClick={onClose} style={{ flex: 1 }} iconLeft={<Icon name="verified-badge" size={20} tone="inverse" />}>
+        ) : (isPaid || !onPaid) ? null : (
+          // Only shown when the modal can actually record a payment (onPaid). A
+          // view-only open (e.g. the appointment card's expand) or an already-
+          // settled bill has no action — close via the header ✕.
+          <Button variant="dark" size="md" onClick={() => onPaid(paidEntered, methodLabel, billNote.trim() || undefined)} style={{ flex: 1 }}
+            disabled={paidEntered <= 0}
+            iconLeft={<Icon name="verified-badge" size={20} tone="inverse" />}>
             {balance > 0 ? `Pay ${inr(balance)}` : "Mark paid"}
           </Button>
         )

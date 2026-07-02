@@ -27,6 +27,16 @@ data class UpdatePatientRequest(
     val age: Int?       // months, or null
 )
 
+// Body for POST /api/patients — create (or find, by phone + name) a patient.
+data class CreatePatientRequest(
+    val name: String,
+    val phone: String?,
+    val email: String?,
+    val gender: String?,
+    val dob: String?,   // ISO yyyy-MM-dd
+    val age: Int?       // months
+)
+
 // Footer shown at the bottom of the Bill modal: when the patient was first
 // registered, and their most recent payment (date + method).
 data class BillFooterDTO(
@@ -122,6 +132,24 @@ class PatientController(
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
     fun list(): List<PatientWithLastVisitDTO> = patientService.listPatientsWithLastVisit()
+
+    // Create (or find, by phone + name) a patient — used by the standalone New
+    // Bill page to bill a walk-in who isn't in the system yet. Reuses the same
+    // find-or-create rule as appointment booking, so the person isn't duplicated.
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','RECEPTIONIST','FRONT_DESK','NURSE','PHARMACY','OTHER')")
+    @Transactional
+    fun create(@RequestBody req: CreatePatientRequest): ResponseEntity<Any> {
+        if (req.name.isBlank()) return ResponseEntity.badRequest().body(mapOf("error" to "Patient name is required"))
+        val p = patientService.findOrCreate(req.name, req.phone, req.email, req.gender, req.dob, req.age)
+        return ResponseEntity.ok(
+            PatientWithLastVisitDTO(
+                id = p.id, name = p.name, phone = p.phone, email = p.email, gender = p.gender,
+                dob = p.dob, age = p.age, displayNo = p.displayNo,
+                lastVisitDate = null, treatingDoctorIds = emptyList(), treatingDepartments = emptyList(),
+            )
+        )
+    }
 
     // Patient Files "notes / prescriptions" keyword search — matches visit
     // free-text + prescriptions, returns "Rx"/"Visit" snippets to highlight.

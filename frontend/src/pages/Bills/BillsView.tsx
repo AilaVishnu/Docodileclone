@@ -11,7 +11,13 @@ import { SearchField } from "../../components/SearchField";
 import { BillStatusBadge, billStatusOf } from "../../components/BillStatusBadge";
 import { BillModal } from "../../components/BillCard/BillModal";
 import { BillReadModal, parseLines } from "./BillReadModal";
-import { listClinicBills, type Bill } from "../../api/bills";
+import { printBill } from "./printBill";
+import { RecentBills } from "../../components/BillCard/RecentBills";
+import { listClinicBills, payBill, createBill, type Bill } from "../../api/bills";
+import { usePatients } from "../../hooks/usePatients";
+import { listPharmacyStock } from "../../api/pharmacy";
+import { Toast } from "../../components/Toast";
+import { resolveToastIcon } from "../../components/Toast/toastIcon";
 import { colors, spacing } from "../../styles/theme";
 import { styles } from "./BillsView.styles";
 
@@ -90,6 +96,8 @@ export interface BillsViewProps {
   onOpenBill?: (bill: ClinicBill) => void;
   onPrintBill?: (bill: ClinicBill) => void;
   onExport?: () => void;
+  /** Open the New Bill page (e.g. the history modal's "Create New Bill"). */
+  onNewBill?: () => void;
 }
 
 /**
@@ -97,7 +105,7 @@ export interface BillsViewProps {
  * → search + status/period filters → invoice table. Composed from existing
  * components (Card, Tabs, DateRangeDropdown, DataGrid, PageHeader, Button).
  */
-export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, onPrintBill, onExport }: BillsViewProps) {
+export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, onPrintBill, onExport, onNewBill }: BillsViewProps) {
   const [status, setStatus] = React.useState("all");
   const [period, setPeriod] = React.useState("thisMonth");
   const [customStart, setCustomStart] = React.useState("");
@@ -108,6 +116,7 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
   // passed in (stories). Re-fetches whenever the period / custom range changes.
   const [fetched, setFetched] = React.useState<ClinicBill[]>([]);
   const [fetching, setFetching] = React.useState(false);
+  const [refreshKey, setRefreshKey] = React.useState(0);
   React.useEffect(() => {
     if (billsProp) return;
     const { from, to } = rangeFor(period, customStart, customEnd);
@@ -119,14 +128,68 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
       .catch(() => { if (!cancelled) setFetched([]); })
       .finally(() => { if (!cancelled) setFetching(false); });
     return () => { cancelled = true; };
-  }, [billsProp, period, customStart, customEnd]);
+  }, [billsProp, period, customStart, customEnd, refreshKey]);
 
   const bills = billsProp ?? fetched;
   const loading = loadingProp ?? fetching;
   // Row-click / "View bill" opens the bill: an unpaid draft → the editable
   // BillModal (seeded); anything settled → the read-only BillReadModal.
   const [openBill, setOpenBill] = React.useState<ClinicBill | null>(null);
+  const [toastMessage, setToastMessage] = React.useState("");
+  // Patient whose bill history the "View bills" link is showing (null = closed).
+  const [historyFor, setHistoryFor] = React.useState<string | null>(null);
+  // Patient the "Create New Bill" editor is open for (resolved to a real id so
+  // the charge can be saved). Null = closed.
+  const [newBillFor, setNewBillFor] = React.useState<{ name: string; id: string } | null>(null);
+  const { data: allPatients } = usePatients();
+  // Medicines price catalog so a picked stock item auto-fills its unit price in
+  // the "Create New Bill" editor (services price via their own picker path).
+  const [medCatalog, setMedCatalog] = React.useState<{ id: string; name: string; unitPrice: number }[]>([]);
+  React.useEffect(() => {
+    listPharmacyStock().then((meds) => setMedCatalog(meds.map((m) => ({ id: m.id, name: m.name, unitPrice: m.unitPrice })))).catch(() => {});
+  }, []);
   const openBillModal = (b: ClinicBill) => { setOpenBill(b); onOpenBill?.(b); };
+
+  // Print a receipt. The bill carries only the patient's name, so resolve the
+  // rest of the meta block (age/gender/mobile/T-id) from the loaded patient list
+  // — but only on an unambiguous single name match, else print name-only. An
+  // external onPrintBill override (stories) still wins and gets just the bill.
+  const patientMetaFor = (b: ClinicBill) => {
+    const q = b.patientName.trim().toLowerCase();
+    const matches = allPatients.filter((p) => p.name.trim().toLowerCase() === q);
+    if (matches.length !== 1) return undefined;
+    const p = matches[0];
+    const digits = (p.phone ?? "").replace(/\D/g, "").slice(-10);
+    return {
+      age: p.age != null ? Math.floor(p.age / 12) : undefined, // stored in months
+      gender: p.gender ?? undefined,
+      mobile: digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : (p.phone ?? undefined),
+      id: p.displayNo != null ? `T${String(p.displayNo).padStart(3, "0")}` : undefined,
+    };
+  };
+  const doPrint = (b: ClinicBill) => (onPrintBill ? onPrintBill(b) : printBill(b, patientMetaFor(b)));
+  // Share context for the bill detail's channel menu — patient contact (to
+  // pre-fill WhatsApp/Email) + demographics (for the PDF), on a single name match.
+  const shareCtxFor = (b: ClinicBill) => {
+    const q = b.patientName.trim().toLowerCase();
+    const matches = allPatients.filter((p) => p.name.trim().toLowerCase() === q);
+    const p = matches.length === 1 ? matches[0] : undefined;
+    return { patient: patientMetaFor(b), phone: p?.phone ?? undefined, email: p?.email ?? undefined, onError: setToastMessage };
+  };
+
+  // Record a payment against a bill (Mark paid / Pay ₹X / Record payment), then
+  // refresh the row in place and close. Surfaces the failure as a toast (and
+  // keeps the modal open) so the desk isn't left guessing.
+  const recordPayment = async (b: ClinicBill, amount: number, method: string, note?: string) => {
+    if (amount <= 0) return;
+    try {
+      const updated = await payBill(b.id, { paidAmount: amount, method, note });
+      setFetched((list) => list.map((x) => (x.id === updated.id ? updated : x)));
+      setOpenBill(null);
+    } catch (e) {
+      setToastMessage((e as Error).message || "Couldn't record the payment");
+    }
+  };
 
   const collectedToday = bills.filter((b) => b.today).reduce((s, b) => s + b.paid, 0);
   const outstanding = bills.reduce((s, b) => s + b.due, 0);
@@ -139,6 +202,29 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
     const queryOk = !q || b.patientName.toLowerCase().includes(q) || b.invoiceNo.toLowerCase().includes(q);
     return statusOk && queryOk;
   });
+
+  // Export the rows currently shown (respects the status/search/period filters)
+  // as a CSV the desk can open in Excel. A cell is quoted + its quotes doubled
+  // so a comma or quote in a name/method can't break the columns.
+  const exportCsv = () => {
+    const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const header = ["S.No", "Patient", "Invoice", "Date", "Billed", "Paid", "Due", "Status", "Method"];
+    const rows = shown.map((b, i) => [
+      i + 1, b.patientName, b.invoiceNo, b.billDate, b.billed, b.paid, b.due,
+      billStatusOf(b), b.paymentMethod ?? "",
+    ]);
+    const csv = [header, ...rows].map((r) => r.map(cell).join(",")).join("\r\n");
+    const { from, to } = rangeFor(period, customStart, customEnd);
+    const stamp = period === "custom" ? `${from || "start"}_${to || "end"}` : period;
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `bills-${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+  };
 
   const columns: GridColumn<ClinicBill>[] = [
     { key: "sno", header: "S.NO", width: 64, align: "left", render: (_b, i) => <span style={styles.muted}>{String(i + 1).padStart(2, "0")}</span> },
@@ -165,7 +251,7 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
             trigger={<Icon name="menu" size={20} tone="inherit" style={{ color: colors.neutral700 }} />}
             items={[
               { label: "View bill", onClick: () => openBillModal(b) },
-              { label: "Print", onClick: () => onPrintBill?.(b) },
+              { label: "Print", onClick: () => doPrint(b) },
               ...(b.due > 0 ? [{ label: "Record payment", onClick: () => openBillModal(b) }] : []),
             ]}
           />
@@ -192,7 +278,7 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
         }
         actions={
           <>
-            <Button variant="light" size="md" iconLeft={<Icon name="download" size={16} tone="inherit" />} onClick={onExport}>Export</Button>
+            <Button variant="light" size="md" iconLeft={<Icon name="download" size={16} tone="inherit" />} onClick={onExport ?? exportCsv}>Export</Button>
           </>
         }
       />
@@ -239,6 +325,9 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
           patientName={openBill.patientName}
           invoiceNo={openBill.invoiceNo}
           initialServices={parseLines(openBill.items).map((l) => ({ name: l.name, price: l.unit }))}
+          initialNote={openBill.note ?? undefined}
+          onPaid={(amount, method, note) => recordPayment(openBill, amount, method, note)}
+          onViewBills={() => { setHistoryFor(openBill.patientName); setOpenBill(null); }}
         />
       ) : (
         <BillReadModal
@@ -246,10 +335,59 @@ export function BillsView({ bills: billsProp, loading: loadingProp, onOpenBill, 
           isOpen
           onClose={() => setOpenBill(null)}
           bill={openBill}
-          onPrint={onPrintBill}
+          onPrint={doPrint}
+          share={shareCtxFor(openBill)}
+          onRecordPayment={(b, amount, method) => recordPayment(b, amount, method)}
+          onViewBills={(b) => { setHistoryFor(b.patientName); setOpenBill(null); }}
           onRefunded={(u) => setFetched((list) => list.map((x) => (x.id === u.id ? u : x)))}
         />
       ))}
+
+      {newBillFor && (
+        <BillModal
+          isOpen
+          onClose={() => setNewBillFor(null)}
+          patientName={newBillFor.name}
+          patientId={newBillFor.id}
+          catalog={medCatalog}
+          onViewBills={() => { const name = newBillFor.name; setNewBillFor(null); setHistoryFor(name); }}
+          onBilled={async ({ method, billed, paid, due, payStatus, lineItems, note }) => {
+            try {
+              await createBill(newBillFor.id, {
+                billed, paid, due, payStatus, paymentMethod: method,
+                items: JSON.stringify(lineItems), note,
+              });
+              setRefreshKey((k) => k + 1); // pull the new invoice into the list
+            } catch (e) {
+              setToastMessage((e as Error).message || "Couldn't create the bill");
+            }
+          }}
+        />
+      )}
+
+      {historyFor !== null && (
+        <RecentBills
+          isOpen
+          onClose={() => setHistoryFor(null)}
+          patientName={historyFor}
+          bills={bills.filter((b) => b.patientName === historyFor)}
+          onCreateNew={() => {
+            const p = allPatients.find((x) => x.name.trim().toLowerCase() === (historyFor ?? "").trim().toLowerCase());
+            setHistoryFor(null);
+            if (p) setNewBillFor({ name: p.name, id: p.id });
+            else onNewBill?.(); // can't resolve the patient → fall back to the New Bill page
+          }}
+          onView={(b) => { const cb = bills.find((x) => x.id === b.id); setHistoryFor(null); if (cb) openBillModal(cb); }}
+          onPrint={(b) => { const cb = bills.find((x) => x.id === b.id); if (cb) doPrint(cb); }}
+        />
+      )}
+
+      <Toast
+        message={toastMessage}
+        {...resolveToastIcon(toastMessage)}
+        isVisible={!!toastMessage}
+        onClose={() => setToastMessage("")}
+      />
     </div>
   );
 }

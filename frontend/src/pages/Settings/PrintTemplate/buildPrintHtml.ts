@@ -474,7 +474,9 @@ export function openPrintWindow(html: string): void {
  * download. Used by the Download button so it actually downloads instead
  * of routing through Chrome's flaky "Save as PDF" preview.
  */
-export async function downloadAsPdf(html: string, filename = "prescription"): Promise<void> {
+// Server-side render → PDF Blob (the raw file). Shared by the download path and
+// by callers that need the file itself — e.g. sharing it via the Web Share API.
+export async function htmlToPdfBlob(html: string, filename = "document"): Promise<Blob> {
   const { API_BASE_URL } = await import("../../../apiConfig");
   const token = localStorage.getItem("docodile_token");
   const res = await fetch(`${API_BASE_URL}/api/print/pdf`, {
@@ -486,7 +488,11 @@ export async function downloadAsPdf(html: string, filename = "prescription"): Pr
     body: JSON.stringify({ html, filename }),
   });
   if (!res.ok) throw new Error(`PDF render failed: HTTP ${res.status}`);
-  const blob = await res.blob();
+  return res.blob();
+}
+
+export async function downloadAsPdf(html: string, filename = "prescription"): Promise<void> {
+  const blob = await htmlToPdfBlob(html, filename);
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

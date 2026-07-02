@@ -172,7 +172,10 @@ function inferForm(name: string): MedForm {
   if (/SYRUP/.test(u)) return "syrup";
   if (/CREAM/.test(u)) return "cream";
   if (/SPRAY/.test(u)) return "spray";
-  if (/SOAP|BAR\b/.test(u)) return "soap";
+  // Cleansers (face/body wash, cleanser, soap bar) map to the "soap" form —
+  // kept in step with inferCategory's WASH/CLEANS rule so a facewash doesn't
+  // fall through to the "tablet" default.
+  if (/SOAP|WASH|CLEANS|BAR\b/.test(u)) return "soap";
   if (/SERUM/.test(u)) return "serum";
   if (/DROP/.test(u)) return "drops";
   if (/OINT/.test(u)) return "ointment";

@@ -17,6 +17,7 @@ import { DateField } from "../DateField";
 import { TimeField } from "../TimeField";
 import { API_BASE_URL } from "../../apiConfig";
 import { listServices, ServiceDTO } from "../../api/services";
+import { listBills, type Bill } from "../../api/bills";
 import { pickAvatar } from "../../utils/avatar";
 
 type Doctor = {
@@ -26,6 +27,9 @@ type Doctor = {
 
 export type EditAppointmentData = {
   id: string;
+  // The DB patient UUID — used to load this patient's real bills (the paid
+  // bill card opens the actual saved invoice, not a rebuilt one).
+  patientId?: string;
   patientName: string;
   patientPhone: string;
   patientEmail?: string;
@@ -47,6 +51,14 @@ export type EditAppointmentData = {
   paymentMethod?: string;
   notes?: string;
   fee?: number;
+  // The day's bill stats for this patient — the reliable "is this settled?"
+  // signal (billed + nothing due → paid), same as the queue Pay badge. The
+  // appointment's own payStatus can be stale for bills raised outside the
+  // appointment-charge flow.
+  todayBillCount?: number;
+  apptBillCount?: number;
+  apptDue?: number;
+  apptRefund?: number;
   // When set, every input renders disabled and the save action is
   // suppressed — useful for viewing the booking details of completed
   // or out-of-window appointments without allowing edits.
@@ -140,11 +152,13 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     // the wall-clock time, and isWalkin=true is sent to the backend so the
     // queue card / billing flow treats it the same as a queue-side walk-in.
     isWalkin: !!editingAppointment?.isWalkin,
-    paymentMethod: editingAppointment?.paymentMethod || "",
+    // A WAIVED appointment reads back as the "Waive" channel at a full 100%
+    // write-off (its fee holds the pre-waive service amount).
+    paymentMethod: editingAppointment?.payStatus?.toUpperCase() === "WAIVED" ? "Waive" : (editingAppointment?.paymentMethod || ""),
     note: editingAppointment?.notes || "",
     subtotal: editingAppointment?.fee || 0,
     tax: "" as string,
-    discount: 0.0,
+    discount: editingAppointment?.payStatus?.toUpperCase() === "WAIVED" ? 100 : 0.0,
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -157,7 +171,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     { payStatus: string; successMessage?: string; message: string } | null
   >(null);
   const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
-  const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
+  const [discountMode, setDiscountMode] = useState<"%" | "₹">(editingAppointment?.payStatus?.toUpperCase() === "WAIVED" ? "%" : "₹");
   // "Advanced" toggle in the page header — reveals extra fields. Wiring the
   // extra fields is deferred; for now this state is set but unused.
   const [isAdvanced, setIsAdvanced] = useState(false);
@@ -422,14 +436,17 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         type: form.type,
         service: form.services.join(" + "),
         isWalkin: form.isWalkin,
-        // "Book Now Pay Later" leaves the payment channel undecided —
-        // even if the receptionist accidentally clicked a Cash/Card/UPI
-        // radio in the UI, we discard it here so the appointment row
-        // doesn't carry a misleading method until it's actually paid.
-        paymentMethod: payStatus === "Paid" ? form.paymentMethod : null,
+        // Persist whatever payment channel the desk picked (Cash/Card/UPI/Waive)
+        // so it survives a reload / reopen — it's the chosen/intended method.
+        // Paid vs unpaid is governed by payStatus, not this field, so a stored
+        // method on an unpaid row isn't "already paid", just the selected channel.
+        paymentMethod: form.paymentMethod || null,
         notes: form.note || null,
-        fee: total > 0 ? total : null,
-        payStatus,
+        // A waive is a full write-off: the total nets to ₹0, but we still record
+        // the SERVICE amount (subtotal) as the fee so a WAIVED invoice can be
+        // minted for it. Otherwise the fee is the net charged.
+        fee: form.paymentMethod === "Waive" ? (subtotal > 0 ? subtotal : null) : (total > 0 ? total : null),
+        payStatus: form.paymentMethod === "Waive" ? "WAIVED" : payStatus,
         // Tells the backend to skip its own same-day duplicate check.
         // Only true on the second submit after the user confirmed the
         // duplicate in the modal below.
@@ -517,6 +534,57 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const discountVal = Number(form.discount) || 0;
   const discountAmount = discountMode === "%" ? subtotal * discountVal / 100 : discountVal;
   const total = subtotal + taxAmount - discountAmount;
+
+  // Is the appointment's bill settled? Prefer the day's bills (billed + nothing
+  // due → paid), the same reliable signal as the queue Pay badge; the
+  // appointment's own payStatus can be stale for bills raised outside the
+  // charge flow. Drives the card's paid/locked read-only view.
+  // THIS appointment's own bill is settled (nothing owed) → paid OR refunded.
+  // Per-appointment (not the patient's other visits), so a refund on another
+  // visit never locks/settles this one. "Paid" is the stricter subset used for
+  // the green stamp + lock: settled AND not refunded — a refund is never a tick.
+  const hasApptBill = (editingAppointment?.apptBillCount ?? 0) > 0;
+  // Settled = paid, refunded OR waived (all "nothing owed"). WAIVED counts even
+  // without a loaded bill so a waived appointment reads read-only, not editable.
+  const billSettled = editingAppointment
+    ? (hasApptBill ? (editingAppointment.apptDue ?? 0) <= 0 : ["PAID", "WAIVED"].includes(editingAppointment.payStatus?.toUpperCase() || ""))
+    : false;
+
+  // Load this appointment's actual saved bill, so the card's expand opens the
+  // real invoice (BillReadModal) — the linked bill if one exists, else the
+  // patient's most recent. For any settled bill (paid or refunded) so a refund
+  // is viewable too.
+  const [apptBill, setApptBill] = useState<(Bill & { patientName: string; today: boolean }) | null>(null);
+  useEffect(() => {
+    const pid = editingAppointment?.patientId;
+    if (!pid || !billSettled) { setApptBill(null); return; }
+    let cancelled = false;
+    listBills(pid)
+      .then((bills) => {
+        if (cancelled) return;
+        // Strictly THIS appointment's own bill (linked by appointmentId) — same
+        // rule as the queue's per-appointment Pay badge, so the two never
+        // disagree. A bill not tied to this appointment (standalone New Bill, or
+        // another visit's) is not shown here; the card falls back to its preview.
+        const linked = bills.find((b) => b.appointmentId === editingAppointment?.id);
+        setApptBill(linked ? { ...linked, patientName: editingAppointment?.patientName || "Patient", today: false } : null);
+      })
+      .catch(() => { if (!cancelled) setApptBill(null); });
+    return () => { cancelled = true; };
+  }, [editingAppointment?.patientId, editingAppointment?.id, editingAppointment?.patientName, billSettled]);
+
+  // "Paid" (the green stamp) is the stricter subset of settled: not refunded and
+  // not waived — a refund or a write-off is never a Paid tick.
+  const billWaived = editingAppointment?.payStatus?.toUpperCase() === "WAIVED" || apptBill?.payStatus?.toUpperCase() === "WAIVED";
+  const billIsPaid = billSettled
+    && !billWaived
+    && (editingAppointment?.apptRefund ?? 0) <= 0
+    && (apptBill?.refund ?? 0) <= 0;
+
+  // The bill card is read-only (inputs frozen) whenever the bill is settled OR
+  // the whole form is locked (completed / at-doc / paid-walk-in / past 24h) — but
+  // it stays interactive so Print / Share / expand keep working in those states.
+  const billCardReadOnly = billSettled || !!editingAppointment?.readOnly;
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-GB", {
@@ -614,13 +682,15 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
           setDobDigits={setDobDigits}
           patients={allPatients}
           onSelectExisting={fillFromPatient}
-          locked={patientFieldsLocked}
-          showClearLink={patientFieldsLocked && lockedPatientId !== "editing"}
+          locked={patientFieldsLocked || billSettled}
+          showClearLink={patientFieldsLocked && lockedPatientId !== "editing" && !billSettled}
           onClearLocked={clearSelectedPatient}
         />
 
-        {/* Billing Card */}
-        <div style={{ gridColumn: "3", gridRow: "1 / span 2", alignSelf: "stretch" }}>
+        {/* Billing Card — stays interactive even when the form is locked, for any
+            SETTLED bill (paid OR refunded), so the desk can still view / print /
+            expand it. Its own inputs are frozen via the card's locked/isPaid. */}
+        <div style={{ gridColumn: "3", gridRow: "1 / span 2", alignSelf: "stretch", ...(billCardReadOnly ? { pointerEvents: "auto" as const } : {}) }}>
           <BillCard
             paymentMethod={form.paymentMethod}
             onPaymentMethodChange={(m) => {
@@ -647,7 +717,17 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             onTaxModeChange={setTaxMode}
             onDiscountModeChange={setDiscountMode}
             services={form.services.map(svc => ({ name: svc, price: SERVICE_PRICES[svc] || 0 }))}
-            isPaid={editingAppointment?.payStatus?.toUpperCase() === "PAID"}
+            isPaid={billIsPaid}
+            locked={billCardReadOnly}
+            settled={billSettled}
+            paidBill={apptBill ?? undefined}
+            onBillRefunded={(u) => setApptBill({ ...u, today: false })}
+            patientName={form.name}
+            patientMeta={{
+              age: form.age ? (parseInt(form.age.split("/")[0]?.trim() || "", 10) || undefined) : undefined,
+              gender: form.gender || undefined,
+              mobile: form.phone || undefined,
+            }}
           />
         </div>
 
@@ -659,6 +739,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               value={form.type}
               onChange={(t) => setForm({ ...form, type: t })}
               options={["New", "Review"]}
+              disabled={billSettled || !!editingAppointment?.readOnly}
             />
           </Card>
 
@@ -694,7 +775,9 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             // Also lock on readOnly — the row's own `pointerEvents: "auto"`
             // overrides the parent grid's readOnly pointer-events block, so
             // we have to re-assert it here. Same on the Service row below.
-            const paidLocked = editingAppointment?.payStatus?.toUpperCase() === "PAID";
+            // Settled (paid, waived OR refunded) → the visit's money is fixed, so
+            // its service/doctor can't change; only date/time (reschedule) stays.
+            const paidLocked = billSettled;
             const doctorLocked = paidLocked || !!editingAppointment?.readOnly;
             // Only dim at the row level when *paid* is the lock reason —
             // when it's just readOnly the parent grid is already at 0.85
@@ -722,7 +805,9 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
           })()}
 
           {(() => {
-            const paidLocked = editingAppointment?.payStatus?.toUpperCase() === "PAID";
+            // Settled (paid, waived OR refunded) → the visit's money is fixed, so
+            // its service/doctor can't change; only date/time (reschedule) stays.
+            const paidLocked = billSettled;
             const servicesLocked = paidLocked || !!editingAppointment?.readOnly;
             // See doctor row above — don't multiply with parent grid's 0.85
             // when readOnly already dims the whole thing.

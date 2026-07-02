@@ -17,9 +17,10 @@ import { API_BASE_URL } from "../../apiConfig";
 import { listPharmacyStock } from "../../api/pharmacy";
 import { getActiveSessions } from "../../api/visits";
 import { recordPatientDeposit } from "../../api/patientSearch";
-import { listBills, chargeAppointment, type Bill } from "../../api/bills";
+import { listBills, chargeAppointment, payBill, type Bill } from "../../api/bills";
 import { RecentBills } from "../BillCard/RecentBills";
 import { BillReadModal } from "../../pages/Bills/BillReadModal";
+import { printBill, type PrintPatientMeta } from "../../pages/Bills/printBill";
 
 type Doctor = {
   id: string;
@@ -57,6 +58,19 @@ type AppointmentQueueProps = {
   onEditStart?: () => void;
   onViewPatientFile?: (patient: import("../../hooks/usePatients").Patient, appointmentId: string, doctorId: string) => void;
 };
+
+// Receipt patient-meta pulled from the appointment a bill was opened under —
+// the appointment already carries the patient's demographics (age in months →
+// years for the receipt).
+function aptReceiptMeta(apt: Appointment): PrintPatientMeta {
+  const digits = (apt.patientPhone ?? "").replace(/\D/g, "").slice(-10);
+  return {
+    age: apt.patientAge != null && apt.patientAge > 0 ? Math.floor(apt.patientAge / 12) : undefined,
+    gender: apt.patientGender ?? undefined,
+    mobile: digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : (apt.patientPhone || undefined),
+    id: apt.patientDisplayNo != null ? `T${String(apt.patientDisplayNo).padStart(3, "0")}` : undefined,
+  };
+}
 
 export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, onViewPatientFile }: AppointmentQueueProps) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -321,6 +335,8 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               rawScheduledTime: apt.scheduledTime || undefined,
               isWalkin: apt.isWalkin,
               status: (apt.status || "WAITING") as Appointment["status"],
+              // Raw appointment pay status — kept as-is for the Edit form. The
+              // queue Pay badge is derived from the day's bills in QueueTable.
               payStatus: apt.payStatus || "DUE",
               paymentMethod: apt.paymentMethod || "",
               doctorId: apt.doctorId,
@@ -334,6 +350,11 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               pharmacyAmount: apt.pharmacyAmount || 0,
               deposit: apt.patientDeposit || 0,
               todayBillCount: apt.todayBillCount || 0,
+              todayDue: Number(apt.todayDue) || 0,
+              todayRefund: Number(apt.todayRefund) || 0,
+              apptBillCount: apt.apptBillCount || 0,
+              apptDue: Number(apt.apptDue) || 0,
+              apptRefund: Number(apt.apptRefund) || 0,
               patientArchived: apt.patientArchived || false,
               createdAt: apt.createdAt || undefined,
             });
@@ -470,16 +491,27 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                   setToastMessage(`${apt.patientName} is archived — restore the patient to continue.`);
                   return;
                 }
-                // Locked = completed appointment OR booking older than
-                // 24h. The modal still opens with full details so the
-                // receptionist can review, just every field + save
-                // action is disabled.
+                // Locked = completed appointment, sent to the doctor (At Doc /
+                // in progress), OR booking older than 24h. The modal still opens
+                // with full details so the receptionist can review, just every
+                // field + save action is disabled. Once it's with the doctor the
+                // booking is in play and mustn't change under them.
                 const isCompleted = apt.status === "COMPLETED";
+                const isWithDoctor = apt.status === "IN_PROGRESS"; // "At Doc" / sent to doctor
                 const ageMs = apt.createdAt ? Date.now() - new Date(apt.createdAt).getTime() : 0;
                 const isPastWindow = apt.createdAt != null && ageMs > 24 * 60 * 60 * 1000;
-                const readOnly = isCompleted || isPastWindow;
+                // A billed-and-settled walk-in is a finished transaction — lock
+                // it whole (the bill can still be viewed/printed). Uses the same
+                // reliable paid signal as the queue Pay badge, not the stale
+                // appointment payStatus.
+                const billPaid = (apt.apptBillCount ?? 0) > 0
+                  ? (apt.apptDue ?? 0) <= 0 && (apt.apptRefund ?? 0) <= 0
+                  : apt.payStatus?.toUpperCase() === "PAID";
+                const paidWalkin = billPaid && !!apt.isWalkin;
+                const readOnly = isCompleted || isWithDoctor || isPastWindow || paidWalkin;
                 setEditingAppointment({
                   id: apt.id,
+                  patientId: apt.patientId,
                   patientName: apt.patientName,
                   patientPhone: apt.patientPhone,
                   patientEmail: apt.patientEmail,
@@ -494,11 +526,17 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                   doctorId: apt.doctorId || activeDoctorId,
                   payStatus: apt.payStatus,
                   paymentMethod: apt.paymentMethod,
+                  todayBillCount: apt.todayBillCount,
+                  apptBillCount: apt.apptBillCount,
+                  apptDue: apt.apptDue,
+                  apptRefund: apt.apptRefund,
                   notes: apt.notes,
                   fee: apt.fee,
                   readOnly,
                   readOnlyReason: isCompleted
                     ? "Appointment is completed — view only."
+                    : isWithDoctor ? "Appointment is with the doctor — view only."
+                    : paidWalkin ? "Walk-in is billed & paid — view only."
                     : isPastWindow ? "Edit window closed (24h after booking) — view only."
                     : undefined,
                 });
@@ -602,7 +640,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
         // additional bill has prior invoices to show; on a first bill the link
         // stays hidden (onViewBills omitted).
         onViewBills={additionalBill ? () => { const apt = medsBillingApt; setMedsBillingApt(null); if (apt) openBillsHistory(apt); } : undefined}
-        onBilled={async ({ method, lineItems, paid }) => {
+        onBilled={async ({ method, lineItems, paid, note }) => {
           // ONE atomic call: the server recomputes the totals from these line
           // items, writes payment, creates the invoice, auto-covers from the
           // deposit and deducts stock — so money + inventory never drift apart.
@@ -612,7 +650,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           const isWaive = method === "Waive";
           if (!aptId) { setToastMessage("No appointment to bill"); return; }
           try {
-            const result = await chargeAppointment(aptId, { method, paidAmount: paid, items: lineItems });
+            const result = await chargeAppointment(aptId, { method, paidAmount: paid, items: lineItems, note });
             const inr = result.bill.billed.toLocaleString("en-IN", { minimumFractionDigits: 2 });
             const baseMsg = isWaive ? `Bill waived for ${who}` : `₹${inr} billed via ${method} for ${who}`;
             setRefreshKey((k) => k + 1);
@@ -685,6 +723,9 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
         loading={historyLoading}
         // Invoice no / pencil → open that bill's read-only detail.
         onView={(b) => setViewBill(b)}
+        // Row printer → the shared "Bill cum Receipt", with the patient meta the
+        // appointment carries.
+        onPrint={(b) => { if (billsHistoryApt) printBill({ ...b, patientName: billsHistoryApt.patientName }, aptReceiptMeta(billsHistoryApt)); }}
         // Create New Bill → close the history and open the editor for another
         // invoice. It opens blank automatically because the patient already has
         // a bill for the date (additionalBill = todayBillCount > 0).
@@ -700,11 +741,30 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           header "View bills" link drops back to the history. */}
       {viewBill && billsHistoryApt && (
         <BillReadModal
-          key={viewBill.id}
+          // Key on paid too, so recording a payment remounts the detail with a
+          // fresh "Collect balance" input rather than a stale typed amount.
+          key={`${viewBill.id}:${viewBill.paid}`}
           isOpen
           onClose={() => setViewBill(null)}
           bill={{ ...viewBill, patientName: billsHistoryApt.patientName, today: false }}
           onViewBills={() => setViewBill(null)}
+          // Print / share the receipt with the patient meta + contact the
+          // appointment already carries (age in months → years, gender, phone,
+          // email, T-id).
+          onPrint={(b) => printBill(b, aptReceiptMeta(billsHistoryApt))}
+          share={{ patient: aptReceiptMeta(billsHistoryApt), phone: billsHistoryApt.patientPhone, email: billsHistoryApt.patientEmail, onError: setToastMessage }}
+          // Collect the (possibly partial) balance: record it, then update both
+          // the open detail and the history row behind it in place.
+          onRecordPayment={async (b, amount, method) => {
+            if (amount <= 0) return;
+            try {
+              const updated = await payBill(b.id, { paidAmount: amount, method });
+              setHistoryBills((list) => list.map((x) => (x.id === updated.id ? updated : x)));
+              setViewBill(updated);
+            } catch (e) {
+              setToastMessage((e as Error).message || "Couldn't record the payment");
+            }
+          }}
           // Refund updates the history row behind the detail (the detail itself
           // flips to Refunded in place).
           onRefunded={(u) => setHistoryBills((list) => list.map((x) => (x.id === u.id ? u : x)))}

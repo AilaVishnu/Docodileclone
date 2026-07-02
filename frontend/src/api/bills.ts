@@ -14,6 +14,7 @@ export type Bill = {
   payStatus: string | null;
   paymentMethod: string | null;
   items: string | null;
+  note: string | null;
   appointmentId: string | null;
   createdAt: string;
 };
@@ -29,6 +30,7 @@ export type CreateBillPayload = {
   payStatus?: string;
   paymentMethod?: string;
   items?: string;
+  note?: string;
 };
 
 function authHeaders(): Record<string, string> {
@@ -70,6 +72,18 @@ export async function refundBill(billId: string): Promise<ClinicBill> {
   return res.json();
 }
 
+// Record a payment against a bill ("Mark paid" / "Pay ₹X" / "Record payment").
+// Adds to what's collected and re-settles due/payStatus. Returns the updated bill.
+export async function payBill(billId: string, payload: { paidAmount: number; method?: string; note?: string }): Promise<ClinicBill> {
+  const res = await fetch(`${API_BASE_URL}/api/tenant/bills/${billId}/pay`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
 export async function createBill(patientId: string, payload: CreateBillPayload): Promise<Bill> {
   const res = await fetch(`${API_BASE_URL}/api/patients/${patientId}/bills`, {
     method: "POST",
@@ -101,7 +115,7 @@ export type ChargeResult = {
 };
 export async function chargeAppointment(
   appointmentId: string,
-  payload: { method: string; discountAmount?: number; paidAmount?: number; billDate?: string; items: ChargeLine[] },
+  payload: { method: string; discountAmount?: number; paidAmount?: number; billDate?: string; items: ChargeLine[]; note?: string },
 ): Promise<ChargeResult> {
   const res = await fetch(`${API_BASE_URL}/api/tenant/appointments/${appointmentId}/charge`, {
     method: "POST",

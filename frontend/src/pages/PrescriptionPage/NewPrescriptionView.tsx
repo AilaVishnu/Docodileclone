@@ -135,6 +135,12 @@ export function NewPrescriptionView({ onBack, onPrescribe }: { onBack?: () => vo
             onDiscountChange={(v) => setForm({ ...form, discount: v })}
             total={Math.round(total)}
             services={form.services.map((svc) => ({ name: svc, price: priceOf(svc) }))}
+            patientName={form.name}
+            patientMeta={{
+              age: form.age ? (parseInt(form.age.split("/")[0]?.trim() || "", 10) || undefined) : undefined,
+              gender: form.gender || undefined,
+              mobile: form.phone || undefined,
+            }}
           />
         </div>
 
