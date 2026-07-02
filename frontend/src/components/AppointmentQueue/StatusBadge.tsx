@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { fonts, colors, radii } from "../../styles/theme";
 import { Icon } from "../Icon";
+import { RefundGlyph, WaivedGlyph } from "../BillStatusBadge/BillStatusBadge";
 
 // H:MM:SS once past an hour, MM:SS below.
 const formatTimer = (s: number) => {
@@ -71,12 +72,19 @@ const PAY_CONFIG: Record<
     label: "Due",
     icon: <Icon name="danger-triangle" size={24} />,
   },
-  // WAIVED — the charge was written off, so nothing is owed. It's settled, so it
-  // reads like Paid (check icon) with its own "Waived" tooltip — never the Due ⚠.
+  // WAIVED — the charge was written off. Reuses the design-system waive glyph
+  // (soft-blue dash), so it reads as waived, never a Paid tick or Due ⚠.
   WAIVED: {
     color: colors.neutral900,
     label: "Waived",
-    icon: <Icon name="check-circle" size={24} />,
+    icon: <WaivedGlyph size={24} />,
+  },
+  // REFUNDED — the payment was reversed. Reuses the design-system refund glyph
+  // (maroon back-arrow) so it reads as refunded, never a Paid tick.
+  REFUNDED: {
+    color: colors.neutral900,
+    label: "Refunded",
+    icon: <RefundGlyph size={24} />,
   },
 };
 

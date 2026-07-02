@@ -24,16 +24,18 @@ const CONFIG: Record<BillStatus, { tint: string; icon: string; iconColor: string
   waived: { tint: colors.blueAlpha20, icon: "", iconColor: "", label: "Waived" },
 };
 
-// Refunded — maroon circle with a cream back-arrow.
-const RefundGlyph = () => (
-  <svg width={GLYPH} height={GLYPH} viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }} aria-hidden="true">
+// Refunded — maroon circle with a cream back-arrow. Exported so the queue Pay
+// badge reuses the exact same glyph (don't reinvent it).
+export const RefundGlyph = ({ size = GLYPH }: { size?: number } = {}) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }} aria-hidden="true">
     <circle cx="9.99935" cy="10.0001" r="8.33333" fill={colors.maroon200} stroke={colors.maroon200} />
     <path d="M6.51667 10.0001L13.4832 10M9.25888 12.3461L6.51667 10.0001L9.25888 7.43275" stroke={colors.primary100} strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
-// Waived — soft-blue circle with a cream dash.
-const WaivedGlyph = () => (
-  <svg width={GLYPH} height={GLYPH} viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }} aria-hidden="true">
+// Waived — soft-blue circle with a cream dash. Exported so the queue Pay badge
+// reuses the exact same glyph (don't reinvent it).
+export const WaivedGlyph = ({ size = GLYPH }: { size?: number } = {}) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }} aria-hidden="true">
     <circle cx="9.99935" cy="10.0001" r="8.33333" fill={colors.blue100} stroke={colors.blue100} />
     <path d="M6.51758 10L13.4841 10" stroke={colors.primary100} strokeLinecap="round" />
   </svg>

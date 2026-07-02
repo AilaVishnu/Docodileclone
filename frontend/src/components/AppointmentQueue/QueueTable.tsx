@@ -46,11 +46,20 @@ export type Appointment = {
    *  field and auto-covers the bill on Charge & Bill; adjusted via the drawer. */
   deposit?: number;
   /** Bills the patient already has for this date. 0 → kebab shows "Bill";
-   *  > 0 → it shows "Create Bill" + "View Bills". */
+   *  > 0 → it shows "Create Bill" + "View Bills". Per-patient (kebab only). */
   todayBillCount?: number;
-  /** Total still outstanding across the patient's bills for this date. With
-   *  todayBillCount it drives the Pay badge: billed + nothing due → Paid. */
+  /** Per-patient day totals — the Pay-badge FALLBACK when this appointment has
+   *  no linked bill (a standalone New Bill): a clean day (nothing due/refunded)
+   *  reads Paid instead of a false Due. Refund/due here never bleed onto the
+   *  badge — those stay on the specific appointment that owns them. */
   todayDue?: number;
+  todayRefund?: number;
+  /** Stats for the bills linked to THIS appointment (not the patient's other
+   *  visits) — drive the Pay badge per appointment: has a bill + nothing due →
+   *  Paid, any due → Due, any refund → Refunded. */
+  apptBillCount?: number;
+  apptDue?: number;
+  apptRefund?: number;
   /** True when the linked patient has been archived. Drives "patient is
    *  archived" toasts in queue/pad navigation. */
   patientArchived?: boolean;
@@ -98,12 +107,28 @@ function formatPhone(raw: string): string {
   return digits.length > 10 && digits.startsWith("91") ? digits.slice(2) : digits;
 }
 
-// The Pay badge shown in the queue. Once the patient has a bill for the day, it
-// reflects those bills — settled (nothing due) → Paid, otherwise Due — so a
-// patient paid via a standalone bill no longer shows a false Due. Falls back to
-// the appointment's own payStatus only when there's no bill for today yet.
+// The Pay badge shown in the queue. Reflects THIS appointment's own bill(s):
+// anything still owed → Due, else any refund → Refunded, else Paid. Keyed per
+// appointment so a refund/payment on one visit never colours another visit for
+// the same patient.
+//
+// When this appointment has no bill of its own, fall back to the patient's day
+// but ONLY for a clean settled state (a bill exists, nothing due, nothing
+// refunded) → Paid — so a standalone New Bill payment isn't shown as a false
+// Due. A refund/due elsewhere does NOT bleed here (it stays on the appointment
+// that owns it); anything unclear falls through to the appointment's payStatus.
 function payBadgeFor(apt: Appointment): string {
-  if ((apt.todayBillCount ?? 0) > 0) return (apt.todayDue ?? 0) > 0 ? "DUE" : "PAID";
+  // A waive is a settled write-off — never a Paid tick. Detected from the
+  // appointment's own status (set to WAIVED at booking / charge).
+  const waived = apt.payStatus?.toUpperCase() === "WAIVED";
+  if ((apt.apptBillCount ?? 0) > 0) {
+    if ((apt.apptDue ?? 0) > 0) return "DUE";
+    if ((apt.apptRefund ?? 0) > 0) return "REFUNDED";
+    if (waived) return "WAIVED";
+    return "PAID";
+  }
+  if (waived) return "WAIVED";
+  if ((apt.todayBillCount ?? 0) > 0 && (apt.todayDue ?? 0) <= 0 && (apt.todayRefund ?? 0) <= 0) return "PAID";
   return apt.payStatus || "DUE";
 }
 
