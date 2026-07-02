@@ -48,6 +48,33 @@ export interface BillPrintProps {
   paymentMode?: string;
   /** Paper width in px. Default 760 (≈ A4 on screen). */
   width?: number;
+
+  // ── Template-driven options (all optional; defaults reproduce the original
+  //    receipt so existing callers/stories are unaffected). ────────────────────
+  /** Receipt heading. Default "Bill cum Receipt". */
+  title?: string;
+  /** Clinic GST registration number, printed under the letterhead. */
+  gstin?: string;
+  /** Accent colour for the title, rule and Final Amount. Falls back to tokens. */
+  accentColor?: string;
+  /** Footer terms / note printed under the totals. */
+  termsText?: string;
+  /** Authorised-signatory block. */
+  signature?: { image?: string; heightMm?: number; text?: string; seal?: string };
+  /** Override the paper font family. */
+  fontFamily?: string;
+  /** Skip the text letterhead (pre-printed paper, or an uploaded header image). */
+  hideLetterhead?: boolean;
+  showDiscountCol?: boolean;
+  showGstRow?: boolean;
+  showAmountInWords?: boolean;
+  showPaymentMode?: boolean;
+  showReferredBy?: boolean;
+  showPatientId?: boolean;
+  showPatientAddress?: boolean;
+  showPatientMobile?: boolean;
+  showReceivedRow?: boolean;
+  showBalanceRow?: boolean;
 }
 
 const inr = (n: number) => `₹ ${Math.round(n).toLocaleString("en-IN")}`;
@@ -87,6 +114,11 @@ const MetaRow = ({ label, value }: { label: string; value: React.ReactNode }) =>
 export function BillPrint({
   clinic, patient, invoiceNo, billDate, status = "paid", referredBy,
   items, gstAmount = 0, overallDiscount = 0, received, paymentMode, width = 760,
+  title = "Bill cum Receipt", gstin, accentColor, termsText, signature,
+  showDiscountCol = true, showGstRow = true, showAmountInWords = true,
+  showPaymentMode = true, showReferredBy = true, showPatientId = true,
+  showPatientAddress = true, showPatientMobile = true, showReceivedRow = true,
+  showBalanceRow = true, fontFamily, hideLetterhead = false,
 }: BillPrintProps) {
   const lineNet = (it: BillPrintItem) => it.qty * it.price - (it.discount ?? 0);
   const billed = items.reduce((s, it) => s + it.qty * it.price, 0);
@@ -115,36 +147,41 @@ export function BillPrint({
   else pushGroup(null, items);
 
   return (
-    <div style={{ ...st.paper, width }}>
-      {/* Letterhead */}
-      <div style={st.header}>
-        {clinic.logo && <div style={st.logo}>{clinic.logo}</div>}
-        <div style={st.identity}>
-          <div style={st.clinicName}>{clinic.name}</div>
-          <div style={st.clinicSub}>{clinic.address}</div>
-          <div style={st.clinicSub}>
-            {[clinic.phone && `Ph: ${clinic.phone}`, clinic.instagram, clinic.email].filter(Boolean).join("  ·  ")}
+    <div style={{ ...st.paper, width, ...(fontFamily ? { fontFamily } : {}) }}>
+      {/* Letterhead — skipped on pre-printed paper / when an uploaded header
+          image already carries the clinic identity. */}
+      {!hideLetterhead && (
+        <>
+          <div style={st.header}>
+            {clinic.logo && <div style={st.logo}>{clinic.logo}</div>}
+            <div style={st.identity}>
+              <div style={st.clinicName}>{clinic.name}</div>
+              <div style={st.clinicSub}>{clinic.address}</div>
+              <div style={st.clinicSub}>
+                {[clinic.phone && `Ph: ${clinic.phone}`, clinic.instagram, clinic.email].filter(Boolean).join("  ·  ")}
+              </div>
+              {gstin && <div style={st.clinicSub}>GSTIN: {gstin}</div>}
+            </div>
           </div>
-        </div>
-      </div>
+          <div style={{ ...st.rule, ...(accentColor ? { backgroundColor: accentColor } : {}) }} />
+        </>
+      )}
 
-      <div style={st.rule} />
-
-      <div style={st.title}>Bill cum Receipt</div>
+      <div style={{ ...st.title, ...(accentColor ? { color: accentColor } : {}) }}>{title}</div>
 
       {/* Patient + bill meta */}
       <div style={st.metaGrid}>
         <div style={st.metaCol}>
           <MetaRow label="Patient Name" value={patient.name + (patientMeta ? ` (${patientMeta})` : "")} />
-          {patient.mobile && <MetaRow label="Mobile Number" value={patient.mobile} />}
-          {patient.id && <MetaRow label="Patient Id" value={patient.id} />}
-          {patient.address && <MetaRow label="Address" value={patient.address} />}
+          {showPatientMobile && patient.mobile && <MetaRow label="Mobile Number" value={patient.mobile} />}
+          {showPatientId && patient.id && <MetaRow label="Patient Id" value={patient.id} />}
+          {showPatientAddress && patient.address && <MetaRow label="Address" value={patient.address} />}
         </div>
         <div style={st.metaCol}>
           <MetaRow label="Bill Date" value={billDate} />
           <MetaRow label="Bill Number" value={invoiceNo} />
           <MetaRow label="Bill Status" value={<span style={{ color: STATUS[status].color, fontWeight: fonts.weight.semibold }}>{STATUS[status].label}</span>} />
-          <MetaRow label="Referred By" value={referredBy || "—"} />
+          {showReferredBy && <MetaRow label="Referred By" value={referredBy || "—"} />}
         </div>
       </div>
 
@@ -156,21 +193,21 @@ export function BillPrint({
             <th style={{ ...st.th, textAlign: "left" }}>Particulars</th>
             <th style={{ ...st.th, ...st.colQty }}>Qty</th>
             <th style={{ ...st.th, ...st.colMoney }}>Price</th>
-            <th style={{ ...st.th, ...st.colMoney }}>Discount</th>
+            {showDiscountCol && <th style={{ ...st.th, ...st.colMoney }}>Discount</th>}
             <th style={{ ...st.th, ...st.colMoney }}>Net Price</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r, i) =>
             "section" in r ? (
-              <tr key={`s${i}`}><td colSpan={6} style={st.sectionRow}>{r.section}</td></tr>
+              <tr key={`s${i}`}><td colSpan={showDiscountCol ? 6 : 5} style={st.sectionRow}>{r.section}</td></tr>
             ) : (
               <tr key={i}>
                 <td style={{ ...st.td, ...st.colNum, color: colors.neutral500 }}>{r.idx}</td>
                 <td style={{ ...st.td, textAlign: "left" }}>{r.item.name}</td>
                 <td style={{ ...st.td, ...st.colQty }}>{r.item.qty}</td>
                 <td style={{ ...st.td, ...st.colMoney }}>{r.item.price.toLocaleString("en-IN")}</td>
-                <td style={{ ...st.td, ...st.colMoney }}>{(r.item.discount ?? 0).toLocaleString("en-IN")}</td>
+                {showDiscountCol && <td style={{ ...st.td, ...st.colMoney }}>{(r.item.discount ?? 0).toLocaleString("en-IN")}</td>}
                 <td style={{ ...st.td, ...st.colMoney, fontWeight: fonts.weight.medium }}>{inr(lineNet(r.item))}</td>
               </tr>
             ),
@@ -181,18 +218,32 @@ export function BillPrint({
       {/* Payment + totals */}
       <div style={st.footer}>
         <div style={st.payCol}>
-          {paymentMode && <MetaRow label="Payment Mode" value={paymentMode} />}
-          <div style={st.words}>{rupeesInWords(finalAmount)}</div>
+          {showPaymentMode && paymentMode && <MetaRow label="Payment Mode" value={paymentMode} />}
+          {showAmountInWords && <div style={st.words}>{rupeesInWords(finalAmount)}</div>}
         </div>
         <div style={st.totals}>
           {totalRow("Billed Amount", inr(billed))}
-          {totalRow("Total GST Amount", inr(gstAmount))}
-          {totalRow("Overall Discount", `− ${inr(totalDiscount)}`)}
-          {totalRow("Final Amount", inr(finalAmount), true)}
-          {totalRow("Received Amount", inr(recd))}
-          {totalRow("Balance Amount", inr(balance), false, balance > 0 ? colors.red200 : undefined)}
+          {showGstRow && totalRow("Total GST Amount", inr(gstAmount))}
+          {showDiscountCol && totalRow("Overall Discount", `− ${inr(totalDiscount)}`)}
+          {totalRow("Final Amount", inr(finalAmount), true, accentColor)}
+          {showReceivedRow && totalRow("Received Amount", inr(recd))}
+          {showBalanceRow && totalRow("Balance Amount", inr(balance), false, balance > 0 ? colors.red200 : undefined)}
         </div>
       </div>
+
+      {/* Terms + authorised signatory */}
+      {(termsText || signature?.image || signature?.text || signature?.seal) && (
+        <div style={st.tailRow}>
+          <div style={st.terms}>{termsText}</div>
+          <div style={st.signCol}>
+            {signature?.seal && <img src={signature.seal} alt="" style={st.seal} />}
+            {signature?.image && (
+              <img src={signature.image} alt="" style={{ height: `${signature.heightMm ?? 18}mm`, objectFit: "contain" }} />
+            )}
+            {signature?.text && <div style={st.signText}>{signature.text}</div>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -241,6 +292,12 @@ const st: Record<string, React.CSSProperties> = {
   footer: { display: "flex", justifyContent: "space-between", gap: spacing.xl, alignItems: "flex-start" },
   payCol: { display: "flex", flexDirection: "column", gap: spacing.s, maxWidth: 300 },
   words: { fontSize: fonts.size.s, color: colors.neutral700, fontStyle: "italic" },
+
+  tailRow: { display: "flex", justifyContent: "space-between", gap: spacing.xl, alignItems: "flex-end", marginTop: spacing.s },
+  terms: { fontSize: fonts.size.xs, color: colors.neutral600, whiteSpace: "pre-wrap", maxWidth: 360, lineHeight: 1.4 },
+  signCol: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, textAlign: "right" },
+  seal: { maxHeight: "28mm", maxWidth: "40mm", objectFit: "contain", opacity: 0.85 },
+  signText: { fontSize: fonts.size.s, color: colors.neutral700, whiteSpace: "pre-wrap" },
 
   totals: { width: 300, display: "flex", flexDirection: "column", gap: spacing["2xs"] },
   totalRow: { display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: fonts.size.s },
