@@ -571,7 +571,11 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       setSelectedPatient(nav.patient);
       setSelectedAppointmentId(nav.appointmentId);
       if (nav.returnTab) setReturnTab(nav.returnTab);
-      if (typeof nav.initialAction === "number") setActiveAction(nav.initialAction);
+      // Always pin the section for the incoming patient — a file-view nav opens
+      // Info (4); a consultation/resume nav (no initialAction) opens Visits (0).
+      // Setting it unconditionally stops a previous patient's tab from bleeding
+      // over and suppressing the Visits-only slot check for the next one.
+      setActiveAction(nav.initialAction ?? 0);
     };
     window.addEventListener("docodile:session-nav", handler);
     return () => window.removeEventListener("docodile:session-nav", handler);
@@ -1062,17 +1066,23 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       setSlotOptions(null);
       setSlotChecked(null);
       setSelectedAppointmentStatus(null);
+      // Back to the queue → next patient opened from the in-page queue starts on
+      // Visits, so its slot check runs (the queue onSelect doesn't set a section).
+      setActiveAction(0);
     }
   }, [selectedPatientId]);
 
-  // On every pad open, look up the patient's appointments for today. With
-  // 2+, ask which slot this consultation is for (popup below) — a visit is
-  // only created once the doctor picks. With exactly 1, adopt it silently.
-  // With 0, leave the ambient flow (existing visits / "No visits yet").
-  // Runs even when the queue pre-selected an appointment, so clicking
-  // either same-day card still asks which slot.
+  // When the doctor enters the Visits/consultation flow for a patient, look up
+  // the patient's appointments for today. With 2+, ask which slot this
+  // consultation is for (popup below) — a visit is only created once the doctor
+  // picks. With exactly 1, adopt it silently. With 0, leave the ambient flow
+  // (existing visits / "No visits yet").
+  // Only in the Visits section (activeAction 0): opening the patient FILE
+  // (Info / Files / Timeline / Bills) is just browsing, not starting a visit,
+  // so it must not prompt for a slot. Switching to the Visits tab runs it then.
   React.useEffect(() => {
     if (!selectedPatientId || visitsLoadedFor !== selectedPatientId) return;
+    if (activeAction !== 0) return;
     if (slotFetchedForRef.current === selectedPatientId) return;
     slotFetchedForRef.current = selectedPatientId;
     const today = todayIso();
@@ -1108,7 +1118,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       }
     })();
     return () => { cancelled = true; };
-  }, [selectedPatientId, visitsLoadedFor]);
+  }, [selectedPatientId, visitsLoadedFor, activeAction]);
 
   // Adopt the slot the doctor picked → the per-appointment auto-create
   // effect then opens (or creates) that appointment's visit.
