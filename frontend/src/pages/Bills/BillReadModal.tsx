@@ -98,9 +98,12 @@ export interface BillReadModalProps {
   /** Share context — patient contact used to pre-fill the share channels
    *  (WhatsApp/Email) and demographics for the PDF receipt. */
   share?: { patient?: PrintPatientMeta; phone?: string; email?: string; onError?: (message: string) => void };
+  /** Allow refunding a settled bill. False for a synthetic/preview bill that
+   *  isn't persisted (nothing to refund against). Default true. */
+  allowRefund?: boolean;
 }
 
-export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefunded, onViewBills, onPrint, share }: BillReadModalProps) {
+export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefunded, onViewBills, onPrint, share, allowRefund = true }: BillReadModalProps) {
   const committed = React.useMemo(() => parseLines(bill.items), [bill.items]);
 
   // Refund flow: Refund button → confirm → POST → reflect REFUNDED in place
@@ -176,7 +179,7 @@ export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefund
       }
       headerActions={
         <>
-          <button style={st.linkBtn} onClick={() => onViewBills?.(bill)}>View bills</button>
+          {onViewBills && <button style={st.linkBtn} onClick={() => onViewBills(bill)}>View bills</button>}
           <Icon name="printer" size={24} tone="inherit" style={{ color: colors.neutral900, cursor: "pointer" }} onClick={() => onPrint?.(bill)} />
           <ShareBillMenu bill={bill} patient={share?.patient} phone={share?.phone} email={share?.email} onError={share?.onError} />
         </>
@@ -256,7 +259,7 @@ export function BillReadModal({ isOpen, onClose, bill, onRecordPayment, onRefund
             iconLeft={<Icon name="bill-check" size={18} tone="inverse" />}>
             {collectNow < balance ? `Record ${inr(collectNow)}` : "Record payment"}
           </Button>
-        ) : effRefund === 0 && status !== "waived" ? (
+        ) : allowRefund && effRefund === 0 && status !== "waived" ? (
           <Button variant="light" size="md" style={{ flex: 1 }} onClick={() => setConfirmRefund(true)}>Refund</Button>
         ) : null
       }

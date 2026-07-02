@@ -92,7 +92,7 @@ const BILL_ITEM_INPUT_STYLE: React.CSSProperties = {
 export function BillModal({
   isOpen, onClose, patient, initialServices,
   patientName, invoiceNo, onViewBills, medicines, onBilled, onPaid,
-  serviceName, serviceFee = 0, catalog, loading = false, patientId, initialNote,
+  serviceName, serviceFee = 0, catalog, loading = false, patientId, initialNote, isPaid = false,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -141,6 +141,9 @@ export function BillModal({
   /** Reopened-bill mode: the bill's existing Details note, seeded into the
    *  editor so a reopen shows it (and can edit + re-save it on pay). */
   initialNote?: string;
+  /** The bill is already settled — hide the "Mark paid" action (there's nothing
+   *  to collect); the modal is just a view/print of what was paid. */
+  isPaid?: boolean;
   /** @deprecated The standalone deposit field was removed — an advance is now
    *  applied as an "Advance / credit" payment mode. Still accepted so existing
    *  callers compile; ignored until the credit-mode wiring lands. */
@@ -591,9 +594,12 @@ export function BillModal({
             iconLeft={<Icon name="verified-badge" size={20} tone="inverse" />}>
             {isWaived ? "Mark Waived" : "Charge & Bill"}
           </Button>
-        ) : (
-          <Button variant="dark" size="md" onClick={() => { if (onPaid) onPaid(paidEntered, methodLabel, billNote.trim() || undefined); else onClose(); }} style={{ flex: 1 }}
-            disabled={!!onPaid && paidEntered <= 0}
+        ) : (isPaid || !onPaid) ? null : (
+          // Only shown when the modal can actually record a payment (onPaid). A
+          // view-only open (e.g. the appointment card's expand) or an already-
+          // settled bill has no action — close via the header ✕.
+          <Button variant="dark" size="md" onClick={() => onPaid(paidEntered, methodLabel, billNote.trim() || undefined)} style={{ flex: 1 }}
+            disabled={paidEntered <= 0}
             iconLeft={<Icon name="verified-badge" size={20} tone="inverse" />}>
             {balance > 0 ? `Pay ${inr(balance)}` : "Mark paid"}
           </Button>
