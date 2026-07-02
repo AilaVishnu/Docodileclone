@@ -140,11 +140,13 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     // the wall-clock time, and isWalkin=true is sent to the backend so the
     // queue card / billing flow treats it the same as a queue-side walk-in.
     isWalkin: !!editingAppointment?.isWalkin,
-    paymentMethod: editingAppointment?.paymentMethod || "",
+    // A WAIVED appointment reads back as the "Waive" channel at a full 100%
+    // write-off (its fee holds the pre-waive service amount).
+    paymentMethod: editingAppointment?.payStatus?.toUpperCase() === "WAIVED" ? "Waive" : (editingAppointment?.paymentMethod || ""),
     note: editingAppointment?.notes || "",
     subtotal: editingAppointment?.fee || 0,
     tax: "" as string,
-    discount: 0.0,
+    discount: editingAppointment?.payStatus?.toUpperCase() === "WAIVED" ? 100 : 0.0,
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -157,7 +159,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     { payStatus: string; successMessage?: string; message: string } | null
   >(null);
   const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
-  const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
+  const [discountMode, setDiscountMode] = useState<"%" | "₹">(editingAppointment?.payStatus?.toUpperCase() === "WAIVED" ? "%" : "₹");
   // "Advanced" toggle in the page header — reveals extra fields. Wiring the
   // extra fields is deferred; for now this state is set but unused.
   const [isAdvanced, setIsAdvanced] = useState(false);
@@ -422,14 +424,17 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         type: form.type,
         service: form.services.join(" + "),
         isWalkin: form.isWalkin,
-        // "Book Now Pay Later" leaves the payment channel undecided —
-        // even if the receptionist accidentally clicked a Cash/Card/UPI
-        // radio in the UI, we discard it here so the appointment row
-        // doesn't carry a misleading method until it's actually paid.
-        paymentMethod: payStatus === "Paid" ? form.paymentMethod : null,
+        // Persist whatever payment channel the desk picked (Cash/Card/UPI/Waive)
+        // so it survives a reload / reopen — it's the chosen/intended method.
+        // Paid vs unpaid is governed by payStatus, not this field, so a stored
+        // method on an unpaid row isn't "already paid", just the selected channel.
+        paymentMethod: form.paymentMethod || null,
         notes: form.note || null,
-        fee: total > 0 ? total : null,
-        payStatus,
+        // A waive is a full write-off: the total nets to ₹0, but we still record
+        // the SERVICE amount (subtotal) as the fee so a WAIVED invoice can be
+        // minted for it. Otherwise the fee is the net charged.
+        fee: form.paymentMethod === "Waive" ? (subtotal > 0 ? subtotal : null) : (total > 0 ? total : null),
+        payStatus: form.paymentMethod === "Waive" ? "WAIVED" : payStatus,
         // Tells the backend to skip its own same-day duplicate check.
         // Only true on the second submit after the user confirmed the
         // duplicate in the modal below.
