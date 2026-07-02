@@ -17,7 +17,9 @@ export const styles: Record<string, CSSProperties> = {
     padding: `${spacing.s} ${spacing.m}`,
     boxShadow: "0 4px 16px rgba(0, 0, 0, 0.1)",
     zIndex: 4000,
-    animation: "slideIn 0.3s ease-out",
+    // Enter/exit is transition-driven in Toast.tsx (slide + fade, tokenised,
+    // reduced-motion-safe) rather than a one-shot CSS keyframe, so the toast can
+    // also animate OUT before it unmounts.
   },
 
   // Same chip, but in normal document flow (no fixed overlay / z-index /

@@ -58,7 +58,7 @@ export function Switch({ checked, onChange, size = "md", hint, ariaLabel, disabl
           backgroundColor: checked ? colors.active.shade600 : colors.neutral300,
           position: "relative",
           cursor: disabled ? "not-allowed" : "pointer",
-          transition: "background-color 160ms",
+          transition: "background-color var(--motion-base) var(--ease-standard)",
           flexShrink: 0,
           display: "inline-block",
         }}
@@ -73,7 +73,7 @@ export function Switch({ checked, onChange, size = "md", hint, ariaLabel, disabl
             borderRadius: "50%",
             backgroundColor: colors.neutral100,
             boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
-            transition: "transform 160ms",
+            transition: "transform var(--motion-slow) var(--ease-spring)",
             transform: `translateX(${checked ? s.travel + 2 : 2}px)`,
             display: "block",
           }}

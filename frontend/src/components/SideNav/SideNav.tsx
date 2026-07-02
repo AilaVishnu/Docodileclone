@@ -3,6 +3,15 @@ import { Icon } from "../Icon";
 import { SideNavItem } from './SideNavItem';
 import { ReactComponent as LogoSmall } from "../../assets/logo-small.svg";
 import { colors } from "../../styles/theme";
+import { LottieIcon } from "../Icon/LottieIcon";
+import homeLottie from "../../assets/lottie/home.json";
+import calendarLottie from "../../assets/lottie/calendar.json";
+import filesLottie from "../../assets/lottie/files.json";
+import pieChartLottie from "../../assets/lottie/pie-chart.json";
+import settingsLottie from "../../assets/lottie/settings.json";
+import patientLottie from "../../assets/lottie/patient.json";
+import catalogLottie from "../../assets/lottie/catalog.json";
+import medsLottie from "../../assets/lottie/meds.json";
 
 export type NavTab =
   | 'Home'
@@ -51,28 +60,23 @@ export function SideNav({ activeTab, onTabChange }: SideNavProps) {
     }
   } as const;
 
-  // Gear icon for Settings.
-  const SettingsIcon = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-  );
-
   // `label` is the routing key (the NavTab); `display` is the short name shown
   // in the compact sidebar. Keep them separate so the wording can change
   // without touching navigation / persisted tab state.
   const menuItems: { label: NavTab; display: string; icon: React.ReactNode }[] = [
-    { label: 'Home', display: 'Home', icon: <Icon name="home" tone="inherit" /> },
-    { label: 'Appointments', display: 'Appts', icon: <Icon name="appointments" tone="inherit" /> },
-    { label: 'Prescription', display: 'Rx Pad', icon: <Icon name="prescription" tone="inherit" /> },
-    { label: 'Patient Files', display: 'Patients', icon: <Icon name="patient-files" tone="inherit" /> },
-    { label: 'Services', display: 'Catalog', icon: <Icon name="catalog" tone="inherit" /> },
-    { label: 'Billing', display: 'Bills', icon: <Icon name="billing" tone="inherit" /> },
-    { label: 'Stats', display: 'Stats', icon: <Icon name="business" tone="inherit" /> },
-    { label: 'Pharmacy', display: 'Meds', icon: <Icon name="pill" tone="inherit" /> },
-    { label: 'Docs', display: 'Docs', icon: <Icon name="document-school" tone="inherit" /> },
-    { label: 'Settings', display: 'Config', icon: <SettingsIcon /> },
+    // Animated Lottie glyphs play a one-shot when their module becomes active
+    // (see LottieIcon). Home / Appointments / Patient Files / Stats / Settings are
+    // wired; the rest stay static <Icon>s until they get their own animated glyphs.
+    { label: 'Home', display: 'Home', icon: <LottieIcon animationData={homeLottie} active={activeTab === 'Home'} size={36} /> },
+    { label: 'Appointments', display: 'Appts', icon: <LottieIcon animationData={calendarLottie} active={activeTab === 'Appointments'} size={36} /> },
+    { label: 'Prescription', display: 'Rx Pad', icon: <LottieIcon animationData={filesLottie} active={activeTab === 'Prescription'} size={36} /> },
+    { label: 'Patient Files', display: 'Patients', icon: <LottieIcon animationData={patientLottie} active={activeTab === 'Patient Files'} size={36} /> },
+    { label: 'Services', display: 'Catalog', icon: <LottieIcon animationData={catalogLottie} active={activeTab === 'Services'} size={36} /> },
+    { label: 'Billing', display: 'Bills', icon: <Icon name="billing" tone="inherit" size={36} /> },
+    { label: 'Stats', display: 'Stats', icon: <LottieIcon animationData={pieChartLottie} active={activeTab === 'Stats'} size={36} /> },
+    { label: 'Pharmacy', display: 'Meds', icon: <LottieIcon animationData={medsLottie} active={activeTab === 'Pharmacy'} size={36} /> },
+    { label: 'Docs', display: 'Docs', icon: <Icon name="document-school" tone="inherit" size={36} /> },
+    { label: 'Settings', display: 'Config', icon: <LottieIcon animationData={settingsLottie} active={activeTab === 'Settings'} size={36} /> },
   ];
 
   return (

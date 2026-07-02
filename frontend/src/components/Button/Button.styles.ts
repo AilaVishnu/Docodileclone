@@ -15,7 +15,15 @@ export const styles: Record<string, CSSProperties> = {
     fontFamily: fonts.family.primary,
     cursor: "pointer",
     outline: "none",
-    transition: "background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease",
+    // Motion tokens (globals.css). Includes transform for the press-scale and
+    // box-shadow for any hover lift; all reduced-motion-safe.
+    transition:
+      "background-color var(--motion-base) var(--ease-standard), " +
+      "border-color var(--motion-base) var(--ease-standard), " +
+      "color var(--motion-base) var(--ease-standard), " +
+      "transform var(--motion-fast) var(--ease-standard), " +
+      "box-shadow var(--motion-base) var(--ease-standard), " +
+      "opacity var(--motion-base) var(--ease-standard)",
     // Pill buttons should never wrap their label — if content is too long for
     // the container, button will overflow visibly (fix container) rather than
     // silently break onto two lines.
