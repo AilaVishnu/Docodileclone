@@ -369,7 +369,7 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
   // label but still open the booking flow; everywhere else it's "New Appointment".
   const primaryCta: { label?: string; variant: "primary" | "secondary" | "dark"; onClick: () => void; hidden?: boolean } = (() => {
     switch (activeTab) {
-      case "Services":      return { label: "New service", variant: "dark", onClick: () => setCreateNonce((n) => n + 1) };
+      case "Services":      return { variant: "dark", onClick: () => setCreateNonce((n) => n + 1), hidden: true }; // Catalog has its own "+ Add Service" in-page
       case "Pharmacy":      return { label: "Add Stock", variant: "dark", onClick: () => setCreateNonce((n) => n + 1) };
       case "Billing":       return { label: "New Bill", variant: "secondary", onClick: handleNewBill };
       case "Prescription":  return { label: "New Prescription", variant: "secondary", onClick: handleNewAppointment };
