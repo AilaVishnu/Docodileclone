@@ -28,23 +28,86 @@ class AppointmentService(
     private val patientRepository: PatientRepository,
     private val patientDepositService: PatientDepositService,
     private val billRepository: BillRepository,
+    private val billService: BillService,
 ) {
+    // Serializes the consultation line-item snapshot into the bill's `items`
+    // JSON (same shape the bill editor / print read back).
+    private val objectMapper = tools.jackson.databind.ObjectMapper()
+
+    // When an appointment is booked/settled as PAID or WAIVED with a service fee,
+    // mint its invoice so every settled service is a real, refundable/printable
+    // bill (not just a payStatus flag). A waive is a full write-off — the service
+    // amount is billed but nothing is collected (paid = 0, payStatus = WAIVED).
+    // Idempotent: skips if the appointment already has a bill, so a later
+    // Charge & Bill (which drops the service line when a bill exists) never
+    // double-bills the service.
+    private fun createConsultationBillIfPaid(appointment: Appointment) {
+        val fee = appointment.fee ?: return
+        val patientId = appointment.patient?.id ?: return
+        val apptId = appointment.id ?: return
+        if (fee <= java.math.BigDecimal.ZERO) return
+        val status = appointment.payStatus?.trim()?.uppercase()
+        val isWaive = status == "WAIVED"
+        val isPaid = status == "PAID"
+        if (!isWaive && !isPaid) return
+        if (billRepository.countByAppointment(apptId) > 0) return // already invoiced
+
+        val name = appointment.service?.trim().takeUnless { it.isNullOrEmpty() } ?: "Consultation"
+        val items = objectMapper.writeValueAsString(
+            listOf(mapOf("name" to name, "qty" to 1, "unit" to fee, "gst" to 0, "disc" to 0, "discUnit" to "₹", "kind" to "service")),
+        )
+        billService.createBill(
+            patientId,
+            com.example.docodile.web.CreateBillRequest(
+                appointmentId = apptId,
+                billDate = appointment.scheduledTime?.toLocalDate() ?: LocalDate.now(),
+                billed = fee,
+                paid = if (isWaive) java.math.BigDecimal.ZERO else fee, // waive collects nothing
+                due = java.math.BigDecimal.ZERO,
+                payStatus = if (isWaive) "WAIVED" else "PAID",
+                paymentMethod = appointment.paymentMethod,
+                items = items,
+            ),
+        )
+    }
+
     fun getAppointmentsForClinic(date: LocalDate): List<AppointmentDTO> {
         val startOfDay = date.atStartOfDay()
         val endOfDay = date.atTime(23, 59, 59)
 
-        // Bills each patient already has on this date → drives the queue kebab's
-        // "Create Bill" vs "View/Create Bills" branch AND the Pay badge (count +
-        // outstanding due), in one query, no N+1.
-        val statsByPatient: Map<UUID, Pair<Int, java.math.BigDecimal>> =
-            billRepository.billStatsByPatientForDate(date)
-                .associate { (it[0] as UUID) to Pair((it[1] as Number).toInt(), it[2] as java.math.BigDecimal) }
+        val appointments = appointmentRepository.findAllByScheduledTimeBetween(startOfDay, endOfDay)
 
-        return appointmentRepository.findAllByScheduledTimeBetween(startOfDay, endOfDay)
-            .map {
-                val stats = statsByPatient[it.patient?.id]
-                it.toDTO(todayBillCount = stats?.first ?: 0, todayDue = stats?.second ?: java.math.BigDecimal.ZERO)
-            }
+        // Per-PATIENT bill stats → the kebab's "Create Bill" vs "View/Create
+        // Bills" branch (any bill for the patient that day lets them view history),
+        // plus the Pay-badge FALLBACK for a bill not tied to any appointment
+        // (a standalone New Bill): a clean settled day (nothing due, nothing
+        // refunded) reads Paid so a standalone payment isn't shown as Due.
+        val statsByPatient: Map<UUID, Triple<Int, java.math.BigDecimal, java.math.BigDecimal>> =
+            billRepository.billStatsByPatientForDate(date)
+                .associate { (it[0] as UUID) to Triple((it[1] as Number).toInt(), it[2] as java.math.BigDecimal, it[3] as java.math.BigDecimal) }
+
+        // Per-APPOINTMENT bill stats → the Pay badge (count + due + refund of the
+        // bills linked to THIS appointment). Keyed by appointment so a refund /
+        // payment on one visit's bill never colours another visit for the same
+        // patient the same day. Takes precedence over the per-patient fallback.
+        val apptIds = appointments.mapNotNull { it.id }
+        val statsByAppointment: Map<UUID, Triple<Int, java.math.BigDecimal, java.math.BigDecimal>> =
+            if (apptIds.isEmpty()) emptyMap()
+            else billRepository.billStatsByAppointment(apptIds)
+                .associate { (it[0] as UUID) to Triple((it[1] as Number).toInt(), it[2] as java.math.BigDecimal, it[3] as java.math.BigDecimal) }
+
+        return appointments.map {
+            val stats = statsByAppointment[it.id]
+            val patient = statsByPatient[it.patient?.id]
+            it.toDTO(
+                todayBillCount = patient?.first ?: 0,
+                todayDue = patient?.second ?: java.math.BigDecimal.ZERO,
+                todayRefund = patient?.third ?: java.math.BigDecimal.ZERO,
+                apptBillCount = stats?.first ?: 0,
+                apptDue = stats?.second ?: java.math.BigDecimal.ZERO,
+                apptRefund = stats?.third ?: java.math.BigDecimal.ZERO,
+            )
+        }
     }
 
     @Transactional
@@ -134,6 +197,8 @@ class AppointmentService(
         )
 
         val saved = appointmentRepository.save(appointment)
+        // Paid at booking → mint the consultation invoice so it's a real bill.
+        createConsultationBillIfPaid(saved)
         return saved.toDTO()
     }
 
@@ -186,7 +251,11 @@ class AppointmentService(
         appointment.fee = request.fee
         appointment.notes = request.notes
 
-        return appointmentRepository.save(appointment).toDTO()
+        val saved = appointmentRepository.save(appointment)
+        // Edited to PAID with a fee and not yet invoiced → mint the consultation
+        // invoice (idempotent — no-op if one already exists).
+        createConsultationBillIfPaid(saved)
+        return saved.toDTO()
     }
 
     @Transactional
@@ -246,7 +315,14 @@ class AppointmentService(
         return digits.takeLast(10)
     }
 
-    private fun Appointment.toDTO(todayBillCount: Int = 0, todayDue: java.math.BigDecimal = java.math.BigDecimal.ZERO): AppointmentDTO {
+    private fun Appointment.toDTO(
+        todayBillCount: Int = 0,
+        todayDue: java.math.BigDecimal = java.math.BigDecimal.ZERO,
+        todayRefund: java.math.BigDecimal = java.math.BigDecimal.ZERO,
+        apptBillCount: Int = 0,
+        apptDue: java.math.BigDecimal = java.math.BigDecimal.ZERO,
+        apptRefund: java.math.BigDecimal = java.math.BigDecimal.ZERO,
+    ): AppointmentDTO {
         return AppointmentDTO(
             id = this.id,
             patientId = this.patient?.id ?: UUID.randomUUID(),
@@ -277,6 +353,10 @@ class AppointmentService(
             patientDeposit = this.patient?.deposit,
             todayBillCount = todayBillCount,
             todayDue = todayDue,
+            todayRefund = todayRefund,
+            apptBillCount = apptBillCount,
+            apptDue = apptDue,
+            apptRefund = apptRefund,
         )
     }
 }
