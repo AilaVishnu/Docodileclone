@@ -80,6 +80,11 @@ allOpen {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// Pin the test JVM timezone. The Postgres testcontainer's newer tzdata
+	// rejects the legacy "Asia/Calcutta" that Windows JVMs resolve to, failing
+	// pool init ("invalid value for parameter TimeZone"). "Asia/Kolkata" is the
+	// canonical name and matches the app's runtime timezone.
+	systemProperty 'user.timezone', 'Asia/Kolkata'
 	finalizedBy jacocoTestReport   // always emit the coverage report after tests run
 }
 
@@ -131,18 +136,23 @@ jacocoTestReport {
 		})
 	}
 	// Print a one-line coverage summary to the console after the report is built.
+	// Parsed with a regex rather than groovy.xml.XmlParser: the report's aggregate
+	// counters are the report-level ones (the LAST <counter> of each type), and
+	// avoiding the XML class keeps editor Groovy tooling happy while behaving the
+	// same at runtime.
 	doLast {
 		def report = file("${layout.buildDirectory.get()}/reports/jacoco/test/jacocoTestReport.xml")
 		if (report.exists()) {
-			def parser = new groovy.xml.XmlParser()
-			parser.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
-			parser.setFeature('http://apache.org/xml/features/disallow-doctype-decl', false)
-			def counters = parser.parse(report).counter
-			counters.findAll { it.@type in ['INSTRUCTION', 'LINE', 'BRANCH'] }.each { c ->
-				def covered = c.@covered as double
-				def missed = c.@missed as double
-				def pct = (covered + missed) > 0 ? (covered / (covered + missed) * 100) : 0
-				println String.format('JaCoCo %-12s coverage: %.1f%%', c.@type, pct)
+			def text = report.text
+			['INSTRUCTION', 'LINE', 'BRANCH'].each { type ->
+				def tags = (text =~ /<counter type="${type}"[^>]*>/).collect { it }
+				if (tags) {
+					def tag = tags.last()   // report-level aggregate
+					def missed  = ((tag =~ /missed="(\d+)"/)[0][1]) as double
+					def covered = ((tag =~ /covered="(\d+)"/)[0][1]) as double
+					def pct = (covered + missed) > 0 ? (covered / (covered + missed) * 100) : 0
+					println String.format('JaCoCo %-12s coverage: %.1f%%', type, pct)
+				}
 			}
 		}
 	}
