@@ -85,7 +85,23 @@ type QueueTableProps = {
   /** appointmentId → backend session start (ISO) for in-progress visits.
    *  Drives the live consultation timer on the IN_PROGRESS status badge. */
   sessionStarts?: Record<string, string>;
+  /** Service name (lowercased) → the clinic's catalog short form ("consultation"
+   *  → "C"). Drives the Service column abbreviation. */
+  serviceCodes?: Record<string, string>;
 };
+
+// A stored service ("Consultation", or "Consultation + Dressing") → the clinic's
+// catalog short forms ("C", "C + D"). Falls back to the raw name when a service
+// has no short form in the catalog (the cell ellipsis truncates it).
+function abbreviateService(service: string, codes?: Record<string, string>): string {
+  return service
+    .split("+")
+    .map((part) => {
+      const name = part.trim();
+      return (codes && codes[name.toLowerCase()]) || name;
+    })
+    .join(" + ");
+}
 
 // Front-desk status actions. Completion is intentionally NOT here — only the
 // doctor marks a visit complete (via "Complete visit" on the prescription pad).
@@ -306,6 +322,7 @@ export function QueueTable({
   menuItems,
   onStatusChange,
   sessionStarts,
+  serviceCodes,
 }: QueueTableProps) {
   // Patient T-id map — same localStorage-backed counter that BookAppointment
   // and PrescriptionQueue use. Keyed by appointment id; missing keys render
@@ -468,14 +485,7 @@ export function QueueTable({
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {apt.service
-                          ? apt.service
-                            .replace(/Consultation/gi, "C")
-                            .replace(/Hydrafacial/gi, "HF")
-                            .replace(/Laser Hair Removal/gi, "LHR")
-                            .replace(/Skin Tag Removal/gi, "SKR")
-                            .replace(/Acne Scar Treatment/gi, "AST")
-                          : "—"}
+                        {apt.service ? abbreviateService(apt.service, serviceCodes) : "—"}
                       </div>
                     </td>
 

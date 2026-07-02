@@ -40,7 +40,7 @@ type AppointmentRow = {
   patientArchived?: boolean;
 };
 
-type StatusFilter = "all" | "AT_DOC" | "IN_PROGRESS" | "WAITING" | "COMPLETED";
+type StatusFilter = "all" | "AT_DOC" | "IN_PROGRESS" | "COMPLETED";
 type ViewMode = "grid" | "list";
 
 type PrescriptionQueueProps = {
@@ -54,7 +54,6 @@ const TAB_ITEMS: { id: StatusFilter; label: string }[] = [
   { id: "all", label: "View all" },
   { id: "AT_DOC", label: "At Doc" },
   { id: "IN_PROGRESS", label: "Ongoing" },
-  { id: "WAITING", label: "Waiting" },
   { id: "COMPLETED", label: "Completed" },
 ];
 
@@ -110,9 +109,11 @@ export function PrescriptionQueue({ onSelect, refreshKey }: PrescriptionQueuePro
   }, [selectedDate, refreshKey]);
 
   const filtered = useMemo(() => {
-    // Only patients actually present at the clinic appear in this queue —
-    // skip Booked (not yet checked in), Cancelled, and No-Show.
-    const HIDDEN_STATUSES = new Set(["BOOKED", "CANCELLED", "NO_SHOW"]);
+    // The Rx pad is the doctor's queue: a patient only appears once the front
+    // desk has SENT them to the doctor (status IN_PROGRESS / "At Doc"). So skip
+    // WAITING (checked in but not sent yet) along with Booked / Cancelled /
+    // No-Show. What's left is At Doc, Ongoing (Start Session clicked), Completed.
+    const HIDDEN_STATUSES = new Set(["BOOKED", "CANCELLED", "NO_SHOW", "WAITING"]);
     const visible = appointments.filter(
       (a) => a.status == null || !HIDDEN_STATUSES.has(a.status),
     );

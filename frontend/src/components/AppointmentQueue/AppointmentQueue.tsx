@@ -15,6 +15,7 @@ import { resolveToastIcon } from "../Toast/toastIcon";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { API_BASE_URL } from "../../apiConfig";
 import { listPharmacyStock } from "../../api/pharmacy";
+import { listServices } from "../../api/services";
 import { getActiveSessions } from "../../api/visits";
 import { recordPatientDeposit } from "../../api/patientSearch";
 import { listBills, chargeAppointment, payBill, type Bill } from "../../api/bills";
@@ -115,6 +116,19 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
   // Polled from the active-sessions endpoint; drives the live status-badge
   // timer (the badge itself ticks each second from this start instant).
   const [sessionStarts, setSessionStarts] = useState<Record<string, string>>({});
+
+  // Service name → catalog short-form ("Consultation" → "C"), so the queue's
+  // Service column shows the clinic's own short form instead of a truncated name.
+  const [serviceCodes, setServiceCodes] = useState<Record<string, string>>({});
+  useEffect(() => {
+    listServices()
+      .then((svcs) => {
+        const m: Record<string, string> = {};
+        svcs.forEach((s) => { if (s.code?.trim()) m[s.name.trim().toLowerCase()] = s.code.trim(); });
+        setServiceCodes(m);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -484,6 +498,7 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
           <QueueTable
             appointments={activeQueue}
             sessionStarts={sessionStarts}
+            serviceCodes={serviceCodes}
             doctorName={doctors.find(d => d.id === activeDoctorId)?.name}
             menuItems={[
               { label: "Edit Appointment", onClick: (apt) => {
