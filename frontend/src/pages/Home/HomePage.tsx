@@ -385,6 +385,8 @@ export function HomePage({ onLogout, onViewClinic }: HomePageProps) {
       <SideNav
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        settingsSection={settingsSection}
+        onSettingsSection={setSettingsSection}
       />
       <div style={styles.contentArea}>
         {/* Transparent backdrop so the content panel's rounded top-left corner

@@ -1,8 +1,10 @@
 import React from 'react';
 import { Icon } from "../Icon";
 import { SideNavItem } from './SideNavItem';
+import { SettingsNavItem } from './SettingsNavItem';
 import { ReactComponent as LogoSmall } from "../../assets/logo-small.svg";
 import { colors } from "../../styles/theme";
+import { SettingsSection } from "../../pages/Settings/sections";
 import { LottieIcon } from "../Icon/LottieIcon";
 import homeLottie from "../../assets/lottie/home.json";
 import calendarLottie from "../../assets/lottie/calendar.json";
@@ -28,9 +30,13 @@ export type NavTab =
 type SideNavProps = {
   activeTab: NavTab;
   onTabChange: (tab: NavTab) => void;
+  // Config sub-section: which Settings section is shown (for the hover flyout's
+  // highlight), and the callback to jump to one. Only meaningful for 'Settings'.
+  settingsSection?: SettingsSection;
+  onSettingsSection?: (section: SettingsSection) => void;
 };
 
-export function SideNav({ activeTab, onTabChange }: SideNavProps) {
+export function SideNav({ activeTab, onTabChange, settingsSection, onSettingsSection }: SideNavProps) {
   const styles = {
     container: {
       width: 'var(--sidenav-w)',
@@ -86,15 +92,27 @@ export function SideNav({ activeTab, onTabChange }: SideNavProps) {
       </div>
 
       <div style={styles.navList}>
-        {menuItems.map((item) => (
-          <SideNavItem
-            key={item.label}
-            label={item.display}
-            icon={item.icon}
-            active={activeTab === item.label}
-            onClick={() => onTabChange(item.label)}
-          />
-        ))}
+        {menuItems.map((item) =>
+          item.label === 'Settings' ? (
+            <SettingsNavItem
+              key={item.label}
+              label={item.display}
+              icon={item.icon}
+              active={activeTab === 'Settings'}
+              onOpen={() => onTabChange('Settings')}
+              activeSection={settingsSection}
+              onSelectSection={(s) => { onSettingsSection?.(s); onTabChange('Settings'); }}
+            />
+          ) : (
+            <SideNavItem
+              key={item.label}
+              label={item.display}
+              icon={item.icon}
+              active={activeTab === item.label}
+              onClick={() => onTabChange(item.label)}
+            />
+          )
+        )}
       </div>
     </div>
   );
