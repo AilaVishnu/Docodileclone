@@ -5,6 +5,7 @@ import { RadioGroup } from "../Radio";
 import { Icon } from "../Icon";
 import { printBill, type PrintPatientMeta } from "../../pages/Bills/printBill";
 import { BillModal } from "./BillModal";
+import { BillReadModal } from "../../pages/Bills/BillReadModal";
 import type { Bill } from "../../api/bills";
 
 type BillCardProps = {
@@ -27,6 +28,20 @@ type BillCardProps = {
   patientName?: string;
   patientMeta?: PrintPatientMeta;
   invoiceNo?: string;
+  /** The appointment's actual saved bill. When present, the expand opens this
+   *  real invoice in the read-only detail (with its real number + refund),
+   *  instead of a bill rebuilt from the card. */
+  paidBill?: Bill & { patientName: string; today: boolean };
+  /** Lock the card's inputs without the "Paid" stamp — e.g. a refunded bill is
+   *  settled (nothing to edit) but must not read as Paid. `isPaid` implies this. */
+  locked?: boolean;
+  /** The bill is settled (paid / waived / refunded). Expanding opens the
+   *  read-only detail rather than the editable editor — even when not "Paid"
+   *  (e.g. a waive shows the Waived read-only bill). */
+  settled?: boolean;
+  /** Called with the updated bill after a refund from the expanded detail, so
+   *  the owner can refresh the card's paid/settled state. */
+  onBillRefunded?: (updated: Bill & { patientName: string; today?: boolean }) => void;
 };
 
 export function BillCard({
@@ -48,18 +63,24 @@ export function BillCard({
   patientName,
   patientMeta,
   invoiceNo,
+  paidBill,
+  locked = false,
+  settled = false,
+  onBillRefunded,
 }: BillCardProps) {
   const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
   const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
+  // Inputs are frozen when the bill is settled — paid (with stamp) or just
+  // locked (e.g. refunded, no stamp).
+  const inputsLocked = isPaid || locked;
   // The full bill editor, opened from the expand icon beside Print. Seeds the
   // same services this card shows.
   const [expanded, setExpanded] = useState(false);
 
-  // Print this bill card as the standard "Bill cum Receipt" (same renderer as
-  // the Bills page / queue). Builds a synthetic bill from the card's live
-  // numbers: services become line items; a bill-level discount is folded onto a
-  // single subtotal line so the printed total matches what the card shows.
-  const printReceipt = () => {
+  // A synthetic bill from the card's live numbers — feeds both the receipt print
+  // and the read-only detail. Services become line items; a bill-level discount
+  // is folded onto a single subtotal line so the total matches the card.
+  const buildDraftBill = (): Bill & { patientName: string; today: boolean } => {
     const discountAmt = discountMode === "%" ? Math.round((subtotal * discount) / 100) : discount;
     const isWaive = paymentMethod === "Waive";
     const lineItems = (discountAmt > 0 || services.length === 0)
@@ -67,7 +88,7 @@ export function BillCard({
       : services.map((s) => ({ name: s.name, qty: 1, unit: s.price, gst: 0, disc: 0, discUnit: "₹" }));
     const now = new Date();
     const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-    const draft: Bill & { patientName: string } = {
+    return {
       id: "", invoiceNo: invoiceNo ?? "", billDate: iso,
       billed: subtotal, paid: isWaive ? 0 : total, due: 0, refund: 0, depositApplied: null,
       payStatus: isWaive ? "WAIVED" : "PAID",
@@ -75,9 +96,12 @@ export function BillCard({
       items: JSON.stringify(lineItems), note: note.trim() || null,
       appointmentId: null, createdAt: "",
       patientName: patientName?.trim() || "Patient",
+      today: false,
     };
-    Promise.resolve(printBill(draft, patientMeta)).catch(() => {});
   };
+  // Print the card as the standard "Bill cum Receipt" (same renderer as the
+  // Bills page / queue).
+  const printReceipt = () => { Promise.resolve(printBill(buildDraftBill(), patientMeta)).catch(() => {}); };
 
   const handleTaxMode = (mode: "%" | "₹") => {
     setTaxMode(mode);
@@ -134,8 +158,8 @@ export function BillCard({
                 type="number"
                 value={subtotal || ""}
                 onChange={(e) => onSubtotalChange(Number(e.target.value))}
-                disabled={isPaid}
-                readOnly={isPaid}
+                disabled={inputsLocked}
+                readOnly={inputsLocked}
               />
             </div>
           </div>
@@ -149,20 +173,20 @@ export function BillCard({
                 placeholder="0"
                 value={discount || ""}
                 onChange={(e) => onDiscountChange(Number(e.target.value))}
-                disabled={isPaid}
-                readOnly={isPaid}
+                disabled={inputsLocked}
+                readOnly={inputsLocked}
               />
               <div style={{ marginLeft: "auto" }}>
                 <div style={styles.toggleGroup}>
                   <button
                     style={discountMode === "%" ? styles.toggleActive : styles.toggleInactive}
                     onClick={() => handleDiscountMode("%")}
-                    disabled={isPaid}
+                    disabled={inputsLocked}
                   >%</button>
                   <button
                     style={discountMode === "₹" ? styles.toggleActive : styles.toggleInactive}
                     onClick={() => handleDiscountMode("₹")}
-                    disabled={isPaid}
+                    disabled={inputsLocked}
                   >₹</button>
                 </div>
               </div>
@@ -180,7 +204,7 @@ export function BillCard({
             name="billPayment"
             value={paymentMethod}
             onChange={onPaymentMethodChange}
-            disabled={isPaid}
+            disabled={inputsLocked}
             options={["Cash", "Card", "UPI", { label: "Waive", value: "Waive", color: colors.red200 }]}
           />
         </div>
@@ -189,16 +213,38 @@ export function BillCard({
       {/* Zigzag torn receipt edge */}
       <div style={styles.zigzag} />
 
-      {/* Full bill editor — the expand icon opens the same services in the
-          larger BillModal workbench. */}
-      {expanded && (
+      {/* Expand → the larger bill view. A paid bill opens the read-only detail:
+          the real saved invoice when we have it (real number + refund), else a
+          rebuilt preview. An unpaid one opens the editable BillModal workbench
+          seeded with the same services. */}
+      {expanded && (paidBill ? (
+        <BillReadModal
+          isOpen
+          onClose={() => setExpanded(false)}
+          bill={paidBill}
+          onPrint={(b) => { void printBill(b, patientMeta); }}
+          share={{ patient: patientMeta, phone: patientMeta?.mobile }}
+          // Refunding here persists a real refund — bubble the updated bill up so
+          // the card drops its Paid stamp/lock instead of going stale.
+          onRefunded={onBillRefunded}
+        />
+      ) : (settled || isPaid) ? (
+        <BillReadModal
+          isOpen
+          onClose={() => setExpanded(false)}
+          bill={buildDraftBill()}
+          allowRefund={false}
+          onPrint={(b) => { void printBill(b, patientMeta); }}
+          share={{ patient: patientMeta, phone: patientMeta?.mobile }}
+        />
+      ) : (
         <BillModal
           isOpen
           onClose={() => setExpanded(false)}
           patientName={patientName}
           initialServices={services}
         />
-      )}
+      ))}
     </div>
   );
 }
