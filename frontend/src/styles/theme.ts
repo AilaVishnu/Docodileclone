@@ -251,6 +251,24 @@ export const strokes = {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// Motion — the microinteraction vocabulary. Keep it SUBTLE: short durations,
+// transform/opacity only, purposeful (feedback/affordance, never decoration).
+// Mirrored as CSS custom properties in globals.css (--motion-* / --ease-*) so
+// inline `transition` strings can reference them AND prefers-reduced-motion can
+// zero them for users who opt out. Prefer the CSS vars in components; these JS
+// values are for docs / the occasional JS-driven animation.
+// ──────────────────────────────────────────────────────────────────────────────
+export const motion = {
+  duration: { fast: "120ms", base: "180ms", slow: "240ms" },
+  ease: {
+    standard: "cubic-bezier(0.2, 0, 0, 1)",      // most state transitions
+    entrance: "cubic-bezier(0.05, 0.7, 0.1, 1)", // things appearing
+    exit: "cubic-bezier(0.3, 0, 0.8, 0.15)",     // things leaving
+    spring: "cubic-bezier(0.34, 1.56, 0.64, 1)", // playful overshoot (toggles)
+  },
+} as const;
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Elevation — one source of truth for shadows (was 8+ ad-hoc inline strings).
 //   • menu  — dropdowns / popovers / autocompletes / pickers
 //   • modal — dialogs / overlays

@@ -21,7 +21,9 @@ export const styles: Record<string, CSSProperties> = {
     cursor: "pointer",
     position: "relative",
     color: colors.neutral700,
-    transition: "all 0.2s ease",
+    transition:
+      "background-color var(--motion-base) var(--ease-standard), " +
+      "color var(--motion-base) var(--ease-standard)",
     outline: "none",
     boxShadow: "none",
     maxWidth: 200,
@@ -92,7 +94,9 @@ export const styles: Record<string, CSSProperties> = {
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-    transition: "background-color 160ms, color 160ms",
+    transition:
+      "background-color var(--motion-base) var(--ease-standard), " +
+      "color var(--motion-base) var(--ease-standard)",
   },
   // sm size — the smaller "visit" tab: always compact (32 / radius 8), 14px text.
   blockTabSm: {
@@ -113,7 +117,9 @@ export const styles: Record<string, CSSProperties> = {
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-    transition: "background-color 160ms, color 160ms",
+    transition:
+      "background-color var(--motion-base) var(--ease-standard), " +
+      "color var(--motion-base) var(--ease-standard)",
   },
   blockTabActive: {
     backgroundColor: colors.neutral100,

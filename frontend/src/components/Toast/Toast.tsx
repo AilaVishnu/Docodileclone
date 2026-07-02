@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { styles } from "./Toast.styles";
 import { Icon } from "../Icon";
 
@@ -34,6 +34,7 @@ type ToastProps = {
 };
 
 export function Toast({ message, isVisible, onClose, duration = 4000, actionLabel, onAction, inline = false, iconName = "buildings", iconColor, surfaceColor }: ToastProps) {
+  // Auto-dismiss after `duration` (the parent flips isVisible → false).
   useEffect(() => {
     if (isVisible && duration > 0) {
       const timer = setTimeout(onClose, duration);
@@ -41,10 +42,41 @@ export function Toast({ message, isVisible, onClose, duration = 4000, actionLabe
     }
   }, [isVisible, duration, onClose]);
 
-  if (!isVisible) return null;
+  // Enter/exit lifecycle — keep the toast mounted through its fade-out so it
+  // animates away instead of vanishing. `rendered` = present in the DOM;
+  // `shown` = the visible (vs pre-enter / leaving) style state.
+  const [rendered, setRendered] = useState(isVisible);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (isVisible) {
+      setRendered(true);
+      // Flip to shown on the next frame so the enter transition runs from the
+      // pre-enter state (mount → shown), not instantly.
+      const r = requestAnimationFrame(() => setShown(true));
+      return () => cancelAnimationFrame(r);
+    }
+    setShown(false);
+    // Unmount only after the exit transition finishes (kept > --motion-fast).
+    const t = setTimeout(() => setRendered(false), 220);
+    return () => clearTimeout(t);
+  }, [isVisible]);
+
+  if (!rendered) return null;
 
   const base = inline ? styles.containerInline : styles.container;
-  const containerStyle = surfaceColor ? { ...base, backgroundColor: surfaceColor } : base;
+  const containerStyle: React.CSSProperties = {
+    ...base,
+    ...(surfaceColor ? { backgroundColor: surfaceColor } : null),
+    // Fixed overlay toast slides in from the right + fades (entrance) and reverses
+    // out (exit); the inline catalog variant stays static.
+    ...(inline ? null : {
+      opacity: shown ? 1 : 0,
+      transform: shown ? "translateX(0)" : "translateX(24px)",
+      transition: shown
+        ? "opacity var(--motion-base) var(--ease-entrance), transform var(--motion-base) var(--ease-entrance)"
+        : "opacity var(--motion-fast) var(--ease-exit), transform var(--motion-fast) var(--ease-exit)",
+    }),
+  };
 
   return (
     <div style={containerStyle}>

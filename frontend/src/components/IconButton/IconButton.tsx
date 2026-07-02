@@ -35,6 +35,7 @@ export function IconButton({
   ariaLabel, onClick, children, size = 32, color = colors.neutral700, title, disabled, style,
 }: IconButtonProps) {
   const [hover, setHover] = useState(false);
+  const [pressed, setPressed] = useState(false);
   return (
     <button
       type="button"
@@ -43,14 +44,23 @@ export function IconButton({
       onClick={onClick}
       disabled={disabled}
       onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      onMouseLeave={() => { setHover(false); setPressed(false); }}
+      onPointerDown={() => setPressed(true)}
+      onPointerUp={() => setPressed(false)}
       style={{
         width: size, height: size, borderRadius: radii.full,
         display: "inline-flex", alignItems: "center", justifyContent: "center",
         border: "none", padding: 0, cursor: disabled ? "default" : "pointer",
         color,
-        background: hover && !disabled ? colors.neutralAlphaBlack : "transparent",
-        transition: "background-color 0.15s ease", flexShrink: 0,
+        // Halo — a soft circular tint fades in on hover and deepens on press,
+        // paired with a slightly deeper scale than Button (the target is small).
+        // Tokenised; reduced-motion-safe.
+        background: disabled ? "transparent" : pressed ? colors.alphaBlack1 : hover ? colors.neutralAlphaBlack : "transparent",
+        transition:
+          "background-color var(--motion-fast) var(--ease-standard), " +
+          "transform var(--motion-fast) var(--ease-standard)",
+        transform: !disabled && pressed ? "scale(0.9)" : "none",
+        flexShrink: 0,
         opacity: disabled ? 0.5 : 1,
         ...style,
       }}

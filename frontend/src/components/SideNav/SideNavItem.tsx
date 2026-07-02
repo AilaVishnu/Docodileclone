@@ -58,12 +58,7 @@ export function SideNavItem({ label, icon, active, onClick }: SideNavItemProps) 
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div style={{
-        display: 'flex',
-        flexShrink: 0,
-        transition: 'transform 0.3s ease',
-        transform: hovered ? 'scale(1.1)' : 'scale(1)',
-      }}>
+      <div style={{ display: 'flex', flexShrink: 0 }}>
         {icon}
       </div>
       <span style={styles.label}>{label}</span>

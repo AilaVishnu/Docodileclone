@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useEffect } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 import { ClearButton } from "../Input/ClearButton";
 
@@ -101,6 +101,16 @@ function errorFor(variant: FieldVariant): React.CSSProperties {
     : { border: `${strokes.xs} solid ${colors.red200}`, backgroundColor: colors.redAlpha10 };
 }
 
+// Focus microinteraction — deepen the field's edge to the theme accent so focus
+// reads clearly (underline/box border, or an inset edge on borderless filled
+// inputs). Animated by the container transition; never overrides invalid state.
+function focusFor(variant: FieldVariant, fill: FieldFill): React.CSSProperties {
+  const accent = colors.active.shade600;
+  if (variant === "underline") return { borderBottomColor: accent };
+  if (fill === "filled") return { boxShadow: `inset 0 0 0 ${strokes.s} ${accent}` };
+  return { borderColor: accent };
+}
+
 function AutoGrowTextarea({ value, onChange, placeholder, maxLength, disabled, inputStyle }: {
   value: string; onChange: (v: string) => void; placeholder?: string; maxLength?: number;
   disabled?: boolean; inputStyle?: React.CSSProperties;
@@ -160,12 +170,18 @@ export function Field({
   type = "text", onKeyDown, onBlur, onFocus, error, errorMessage, maxLength,
   multiline, disabled, inputMode, name, autoFocus, ariaLabel, style, inputStyle,
 }: FieldProps) {
+  const [focused, setFocused] = useState(false);
   const containerStyle: React.CSSProperties = {
     ...containerBase,
     ...variantGeometry[variant],
     ...surfaceFor(variant, fill),
+    transition:
+      "border-color var(--motion-fast) var(--ease-standard), " +
+      "box-shadow var(--motion-fast) var(--ease-standard)",
     // multiline drops the fixed height so the textarea can grow.
     ...(multiline ? { height: undefined, alignItems: "flex-start" } : {}),
+    // Focus edge (kept below error so an invalid field always wins).
+    ...(focused && !error && !disabled ? focusFor(variant, fill) : {}),
     ...(error ? errorFor(variant) : {}),
     ...(disabled ? { opacity: 0.6 } : {}),
     ...style,
@@ -173,7 +189,7 @@ export function Field({
 
   return (
     <div style={{ width: "100%" }}>
-      <div style={containerStyle}>
+      <div style={containerStyle} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}>
         {iconLeft && <span style={{ fontSize: fonts.size.m, lineHeight: 1, color: colors.neutral900, opacity: 0.8, ...(multiline ? { marginTop: 4 } : {}) }}>{iconLeft}</span>}
 
         {multiline ? (
