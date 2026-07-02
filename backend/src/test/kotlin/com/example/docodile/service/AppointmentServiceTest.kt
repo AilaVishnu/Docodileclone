@@ -7,12 +7,21 @@ import com.example.docodile.repo.AppointmentRepository
 import com.example.docodile.repo.AppUserRepository
 import com.example.docodile.repo.BillRepository
 import com.example.docodile.repo.PatientRepository
+import com.example.docodile.web.BillDTO
+import com.example.docodile.web.BookAppointmentRequest
+import com.example.docodile.web.CreateBillRequest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
 import org.mockito.Mock
+import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import org.mockito.junit.jupiter.MockitoExtension
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -36,6 +45,9 @@ class AppointmentServiceTest {
 
     @Mock
     private lateinit var billRepository: BillRepository
+
+    @Mock
+    private lateinit var billService: BillService
 
     @InjectMocks
     private lateinit var appointmentService: AppointmentService
@@ -68,15 +80,16 @@ class AppointmentServiceTest {
     }
 
     @Test
-    fun `getAppointmentsForClinic populates todayBillCount from the day's bills`() {
+    fun `getAppointmentsForClinic populates per-patient count + per-appointment bill stats`() {
         val date = LocalDate.of(2023, 10, 10)
         val pid = UUID.randomUUID()
+        val aptId = UUID.randomUUID()
         // Seed the three Bill-editor fields the schema-per-tenant rebase dropped
         // (pharmacy total, bill-level discount, patient advance) so the assertions
         // below guard against them being silently lost again.
         val patient = Patient(id = pid, name = "Asha").also { it.deposit = BigDecimal("200") }
         val appointment = Appointment(
-            id = UUID.randomUUID(),
+            id = aptId,
             patient = patient,
             doctor = AppUser(id = UUID.randomUUID(), name = "Dr. Smith"),
             scheduledTime = LocalDateTime.now(),
