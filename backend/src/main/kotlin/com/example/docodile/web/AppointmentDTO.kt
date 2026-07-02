@@ -34,13 +34,20 @@ data class AppointmentDTO(
     // The linked patient's running deposit/advance balance — the bill seeds its
     // Deposit field from this and auto-draws against it on Charge & Bill.
     val patientDeposit: java.math.BigDecimal? = null,
-    // How many bills the patient already has on this appointment's date — the
-    // queue flips the kebab from "Bill" to "View Bills" once this is > 0.
+    // Per-PATIENT bill stats for the date — the kebab flips "Bill" → "View
+    // Bills" once todayBillCount > 0, and the Pay badge FALLBACK uses these for a
+    // bill not tied to any appointment (a standalone New Bill): a clean day
+    // (nothing due, nothing refunded) reads Paid instead of a false Due.
     val todayBillCount: Int = 0,
-    // Total still outstanding across the patient's bills on this date. With
-    // todayBillCount it drives the queue Pay badge: billed + nothing due → Paid,
-    // otherwise Due. Zero when the patient has no bill today.
     val todayDue: java.math.BigDecimal = java.math.BigDecimal.ZERO,
+    val todayRefund: java.math.BigDecimal = java.math.BigDecimal.ZERO,
+    // Bill stats for the bills linked to THIS appointment (not the patient's
+    // other visits). Drive the Pay badge per appointment: apptBillCount > 0 and
+    // nothing due → Paid, any due → Due, any refund → Refunded. Keeping them
+    // per-appointment stops a refund/payment on one visit colouring another.
+    val apptBillCount: Int = 0,
+    val apptDue: java.math.BigDecimal = java.math.BigDecimal.ZERO,
+    val apptRefund: java.math.BigDecimal = java.math.BigDecimal.ZERO,
     // True if the linked patient has been archived. The appointment still
     // appears in the queue (so the receptionist can see who's checked in),
     // but the frontend blocks navigation into the prescription pad and
