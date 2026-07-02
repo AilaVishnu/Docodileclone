@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { styles } from "./BillCard.styles";
 import { colors, spacing } from "../../styles/theme";
 import { RadioGroup } from "../Radio";
@@ -23,6 +23,9 @@ type BillCardProps = {
   total: number;
   onTaxModeChange?: (mode: "%" | "₹") => void;
   onDiscountModeChange?: (mode: "%" | "₹") => void;
+  /** Controls the discount unit toggle. When provided, the owner drives the
+   *  mode (e.g. Waive forces "%"); omit it to let the card manage it locally. */
+  discountMode?: "%" | "₹";
   services?: { name: string; price: number }[];
   /** Print context — the patient the receipt is for. */
   patientName?: string;
@@ -42,6 +45,12 @@ type BillCardProps = {
   /** Called with the updated bill after a refund from the expanded detail, so
    *  the owner can refresh the card's paid/settled state. */
   onBillRefunded?: (updated: Bill & { patientName: string; today?: boolean }) => void;
+  /** Surface a message (e.g. nothing to print yet) via the host's toast. */
+  onToast?: (message: string) => void;
+  /** When set, Print requires a real saved invoice (`paidBill`) — a draft that
+   *  hasn't been booked/settled has no invoice, so Print toasts instead. Used by
+   *  the booking card, where the invoice is only minted server-side on booking. */
+  requireInvoiceToPrint?: boolean;
 };
 
 export function BillCard({
@@ -58,6 +67,7 @@ export function BillCard({
   total,
   onTaxModeChange,
   onDiscountModeChange,
+  discountMode: discountModeProp,
   services = [],
   isPaid = false,
   patientName,
@@ -67,9 +77,21 @@ export function BillCard({
   locked = false,
   settled = false,
   onBillRefunded,
+  onToast,
+  requireInvoiceToPrint = false,
 }: BillCardProps) {
   const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
-  const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
+  // Discount unit is controlled by the owner when `discountModeProp` is given
+  // (so Waive can force "%"); otherwise the card owns it locally.
+  const [discountModeLocal, setDiscountModeLocal] = useState<"%" | "₹">("₹");
+  const discountMode = discountModeProp ?? discountModeLocal;
+  // Keep the discount within range so the bill can never go negative: at most
+  // 100% in "%" mode, or the subtotal in "₹" mode.
+  const clampDiscount = (v: number) => {
+    if (!Number.isFinite(v) || v <= 0) return 0;
+    const max = discountMode === "%" ? 100 : subtotal;
+    return Math.min(v, Math.max(0, max));
+  };
   // Inputs are frozen when the bill is settled — paid (with stamp) or just
   // locked (e.g. refunded, no stamp).
   const inputsLocked = isPaid || locked;
@@ -77,11 +99,28 @@ export function BillCard({
   // same services this card shows.
   const [expanded, setExpanded] = useState(false);
 
+  // clampDiscount only runs on keystroke / unit toggle; if the subtotal later
+  // shrinks (e.g. a service is removed) an already-entered ₹ discount can end
+  // up above it. Re-clamp so the stored discount never exceeds its ceiling —
+  // otherwise the receipt could print a negative amount. Never touch a locked
+  // (settled) bill.
+  useEffect(() => {
+    if (inputsLocked) return;
+    const clamped = clampDiscount(discount);
+    if (clamped !== discount) onDiscountChange(clamped);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotal, discountMode]);
+
   // A synthetic bill from the card's live numbers — feeds both the receipt print
   // and the read-only detail. Services become line items; a bill-level discount
   // is folded onto a single subtotal line so the total matches the card.
   const buildDraftBill = (): Bill & { patientName: string; today: boolean } => {
-    const discountAmt = discountMode === "%" ? Math.round((subtotal * discount) / 100) : discount;
+    // Cap the discount at the billable amount so a stale/oversized discount can
+    // never make a line item (or the receipt total) go negative.
+    const discountAmt = Math.min(
+      Math.max(0, discountMode === "%" ? Math.round((subtotal * discount) / 100) : discount),
+      Math.max(0, subtotal),
+    );
     const isWaive = paymentMethod === "Waive";
     const lineItems = (discountAmt > 0 || services.length === 0)
       ? [{ name: services.length ? services.map((s) => s.name).join(", ") : "Consultation", qty: 1, unit: subtotal, gst: 0, disc: discountAmt, discUnit: "₹" }]
@@ -101,7 +140,18 @@ export function BillCard({
   };
   // Print the card as the standard "Bill cum Receipt" (same renderer as the
   // Bills page / queue).
-  const printReceipt = () => { Promise.resolve(printBill(buildDraftBill(), patientMeta)).catch(() => {}); };
+  const printReceipt = () => {
+    // A booking card prints only a real, saved invoice — a draft that hasn't
+    // been booked/settled yet has no invoice to print.
+    if (requireInvoiceToPrint && !paidBill) {
+      onToast?.("No invoice yet — book the appointment to generate the bill, then print.");
+      return;
+    }
+    // Nothing billed yet → nudge to fill the bill rather than print a ₹0 receipt.
+    if (subtotal <= 0) { onToast?.("Add a service and bill it before you can print."); return; }
+    // Prefer the real saved invoice when we have one; else the card's draft.
+    Promise.resolve(printBill(paidBill ?? buildDraftBill(), patientMeta)).catch(() => {});
+  };
 
   const handleTaxMode = (mode: "%" | "₹") => {
     setTaxMode(mode);
@@ -109,8 +159,11 @@ export function BillCard({
   };
 
   const handleDiscountMode = (mode: "%" | "₹") => {
-    setDiscountMode(mode);
+    setDiscountModeLocal(mode);
     onDiscountModeChange?.(mode);
+    // Re-clamp the existing amount to the new unit's ceiling (e.g. ₹500 → 100%).
+    const max = mode === "%" ? 100 : subtotal;
+    if (discount > max) onDiscountChange(Math.max(0, max));
   };
 
   return (
@@ -172,7 +225,7 @@ export function BillCard({
                 type="number"
                 placeholder="0"
                 value={discount || ""}
-                onChange={(e) => onDiscountChange(Number(e.target.value))}
+                onChange={(e) => onDiscountChange(clampDiscount(Number(e.target.value)))}
                 disabled={inputsLocked}
                 readOnly={inputsLocked}
               />

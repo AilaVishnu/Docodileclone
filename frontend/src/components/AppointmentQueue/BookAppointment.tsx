@@ -533,7 +533,9 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const taxAmount = taxMode === "%" ? subtotal * taxVal / 100 : taxVal;
   const discountVal = Number(form.discount) || 0;
   const discountAmount = discountMode === "%" ? subtotal * discountVal / 100 : discountVal;
-  const total = subtotal + taxAmount - discountAmount;
+  // Floor at ₹0 — the discount is clamped at the card, but a bill can never be
+  // negative regardless of how the numbers are entered.
+  const total = Math.max(0, subtotal + taxAmount - discountAmount);
 
   // Is the appointment's bill settled? Prefer the day's bills (billed + nothing
   // due → paid), the same reliable signal as the queue Pay badge; the
@@ -716,12 +718,15 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             total={Math.round(total)}
             onTaxModeChange={setTaxMode}
             onDiscountModeChange={setDiscountMode}
+            discountMode={discountMode}
             services={form.services.map(svc => ({ name: svc, price: SERVICE_PRICES[svc] || 0 }))}
             isPaid={billIsPaid}
             locked={billCardReadOnly}
             settled={billSettled}
             paidBill={apptBill ?? undefined}
             onBillRefunded={(u) => setApptBill({ ...u, today: false })}
+            onToast={setToastMessage}
+            requireInvoiceToPrint
             patientName={form.name}
             patientMeta={{
               age: form.age ? (parseInt(form.age.split("/")[0]?.trim() || "", 10) || undefined) : undefined,
