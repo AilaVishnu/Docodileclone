@@ -144,10 +144,14 @@ class AppointmentService(
 
         // Server-side enforcement of the edit window — mirrors the
         // BookAppointment modal's readOnly gates so a direct API call
-        // can't bypass them. COMPLETED locks instantly; any other
-        // status respects the 24h window from createdAt.
+        // can't bypass them. COMPLETED and IN_PROGRESS (sent to the doctor)
+        // lock instantly; any other status respects the 24h window from
+        // createdAt.
         if (appointment.status?.uppercase() == "COMPLETED") {
             throw IllegalArgumentException("Appointment is completed and locked.")
+        }
+        if (appointment.status?.uppercase() == "IN_PROGRESS") {
+            throw IllegalArgumentException("Appointment is with the doctor and locked.")
         }
         appointment.createdAt?.let { created ->
             val ageMs = java.time.Duration.between(created, java.time.Instant.now()).toMillis()
