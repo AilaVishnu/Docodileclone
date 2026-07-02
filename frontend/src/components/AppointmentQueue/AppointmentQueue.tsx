@@ -351,6 +351,10 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
               deposit: apt.patientDeposit || 0,
               todayBillCount: apt.todayBillCount || 0,
               todayDue: Number(apt.todayDue) || 0,
+              todayRefund: Number(apt.todayRefund) || 0,
+              apptBillCount: apt.apptBillCount || 0,
+              apptDue: Number(apt.apptDue) || 0,
+              apptRefund: Number(apt.apptRefund) || 0,
               patientArchived: apt.patientArchived || false,
               createdAt: apt.createdAt || undefined,
             });
@@ -487,16 +491,27 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                   setToastMessage(`${apt.patientName} is archived — restore the patient to continue.`);
                   return;
                 }
-                // Locked = completed appointment OR booking older than
-                // 24h. The modal still opens with full details so the
-                // receptionist can review, just every field + save
-                // action is disabled.
+                // Locked = completed appointment, sent to the doctor (At Doc /
+                // in progress), OR booking older than 24h. The modal still opens
+                // with full details so the receptionist can review, just every
+                // field + save action is disabled. Once it's with the doctor the
+                // booking is in play and mustn't change under them.
                 const isCompleted = apt.status === "COMPLETED";
+                const isWithDoctor = apt.status === "IN_PROGRESS"; // "At Doc" / sent to doctor
                 const ageMs = apt.createdAt ? Date.now() - new Date(apt.createdAt).getTime() : 0;
                 const isPastWindow = apt.createdAt != null && ageMs > 24 * 60 * 60 * 1000;
-                const readOnly = isCompleted || isPastWindow;
+                // A billed-and-settled walk-in is a finished transaction — lock
+                // it whole (the bill can still be viewed/printed). Uses the same
+                // reliable paid signal as the queue Pay badge, not the stale
+                // appointment payStatus.
+                const billPaid = (apt.apptBillCount ?? 0) > 0
+                  ? (apt.apptDue ?? 0) <= 0 && (apt.apptRefund ?? 0) <= 0
+                  : apt.payStatus?.toUpperCase() === "PAID";
+                const paidWalkin = billPaid && !!apt.isWalkin;
+                const readOnly = isCompleted || isWithDoctor || isPastWindow || paidWalkin;
                 setEditingAppointment({
                   id: apt.id,
+                  patientId: apt.patientId,
                   patientName: apt.patientName,
                   patientPhone: apt.patientPhone,
                   patientEmail: apt.patientEmail,
@@ -511,11 +526,17 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, o
                   doctorId: apt.doctorId || activeDoctorId,
                   payStatus: apt.payStatus,
                   paymentMethod: apt.paymentMethod,
+                  todayBillCount: apt.todayBillCount,
+                  apptBillCount: apt.apptBillCount,
+                  apptDue: apt.apptDue,
+                  apptRefund: apt.apptRefund,
                   notes: apt.notes,
                   fee: apt.fee,
                   readOnly,
                   readOnlyReason: isCompleted
                     ? "Appointment is completed — view only."
+                    : isWithDoctor ? "Appointment is with the doctor — view only."
+                    : paidWalkin ? "Walk-in is billed & paid — view only."
                     : isPastWindow ? "Edit window closed (24h after booking) — view only."
                     : undefined,
                 });
