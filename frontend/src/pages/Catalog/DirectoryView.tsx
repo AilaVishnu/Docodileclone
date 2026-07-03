@@ -1,4 +1,4 @@
-import React, { useState, CSSProperties } from "react";
+import React, { useState, useEffect, CSSProperties } from "react";
 import { Field } from "../../components/Field";
 import { Button } from "../../components/Button";
 import { IconButton } from "../../components/IconButton";
@@ -8,7 +8,8 @@ import { ModalHeader } from "../../components/ModalHeader";
 import { ContactCard } from "../../components/Catalog/ContactCard";
 import { colors, fonts, spacing, radii } from "../../styles/theme";
 import { styles as form } from "../Services/AddServiceModal.styles";
-import { DIRECTORY, Category, DirEntry } from "./catalogData";
+import { Category, DirEntry } from "./catalogData";
+import { listDirectory, createDirectoryEntry, updateDirectoryEntry, deleteDirectoryEntry, dtoToBody, DirectoryBody } from "../../api/directory";
 
 type DirCategory = Exclude<Category, "Services">;
 
@@ -24,6 +25,12 @@ const CAT_ICON: Record<DirCategory, string> = {
   Suppliers: "buildings",
   Contacts: "user",
 };
+const CTA: Record<DirCategory, string | undefined> = {
+  "Referral doctors": "Refer",
+  Labs: "Order test",
+  Suppliers: "Reorder",
+  Contacts: undefined,
+};
 
 /**
  * DirectoryView — one Catalog directory tab (referral doctors / labs /
@@ -33,17 +40,61 @@ const CAT_ICON: Record<DirCategory, string> = {
  */
 export function DirectoryView({ category }: { category: DirCategory }) {
   const [q, setQ] = useState("");
+  const [entries, setEntries] = useState<DirEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<DirEntry | null>(null);
   const [refer, setRefer] = useState<DirEntry | null>(null);
   const [edit, setEdit] = useState<DirEntry | null>(null);
   const [adding, setAdding] = useState(false);
 
-  const rows = DIRECTORY[category].filter((e) => {
+  // A persisted entry → a card entry: add the client-derived icon + per-category
+  // CTA (neither is stored server-side).
+  const toEntry = (b: DirectoryBody & { id: string }): DirEntry => ({
+    ...b,
+    subtitle: b.subtitle ?? "",
+    icon: <Icon name={CAT_ICON[category]} tone="inherit" size={22} />,
+    cta: CTA[category],
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    (async () => {
+      try {
+        const dtos = await listDirectory(category);
+        if (!cancelled) setEntries(dtos.map((d) => toEntry(dtoToBody(d))));
+      } catch (e) {
+        if (!cancelled) setError((e as Error).message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category]);
+
+  const rows = entries.filter((e) => {
     const t = q.trim().toLowerCase();
     return !t || e.name.toLowerCase().includes(t) || e.subtitle.toLowerCase().includes(t);
   });
 
   const blank: DirEntry = { id: "new", name: "", subtitle: "", icon: <Icon name={CAT_ICON[category]} tone="inherit" size={22} />, phone: "", email: "", address: "", tags: [] };
+
+  const handleSave = async (body: DirectoryBody, id?: string) => {
+    if (id && id !== "new") {
+      const dto = await updateDirectoryEntry(id, category, body);
+      setEntries((prev) => prev.map((e) => (e.id === id ? toEntry(dtoToBody(dto)) : e)));
+    } else {
+      const dto = await createDirectoryEntry(category, body);
+      setEntries((prev) => [...prev, toEntry(dtoToBody(dto))]);
+    }
+  };
+  const handleDelete = async (id: string) => {
+    await deleteDirectoryEntry(id);
+    setEntries((prev) => prev.filter((e) => e.id !== id));
+  };
 
   return (
     <div style={styles.content}>
@@ -56,7 +107,11 @@ export function DirectoryView({ category }: { category: DirCategory }) {
         </Button>
       </div>
 
-      {rows.length === 0 ? (
+      {loading ? (
+        <div style={styles.empty}>Loading {category.toLowerCase()}…</div>
+      ) : error ? (
+        <div style={{ ...styles.empty, color: colors.red200 }}>Couldn’t load {category.toLowerCase()} — {error}</div>
+      ) : rows.length === 0 ? (
         <div style={styles.empty}>
           {q.trim()
             ? `No ${category.toLowerCase()} match “${q}”.`
@@ -72,8 +127,8 @@ export function DirectoryView({ category }: { category: DirCategory }) {
 
       {open && <ContactDetail entry={open} onClose={() => setOpen(null)} onRefer={(e) => { setOpen(null); setRefer(e); }} onEdit={(e) => { setOpen(null); setEdit(e); }} />}
       {refer && <ReferOut entry={refer} onClose={() => setRefer(null)} />}
-      {edit && <ContactEdit entry={edit} title="Edit contact" onClose={() => setEdit(null)} />}
-      {adding && <ContactEdit entry={blank} title={ADD_LABEL[category]} onClose={() => setAdding(false)} />}
+      {edit && <ContactEdit entry={edit} title="Edit contact" onClose={() => setEdit(null)} onSave={handleSave} onDelete={handleDelete} />}
+      {adding && <ContactEdit entry={blank} title={ADD_LABEL[category]} onClose={() => setAdding(false)} onSave={handleSave} />}
     </div>
   );
 }
@@ -137,7 +192,7 @@ function QuickIcon({ icon, label }: { icon: string; label: string }) {
 }
 
 // ── Add / Edit (mirrors AddServiceModal) ────────────────────────────────────
-function ContactEdit({ entry, title, onClose }: { entry: DirEntry; title: string; onClose: () => void }) {
+function ContactEdit({ entry, title, onClose, onSave, onDelete }: { entry: DirEntry; title: string; onClose: () => void; onSave: (body: DirectoryBody, id?: string) => Promise<void>; onDelete?: (id: string) => Promise<void> }) {
   const isEdit = title.startsWith("Edit");
   const [name, setName] = useState(entry.name);
   const [subtitle, setSubtitle] = useState(entry.subtitle);
@@ -145,6 +200,42 @@ function ContactEdit({ entry, title, onClose }: { entry: DirEntry; title: string
   const [email, setEmail] = useState(entry.email ?? "");
   const [address, setAddress] = useState(entry.address ?? "");
   const [tags, setTags] = useState((entry.tags ?? []).join(", "));
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const save = async () => {
+    if (!name.trim()) { setErr("Name is required"); return; }
+    setSaving(true);
+    setErr(null);
+    try {
+      await onSave({
+        name: name.trim(),
+        subtitle: subtitle.trim(),
+        phone: phone.trim() || undefined,
+        whatsapp: entry.whatsapp ?? !!phone.trim(),
+        email: email.trim() || undefined,
+        address: address.trim() || undefined,
+        tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+      }, isEdit ? entry.id : undefined);
+      onClose();
+    } catch (e) {
+      setErr((e as Error).message);
+      setSaving(false);
+    }
+  };
+  const remove = async () => {
+    if (!onDelete || !window.confirm(`Delete “${entry.name}”?`)) return;
+    setSaving(true);
+    setErr(null);
+    try {
+      await onDelete(entry.id);
+      onClose();
+    } catch (e) {
+      setErr((e as Error).message);
+      setSaving(false);
+    }
+  };
+
   return (
     <Modal isOpen onClose={onClose} surface={colors.neutral100} width={440}>
       <div style={form.cardBody}>
@@ -177,9 +268,15 @@ function ContactEdit({ entry, title, onClose }: { entry: DirEntry; title: string
             <Field variant="box" value={tags} onChange={setTags} placeholder="Comma-separated" ariaLabel="Tags" />
           </div>
         </div>
-        <div style={form.footer}>
-          <Button variant="light" size="sm" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" size="sm" onClick={onClose}>{isEdit ? "Save changes" : title}</Button>
+        {err && <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 4 }}>{err}</div>}
+        <div style={{ ...form.footer, justifyContent: isEdit && onDelete ? "space-between" : "flex-end" }}>
+          {isEdit && onDelete && (
+            <Button variant="light" size="sm" onClick={remove} disabled={saving}>Delete</Button>
+          )}
+          <div style={{ display: "flex", gap: spacing.s }}>
+            <Button variant="light" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
+            <Button variant="primary" size="sm" onClick={save} disabled={saving}>{saving ? "Saving…" : isEdit ? "Save changes" : title}</Button>
+          </div>
         </div>
       </div>
     </Modal>

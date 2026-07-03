@@ -29,10 +29,3 @@ export type DirEntry = {
 };
 
 export type Category = "Services" | "Referral doctors" | "Labs" | "Suppliers" | "Contacts";
-
-export const DIRECTORY: Record<Exclude<Category, "Services">, DirEntry[]> = {
-  "Referral doctors": [],
-  Labs: [],
-  Suppliers: [],
-  Contacts: [],
-};
