@@ -235,10 +235,12 @@ function ContactEdit({ entry, category, title, onClose, onSave, onDelete }: { en
   const [touched, setTouched] = useState(false);
   const nameInvalid = !name.trim();
   const emailInvalid = !!email.trim() && !EMAIL_RE.test(email.trim());
+  const phoneDigits = phone.replace(/\D/g, "");
+  const phoneInvalid = !!phone.trim() && (phoneDigits.length < 7 || phoneDigits.length > 15);
 
   const save = async () => {
     setTouched(true);
-    if (nameInvalid || emailInvalid) return;
+    if (nameInvalid || emailInvalid || phoneInvalid) return;
     setSaving(true);
     setErr(null);
     try {
@@ -286,7 +288,7 @@ function ContactEdit({ entry, category, title, onClose, onSave, onDelete }: { en
           <div style={form.row}>
             <div style={form.field}>
               <label style={form.label}>Phone</label>
-              <Field variant="box" type="tel" value={phone} onChange={setPhone} placeholder="+91 …" ariaLabel="Phone" />
+              <Field variant="box" type="tel" value={phone} onChange={setPhone} placeholder="+91 …" ariaLabel="Phone" error={touched && phoneInvalid} errorMessage={touched && phoneInvalid ? "Enter a valid phone number" : undefined} />
             </div>
             <div style={form.field}>
               <label style={form.label}>Email</label>
