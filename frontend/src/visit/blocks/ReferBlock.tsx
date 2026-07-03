@@ -1,7 +1,6 @@
 import React from "react";
 import { Icon } from "../../components/Icon";
 import { colors } from "../../styles/theme";
-import type { Doctor } from "../../hooks/useDoctors";
 import {
   noteRow,
   noteLabel,
@@ -17,26 +16,24 @@ import {
   referMenuItemMeta,
 } from "./bottomRowStyles";
 
-// ReferBlock — refer the patient to another doctor. Lifted VERBATIM from
-// PrescriptionPage's inline "Refer to" row: a custom click-outside dropdown (NOT
-// a generic Select) populated with the clinic's real doctors, with the doctor
-// currently treating the visit filtered out. The open state + click-outside
-// listener + wrapper ref live INSIDE the block; the page owns the selected
-// doctor id + the doctors list and passes them as props.
+// ReferBlock — "Referred by": which referral doctor (from the Catalog directory)
+// referred this patient in. A custom click-outside dropdown (NOT a generic
+// Select) populated with the clinic's referral doctors. The selected value is
+// the doctor's NAME (denormalized onto the visit + printed as "Ref. by"), so the
+// field keeps working even if that referral doctor is later renamed/removed.
+export type ReferOption = { id: string; name: string; specialty?: string };
+
 export type ReferBlockProps = {
-  /** Clinic doctors (from useDoctors()). */
-  doctors: Doctor[];
-  /** Selected doctor id (referDoctorId on the page), or null. */
+  /** Referral doctors from the Catalog directory (useReferralDoctors()). */
+  options: ReferOption[];
+  /** Selected referral doctor NAME, or null. */
   value: string | null;
-  onChange: (doctorId: string) => void;
-  /** Doctor already treating this visit — hidden from the list (no self-referral). */
-  excludeDoctorId?: string | null;
+  onChange: (name: string) => void;
 };
 
-export function ReferBlock({ doctors, value, onChange, excludeDoctorId }: ReferBlockProps) {
+export function ReferBlock({ options, value, onChange }: ReferBlockProps) {
   const [referOpen, setReferOpen] = React.useState(false);
   const referWrapRef = React.useRef<HTMLDivElement>(null);
-  const referDoctorName = doctors.find((d) => d.id === value)?.name ?? "";
 
   React.useEffect(() => {
     if (!referOpen) return;
@@ -53,7 +50,7 @@ export function ReferBlock({ doctors, value, onChange, excludeDoctorId }: ReferB
     <div style={noteRow}>
       <div style={noteLabel}>
         <Icon name="users-group-rounded" tone="inherit" style={sectionIcon} />
-        <span style={noteLabelText}>Refer to</span>
+        <span style={noteLabelText}>Referred by</span>
       </div>
       <div ref={referWrapRef} style={{ position: "relative" }}>
         <div
@@ -66,10 +63,10 @@ export function ReferBlock({ doctors, value, onChange, excludeDoctorId }: ReferB
           <span
             style={{
               ...referText,
-              ...(referDoctorName ? { color: colors.neutral900 } : {}),
+              ...(value ? { color: colors.neutral900 } : {}),
             }}
           >
-            {referDoctorName || "Select doctor"}
+            {value || "Select referral doctor"}
           </span>
           <span style={referChevron}>
             <Icon
@@ -80,36 +77,29 @@ export function ReferBlock({ doctors, value, onChange, excludeDoctorId }: ReferB
             />
           </span>
         </div>
-        {referOpen && (() => {
-          // Hide the doctor who's already treating this visit
-          // — referring to yourself isn't a referral.
-          const referableDoctors = doctors.filter((d) => d.id !== excludeDoctorId);
-          return (
-            <div style={referMenu}>
-              {referableDoctors.length === 0 ? (
-                <div style={referMenuEmpty}>No other doctors in this clinic</div>
-              ) : (
-                referableDoctors.map((d) => (
-                  <button
-                    key={d.id}
-                    type="button"
-                    style={referMenuItem}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      onChange(d.id);
-                      setReferOpen(false);
-                    }}
-                  >
-                    <span style={referMenuItemName}>{d.name}</span>
-                    {(d.specialty || d.department) && (
-                      <span style={referMenuItemMeta}>{d.specialty || d.department}</span>
-                    )}
-                  </button>
-                ))
-              )}
-            </div>
-          );
-        })()}
+        {referOpen && (
+          <div style={referMenu}>
+            {options.length === 0 ? (
+              <div style={referMenuEmpty}>No referral doctors — add them in Catalog</div>
+            ) : (
+              options.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  style={referMenuItem}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onChange(o.name);
+                    setReferOpen(false);
+                  }}
+                >
+                  <span style={referMenuItemName}>{o.name}</span>
+                  {o.specialty && <span style={referMenuItemMeta}>{o.specialty}</span>}
+                </button>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ import { ComplaintsBlock, DiagnosisBlock, TestsBlock, emptyTags } from "./blocks
 import { NotesBlock, emptyNotes } from "./blocks/NotesBlock";
 import { ReferBlock } from "./blocks/ReferBlock";
 import { ReviewBlock } from "./blocks/ReviewBlock";
-import { useDoctors } from "../hooks/useDoctors";
+import { useReferralDoctors } from "../hooks/useReferralDoctors";
 import type { BlockComponentProps, BlockDefinition } from "./block";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -59,12 +59,12 @@ function RxAdapter({ value, onChange }: BlockComponentProps<RxData>) {
 }
 
 // ── Refer adapter ───────────────────────────────────────────────────────────
-export type ReferData = { doctorId: string | null };
-export const emptyRefer = (): ReferData => ({ doctorId: null });
+export type ReferData = { referredBy: string | null };
+export const emptyRefer = (): ReferData => ({ referredBy: null });
 
 function ReferAdapter({ value, onChange }: BlockComponentProps<ReferData>) {
-  const { data: doctors } = useDoctors();
-  return <ReferBlock doctors={doctors} value={value.doctorId} onChange={(id) => onChange({ doctorId: id })} />;
+  const referralDoctors = useReferralDoctors();
+  return <ReferBlock options={referralDoctors} value={value.referredBy} onChange={(name) => onChange({ referredBy: name })} />;
 }
 
 // ── Review adapter ──────────────────────────────────────────────────────────

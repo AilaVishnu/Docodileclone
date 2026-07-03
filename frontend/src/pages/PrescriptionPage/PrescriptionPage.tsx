@@ -20,6 +20,7 @@ import { RxBlock } from "../../visit/blocks/RxBlock";
 import { ReferBlock } from "../../visit/blocks/ReferBlock";
 import { ReviewBlock } from "../../visit/blocks/ReviewBlock";
 import { useDoctors } from "../../hooks/useDoctors";
+import { useReferralDoctors } from "../../hooks/useReferralDoctors";
 import { colors, fonts, radii, spacing } from "../../styles/theme";
 import {
   fetchPatientSummary,
@@ -382,7 +383,8 @@ const copyForwardDraft = (
   privateNotes: source?.privateNotes ?? null,
   tests: source?.tests ?? null,
   reviewNotes: source?.reviewNotes ?? null,
-  referDoctorId: source?.referDoctorId ?? null,
+  referDoctorId: null,
+  referredBy: source?.referredBy ?? null,
   createdByDoctorId: opts.createdByDoctorId ?? null,
   appointmentId: opts.appointmentId,
   sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
@@ -837,14 +839,12 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       setActiveTab(visits.length - 1);
     }
   }, [selectedPatientId, visitsLoadedFor, visits.length]);
-  // Refer-To doctor — clinic-scoped picker. `referDoctorId` holds the
-  // selected doctor's UUID; the visible label comes from the matching row
-  // in the `doctors` list fetched via useDoctors().
-  const [referDoctorId, setReferDoctorId] = React.useState<string | null>(null);
+  // "Referred by" — the referral doctor (from the Catalog directory) who
+  // referred the patient in. Holds the doctor's NAME (denormalized onto the
+  // visit + printed as "Ref. by"); the picker below lists referral doctors.
+  const [referredBy, setReferredBy] = React.useState<string | null>(null);
   const { data: doctors } = useDoctors();
-  // The visible label for the save path (referredBy). The Refer-To dropdown
-  // itself — open state, click-outside, doctor list — now lives in ReferBlock.
-  const referDoctorName = doctors.find((d) => d.id === referDoctorId)?.name ?? "";
+  const referralDoctors = useReferralDoctors();
 
   // Next-Review date <-> days are linked. Picking a date computes the
   // whole-day delta from today; typing days computes today + days. Both
@@ -935,7 +935,9 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
     _setTestsValue(activeVisit?.tests ?? "");
     setNotesForPatientValue(activeVisit?.notesForPatient ?? "");
     setPrivateNotesValue(activeVisit?.privateNotes ?? "");
-    setReferDoctorId(activeVisit?.referDoctorId ?? null);
+    // Prefer the new referral field; fall back to the legacy staff-refer name
+    // so pre-existing visits still show their "Ref. by" value.
+    setReferredBy(activeVisit?.referredBy ?? activeVisit?.referDoctorName ?? null);
     // Loading a visit is not an edit — clear any pending-edit state in the same
     // effect that pours the data in, so the footer button reads "Complete visit"
     // (not "Save changes") the instant a pre-filled pad opens. (editedSinceLoadRef
@@ -1541,7 +1543,8 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       notesForPatient: notesForPatientValue || null,
       privateNotes: privateNotesValue || null,
       tests: testsValue || null,
-      referDoctorId: referDoctorId,
+      referDoctorId: null,
+      referredBy: referredBy,
       reviewDate: fmtDate(reviewDate),
       reviewDays: reviewDays.trim() === "" ? null : parseInt(reviewDays, 10),
       reviewNotes: reviewNotesValue || null,
@@ -2051,7 +2054,7 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
       visitNumber: visitIndex >= 0 ? visits.length - visitIndex : null, // newest = highest #
       visitDate: activeVisit.visitDate,
       visitTime: new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }),
-      referredBy: referDoctorName || null,
+      referredBy: referredBy || null,
       // Prefer the server-resolved name (works even when the prescriber isn't in
       // the caller's scoped doctors list); fall back to the loaded list.
       doctorName: activeVisit.createdByDoctorName ?? doctors.find((d) => d.id === activeVisit.createdByDoctorId)?.name ?? null,
@@ -2590,15 +2593,13 @@ export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPa
                     onLoadTemplate={() => openTemplates("load", "tests")}
                     onSaveTemplate={() => openTemplates("save", "tests")}
                   />
-                  {/* Refer to — dropdown of doctors in the current clinic
-                (fetched from /api/doctors, which filters by the caller's
-                clinicId via the JWT). Click the pill to open; selecting a
-                doctor sets referDoctorId and closes the menu. */}
+                  {/* Referred by — the referral doctor (from the Catalog
+                directory) who referred this patient in. Selecting one stores
+                its name on the visit and prints as "Ref. by". */}
                   <ReferBlock
-                    doctors={doctors}
-                    value={referDoctorId}
-                    excludeDoctorId={appointmentDoctorId}
-                    onChange={(id) => { setReferDoctorId(id); flagDirty(); }}
+                    options={referralDoctors}
+                    value={referredBy}
+                    onChange={(name) => { setReferredBy(name); flagDirty(); }}
                   />
                   {/* Next Review — date picker + "or ___ days" + notes field */}
                   <ReviewBlock

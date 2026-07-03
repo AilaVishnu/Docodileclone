@@ -52,6 +52,9 @@ export type VisitDTO = {
 
   referDoctorId: string | null;
   referDoctorName: string | null;
+  /** Referral doctor (from the Catalog directory) who referred the patient in —
+   *  a denormalized name, printed as "Ref. by". */
+  referredBy: string | null;
   reviewDate: string | null;
   reviewDays: number | null;
   reviewNotes: string | null;
