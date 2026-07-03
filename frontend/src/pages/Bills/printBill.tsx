@@ -21,6 +21,13 @@ const fmtDate = (iso: string) => {
 // the patient can't be resolved unambiguously, leaving just the name.
 export type PrintPatientMeta = { age?: number; gender?: string; mobile?: string; id?: string };
 
+// Clinic name for the receipt letterhead + the share-message text: the default
+// Bill template's letterhead wins, else the cached clinic profile, else a
+// neutral placeholder. Shared so the printed receipt and the share text agree.
+export function resolveClinicName(fallback = "Your Clinic"): string {
+  return getDefaultBillTemplate()?.clinicName?.trim() || localStorage.getItem("docodile_clinic_name") || fallback;
+}
+
 const PAPER_W = 760;
 
 // BillPrint styles reference the design-system type ramp via CSS custom
@@ -91,8 +98,8 @@ export async function buildBillHtml(
     <BillPrint
       clinic={{
         name: clinicName,
-        address: t.clinicAddress || "",
-        phone: t.clinicPhone || undefined,
+        address: t.clinicAddress?.trim() || localStorage.getItem("docodile_clinic_address") || "",
+        phone: t.clinicPhone?.trim() || localStorage.getItem("docodile_clinic_phone") || undefined,
         email: t.clinicEmail || undefined,
         logo: t.logoImage ? <img src={t.logoImage} alt="" style={{ height: 56, objectFit: "contain" }} /> : undefined,
       }}

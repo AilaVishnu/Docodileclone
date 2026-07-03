@@ -1,7 +1,8 @@
 import React from "react";
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 import { Icon } from "../../components/Icon";
-import { shareBill, billPdfFile, type PrintPatientMeta } from "./printBill";
+import { shareBill, billPdfFile, resolveClinicName, type PrintPatientMeta } from "./printBill";
+import { ensureBillTemplatesLoaded } from "../Settings/BillTemplate/storage";
 import type { Bill } from "../../api/bills";
 import { colors } from "../../styles/theme";
 
@@ -23,7 +24,7 @@ const fmtDate = (iso: string) => {
 // A short, human-readable summary sent as the WhatsApp / email / clipboard text
 // (the PDF carries the full itemised receipt).
 function billSummary(bill: ShareBill): string {
-  const clinic = localStorage.getItem("docodile_clinic_name") || "";
+  const clinic = resolveClinicName("");
   return [
     clinic,
     `Bill ${bill.invoiceNo} — ${fmtDate(bill.billDate)}`,
@@ -77,6 +78,11 @@ export interface ShareBillMenuProps {
 }
 
 export function ShareBillMenu({ bill, patient, phone, email, onError, trigger }: ShareBillMenuProps) {
+  // Prime the default Bill template + clinic identity so billSummary() can name
+  // the clinic (same source the printed receipt uses) by the time an item is
+  // clicked. Cheap and cached — a no-op after the first call this session.
+  React.useEffect(() => { void ensureBillTemplatesLoaded(); }, []);
+
   // Send the actual PDF via the OS share sheet (WhatsApp / Email / … get the
   // file attached). Falls back to a plain download if the platform can't share
   // files; a dismissed sheet (AbortError) isn't a failure.
