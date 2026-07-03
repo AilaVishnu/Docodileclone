@@ -31,6 +31,20 @@ const CTA: Record<DirCategory, string | undefined> = {
   Suppliers: "Reorder",
   Contacts: undefined,
 };
+// Category-appropriate example placeholders for the Add/Edit form (so the
+// supplier form doesn't suggest a doctor's name).
+const PLACEHOLDERS: Record<DirCategory, { name: string; subtitle: string }> = {
+  "Referral doctors": { name: "e.g. Dr. Anjali Menon", subtitle: "e.g. Dermatosurgery · Apollo" },
+  Labs: { name: "e.g. Metropolis Labs", subtitle: "e.g. Pathology · home collection" },
+  Suppliers: { name: "e.g. MedPlus Distribution", subtitle: "e.g. Pharma distributor" },
+  Contacts: { name: "e.g. EcoClean", subtitle: "e.g. Biomedical waste" },
+};
+const SINGULAR_LOWER: Record<DirCategory, string> = {
+  "Referral doctors": "referral doctor",
+  Labs: "lab",
+  Suppliers: "supplier",
+  Contacts: "contact",
+};
 
 /**
  * DirectoryView — one Catalog directory tab (referral doctors / labs /
@@ -127,8 +141,8 @@ export function DirectoryView({ category }: { category: DirCategory }) {
 
       {open && <ContactDetail entry={open} onClose={() => setOpen(null)} onRefer={(e) => { setOpen(null); setRefer(e); }} onEdit={(e) => { setOpen(null); setEdit(e); }} />}
       {refer && <ReferOut entry={refer} onClose={() => setRefer(null)} />}
-      {edit && <ContactEdit entry={edit} title="Edit contact" onClose={() => setEdit(null)} onSave={handleSave} onDelete={handleDelete} />}
-      {adding && <ContactEdit entry={blank} title={ADD_LABEL[category]} onClose={() => setAdding(false)} onSave={handleSave} />}
+      {edit && <ContactEdit entry={edit} category={category} title={`Edit ${SINGULAR_LOWER[category]}`} onClose={() => setEdit(null)} onSave={handleSave} onDelete={handleDelete} />}
+      {adding && <ContactEdit entry={blank} category={category} title={ADD_LABEL[category]} onClose={() => setAdding(false)} onSave={handleSave} />}
     </div>
   );
 }
@@ -192,7 +206,7 @@ function QuickIcon({ icon, label }: { icon: string; label: string }) {
 }
 
 // ── Add / Edit (mirrors AddServiceModal) ────────────────────────────────────
-function ContactEdit({ entry, title, onClose, onSave, onDelete }: { entry: DirEntry; title: string; onClose: () => void; onSave: (body: DirectoryBody, id?: string) => Promise<void>; onDelete?: (id: string) => Promise<void> }) {
+function ContactEdit({ entry, category, title, onClose, onSave, onDelete }: { entry: DirEntry; category: DirCategory; title: string; onClose: () => void; onSave: (body: DirectoryBody, id?: string) => Promise<void>; onDelete?: (id: string) => Promise<void> }) {
   const isEdit = title.startsWith("Edit");
   const [name, setName] = useState(entry.name);
   const [subtitle, setSubtitle] = useState(entry.subtitle);
@@ -243,11 +257,11 @@ function ContactEdit({ entry, title, onClose, onSave, onDelete }: { entry: DirEn
         <div style={form.form}>
           <div style={form.field}>
             <label style={form.label}>Name<span style={form.required}>*</span></label>
-            <Field variant="box" value={name} onChange={setName} placeholder="e.g. Dr. Anjali Menon" autoFocus ariaLabel="Name" />
+            <Field variant="box" value={name} onChange={setName} placeholder={PLACEHOLDERS[category].name} autoFocus ariaLabel="Name" />
           </div>
           <div style={form.field}>
             <label style={form.label}>Title / type</label>
-            <Field variant="box" value={subtitle} onChange={setSubtitle} placeholder="e.g. Dermatosurgery · Apollo" ariaLabel="Title" />
+            <Field variant="box" value={subtitle} onChange={setSubtitle} placeholder={PLACEHOLDERS[category].subtitle} ariaLabel="Title" />
           </div>
           <div style={form.row}>
             <div style={form.field}>
