@@ -6,6 +6,8 @@ import { Icon } from "../../components/Icon";
 import { Modal } from "../../components/Modal";
 import { ModalHeader } from "../../components/ModalHeader";
 import { ContactCard } from "../../components/Catalog/ContactCard";
+import { Toast } from "../../components/Toast";
+import { resolveToastIcon } from "../../components/Toast/toastIcon";
 import { colors, fonts, spacing, radii } from "../../styles/theme";
 import { styles as form } from "../Services/AddServiceModal.styles";
 import { Category, DirEntry } from "./catalogData";
@@ -45,6 +47,13 @@ const SINGULAR_LOWER: Record<DirCategory, string> = {
   Suppliers: "supplier",
   Contacts: "contact",
 };
+const SINGULAR: Record<DirCategory, string> = {
+  "Referral doctors": "Referral doctor",
+  Labs: "Lab",
+  Suppliers: "Supplier",
+  Contacts: "Contact",
+};
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * DirectoryView — one Catalog directory tab (referral doctors / labs /
@@ -61,6 +70,8 @@ export function DirectoryView({ category }: { category: DirCategory }) {
   const [refer, setRefer] = useState<DirEntry | null>(null);
   const [edit, setEdit] = useState<DirEntry | null>(null);
   const [adding, setAdding] = useState(false);
+  const [toast, setToast] = useState<{ visible: boolean; message: string }>({ visible: false, message: "" });
+  const showToast = (message: string) => setToast({ visible: true, message });
 
   // A persisted entry → a card entry: add the client-derived icon + per-category
   // CTA (neither is stored server-side).
@@ -100,14 +111,17 @@ export function DirectoryView({ category }: { category: DirCategory }) {
     if (id && id !== "new") {
       const dto = await updateDirectoryEntry(id, category, body);
       setEntries((prev) => prev.map((e) => (e.id === id ? toEntry(dtoToBody(dto)) : e)));
+      showToast(`${SINGULAR[category]} updated`);
     } else {
       const dto = await createDirectoryEntry(category, body);
       setEntries((prev) => [...prev, toEntry(dtoToBody(dto))]);
+      showToast(`${SINGULAR[category]} added`);
     }
   };
   const handleDelete = async (id: string) => {
     await deleteDirectoryEntry(id);
     setEntries((prev) => prev.filter((e) => e.id !== id));
+    showToast(`${SINGULAR[category]} deleted`);
   };
 
   return (
@@ -143,6 +157,8 @@ export function DirectoryView({ category }: { category: DirCategory }) {
       {refer && <ReferOut entry={refer} onClose={() => setRefer(null)} />}
       {edit && <ContactEdit entry={edit} category={category} title={`Edit ${SINGULAR_LOWER[category]}`} onClose={() => setEdit(null)} onSave={handleSave} onDelete={handleDelete} />}
       {adding && <ContactEdit entry={blank} category={category} title={ADD_LABEL[category]} onClose={() => setAdding(false)} onSave={handleSave} />}
+
+      <Toast message={toast.message} {...resolveToastIcon(toast.message)} isVisible={toast.visible} onClose={() => setToast({ visible: false, message: "" })} />
     </div>
   );
 }
@@ -216,9 +232,13 @@ function ContactEdit({ entry, category, title, onClose, onSave, onDelete }: { en
   const [tags, setTags] = useState((entry.tags ?? []).join(", "));
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [touched, setTouched] = useState(false);
+  const nameInvalid = !name.trim();
+  const emailInvalid = !!email.trim() && !EMAIL_RE.test(email.trim());
 
   const save = async () => {
-    if (!name.trim()) { setErr("Name is required"); return; }
+    setTouched(true);
+    if (nameInvalid || emailInvalid) return;
     setSaving(true);
     setErr(null);
     try {
@@ -257,7 +277,7 @@ function ContactEdit({ entry, category, title, onClose, onSave, onDelete }: { en
         <div style={form.form}>
           <div style={form.field}>
             <label style={form.label}>Name<span style={form.required}>*</span></label>
-            <Field variant="box" value={name} onChange={setName} placeholder={PLACEHOLDERS[category].name} autoFocus ariaLabel="Name" />
+            <Field variant="box" value={name} onChange={setName} placeholder={PLACEHOLDERS[category].name} autoFocus ariaLabel="Name" error={touched && nameInvalid} errorMessage={touched && nameInvalid ? "Name is required" : undefined} />
           </div>
           <div style={form.field}>
             <label style={form.label}>Title / type</label>
@@ -270,7 +290,7 @@ function ContactEdit({ entry, category, title, onClose, onSave, onDelete }: { en
             </div>
             <div style={form.field}>
               <label style={form.label}>Email</label>
-              <Field variant="box" type="email" value={email} onChange={setEmail} placeholder="name@clinic.in" ariaLabel="Email" />
+              <Field variant="box" type="email" value={email} onChange={setEmail} placeholder="name@clinic.in" ariaLabel="Email" error={touched && emailInvalid} errorMessage={touched && emailInvalid ? "Enter a valid email" : undefined} />
             </div>
           </div>
           <div style={form.field}>
