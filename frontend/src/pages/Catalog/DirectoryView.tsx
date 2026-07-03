@@ -56,11 +56,19 @@ export function DirectoryView({ category }: { category: DirCategory }) {
         </Button>
       </div>
 
-      <div style={styles.grid}>
-        {rows.map((e) => (
-          <ContactCard key={e.id} entry={e} onOpen={setOpen} onEdit={setEdit} />
-        ))}
-      </div>
+      {rows.length === 0 ? (
+        <div style={styles.empty}>
+          {q.trim()
+            ? `No ${category.toLowerCase()} match “${q}”.`
+            : `No ${category.toLowerCase()} yet — add one with “${ADD_LABEL[category]}”.`}
+        </div>
+      ) : (
+        <div style={styles.grid}>
+          {rows.map((e) => (
+            <ContactCard key={e.id} entry={e} onOpen={setOpen} onEdit={setEdit} />
+          ))}
+        </div>
+      )}
 
       {open && <ContactDetail entry={open} onClose={() => setOpen(null)} onRefer={(e) => { setOpen(null); setRefer(e); }} onEdit={(e) => { setOpen(null); setEdit(e); }} />}
       {refer && <ReferOut entry={refer} onClose={() => setRefer(null)} />}
@@ -244,4 +252,5 @@ const styles: Record<string, CSSProperties> = {
   content: { display: "flex", flexDirection: "column", gap: spacing.l },
   toolbar: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: spacing.m },
   grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: spacing.m },
+  empty: { padding: `${spacing["3xl"]} ${spacing.l}`, textAlign: "center", color: colors.neutral500, fontSize: fonts.size.s },
 };
