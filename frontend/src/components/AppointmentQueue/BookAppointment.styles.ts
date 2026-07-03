@@ -29,7 +29,10 @@ export const styles: Record<string, CSSProperties> = {
     bottom: 0,
     backgroundColor: colors.active.shade200,
     zIndex: 2000,
-    padding: `${fluidSpacing.outerY} ${fluidSpacing.outerX}`,
+    // No TOP padding: the sticky <PageHeader/> is the first child and must hug
+    // the very top (touching the TopNav). Its own internal padding provides the
+    // header's breathing room; the flex gap below spaces it from the grid.
+    padding: `0 ${fluidSpacing.outerX} ${fluidSpacing.outerY}`,
     display: "flex",
     flexDirection: "column",
     gap: spacing.m,
@@ -37,85 +40,27 @@ export const styles: Record<string, CSSProperties> = {
     // using 2xl (16) since 32 isn't on the Figma radius ladder. Ask design if
     // they want radii["3xl"] added for this.
     borderRadius: `${radii["2xl"]}px 0 0 0`,
-    overflow: "auto",
+    // When the form grows beyond the viewport (e.g. many services), THIS block
+    // scrolls vertically — the TopNav and sidebar (outside the overlay) stay
+    // fixed. Never scrolls horizontally.
+    overflowY: "auto",
+    overflowX: "hidden",
   },
 
-  // ─── Header (back button + centered title with doctor dropdown) ──────────
-  header: {
-    display: "flex",
-    alignItems: "center",
-    position: "relative",
-    marginBottom: spacing["2xs"],
-    // Cap at content max-width, center in viewport
-    width: "100%",
-    maxWidth: layout.contentMaxWidth,
-    marginLeft: "auto",
-    marginRight: "auto",
-  },
-  backButton: {
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "32px",
-    height: "32px",
-    borderRadius: radii.full,
-    border: `${strokes.xs} solid ${colors.neutral300}`,
-    backgroundColor: "transparent",
-    padding: 0,
-    position: "absolute",
-    left: 0,
-  },
-  titleContainer: {
-    display: "flex",
-    alignItems: "center",
-    gap: spacing.xs,
-    flex: 1,
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: fonts.size.h5,
-    color: colors.neutral900,
-    fontFamily: fonts.family.secondary,
-    margin: 0,
-    display: "flex",
-    alignItems: "center",
-    gap: spacing.xs,
-    fontWeight: fonts.weight.regular,
-  },
-  clickableDoctor: {
-    textDecoration: "underline",
-    cursor: "pointer",
-    color: colors.neutral900,
-    fontWeight: fonts.weight.regular,
-  },
-  doctorDropdown: {
-    appearance: "none" as const,
-    WebkitAppearance: "none" as const,
-    background: "none",
-    border: "none",
-    borderBottom: `${strokes.m} solid ${colors.neutral900}`,
-    fontFamily: fonts.family.secondary,
-    // Was h4 (32) — inconsistent with title (h5 24). They sit on the same
-    // visual line, so matching to h5.
-    fontSize: fonts.size.h5,
-    fontWeight: fonts.weight.regular,
-    color: colors.neutral900,
-    cursor: "pointer",
-    outline: "none",
-    padding: `0 ${spacing["2xs"]}`,
-    marginLeft: spacing.xs,
-    textDecoration: "underline",
-    textUnderlineOffset: "4px",
-  },
+  // ─── Header ──────────────────────────────────────────────────────────────
+  // Moved to the shared <PageHeader/> component (components/PageHeader). The
+  // old inline header / backButton / title styles were removed when this page
+  // adopted the sticky app-bar.
 
   // ─── Main 3-column grid ──────────────────────────────────────────────────
   grid: {
     display: "grid",
-    // patient | form (grows 524 → 700) | bill
-    gridTemplateColumns: "200px minmax(524px, 700px) 312px",
+    // patient | form | bill — all FIXED widths so the block is a constant size
+    // per tier; the side gutters absorb the extra width (justify-content center
+    // + margin auto). Columns tighten in the 1200–1439 tier via globals.css.
+    gridTemplateColumns: "var(--book-col-left) var(--book-col-form) var(--book-col-right)",
     gridTemplateRows: "auto auto auto",
-    gap: spacing.m,
+    gap: "var(--book-grid-gap, 16px)",
     justifyContent: "center",
     alignItems: "stretch",
     width: "100%",
@@ -143,7 +88,8 @@ export const styles: Record<string, CSSProperties> = {
     gridRow: "1",
     alignItems: "center",
     justifyContent: "center",
-    padding: spacing.m,
+    padding: "var(--book-patient-pad, 16px)",
+    gap: "var(--book-patient-gap, 12px)",
   },
   scheduleColumn: {
     gridColumn: "1",
@@ -171,8 +117,8 @@ export const styles: Record<string, CSSProperties> = {
   // Avatar illustration shown above the Patient ID — Figma 2350:52.
   // Picked by gender + age band; updates as the user fills the form.
   patientAvatar: {
-    width: 140,
-    height: 140,
+    width: "var(--book-patient-avatar, 140px)",
+    height: "var(--book-patient-avatar, 140px)",
     objectFit: "contain" as const,
     display: "block",
   },
@@ -183,7 +129,8 @@ export const styles: Record<string, CSSProperties> = {
     gridColumn: "2",
     gridRow: "1",
     gap: spacing.m,
-    padding: `${spacing.m} ${spacing.xl}`,
+    // Bottom padding var-driven so 1024 trims the space under male/female.
+    padding: `${spacing.m} ${spacing.xl} var(--book-form-pad-bottom, 16px) ${spacing.xl}`,
   },
 
   // Appointment details — Figma: padding 24/24/24/16 (asymmetric left), gap 16
@@ -191,8 +138,10 @@ export const styles: Record<string, CSSProperties> = {
   appointmentDetailsCard: {
     gridColumn: "2",
     gridRow: "2",
-    gap: spacing.m,
-    padding: `${spacing.xl} ${spacing.xl} ${spacing.xl} ${spacing.m}`,
+    // Inter-row gap + top/bottom padding var-driven so 1024 compresses the
+    // doctor/service rhythm without touching the left/right asymmetry.
+    gap: "var(--book-details-gap, 16px)",
+    padding: `var(--book-details-pad-y, 24px) ${spacing.xl} var(--book-details-pad-y, 24px) ${spacing.m}`,
     justifyContent: "center",
     alignSelf: "start",
     minHeight: "144px",
@@ -286,7 +235,8 @@ export const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: spacing.xs,
-    padding: spacing.xs,
+    // Horizontal padding fixed; vertical via var so 1024 can flatten the row.
+    padding: `var(--book-input-pady) ${spacing.xs}`,
     borderBottom: `${strokes.xs} solid ${colors.neutral300}`,
     width: "100%",
   },
@@ -328,7 +278,7 @@ export const styles: Record<string, CSSProperties> = {
   },
   input: {
     width: "100%",
-    padding: `${spacing.xs} ${spacing.s}`,
+    padding: `var(--book-input-pady) ${spacing.s}`,
     borderRadius: radii.m,
     border: `${strokes.xs} solid ${colors.neutral300}`,
     fontSize: fonts.size.m,
@@ -351,22 +301,10 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     width: "100%",
   },
-  radioGroup: {
-    display: "flex",
-    gap: spacing.m,
-  },
   radioGroupInline: {
     display: "flex",
     gap: spacing.s,
     flexWrap: "nowrap",
-  },
-  radioLabel: {
-    display: "flex",
-    alignItems: "center",
-    gap: spacing["2xs"], // was 6px — snapped to 4
-    fontSize: fonts.size.m,
-    cursor: "pointer",
-    color: colors.neutral900,
   },
   radioLabelSmall: {
     display: "flex",
@@ -379,7 +317,7 @@ export const styles: Record<string, CSSProperties> = {
   },
   select: {
     width: "100%",
-    padding: `${spacing.xs} ${spacing.s}`,
+    padding: `var(--book-input-pady) ${spacing.s}`,
     borderRadius: radii.m,
     border: `${strokes.xs} solid ${colors.neutral300}`,
     fontSize: fonts.size.m,
@@ -399,7 +337,7 @@ export const styles: Record<string, CSSProperties> = {
     gap: spacing.m,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: spacing.m,
+    marginTop: "var(--book-footer-mt, 16px)",
     width: "100%",
   },
   pillButtonPrimary: {
@@ -412,11 +350,11 @@ export const styles: Record<string, CSSProperties> = {
     justifyContent: "center",
     gap: spacing.xs,
     cursor: "pointer",
-    border: "none",
+    border: `${strokes.s} solid ${colors.neutral900}`,
     fontSize: fonts.size.m,
     fontWeight: fonts.weight.regular,
     fontFamily: fonts.family.primary,
-    minWidth: "200px",
+    width: "216px",
     boxSizing: "border-box",
   },
   pillButtonSecondary: {
@@ -433,7 +371,7 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.m,
     fontWeight: fonts.weight.regular,
     fontFamily: fonts.family.primary,
-    minWidth: "200px",
+    width: "216px",
     boxSizing: "border-box",
   },
   pillButtonPayDue: {
@@ -450,7 +388,7 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.m,
     fontWeight: fonts.weight.regular,
     fontFamily: fonts.family.primary,
-    minWidth: "200px",
+    width: "216px",
     boxSizing: "border-box",
   },
 };

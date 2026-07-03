@@ -1,142 +1,125 @@
 package com.example.docodile.service
 
-import com.example.docodile.repo.ClinicStaffRepository
-import com.example.docodile.repo.ClinicEntityRepository
-import com.example.docodile.repo.TenantRepository
-import com.example.docodile.domain.ClinicEntity
-import com.example.docodile.web.ClinicDetailsRequest
+import com.example.docodile.domain.AuditAction
+import com.example.docodile.domain.AppUser
+import com.example.docodile.domain.ClinicSettings
+import com.example.docodile.domain.Role
+import com.example.docodile.repo.AppUserRepository
+import com.example.docodile.repo.ClinicSettingsRepository
 import com.example.docodile.security.CurrentUser
+import com.example.docodile.web.ClinicDetailsRequest
+import com.example.docodile.web.StaffRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 
-import com.example.docodile.repo.AppUserRepository
-import com.example.docodile.domain.Role
-import com.example.docodile.web.StaffRequest
-import com.example.docodile.domain.AppUser
-import com.example.docodile.domain.ClinicStaff
-import com.example.docodile.domain.ClinicStaffId
-
 @Service
 class ClinicStatusService(
-    private val clinicEntityRepository: ClinicEntityRepository,
-    private val clinicStaffRepository: ClinicStaffRepository,
+    private val clinicSettingsRepository: ClinicSettingsRepository,
     private val appUserRepository: AppUserRepository,
-    private val tenantRepository: TenantRepository,
-    private val currentUser: CurrentUser
+    private val currentUser: CurrentUser,
+    private val passwordTokenService: PasswordTokenService,
+    private val emailService: EmailService,
+    private val auditService: AuditService,
 ) {
     fun isClinicComplete(): Boolean {
-        val tenantId = currentUser.tenantId()
-        val clinics = clinicEntityRepository.findAllByTenantId(tenantId)
-        if (clinics.isEmpty()) return false
-
-        return clinics.any { clinic ->
-            val hasCoreDetails = !clinic.name.isNullOrBlank()
-                && !clinic.address.isNullOrBlank()
-                && !clinic.phone.isNullOrBlank()
-
-            val staffCount = clinicStaffRepository.countByIdClinicId(clinic.id)
-            hasCoreDetails && staffCount > 0
-        }
+        val settings = clinicSettingsRepository.findAll().firstOrNull() ?: return false
+        val hasCoreDetails = settings.name.isNotBlank() && !settings.address.isNullOrBlank()
+        val hasStaff = appUserRepository.findAll().any { it.active }
+        return hasCoreDetails && hasStaff
     }
 
-    fun getClinicsForTenant(): List<ClinicEntity> {
-        return clinicEntityRepository.findAllByTenantId(currentUser.tenantId())
+    fun getClinicSettings(): ClinicSettings? {
+        return clinicSettingsRepository.findAll().firstOrNull()
     }
 
     @Transactional
-    fun saveClinicDetails(request: ClinicDetailsRequest): ClinicEntity {
-        val tenantId = currentUser.tenantId()
-        
-        val clinic = if (request.id != null) {
-            clinicEntityRepository.findById(request.id)
-                .filter { it.tenant?.id == tenantId }
-                .orElseThrow { IllegalArgumentException("Clinic not found") }
-        } else {
-            // Count clinics for this tenant
-            val currentCount = clinicEntityRepository.countByTenantId(tenantId)
-            if (currentCount >= 5) {
-                throw IllegalArgumentException("You can only have up to 5 clinics")
-            }
+    fun saveClinicDetails(request: ClinicDetailsRequest): ClinicSettings {
+        val settings = clinicSettingsRepository.findAll().firstOrNull()
+            ?: ClinicSettings()
 
-            val tenant = tenantRepository.findById(tenantId)
-                .orElseThrow { IllegalStateException("Tenant not found") }
-            ClinicEntity(tenant = tenant, createdAt = Instant.now())
-        }
-
-        // Domain Immutability and Uniqueness Logic
-        if (!request.domain.isNullOrBlank()) {
-            if (clinic.domain != null) {
-                // Domain once saved, cannot be updated
-                if (clinic.domain != request.domain) {
-                    throw IllegalArgumentException("Domain cannot be changed once saved")
-                }
-            } else {
-                // Setting domain for the first time
-                // Application-wide uniqueness check
-                if (clinicEntityRepository.existsByDomainIgnoreCase(request.domain)) {
-                    throw IllegalArgumentException("Domain name already exists in application")
-                }
-                clinic.domain = request.domain
-            }
-        }
-
-        clinic.apply {
-            name = request.name
-            address = request.address
-            phone = request.phone
+        settings.apply {
+            name      = request.name
+            address   = request.address
             speciality = request.speciality
+            updatedAt  = Instant.now()
         }
 
-        return clinicEntityRepository.save(clinic)
+        val saved = clinicSettingsRepository.save(settings)
+        auditService.log(
+            action     = AuditAction.CONFIG_CHANGED,
+            entityType = "ClinicSettings",
+            entityId   = saved.id,
+            metadata   = mapOf("clinicName" to saved.name),
+        )
+        return saved
     }
 
-    fun isDomainAvailable(domain: String): Boolean {
-        return !clinicEntityRepository.existsByDomainIgnoreCase(domain)
-    }
-
-    fun getStaffForClinic(clinicId: UUID): List<AppUser> {
-        val associations = clinicStaffRepository.findByClinicId(clinicId)
-        return associations.mapNotNull { it.staff }
+    fun getStaff(): List<AppUser> {
+        return appUserRepository.findAll()
     }
 
     @Transactional
-    fun saveStaff(clinicId: UUID, request: StaffRequest): AppUser {
-        val tenantId = currentUser.tenantId()
-        val clinic = clinicEntityRepository.findById(clinicId)
-            .filter { it.tenant?.id == tenantId }
-            .orElseThrow { IllegalArgumentException("Clinic not found") }
-
+    fun saveStaff(request: StaffRequest): AppUser {
         // Server-side validation
         if (!request.email.contains("@") || !request.email.contains(".")) {
-             throw IllegalArgumentException("Invalid email format")
+            throw IllegalArgumentException("Invalid email format")
         }
         if (request.phone.replace("\\D".toRegex(), "").length < 10) {
-             throw IllegalArgumentException("Phone number must have at least 10 digits")
+            throw IllegalArgumentException("Phone number must have at least 10 digits")
         }
 
-        // Check email uniqueness
-        val existingByEmail = appUserRepository.findByEmail(request.email.trim().lowercase())
-        if (existingByEmail.isPresent && existingByEmail.get().id != request.id) {
+        // Department + specialty rules tied to role:
+        //   Doctor                              → department + specialty both required
+        //   Nurse                               → department required, specialty ignored
+        //   Pharmacy / Lab / Front Desk / Other → both optional (clinic-wide roles)
+        val deptRequiredRoles = setOf("DOCTOR", "NURSE")
+        val normalizedRole = request.role.uppercase().replace(" ", "_")
+        if (normalizedRole in deptRequiredRoles && request.department.isNullOrBlank()) {
+            throw IllegalArgumentException("Department is required for ${request.role}")
+        }
+        if (normalizedRole == "DOCTOR" && request.specialty.isNullOrBlank()) {
+            throw IllegalArgumentException("Specialty is required for Doctor")
+        }
+        if (!request.department.isNullOrBlank()) {
+            val clinicDepartments = clinicSettingsRepository.findAll().firstOrNull()
+                ?.speciality
+                ?.split(",")
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() }
+                .orEmpty()
+            if (request.department !in clinicDepartments) {
+                throw IllegalArgumentException("Department '${request.department}' is not configured for this clinic")
+            }
+        }
+
+        val normalizedEmail = request.email.trim().lowercase()
+        val existingByEmail = appUserRepository.findByEmail(normalizedEmail)
+
+        // Resolve the target staff row:
+        //   - Editing (id present) → load that row.
+        //   - Adding with an email that already exists → reuse that row (reactivation).
+        //   - Otherwise → a brand-new account.
+        val staff = when {
+            request.id != null ->
+                appUserRepository.findById(request.id)
+                    .orElseThrow { IllegalArgumentException("Staff member not found") }
+            existingByEmail.isPresent -> existingByEmail.get()
+            else -> AppUser(createdAt = Instant.now())
+        }
+
+        // Email must be unique to this staff row.
+        if (existingByEmail.isPresent && existingByEmail.get().id != staff.id) {
             throw IllegalArgumentException("Email already exists for another staff member")
         }
 
-        // Check phone uniqueness
-        if (appUserRepository.existsByPhone(request.phone) &&
-            (request.id == null || !appUserRepository.findById(request.id).map { it.phone == request.phone }.orElse(false))) {
+        // Phone must be unique to this staff row (allow keeping their own).
+        if (appUserRepository.existsByPhone(request.phone) && request.phone != staff.phone) {
             throw IllegalArgumentException("Phone number already exists for another staff member")
         }
 
-        val staff = if (request.id != null) {
-            appUserRepository.findById(request.id)
-                .filter { it.tenant?.id == tenantId }
-                .orElseThrow { IllegalArgumentException("Staff member not found") }
-        } else {
-            val tenant = tenantRepository.findById(tenantId)
-                .orElseThrow { IllegalStateException("Tenant not found") }
-            AppUser(tenant = tenant, createdAt = Instant.now())
-        }
+        val isNew = request.id == null && existingByEmail.isEmpty
 
         staff.apply {
             name = request.name
@@ -148,42 +131,69 @@ class ClinicStatusService(
             }.getOrNull()
             role = resolved ?: Role.OTHER
             customRole = if (resolved == null) request.role.trim() else null
-            speciality = request.speciality
+            department = request.department
+            specialty = request.specialty
             registrationNo = request.registrationNo
-            passwordHash = null // As requested
+            qualification = request.qualification
+            medicalCouncil = request.medicalCouncil
+            experienceYears = request.experienceYears
+            // Adding or editing a staff member (re)activates them — covers
+            // the case where a previously-removed doctor rejoins the clinic.
+            active = true
+            if (isNew) {
+                passwordHash = null
+                accountStatus = "PENDING_ACTIVATION"
+            }
         }
 
         val savedStaff = appUserRepository.save(staff)
 
-        // Ensure linked to clinic
-        if (!clinicStaffRepository.existsByIdClinicIdAndIdStaffId(clinicId, savedStaff.id)) {
-            val association = ClinicStaff(
-                id = ClinicStaffId(clinicId = clinicId, staffId = savedStaff.id),
-                clinic = clinic,
-                staff = savedStaff,
-                createdAt = Instant.now()
-            )
-            clinicStaffRepository.save(association)
+        if (isNew) {
+            val clinicName = clinicSettingsRepository.findAll().firstOrNull()?.name ?: "your clinic"
+            val rawToken = passwordTokenService.generateToken(savedStaff.id)
+            val setupLink = passwordTokenService.buildSetupLink(rawToken)
+            emailService.sendWelcomeEmail(savedStaff.email, savedStaff.name ?: "", clinicName, setupLink)
         }
+
+        auditService.log(
+            action     = if (isNew) AuditAction.USER_CREATED else AuditAction.USER_UPDATED,
+            entityType = "AppUser",
+            entityId   = savedStaff.id,
+            metadata   = mapOf("email" to savedStaff.email),
+        )
 
         return savedStaff
     }
 
     @Transactional
-    fun deleteStaff(clinicId: UUID, staffId: UUID) {
-        val tenantId = currentUser.tenantId()
-        clinicEntityRepository.findById(clinicId)
-            .filter { it.tenant?.id == tenantId }
-            .orElseThrow { IllegalArgumentException("Clinic not found") }
-
+    fun deactivateStaff(staffId: UUID) {
         val staff = appUserRepository.findById(staffId)
-            .filter { it.tenant?.id == tenantId }
             .orElseThrow { IllegalArgumentException("Staff member not found") }
 
-        // Delete clinic-staff association first, then the user
-        val compositeKey = ClinicStaffId(clinicId = clinicId, staffId = staffId)
-        clinicStaffRepository.deleteById(compositeKey)
-        clinicStaffRepository.flush()
-        appUserRepository.delete(staff)
+        // Soft deactivation — never hard-delete a staff member who may own
+        // historical records. Flip active=false hides them from booking lists
+        // and blocks login while preserving past appointments (medical-legal
+        // requirement). Hard-deleting would violate NOT NULL FK on appointment.doctor_id.
+        staff.active = false
+        appUserRepository.save(staff)
+        auditService.log(
+            action     = AuditAction.USER_DEACTIVATED,
+            entityType = "AppUser",
+            entityId   = staffId,
+        )
+    }
+
+    @Transactional
+    fun reactivateStaff(staffId: UUID) {
+        val staff = appUserRepository.findById(staffId)
+            .orElseThrow { IllegalArgumentException("Staff member not found") }
+
+        staff.active = true
+        appUserRepository.save(staff)
+        auditService.log(
+            action     = AuditAction.USER_REACTIVATED,
+            entityType = "AppUser",
+            entityId   = staffId,
+        )
     }
 }

@@ -1,0 +1,568 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { UploadModal } from "../../components/UploadModal";
+import { Select } from "../../components/Input/Select/Select";
+import { DatePicker } from "../../components/DatePicker/DatePicker";
+import { colors, fonts, radii, spacing } from "../../styles/theme";
+import type { VisitDTO } from "../../api/visits";
+import { API_BASE_URL } from "../../apiConfig";
+
+// Row shape consumed by PrescriptionPage's file list. `fileId` is set when
+// the file was successfully persisted to the backend; `fileUrl` is a local
+// blob URL used for immediate preview without a backend round-trip.
+export type AddReportRow = {
+  id: string;
+  fileId?: string;       // backend UUID, present after a successful upload
+  name: string;
+  category: string;
+  date: string;
+  fileUrl: string | null;
+  mimeType: string | null;
+  visitId?: string;
+  notes?: string;
+};
+
+// Semantic categories — the chip the user picks here drives both this row's
+// metadata AND the filter chips above the Files table. Order matches the
+// Files tab chips in PrescriptionPage (minus "All", which is the default
+// pass-through filter).
+const CATEGORIES = [
+  "Reports",
+  "Prescriptions",
+  "Observations",
+  "Admin",
+  "Other",
+] as const;
+
+type Props = {
+  isOpen: boolean;
+  visits: VisitDTO[];
+  defaultVisitId?: string | null;
+  patientId: string | null;
+  onClose: () => void;
+  onAdd: (rows: AddReportRow[]) => void;
+};
+
+// Per-file form state. `previewUrl` is created via URL.createObjectURL for
+// image files only; revoked on unmount so we don't leak blobs.
+type DraftEntry = {
+  id: string;
+  file: File;
+  previewUrl: string | null;
+  name: string;
+  category: string;
+  date: Date;
+  visitId: string;
+  notes: string;
+};
+
+let draftCounter = 0;
+const nextDraftId = () => `draft-${++draftCounter}-${Date.now()}`;
+
+// Strip extension, replace separators with spaces, title-case. "CBC_jan_2026.pdf"
+// → "CBC Jan 2026". Best-effort — user can edit.
+function suggestNameFromFile(file: File): string {
+  const base = file.name.replace(/\.[^.]+$/, "");
+  const cleaned = base.replace(/[_-]+/g, " ").trim();
+  return cleaned
+    .split(/\s+/)
+    .map((w) => (w.length > 3 ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w.toUpperCase()))
+    .join(" ");
+}
+
+// Heuristic category guess from filename keywords against the new semantic
+// taxonomy. Falls through to "Other" when nothing matches — the user can
+// always correct via the dropdown.
+function suggestCategory(file: File): string {
+  const lower = file.name.toLowerCase();
+  if (/rx|prescription|tablet|capsule|dose/.test(lower)) return "Prescriptions";
+  if (/blood|cbc|hb|hemoglob|urine|path|biops|cytol|smear|xray|x-ray|mri|ct|scan|ultrasound|usg|ecg|ekg|report|lab/.test(lower)) {
+    return "Reports";
+  }
+  if (/wound|skin|dental|photo|before|after|observ/.test(lower)) return "Observations";
+  if (/consent|insurance|aadhaar|passport|id_proof|referral|discharge|vaccin/.test(lower)) return "Admin";
+  return "";
+}
+
+const isImageFile = (f: File): boolean => f.type.startsWith("image/");
+
+const fmtVisitOption = (v: VisitDTO): string =>
+  new Date(v.visitDate).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+const fmtDateForRow = (d: Date): string =>
+  d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
+
+export function AddReportModal({
+  isOpen,
+  visits,
+  defaultVisitId,
+  patientId,
+  onClose,
+  onAdd,
+}: Props) {
+  const [drafts, setDrafts] = useState<DraftEntry[]>([]);
+  const [openPickerFor, setOpenPickerFor] = useState<string | null>(null);
+
+  // Reset drafts whenever the modal opens fresh. Skip revoke for drafts that
+  // were "kept" by handleSave (their URL is now owned by the caller).
+  useEffect(() => {
+    if (!isOpen) {
+      drafts.forEach((d) => {
+        const kept = (d as DraftEntry & { _kept?: boolean })._kept;
+        if (d.previewUrl && !kept) URL.revokeObjectURL(d.previewUrl);
+      });
+      setDrafts([]);
+      setOpenPickerFor(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  const addFiles = (files: FileList | File[]) => {
+    const arr = Array.from(files);
+    if (arr.length === 0) return;
+    const newDrafts: DraftEntry[] = arr.map((file) => ({
+      id: nextDraftId(),
+      file,
+      previewUrl: isImageFile(file) ? URL.createObjectURL(file) : null,
+      name: suggestNameFromFile(file),
+      category: suggestCategory(file),
+      date: new Date(),
+      visitId: defaultVisitId || (visits[0]?.id ?? ""),
+      notes: "",
+    }));
+    setDrafts((prev) => [...prev, ...newDrafts]);
+  };
+
+  const updateDraft = <K extends keyof DraftEntry>(id: string, key: K, value: DraftEntry[K]) =>
+    setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, [key]: value } : d)));
+
+  const removeDraft = (id: string) =>
+    setDrafts((prev) => {
+      const target = prev.find((d) => d.id === id);
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((d) => d.id !== id);
+    });
+
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleSave = async () => {
+    // Validate on click (button is now clickable by default): surface a friendly
+    // message via the existing uploadError banner instead of disabling the button.
+    if (drafts.length === 0) {
+      setUploadError("Please add at least one report.");
+      return;
+    }
+    if (drafts.some((d) => !d.category)) {
+      setUploadError("Please choose a category for each report.");
+      return;
+    }
+    setUploading(true);
+    setUploadError(null);
+    let anyFailed = false;
+
+    const rows: AddReportRow[] = await Promise.all(
+      drafts.map(async (d) => {
+        const name = d.name.trim() || d.file.name;
+        // Reuse existing blob URL for immediate preview; caller owns lifecycle.
+        const fileUrl = d.previewUrl ?? URL.createObjectURL(d.file);
+        (d as DraftEntry & { _kept?: boolean })._kept = true;
+
+        let fileId: string | undefined;
+        if (patientId) {
+          try {
+            const token = localStorage.getItem("docodile_token");
+            const form = new FormData();
+            form.append("file", d.file, name);
+            if (d.category) form.append("category", d.category);
+            form.append("investigationDate", d.date.toISOString().split("T")[0]);
+            if (d.notes) form.append("notes", d.notes);
+            const res = await fetch(`${API_BASE_URL}/api/patients/${patientId}/files`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+              body: form,
+            });
+            if (res.ok) {
+              const dto = await res.json();
+              fileId = dto.id as string;
+            } else {
+              const errText = await res.text().catch(() => res.status.toString());
+              console.error(`File upload failed (${res.status}):`, errText);
+              anyFailed = true;
+            }
+          } catch (err) {
+            console.error("File upload error:", err);
+            anyFailed = true;
+          }
+        }
+
+        return {
+          id: fileId ?? d.id,
+          fileId,
+          name,
+          category: d.category,
+          date: fmtDateForRow(d.date),
+          fileUrl,
+          mimeType: d.file.type || null,
+          visitId: d.visitId,
+          notes: d.notes,
+        };
+      })
+    );
+
+    setUploading(false);
+    if (anyFailed) {
+      setUploadError("File saved locally but could not be persisted to server. It will be lost on refresh.");
+    }
+    onAdd(rows);
+    if (!anyFailed) onClose();
+  };
+
+  const titleCopy = "Add File";
+  const headerSubtitle = "Upload reports, prescriptions, photos, or any patient file";
+
+  const categoryOpts = useMemo(
+    () => [
+      { label: "Select category", value: "" },
+      ...CATEGORIES.map((c) => ({ label: c, value: c })),
+    ],
+    []
+  );
+  const visitOpts = useMemo(
+    () => visits.map((v) => ({ label: fmtVisitOption(v), value: v.id })),
+    [visits]
+  );
+
+  return (
+    <UploadModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={titleCopy}
+      subtitle={headerSubtitle}
+      dropTitleActive="Add more files"
+      dropHint="Any file type · multi-select supported"
+      hasFiles={drafts.length > 0}
+      multiple
+      onFiles={addFiles}
+      error={uploadError}
+      cancelLabel={uploadError ? "Close anyway" : "Cancel"}
+      confirmLabel={uploading ? "Uploading…" : `Add${drafts.length > 1 ? ` (${drafts.length})` : ""}`}
+      onConfirm={handleSave}
+      confirmDisabled={uploading}
+    >
+        {drafts.length > 0 && (
+          <div style={styles.draftList}>
+            {drafts.map((d) => (
+              <div key={d.id} style={styles.draftRow}>
+                {/* Thumbnail */}
+                <div style={styles.thumb}>
+                  {d.previewUrl ? (
+                    <img src={d.previewUrl} alt="" style={styles.thumbImg} />
+                  ) : (
+                    <span style={styles.thumbExt}>{fileExt(d.file.name)}</span>
+                  )}
+                </div>
+
+                {/* Form fields */}
+                <div style={styles.fields}>
+                  <div style={styles.fieldRow}>
+                    <label style={styles.fieldLabel}>Name</label>
+                    <input
+                      type="text"
+                      value={d.name}
+                      onChange={(e) => updateDraft(d.id, "name", e.target.value)}
+                      style={styles.textInput}
+                      placeholder={d.file.name}
+                    />
+                  </div>
+
+                  <div style={styles.twoCol}>
+                    <div style={styles.fieldRow}>
+                      <label style={styles.fieldLabel}>Category</label>
+                      <Select
+                        value={d.category}
+                        onChange={(v) => updateDraft(d.id, "category", v)}
+                        placeholder="Category"
+                        options={categoryOpts}
+                      />
+                    </div>
+                    <div style={styles.fieldRow}>
+                      <label style={styles.fieldLabel}>Investigation date</label>
+                      <button
+                        type="button"
+                        onClick={() => setOpenPickerFor(openPickerFor === d.id ? null : d.id)}
+                        style={styles.dateTrigger}
+                      >
+                        {d.date.toLocaleDateString(undefined, {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </button>
+                      {openPickerFor === d.id && (
+                        <DatePicker
+                          selectedDate={d.date}
+                          onSelect={(date) => {
+                            updateDraft(d.id, "date", date);
+                            setOpenPickerFor(null);
+                          }}
+                          onClose={() => setOpenPickerFor(null)}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {visits.length > 0 && (
+                    <div style={styles.fieldRow}>
+                      <label style={styles.fieldLabel}>Tie to visit</label>
+                      <Select
+                        value={d.visitId}
+                        onChange={(v) => updateDraft(d.id, "visitId", v)}
+                        placeholder="Select visit"
+                        options={visitOpts}
+                      />
+                    </div>
+                  )}
+
+                  <div style={styles.fieldRow}>
+                    <label style={styles.fieldLabel}>Notes (optional)</label>
+                    <textarea
+                      value={d.notes}
+                      onChange={(e) => updateDraft(d.id, "notes", e.target.value)}
+                      style={styles.textarea}
+                      rows={2}
+                      placeholder="e.g. Hb low, follow up in 2 wks"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => removeDraft(d.id)}
+                  aria-label="Remove"
+                  style={styles.removeBtn}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+      </UploadModal>
+  );
+}
+
+// Best-effort file-extension chip when no image preview is available.
+function fileExt(filename: string): string {
+  const m = filename.match(/\.([^.]+)$/);
+  return (m ? m[1] : "FILE").slice(0, 4).toUpperCase();
+}
+
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
+// These are local to the modal — every other dropdown / picker / date input
+// reuses an existing component (Modal, Select, DatePicker). The form-row
+// scaffolding (label, text input, textarea, drop zone) is new because the
+// project doesn't have a generic form-field primitive yet.
+
+const styles: Record<string, React.CSSProperties> = {
+  container: {
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.l,
+    width: 560,
+    maxWidth: "100%",
+    maxHeight: "80vh",
+    overflowY: "auto",
+  },
+  header: {
+    position: "relative",
+    textAlign: "center",
+  },
+  title: {
+    margin: 0,
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h5,
+    lineHeight: fonts.lineHeight.h5,
+    fontWeight: fonts.weight.semibold,
+    color: colors.neutral900,
+  },
+  subtitle: {
+    margin: 0,
+    marginTop: 4,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.neutral600,
+  },
+  dropZone: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    padding: `${spacing.xl} ${spacing.l}`,
+    border: `1.5px dashed ${colors.primary400}`,
+    borderRadius: radii.l,
+    backgroundColor: colors.neutral100,
+    cursor: "pointer",
+    width: "100%",
+    boxSizing: "border-box",
+    fontFamily: fonts.family.primary,
+    transition: "background-color 0.15s ease, border-color 0.15s ease",
+  },
+  dropZoneActive: {
+    backgroundColor: colors.primary100,
+    borderColor: colors.primary600,
+  },
+  dropZoneIcon: {
+    fontSize: 22,
+    color: colors.primary700,
+    lineHeight: 1,
+  },
+  dropZoneTitle: {
+    fontSize: fonts.control.md,
+    color: colors.neutral900,
+    fontWeight: fonts.weight.medium,
+  },
+  dropZoneHint: {
+    fontSize: fonts.control.xs,
+    color: colors.neutral500,
+  },
+  draftList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.s,
+  },
+  draftRow: {
+    display: "flex",
+    gap: spacing.m,
+    padding: spacing.m,
+    backgroundColor: colors.neutral100,
+    borderRadius: radii.m,
+    border: `1px solid ${colors.neutral200}`,
+  },
+  thumb: {
+    width: 56,
+    height: 56,
+    borderRadius: radii.s,
+    backgroundColor: colors.primary100,
+    border: `1px solid ${colors.primary300}`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    flexShrink: 0,
+  },
+  thumbImg: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover" as const,
+  },
+  thumbExt: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.xs,
+    fontWeight: fonts.weight.semibold,
+    color: colors.primary800,
+    letterSpacing: 0.5,
+  },
+  fields: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.s,
+  },
+  twoCol: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: spacing.s,
+  },
+  fieldRow: {
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    minWidth: 0,
+  },
+  // Matches PrescriptionPage.styles.ts `fieldLabel` — sentence case, regular
+  // weight, neutral500. Form labels across the app share this treatment.
+  fieldLabel: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.xs,
+    lineHeight: fonts.lineHeight.xs,
+    color: colors.neutral500,
+    fontWeight: fonts.weight.regular,
+  },
+  textInput: {
+    width: "100%",
+    height: 40,
+    boxSizing: "border-box",
+    padding: `0 ${spacing.s}`,
+    border: `1px solid ${colors.neutral300}`,
+    borderRadius: radii.m,
+    backgroundColor: colors.neutral100,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.md,
+    color: colors.neutral900,
+    outline: "none",
+  },
+  textarea: {
+    width: "100%",
+    minHeight: 56,
+    resize: "vertical" as const,
+    boxSizing: "border-box",
+    padding: spacing.s,
+    border: `1px solid ${colors.neutral300}`,
+    borderRadius: radii.m,
+    backgroundColor: colors.neutral100,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.neutral900,
+    outline: "none",
+  },
+  dateTrigger: {
+    height: 40,
+    boxSizing: "border-box",
+    padding: `0 ${spacing.s}`,
+    border: `1px solid ${colors.neutral300}`,
+    borderRadius: radii.m,
+    backgroundColor: colors.neutral100,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.md,
+    color: colors.neutral900,
+    textAlign: "left" as const,
+    cursor: "pointer",
+  },
+  // Same treatment as `closeBtn` — plain text, no background circle. Keeps
+  // every "dismiss" affordance in the modal visually consistent.
+  removeBtn: {
+    alignSelf: "flex-start",
+    background: "none",
+    border: "none",
+    color: colors.neutral900,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.m,
+    cursor: "pointer",
+    padding: 0,
+    flexShrink: 0,
+  },
+  uploadError: {
+    margin: 0,
+    padding: `${spacing.s} ${spacing.m}`,
+    backgroundColor: colors.yellowAlpha10,
+    border: `1px solid ${colors.yellow200}`,
+    borderRadius: radii.m,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.neutral900,
+  },
+  footer: {
+    display: "flex",
+    justifyContent: "center",
+    gap: spacing.s,
+  },
+};

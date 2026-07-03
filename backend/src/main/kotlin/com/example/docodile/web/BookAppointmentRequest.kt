@@ -18,5 +18,9 @@ data class BookAppointmentRequest(
     val paymentMethod: String? = null,
     val notes: String? = null,
     val fee: java.math.BigDecimal? = null,
-    val payStatus: String? = "Unpaid"
+    val payStatus: String? = "Unpaid",
+    // True when the caller has already confirmed they want to add a
+    // second appointment on a day the patient already has one. Skips the
+    // same-day duplicate check below.
+    val force: Boolean = false,
 )

@@ -1,15 +1,13 @@
 import React from "react";
 import { colors, fonts } from "../../styles/theme";
+import { cardSurface } from "../Card/Card.styles";
 import { StaffIllustration } from "../AddStaffModal/StaffIllustration";
-import { ReactComponent as IconStopwatch } from "../../assets/icons/stopwatch.svg";
-import { ReactComponent as IconUser } from "../../assets/icons/user.svg";
-import { ReactComponent as IconHourglass } from "../../assets/icons/hourglass.svg";
-import { ReactComponent as IconUserCheck } from "../../assets/icons/user-check.svg";
-import { ReactComponent as IconUsersGroup } from "../../assets/icons/users-group.svg";
+import { Icon } from "../Icon";
 
 type DoctorStatusCardProps = {
   doctorName: string;
   doctorGender?: string;
+  doctorRole?: string;
   appointments: {
     status: string;
     patientName?: string;
@@ -40,6 +38,7 @@ function StatRow({ icon, text }: StatRowProps) {
 export function DoctorStatusCard({
   doctorName,
   doctorGender,
+  doctorRole,
   appointments,
 }: DoctorStatusCardProps) {
   const inProgress = appointments.find(
@@ -60,7 +59,7 @@ export function DoctorStatusCard({
       {/* Avatar overlapping card top */}
       <div style={cardStyles.avatarWrapper}>
         <StaffIllustration
-          role="Doctor"
+          role={doctorRole || "Doctor"}
           gender={(doctorGender || "male") as "male" | "female" | "other"}
           width="56px"
           height="56px"
@@ -76,7 +75,7 @@ export function DoctorStatusCard({
         <div style={cardStyles.divider} />
 
         <StatRow
-          icon={<IconStopwatch />}
+          icon={<Icon name="stopwatch" />}
           text={
             <span>
               <span style={statStyles.label}>At the doc : </span>
@@ -88,7 +87,7 @@ export function DoctorStatusCard({
         />
 
         <StatRow
-          icon={<IconUser />}
+          icon={<Icon name="user" />}
           text={
             <span>
               <span style={statStyles.label}>Waiting : </span>
@@ -98,7 +97,7 @@ export function DoctorStatusCard({
         />
 
         <StatRow
-          icon={<IconHourglass />}
+          icon={<Icon name="hourglass" />}
           text={
             <span>
               <span style={statStyles.label}>Wait time : </span>
@@ -108,7 +107,7 @@ export function DoctorStatusCard({
         />
 
         <StatRow
-          icon={<IconUserCheck />}
+          icon={<Icon name="user-check" />}
           text={
             <span>
               <span style={statStyles.label}>Completed : </span>
@@ -120,7 +119,7 @@ export function DoctorStatusCard({
         <div style={cardStyles.divider} />
 
         <StatRow
-          icon={<IconUsersGroup />}
+          icon={<Icon name="users-group" />}
           text={
             <span>
               <span style={statStyles.label}>Total : </span>
@@ -160,14 +159,17 @@ const cardStyles: Record<string, React.CSSProperties> = {
   },
 
   card: {
-    backgroundColor: colors.primary100,   // #F9F9ED — warm cream from Figma
-    borderRadius: "20px",
+    // Cream queue surface — shared with HeatmapCard via cardSurface
+    // (was borderRadius "20px" literal → 16).
+    ...cardSurface("cream", "none"),
     border: "none",
-    padding: "40px 20px 20px",
+    // Top/bottom fixed, horizontal var-driven so 1024 tightens the right
+    // whitespace; width var lets the queue table reclaim space.
+    padding: "40px var(--queue-side-padx, 20px) 20px",
     display: "flex",
     flexDirection: "column",
     gap: "2px",
-    width: "246px",
+    width: "var(--queue-side-w, 246px)",
   },
 
   doctorName: {
@@ -191,7 +193,8 @@ const statStyles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: "10px",
-    padding: "5px 0",
+    // Roomier vertical rhythm so the stat list reads comfortably.
+    padding: "8px 0 8px var(--queue-stat-padl, 0px)",
   },
 
   iconWrap: {
@@ -205,9 +208,9 @@ const statStyles: Record<string, React.CSSProperties> = {
 
   text: {
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.s,
+    fontSize: fonts.size.m,
     color: colors.neutral900,
-    lineHeight: "20px",
+    lineHeight: "22px",
   },
 
   label: {

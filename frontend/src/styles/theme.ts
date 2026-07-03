@@ -66,14 +66,25 @@ export const colors = {
   neutral900: "#202020",
   neutral1000: "#040404",
   greenAlpha10: "rgba(31, 193, 107, 0.1)",
+  greenAlpha20: "rgba(31, 193, 107, 0.2)",
   green200: "#1FC16B",
   green100: "#84EBB4",
   yellowAlpha10: "rgba(255, 219, 67, 0.1)",
+  yellowAlpha20: "rgba(255, 219, 67, 0.2)",
+  yellow300: "#A07A00",
   yellow200: "#DFB400",
   yellow100: "#FFDB43",
   redAlpha10: "rgba(251, 55, 72, 0.1)",
+  redAlpha20: "rgba(251, 55, 72, 0.2)",
   red200: "#D00416",
   red100: "#FB3748",
+  blueAlpha10: "rgba(116, 150, 212, 0.1)",
+  blueAlpha20: "rgba(116, 150, 212, 0.2)",
+  blue200: "#1D63C9",
+  blue100: "#7496D4",
+  maroonAlpha10: "rgba(155, 44, 44, 0.1)",
+  maroonAlpha20: "rgba(155, 44, 44, 0.2)",
+  maroon200: "#9B2C2C",
   alphaWhite1: "rgba(255, 255, 255, 0.1)",
   alphaBlack1: "rgba(0, 0, 0, 0.1)",
   alphaBlack2: "rgba(0, 0, 0, 0.2)",
@@ -128,38 +139,37 @@ export const fonts = {
     primary: "'Inter', sans-serif",
     secondary: "'Libertinus Serif', 'source-serif', serif",
   },
-  // ─── "Universal" fluid scale ─────────────────────────────────────────
-  // Rates chosen so min is held across the full 1280–1920 CSS viewport
-  // range. Formula: rate_vw = min_px / 19.2. At viewport ≤ 1920 the clamp
-  // returns MIN (design baseline). Between 1920 and ~2300–2400 it grows to
-  // the ceiling. Effect: 1280/1440/1536/1920 all render identical to the
-  // Figma design; 2560 users get a mild scale-up, nothing dramatic.
+  // ─── Type scale ───────────────────────────────────────────────────────
+  // Tokens are CSS-var-driven. Values live in globals.css as --fs-* and
+  // --lh-* under :root (baseline = 1440 design, with clamps that grow
+  // fluidly above 1920) and a 1024 compact tier in the media query.
+  // Components keep reading fonts.size.h1 etc.; the value resolves per
+  // viewport with no React re-renders.
   size: {
-    h1: "clamp(60px, 3.125vw, 80px)",  // 60 up to 1920, 80 at 2560
-    h2: "clamp(48px, 2.5vw, 64px)",    // 48 up to 1920, 64 at 2560
-    h3: "clamp(40px, 2.08vw, 52px)",   // 40 up to 1920, 52 at 2500
-    h4: "clamp(32px, 1.67vw, 42px)",   // 32 up to 1920, 42 at 2515
-    h5: "clamp(24px, 1.25vw, 30px)",   // 24 up to 1920, 30 at 2400
-    h6: "clamp(20px, 1.04vw, 24px)",   // 20 up to 1920, 24 at 2308
-    l:  "clamp(20px, 1.04vw, 24px)",
-    m:  "clamp(16px, 0.83vw, 18px)",   // 16 up to 1920, 18 at 2170
-    s:  "clamp(14px, 0.73vw, 16px)",   // 14 up to 1920, 16 at 2192
-    xs: "12px",
-    caption: "10px",
+    h1: "var(--fs-h1)",
+    h2: "var(--fs-h2)",
+    h3: "var(--fs-h3)",
+    h4: "var(--fs-h4)",
+    h5: "var(--fs-h5)",
+    h6: "var(--fs-h6)",
+    l:  "var(--fs-l)",
+    m:  "var(--fs-m)",
+    s:  "var(--fs-s)",
+    xs: "var(--fs-xs)",
+    caption: "var(--fs-caption)",
   },
   lineHeight: {
-    // Same pattern — min held to 1920, modest ceiling above.
-    h1: "clamp(72px, 3.75vw, 96px)",
-    h2: "clamp(56px, 2.92vw, 76px)",
-    h3: "clamp(48px, 2.5vw, 64px)",
-    h4: "clamp(44px, 2.29vw, 56px)",
-    h5: "clamp(34px, 1.77vw, 42px)",
-    h6: "clamp(28px, 1.46vw, 34px)",
-    l:  "clamp(28px, 1.46vw, 32px)",
-    m:  "clamp(22px, 1.15vw, 26px)",
-    s:  "clamp(20px, 1.04vw, 22px)",
-    xs: "16px",
-    caption: "14px",
+    h1: "var(--lh-h1)",
+    h2: "var(--lh-h2)",
+    h3: "var(--lh-h3)",
+    h4: "var(--lh-h4)",
+    h5: "var(--lh-h5)",
+    h6: "var(--lh-h6)",
+    l:  "var(--lh-l)",
+    m:  "var(--lh-m)",
+    s:  "var(--lh-s)",
+    xs: "var(--lh-xs)",
+    caption: "var(--lh-caption)",
   },
   weight: {
     regular: 400,
@@ -186,10 +196,10 @@ export const fonts = {
   // control text is static; only long-form content is fluid.
   // ──────────────────────────────────────────────────────────────────────────
   control: {
-    lg: "18px",
-    md: "16px",   // default button / input text
-    sm: "14px",   // secondary label / small button
-    xs: "12px",   // helper text / micro label
+    lg: "var(--ctrl-fs-lg)",
+    md: "var(--ctrl-fs-md)",   // default button / input text
+    sm: "var(--ctrl-fs-sm)",   // secondary label / small button
+    xs: "var(--ctrl-fs-xs)",   // helper text / micro label
   },
 };
 
@@ -203,9 +213,16 @@ export const radii = {
   xl: 12,
   "2xl": 16,
   xxl: 16,     // legacy alias for 2xl (do not remove — in use)
-  primary: 20, // legacy (off-system, only used in LoginCard/ClinicCard)
   pill: 999,   // legacy alias for full
   full: 999,
+};
+
+// Canonical icon box. The shared <Icon> component defaults to `size`; `sizeSmall`
+// is the 20px variant. Formalizes what used to be a bare `24` default (UI audit
+// Category 8 — "make 24px a real token").
+export const icon = {
+  size: 24,
+  sizeSmall: 20,
 };
 
 export const spacing = {
@@ -233,34 +250,93 @@ export const strokes = {
   l: "4px",
 }
 
-export const paragraphSpacing = {
-  h2: "48px",
-  h4: "44px",
-  h5: "34px",
-  l: "24px",
-  m: "22px",
-  xs: "16px",
-  caption: "14px",
+// ──────────────────────────────────────────────────────────────────────────────
+// Motion — the microinteraction vocabulary. Keep it SUBTLE: short durations,
+// transform/opacity only, purposeful (feedback/affordance, never decoration).
+// Mirrored as CSS custom properties in globals.css (--motion-* / --ease-*) so
+// inline `transition` strings can reference them AND prefers-reduced-motion can
+// zero them for users who opt out. Prefer the CSS vars in components; these JS
+// values are for docs / the occasional JS-driven animation.
+// ──────────────────────────────────────────────────────────────────────────────
+export const motion = {
+  duration: { fast: "120ms", base: "180ms", slow: "240ms" },
+  ease: {
+    standard: "cubic-bezier(0.2, 0, 0, 1)",      // most state transitions
+    entrance: "cubic-bezier(0.05, 0.7, 0.1, 1)", // things appearing
+    exit: "cubic-bezier(0.3, 0, 0.8, 0.15)",     // things leaving
+    spring: "cubic-bezier(0.34, 1.56, 0.64, 1)", // playful overshoot (toggles)
+  },
+} as const;
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Elevation — one source of truth for shadows (was 8+ ad-hoc inline strings).
+//   • menu  — dropdowns / popovers / autocompletes / pickers
+//   • modal — dialogs / overlays
+//   • card  — raised cards
+// ──────────────────────────────────────────────────────────────────────────────
+export const shadows = {
+  menu: "0 4px 16px rgba(0, 0, 0, 0.08)",
+  modal: "0 12px 40px rgba(0, 0, 0, 0.12)",
+  card: "0 4px 20px rgba(0, 0, 0, 0.04)",
 };
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Fluid spacing for responsive shells.
+// z-index scale — one source of truth for stacking (was ad-hoc 1000…4000).
+// Modals sit ABOVE the fixed sidebar/top-nav (sticky:3000); a dialog opened from
+// inside a modal uses `modalTop` so it stacks above its parent; toasts win.
+// ──────────────────────────────────────────────────────────────────────────────
+export const zIndex = {
+  dropdown: 100,
+  sticky: 3000,    // SideNav / TopNav
+  modal: 4000,
+  modalTop: 4100,  // a confirm/dialog opened from within a modal
+  popover: 4500,   // portaled menus/dropdowns — must clear modals (4000/4100)
+  toast: 5000,
+};
+
+// Responsive breakpoints — desktop-only scope (no phone / tablet).
+//
+// Two intervals, one threshold:
+//   interval 1 (1200–1439) — "compact desktop": smaller laptops / scaled
+//                             displays. Type + universal controls shrink.
+//   interval 2 (1440+)      — "comfortable desktop": the design baseline.
+// md (1200) is the minimum supported viewport (see #root min-width in
+// globals.css); below it the app scrolls horizontally. lg (1440) is the
+// only real style threshold.
+//
+// Used both in JS (via useMediaQuery) and as the literal numbers behind
+// the @media rules in globals.css. Keep the two sources in sync — if you
+// change a number here, update globals.css too.
+export const breakpoints = {
+  md: 1200,
+  lg: 1440,
+} as const;
+
+export const paragraphSpacing = {
+  h2: "var(--ps-h2)",
+  h4: "var(--ps-h4)",
+  h5: "var(--ps-h5)",
+  l:  "var(--ps-l)",
+  m:  "var(--ps-m)",
+  xs: "var(--ps-xs)",
+  caption: "var(--ps-caption)",
+};
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Outer shell spacing. Fixed px (no viewport scaling).
 // RULE: Use these ONLY for outer page padding, section gutters, or content
-// max-widths — never inside controls (buttons, inputs, chips) where static
-// spacing preserves visual density.
-// Baseline viewport = 1440px. Each clamp hits the baseline value at 1440
-// and reaches the ceiling around 2560px.
+// max-widths — never inside controls (buttons, inputs, chips).
 // ──────────────────────────────────────────────────────────────────────────────
 export const fluidSpacing = {
   // Outer page gutters (main content area padding)
-  outerY: "clamp(24px, 1.25vw, 32px)",   // vertical: 24 → 32
-  outerX: "clamp(40px, 2.19vw, 56px)",   // horizontal: 40 → 56
+  outerY: "24px",
+  outerX: "40px",
 
   // Section / card-to-card gutters (when stacking or grid-gapping)
-  sectionGap: "clamp(16px, 1.11vw, 24px)",
+  sectionGap: "16px",
 
-  // Card outer horizontal padding (cards inside a viewport-scaled container)
-  cardX: "clamp(16px, 1.11vw, 24px)",
+  // Card outer horizontal padding
+  cardX: "16px",
 };
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -271,14 +347,12 @@ export const layout = {
   // Content max-width. Above this viewport, extra space becomes outer gutter.
   contentMaxWidth: "1440px",
 
-  // Minimum supported viewport. Below this, layout may degrade.
-  minViewport: "1280px",
+  // Minimum supported viewport. Below this the app scrolls horizontally.
+  minViewport: "1200px",
 
-  // Common breakpoints (for future media queries)
+  // The two intervals (see `breakpoints` above).
   breakpoints: {
-    laptop: "1280px",
+    laptop: "1200px",
     desktop: "1440px",
-    wide: "1920px",
-    ultraWide: "2560px",
   },
 };

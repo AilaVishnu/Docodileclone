@@ -6,6 +6,7 @@ Thumbs.db
 # IDEs
 .idea/
 .vscode/
+.claude/
 *.iml
 
 
@@ -33,6 +34,7 @@ out/
 
 # Spring Boot
 application-local.yml
+application-local.properties
 application-dev.yml
 
 
@@ -48,6 +50,8 @@ docker-data/
 # Database
 *.sql
 !**/db/migration/*.sql
+!**/db/control/*.sql
+!**/db/tenant/*.sql
 
 
 # Coverage
@@ -57,3 +61,11 @@ coverage/
 # Misc
 .tmp/
 .cache/
+
+
+# Local research artefacts — design study screenshots, scratch plans,
+# anything we keep on disk for reference but don't want shared.
+plans/
+*.png
+!frontend/**/*.png
+!backend/**/*.png

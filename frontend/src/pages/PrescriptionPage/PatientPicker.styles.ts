@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { colors, fonts, radii, spacing } from "../../styles/theme";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal "home" view of the Prescription page — a search bar + recent
@@ -34,24 +34,10 @@ export const styles: Record<string, CSSProperties> = {
     color: colors.neutral500,
   },
 
-  // Search input — pill-shaped, neutral white background with primary300 border
+  // Search input — pill-shaped Field (variant="pill"), responsive height.
   searchWrap: {
     position: "relative" as const,
     width: "100%",
-  },
-  searchInput: {
-    width: "100%",
-    height: 48,
-    boxSizing: "border-box" as const,
-    padding: `0 ${spacing.l} 0 ${spacing.l}`,
-    borderRadius: radii.full,
-    border: `${strokes.xs} solid ${colors.primary300}`,
-    backgroundColor: colors.neutral100,
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.m,
-    lineHeight: fonts.lineHeight.m,
-    color: colors.neutral900,
-    outline: "none",
   },
 
   // Recent-patients card — primary100 cream wash, list of clickable rows

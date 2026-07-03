@@ -1,5 +1,6 @@
 import { CSSProperties } from "react";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes, fluidSpacing } from "../../styles/theme";
+import { tableHeadCell, tableDivider } from "../../styles/tableStyles";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Styles for the Prescription "Today's Queue" landing — Figma 2282:17378.
@@ -8,11 +9,21 @@ import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const styles: Record<string, CSSProperties> = {
+  // Acts as its OWN scroll container (mirroring AppointmentQueue.container)
+  // so the sticky <PageHeader/> can hug the very top of main. See
+  // PageHeader.styles.ts for the sticky-clamp note.
   page: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     display: "flex",
     flexDirection: "column",
     gap: spacing.l,
-    width: "100%",
+    padding: `0 ${fluidSpacing.outerX} ${fluidSpacing.outerY}`,
+    overflowY: "auto",
+    overflowX: "hidden",
   },
   // "Today's Queue" — centered serif title (Figma: H5 24/34)
   title: {
@@ -31,30 +42,7 @@ export const styles: Record<string, CSSProperties> = {
     justifyContent: "space-between",
     gap: spacing.m,
   },
-  tabs: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  // Tab pill — Figma 2340:1151 (design-system "tabs" component).
-  // Inactive: alphaBlack0 bg + alphaBlack3 text, 12px radius, paragraph-m
-  // typography (Inter 16/22). Active: white bg with neutral900 text.
-  tab: {
-    height: 40,
-    padding: `${spacing.xs} ${spacing.m}`,
-    borderRadius: radii.xl,
-    border: "none",
-    backgroundColor: colors.alphaBlack0,
-    color: colors.alphaBlack3,
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.size.m,
-    lineHeight: fonts.lineHeight.m,
-    cursor: "pointer",
-  },
-  tabActive: {
-    backgroundColor: colors.neutral100,
-    color: colors.neutral900,
-  },
+  // (Filter tabs now use the shared <Tabs variant="block"> component.)
   viewToggle: {
     display: "inline-flex",
     alignItems: "center",
@@ -69,7 +57,9 @@ export const styles: Record<string, CSSProperties> = {
     borderRadius: radii.s,
     border: "none",
     backgroundColor: "transparent",
-    color: colors.neutral600,
+    // neutral900 to match the sidebar's icon tone (paired with strokeWidth
+    // 1.5 on the icon component for the same weight).
+    color: colors.neutral900,
     cursor: "pointer",
   },
   viewBtnActive: {
@@ -78,11 +68,19 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   // ─── grid (card) layout — Figma 2282:18638 ────────────────────────────
+  // Card width is fixed (308); the number of cards per row grows with the
+  // viewport (auto-fill packs as many as fit), and the horizontal gap scales
+  // between 16px (tight on 1024) and 32px (breathy on 2560). Cards stay
+  // centered in the row so leftover space goes to outer gutters.
   grid: {
-    display: "flex",
-    flexWrap: "wrap" as const,
-    rowGap: 73,
-    columnGap: spacing.xl, // 24px between cards horizontally; row-gap matches paddingTop so wrapped rows clear the 49px avatar overlap.
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, 308px)",
+    // Left-justified so the first card lines up with the "View all" tab on
+    // the left of the controls row above. Extra horizontal space lands on
+    // the right as a single gutter (rather than splitting both sides).
+    justifyContent: "start",
+    columnGap: "clamp(16px, 1.5vw, 32px)",
+    rowGap: 73, // matches paddingTop so wrapped rows clear the 49px avatar overlap.
     // 49px avatar overlap + 24px breathing room below the tabs above so
     // the avatar tops don't kiss the tab pills.
     paddingTop: 73,
@@ -100,7 +98,10 @@ export const styles: Record<string, CSSProperties> = {
     // is 81 tall, body sits at y=49 of the 328-tall outer group), so the
     // card's effective top padding includes that overlap.
     minHeight: 279,
-    padding: `49px ${spacing.xl} ${spacing.xl}`,
+    // Tight horizontal padding (xl 24 → s 12) — buys interior width without
+    // changing the card's 308px outer footprint, so longer names/labels have
+    // more room before they need to truncate.
+    padding: `49px ${spacing.s} ${spacing.xl}`,
     display: "flex",
     flexDirection: "column" as const,
     alignItems: "center" as const,
@@ -157,13 +158,15 @@ export const styles: Record<string, CSSProperties> = {
   cardTitleMeta: {
     fontSize: fonts.size.l,
     lineHeight: fonts.lineHeight.l,
-    fontFamily: fonts.family.secondary,
+    fontFamily: fonts.family.primary,
     color: colors.neutral900,
   },
   cardRows: {
     display: "flex",
     flexDirection: "column" as const,
-    gap: spacing.xs,
+    // Slightly more vertical air between Service / Type / Time / Status rows
+    // (xs 8 → s 12) so each row reads as its own line, not a tight list.
+    gap: spacing.s,
     width: "100%",
   },
   row: {
@@ -212,24 +215,22 @@ export const styles: Record<string, CSSProperties> = {
     textAlign: "left" as const,
     tableLayout: "fixed" as const,
   },
-  // Figma 1932:2438 row padding: 8px horizontal / 12px vertical. Same for
-  // every cell so columns line up vertically across header + data rows.
+  // Vertical rhythm matches AppointmentQueue (th 12px / td 10px) so the two
+  // queue tables read as siblings. Per-cell paddingLeft/Right is overridden
+  // inline (mirrors the QueueTable spacer pattern).
   th: {
-    padding: "14px 8px",
-    borderBottom: `${strokes.xs} solid ${colors.primary300}`,
-    color: colors.alphaBlack3,
-    fontWeight: fonts.weight.regular,
+    ...tableHeadCell, // shared: alphaBlack3 / 400 / primary300 divider
+    padding: "12px 0",
     fontSize: fonts.size.m,
     lineHeight: fonts.lineHeight.m,
     fontFamily: fonts.family.primary,
-    textAlign: "left" as const,
     verticalAlign: "middle" as const,
   },
   tr: {
-    borderBottom: `${strokes.xs} solid ${colors.primary300}`,
+    borderBottom: tableDivider,
   },
   td: {
-    padding: "14px 8px",
+    padding: "10px 0",
     fontSize: fonts.size.m,
     lineHeight: fonts.lineHeight.m,
     fontFamily: fonts.family.primary,
@@ -238,18 +239,19 @@ export const styles: Record<string, CSSProperties> = {
     whiteSpace: "nowrap" as const,
   },
   tdSerial: {
-    padding: "14px 8px",
+    padding: "10px 0",
     fontSize: fonts.size.m,
     lineHeight: fonts.lineHeight.m,
     fontFamily: fonts.family.primary,
     color: colors.neutral900,
     verticalAlign: "middle" as const,
     textAlign: "left" as const,
+    whiteSpace: "nowrap" as const,
   },
   // <td> can't be display:flex without breaking vertical-align; the inner
   // span handles the flex layout for name + (M|25) meta.
   tdName: {
-    padding: "14px 8px",
+    padding: "10px 0",
     fontSize: fonts.size.m,
     lineHeight: fonts.lineHeight.m,
     fontFamily: fonts.family.primary,

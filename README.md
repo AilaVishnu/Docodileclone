@@ -2,14 +2,19 @@
 
 A **multi-tenant Electronic Medical Records (EMR) and Clinic Operations platform** designed for small to mid-sized clinics in India.
 
-## 🧠 Memory Bank
-This project uses a "Memory Bank" located in the `memory-bank/` directory to maintain system context. AI assistants should refer to these files to understand the project's architecture, patterns, and current state.
+## 🧠 Source of truth (read these first)
 
-- [Project Brief](memory-bank/projectBrief.md)
-- [Product Context](memory-bank/productContext.md)
-- [System Patterns](memory-bank/systemPatterns.md)
-- [Tech Context](memory-bank/techContext.md)
-- [Active Context](memory-bank/activeContext.md)
+- **Backend / architecture / multi-tenancy:** [`docs/architecture.md`](docs/architecture.md)
+- **Frontend / design system:** [`frontend/CLAUDE.md`](frontend/CLAUDE.md) (rules, component
+  inventory, canon, responsiveness) + Storybook (`npm run storybook`)
+- **Design decisions history:** [`docs/ds-cleanup-log.md`](docs/ds-cleanup-log.md)
+- **Standards / Definition of Done:** [`docs/contributing.md`](docs/contributing.md)
+- **Outstanding work:** [`docs/backlog.md`](docs/backlog.md)
+
+> The `memory-bank/` files ([Project Brief](memory-bank/projectBrief.md) ·
+> [Product Context](memory-bank/productContext.md)) hold high-level product vision and predate the
+> schema-per-clinic redesign — use the sources above for current technical truth. (The stale
+> `systemPatterns` / `techContext` / `activeContext` files were removed 2026-06-30.)
 
 ---
 
@@ -188,24 +193,30 @@ npm start
 
 ---
 
-## Multi-Tenancy Strategy (MVP)
+## Multi-Tenancy Strategy
 
-* **Single PostgreSQL database**
-* **Tenant isolation via clinic_id**
+* **Schema-per-clinic.** One PostgreSQL database, one schema per clinic; each clinic is its own
+  subdomain (`acme.docodile.app`). A `platform` control-plane schema holds the clinic registry.
+* Isolation is enforced at the connection's `search_path` (Hibernate multi-tenancy) — **not** a
+  `clinic_id` column. Application code is tenant-agnostic.
+* **Full details: [`docs/architecture.md`](docs/architecture.md)** — read this before touching data
+  access, auth, migrations, background jobs, or WebSockets.
 
 ---
 
 ## Contribution Guidelines
 
-* Use short-lived branches:
+**Read [`docs/contributing.md`](docs/contributing.md)** for the full standards and the Definition of
+Done; PRs use the checklist in `.github/pull_request_template.md`. In short:
 
-  ```
-  feature/<short-description>
-  ```
-* Keep commits small and readable
-* Do not commit secrets, `.env` files, or credentials
-* Follow existing package and module structure
-* Discuss before adding major dependencies
+* Short-lived branches off `main` (`feature/<short-description>`); never commit to `main` directly.
+* Keep PRs small, single-purpose, and surgical; commits `area: imperative summary`.
+* Include tests for new behaviour; regression test every bug fix.
+* Build **and** test pass locally — backend (`./gradlew test`) **and** frontend
+  (`tsc --noEmit`, `eslint`, `npm run build`); CI doesn't run the frontend checks.
+* Don't break the tenancy invariants in `docs/architecture.md` §10.
+* Add a `docs/` page for any complex/new feature or pattern.
+* Never commit secrets, `.env` files, or credentials.
 
 ---
 

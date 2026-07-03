@@ -1,5 +1,6 @@
 package com.example.docodile.web
 
+import jakarta.validation.constraints.Size
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -38,15 +39,21 @@ data class SaveVisitRequest(
     val personalHistory: String? = null,
     val pastMedicalHistory: String? = null,
 
-    // Free-text + Autocomplete fields
-    val complaints: String? = null,
-    val diagnosis: String? = null,
-    val notesForPatient: String? = null,
-    val privateNotes: String? = null,
-    val tests: String? = null,
+    // Free-text + Autocomplete fields — size-bounded to prevent oversized payloads
+    @field:Size(max = 5000) val complaints: String? = null,
+    @field:Size(max = 5000) val diagnosis: String? = null,
+    @field:Size(max = 5000) val notesForPatient: String? = null,
+    @field:Size(max = 5000) val privateNotes: String? = null,
+    @field:Size(max = 5000) val tests: String? = null,
+
+    // Treating doctor (the one whose pad this visit belongs to). Carried
+    // through from the appointment when the doctor opens View Pad, so the
+    // visit gets correctly attributed even when the caller is a receptionist.
+    val createdByDoctorId: UUID? = null,
 
     // Referral + next review
     val referDoctorId: UUID? = null,
+    val referredBy: String? = null,
     val reviewDate: LocalDate? = null,
     val reviewDays: Int? = null,
     val reviewNotes: String? = null,
@@ -56,6 +63,10 @@ data class SaveVisitRequest(
     val sessionStartedAt: Instant? = null,
     val sessionEndedAt: Instant? = null,
     val sessionDurationSec: Int? = null,
+
+    // The appointment this visit is opened from. Set on create so each
+    // same-day appointment gets its own visit; preserved on update.
+    val appointmentId: UUID? = null,
 
     val prescriptions: List<RxRowDTO> = emptyList()
 )

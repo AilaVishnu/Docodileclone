@@ -51,11 +51,10 @@ const ROLE_BG: Record<string, string> = {
 // Tuned for the 217×217 SVG viewBox (figure body y≈38..217, x≈50..185).
 const CROP_SETTINGS: Record<Crop, { size: string; position: string }> = {
   full: { size: "contain",   position: "50% 100%" },  // full figure, bottom, letterboxed sides
-  // `cover` fills the container (no side letterboxing), crops at most ~15
-  // SVG units from the top. Since the figure's hair sits at y=38, the hair
-  // stays visible with a small band of background above it. Previous 140%
-  // was cropping the top of the head.
-  bust: { size: "cover",     position: "50% 100%" },
+  // `cover` fills the container, then anchors the image near the top so the
+  // figure sits lower in the frame and the head clears the arch curve at the
+  // top of StaffWindow (was bottom-aligned at 100%, which clipped the head).
+  bust: { size: "cover",     position: "50% 20%"  },
   face: { size: "120% auto", position: "50% 22%"  },  // head/face, centered
 };
 

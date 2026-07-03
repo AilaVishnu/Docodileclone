@@ -4,18 +4,35 @@ import { colors, spacing, fonts, radii } from "../../styles/theme";
 export const styles: Record<string, CSSProperties> = {
   container: {
     position: "fixed",
-    bottom: spacing.xl,
-    right: spacing.xl,
+    // Anchored at bottom-right, just to the left of the chat bubble FAB
+    // (52px bubble + 24px right offset + 12px gap ≈ 88px from the right edge).
+    bottom: 24,
+    right: 88,
     display: "flex",
     alignItems: "center",
     gap: spacing.s,
     backgroundColor: colors.neutral100,
     border: `1px solid ${colors.neutral200}`,
-    borderRadius: radii.xxl,
+    borderRadius: radii["2xl"],
     padding: `${spacing.s} ${spacing.m}`,
     boxShadow: "0 4px 16px rgba(0, 0, 0, 0.1)",
     zIndex: 4000,
-    animation: "slideIn 0.3s ease-out",
+    // Enter/exit is transition-driven in Toast.tsx (slide + fade, tokenised,
+    // reduced-motion-safe) rather than a one-shot CSS keyframe, so the toast can
+    // also animate OUT before it unmounts.
+  },
+
+  // Same chip, but in normal document flow (no fixed overlay / z-index /
+  // slide-in) — used by the `inline` prop for catalogs and stories.
+  containerInline: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: spacing.s,
+    backgroundColor: colors.neutral100,
+    border: `1px solid ${colors.neutral200}`,
+    borderRadius: radii["2xl"],
+    padding: `${spacing.s} ${spacing.m}`,
+    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.1)",
   },
 
   icon: {

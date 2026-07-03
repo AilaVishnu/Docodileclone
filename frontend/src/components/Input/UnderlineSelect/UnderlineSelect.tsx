@@ -1,16 +1,24 @@
 import React, { useState, useRef, useEffect } from "react";
-import { colors, fonts } from "../../../styles/theme";
+import { colors, fonts, radii, shadows, zIndex } from "../../../styles/theme";
+import { ChevronDown } from "../../icons/ChevronDown";
 
-type UnderlineSelectOption = {
-  label: string;
-  value: string;
-};
+// ─────────────────────────────────────────────────────────────────────────────
+// UnderlineSelect — an inline "chip" dropdown: a compact outline pill
+// (primary400 border) with a label + chevron, opening the canonical menu. Used
+// inline inside titles (e.g. the booking header "Book an appointment for […]").
+//
+// Named UnderlineSelect for history; the old serif "underline" variant was
+// removed (it was unused everywhere). Chevron is state-driven + menu items use
+// control text, to stay consistent with Select / SuggestionInput.
+// ─────────────────────────────────────────────────────────────────────────────
+type ChipOption = { label: string; value: string };
 
 type UnderlineSelectProps = {
-  options: (string | UnderlineSelectOption)[];
+  options: (string | ChipOption)[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  /** Trigger label size. Defaults to the control/button size (--btn-fs). */
   fontSize?: string;
 };
 
@@ -19,93 +27,90 @@ export function UnderlineSelect({
   value,
   onChange,
   placeholder = "Select...",
-  fontSize = fonts.size.h4,
+  fontSize = "var(--btn-fs)",
 }: UnderlineSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+    const onDoc = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setIsOpen(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  const normalizedOptions: UnderlineSelectOption[] = options.map((opt) =>
-    typeof opt === "string" ? { label: opt, value: opt } : opt
-  );
-
-  const selectedOption = normalizedOptions.find((opt) => opt.value === value);
+  const opts: ChipOption[] = options.map((o) => (typeof o === "string" ? { label: o, value: o } : o));
+  const selected = opts.find((o) => o.value === value);
 
   return (
     <div ref={containerRef} style={{ position: "relative", display: "inline-block" }}>
       <span
         onClick={() => setIsOpen(!isOpen)}
-        onMouseEnter={() => {}}
-        onMouseLeave={() => {}}
         style={{
-          fontFamily: fonts.family.secondary,
-          fontSize,
-          fontWeight: 400,
-          color: colors.neutral900,
-          textDecoration: "underline",
-          textUnderlineOffset: "4px",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
           cursor: "pointer",
           userSelect: "none",
-          transition: "opacity 0.15s",
+          backgroundColor: "transparent",
+          border: `1px solid ${colors.primary400}`,
+          borderRadius: radii.m,
+          padding: "4px 12px",
         }}
       >
-        {selectedOption ? selectedOption.label : placeholder}
+        <span style={{ fontFamily: fonts.family.primary, fontSize, fontWeight: fonts.weight.semibold, color: colors.neutral900 }}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <ChevronDown open={isOpen} color={isOpen ? colors.neutral900 : colors.neutral300} />
       </span>
 
       {isOpen && (
         <div
           style={{
+            // Canonical menu surface (shared with Select / SuggestionInput).
             position: "absolute",
             top: "calc(100% + 8px)",
-            left: "50%",
-            transform: "translateX(-50%)",
+            left: 0,
             backgroundColor: colors.neutral100,
-            border: `1px solid ${colors.neutral300}`,
-            borderRadius: "12px",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-            zIndex: 1000,
+            border: `1px solid ${colors.primary300}`,
+            borderRadius: radii.m,
+            boxShadow: shadows.menu,
+            zIndex: zIndex.popover,
             minWidth: "200px",
-            maxHeight: "240px",
+            maxHeight: "260px",
             overflowY: "auto",
-            padding: "6px",
+            padding: "12px 8px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
           }}
         >
-          {normalizedOptions.map((option) => (
+          {opts.map((o) => (
             <div
-              key={option.value}
+              key={o.value}
               onClick={() => {
-                onChange(option.value);
+                onChange(o.value);
                 setIsOpen(false);
               }}
               style={{
-                padding: "10px 14px",
+                padding: "10px 16px",
                 cursor: "pointer",
-                borderRadius: "8px",
+                borderRadius: radii.m,
                 fontFamily: fonts.family.primary,
-                fontSize: fonts.size.m,
+                fontSize: fonts.control.sm,
                 color: colors.neutral900,
                 backgroundColor: "transparent",
                 transition: "background-color 0.15s",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = colors.active.shade100;
-                e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = "transparent";
-                e.currentTarget.style.boxShadow = "none";
               }}
             >
-              {option.label}
+              {o.label}
             </div>
           ))}
         </div>

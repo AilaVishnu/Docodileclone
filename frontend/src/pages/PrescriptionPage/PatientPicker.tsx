@@ -1,5 +1,6 @@
 import React from "react";
 import { styles } from "./PatientPicker.styles";
+import { Field } from "../../components/Field";
 import { Patient, usePatients } from "../../hooks/usePatients";
 import { pickAvatar } from "../../utils/avatar";
 
@@ -11,10 +12,11 @@ import { pickAvatar } from "../../utils/avatar";
 
 type PatientPickerProps = {
   onSelect: (patient: Patient) => void;
+  refreshKey?: number;
 };
 
-export function PatientPicker({ onSelect }: PatientPickerProps) {
-  const { data: patients, loading, error } = usePatients();
+export function PatientPicker({ onSelect, refreshKey }: PatientPickerProps) {
+  const { data: patients, loading, error } = usePatients(refreshKey);
   const [query, setQuery] = React.useState<string>("");
 
   const filtered = React.useMemo(() => {
@@ -35,12 +37,13 @@ export function PatientPicker({ onSelect }: PatientPickerProps) {
       </header>
 
       <div style={styles.searchWrap}>
-        <input
-          style={styles.searchInput}
+        <Field
+          variant="pill"
+          type="search"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={setQuery}
           placeholder="Search patients…"
-          aria-label="Search patients"
+          ariaLabel="Search patients"
         />
       </div>
 

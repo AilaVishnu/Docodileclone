@@ -8,30 +8,73 @@ import java.time.LocalDate
 import java.util.UUID
 
 interface VisitRepository : JpaRepository<Visit, UUID> {
-    fun findAllByClinicIdAndPatientIdOrderByVisitDateAsc(clinicId: UUID, patientId: UUID): List<Visit>
+    fun findAllByVisitDateBetween(start: LocalDate, end: LocalDate): List<Visit>
 
-    // Cross-clinic guard: even if a caller knows a visitId, they can only
-    // load it if it belongs to their clinic. Mirrors the pattern used by
-    // PatientRepository.findAllByClinicId.
-    fun findByIdAndClinicId(id: UUID, clinicId: UUID): Visit?
+    @Query("""
+        SELECT v FROM Visit v
+        WHERE (
+            LOWER(v.complaints) LIKE :q
+            OR LOWER(v.diagnosis) LIKE :q
+            OR LOWER(v.notesForPatient) LIKE :q
+            OR LOWER(v.privateNotes) LIKE :q
+            OR LOWER(v.tests) LIKE :q
+            OR LOWER(v.reviewNotes) LIKE :q
+          )
+        ORDER BY v.visitDate DESC
+    """)
+    fun searchNotes(@Param("q") q: String): List<Visit>
 
-    /**
-     * Most-recent visit_date per patient, scoped to one clinic. Used by the
-     * patient list endpoint to render "last visit DD MMM" without N+1
-     * fetches. Returns rows of `[patientId, lastVisitDate]`.
-     */
-    @Query(
-        """
+    @Query("""
+        SELECT v FROM Visit v
+        WHERE v.reviewDate IS NOT NULL
+          AND v.reviewDate < :today
+        ORDER BY v.reviewDate ASC
+    """)
+    fun findOverdueReviews(@Param("today") today: LocalDate): List<Visit>
+
+    fun findAllByPatientIdOrderByVisitDateAscCreatedAtAsc(patientId: UUID): List<Visit>
+
+    @Query("""
+        SELECT v FROM Visit v
+        WHERE v.sessionStartedAt IS NOT NULL
+          AND v.sessionEndedAt IS NULL
+          AND (
+            v.appointmentId IS NULL
+            OR NOT EXISTS (
+              SELECT 1 FROM Appointment a
+              WHERE a.id = v.appointmentId
+                AND UPPER(a.status) IN ('COMPLETED', 'CANCELLED', 'NO_SHOW')
+            )
+          )
+    """)
+    fun findActiveSessions(): List<Visit>
+
+    @Query("SELECT v FROM Visit v WHERE v.patient.id IN :patientIds ORDER BY v.visitDate ASC")
+    fun findAllByPatientIdInOrderByVisitDateAsc(@Param("patientIds") patientIds: List<UUID>): List<Visit>
+
+    fun findAllByExternalRefIsNotNull(): List<Visit>
+
+    @Query("""
         SELECT v.patient.id AS patientId, MAX(v.visitDate) AS lastVisitDate
         FROM Visit v
-        WHERE v.clinic.id = :clinicId
         GROUP BY v.patient.id
-        """
-    )
-    fun findLastVisitDatesByClinic(@Param("clinicId") clinicId: UUID): List<LastVisitProjection>
+    """)
+    fun findLastVisitDates(): List<LastVisitProjection>
+
+    @Query("""
+        SELECT DISTINCT v.patient.id AS patientId, v.createdByDoctor.id AS doctorId
+        FROM Visit v
+        WHERE v.createdByDoctor IS NOT NULL
+    """)
+    fun findPatientDoctorPairs(): List<PatientDoctorProjection>
 }
 
 interface LastVisitProjection {
     fun getPatientId(): UUID
     fun getLastVisitDate(): LocalDate?
+}
+
+interface PatientDoctorProjection {
+    fun getPatientId(): UUID
+    fun getDoctorId(): UUID?
 }

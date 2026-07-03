@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import "./styles/globals.css";
-import { AdminLoginPage, StaffLoginPage } from './pages/LoginPage';
+import { LoginPage } from './pages/LoginPage';
 import { HomePage } from './pages/Home';
 import { BuildYourClinicPage } from './pages/BuildYourClinicPage';
-import { ClinicSelectionPage } from './pages/ClinicSelectionPage';
+import { SetupPasswordPage } from './pages/SetupPasswordPage/SetupPasswordPage';
 
 function App() {
-  const [view, setViewState] = useState<"login" | "home" | "build" | "select">(() => {
+  const [view, setViewState] = useState<"login" | "home" | "build">(() => {
     const token = localStorage.getItem("docodile_token");
     const sessionActive = sessionStorage.getItem("docodile_session");
 
@@ -18,22 +19,24 @@ function App() {
       localStorage.removeItem("docodile_home_tab");
       localStorage.removeItem("docodile_clinic_id");
       localStorage.removeItem("docodile_clinic_name");
+      localStorage.removeItem("docodile_user_id");
+      localStorage.removeItem("docodile_user_email");
       return "login";
     }
 
     // Existing session (refresh) — restore saved view
-    const savedView = localStorage.getItem("docodile_view") as "login" | "home" | "build" | "select";
-    return savedView || "select";
+    const savedView = localStorage.getItem("docodile_view") as "login" | "home" | "build";
+    return savedView || "home";
   });
 
-  const setView = (newView: "login" | "home" | "build" | "select") => {
+  const setView = (newView: "login" | "home" | "build") => {
     localStorage.setItem("docodile_view", newView);
     setViewState(newView);
   };
 
   const handleLoginSuccess = () => {
     sessionStorage.setItem("docodile_session", "true");
-    setView("select");
+    setView("home");
   };
 
   const handleLogout = () => {
@@ -43,6 +46,8 @@ function App() {
     localStorage.removeItem("docodile_home_tab");
     localStorage.removeItem("docodile_clinic_id");
     localStorage.removeItem("docodile_clinic_name");
+    localStorage.removeItem("docodile_user_id");
+    localStorage.removeItem("docodile_user_email");
     sessionStorage.removeItem("docodile_session");
     setView("login");
   };
@@ -51,38 +56,51 @@ function App() {
     setView("build");
   };
 
-  const handleNavigateToSelection = () => {
-    setView("select");
-  };
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/setup-password" element={<SetupPasswordPage />} />
+        <Route path="/*" element={<MainApp
+          view={view}
+          handleLoginSuccess={handleLoginSuccess}
+          handleLogout={handleLogout}
+          handleNavigateToBuild={handleNavigateToBuild}
+          setView={setView}
+        />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
 
+type MainAppProps = {
+  view: "login" | "home" | "build";
+  handleLoginSuccess: () => void;
+  handleLogout: () => void;
+  handleNavigateToBuild: () => void;
+  setView: (v: "login" | "home" | "build") => void;
+};
+
+function MainApp({
+  view,
+  handleLoginSuccess, handleLogout,
+  handleNavigateToBuild,
+}: MainAppProps) {
   return (
     <div className="App">
       {view === "login" && (
         <div className="centered-layout">
           <header className="App-header">
-            <AdminLoginPage onLoginSuccess={handleLoginSuccess} />
+            <LoginPage onLoginSuccess={handleLoginSuccess} />
           </header>
         </div>
       )}
-      {view === "select" && (
-        <ClinicSelectionPage
-          onSelectClinic={(clinicId, clinicName) => {
-            localStorage.setItem("docodile_clinic_id", clinicId);
-            localStorage.setItem("docodile_clinic_name", clinicName);
-            setView("home");
-          }}
-          onGoToBuild={() => setView("build")}
-          onLogout={handleLogout}
-        />
-      )}
       {view === "build" && (
-        <BuildYourClinicPage onNext={() => setView("select")} />
+        <BuildYourClinicPage onNext={() => {}} />
       )}
       {view === "home" && (
         <HomePage
           onLogout={handleLogout}
           onViewClinic={handleNavigateToBuild}
-          onViewAllClinics={handleNavigateToSelection}
         />
       )}
     </div>

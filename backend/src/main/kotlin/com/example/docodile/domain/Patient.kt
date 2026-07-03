@@ -2,11 +2,9 @@ package com.example.docodile.domain
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.FetchType
 import jakarta.persistence.Id
-import jakarta.persistence.JoinColumn
-import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -16,10 +14,6 @@ import java.util.UUID
 class Patient(
     @Id
     var id: UUID = UUID.randomUUID(),
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "clinic_id", nullable = false)
-    var clinic: ClinicEntity? = null,
 
     @Column(nullable = false)
     var name: String = "",
@@ -37,5 +31,27 @@ class Patient(
     var address: String? = null,
 
     @Column(name = "created_at")
-    var createdAt: Instant? = null
+    var createdAt: Instant? = null,
+
+    @Column(name = "updated_at")
+    var updatedAt: Instant? = null,
+
+    @Column(name = "deleted_at")
+    var deletedAt: Instant? = null,
+
+    // Source-system id when this patient was bulk-imported (e.g. the
+    // HealthPlix "T428"). Null for patients created natively in Docodile.
+    // Drives idempotent re-imports — see V41 migration.
+    @Column(name = "external_ref")
+    var externalRef: String? = null,
+
+    // Human-facing patient number, unique and sequential per clinic. Assigned
+    // in creation/import order, skipping numbers already taken — see V46.
+    @Column(name = "display_no")
+    var displayNo: Int? = null,
+
+    // Running advance/deposit balance — a credit held against future bills.
+    // Deposits add, refunds subtract, and Charge & Bill auto-draws against it;
+    // every movement is recorded in patient_deposit_ledger. Never negative.
+    var deposit: BigDecimal? = null
 )

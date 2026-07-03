@@ -1,9 +1,17 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// DoctorSchedule storage — localStorage-backed for v1.
-// Backend-ready shape: when the API is ready, swap localStorage for fetch().
-//   GET    /api/tenant/clinics/{clinicId}/staff/{staffId}/availability
-//   PUT    /api/tenant/clinics/{clinicId}/staff/{staffId}/availability
+// DoctorSchedule storage — backend-backed clinic-wide schedule, with a
+// localStorage write-through cache so the existing sync `loadSchedule()` API
+// works for read-only consumers (AnalogClock, HeatmapCard).
+//
+//   GET /api/tenant/clinic-schedule  -> { schedule: "<json>" }
+//   PUT /api/tenant/clinic-schedule  body { schedule: "<json>" }
+//
+// Call `hydrateScheduleFromBackend()` once on app boot to prime the cache;
+// after that `loadSchedule()` returns from cache instantly, and every
+// `saveSchedule()` writes to the cache + fires PUT.
 // ─────────────────────────────────────────────────────────────────────────────
+
+import { getClinicSchedule, putClinicSchedule } from "../../api/clinicSchedule";
 
 export type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 
@@ -130,12 +138,11 @@ const defaultState = (): ScheduleState => ({
 
 // ─── Persistence ─────────────────────────────────────────────────────────────
 
-export function loadSchedule(): ScheduleState {
+function normalize(raw: string | null): ScheduleState {
+  if (!raw) return defaultState();
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultState();
     const parsed = JSON.parse(raw) as ScheduleState;
-    // Defensive: ensure all 7 days present
+    if (!parsed.default) return defaultState();
     for (const k of DAY_KEYS) {
       if (!parsed.default[k]) parsed.default[k] = blankDay();
     }
@@ -146,8 +153,34 @@ export function loadSchedule(): ScheduleState {
   }
 }
 
+// Sync read against the localStorage cache. Backend is the source of truth;
+// the cache is populated on app boot via `hydrateScheduleFromBackend()` and
+// kept in sync by every `saveSchedule()` call.
+export function loadSchedule(): ScheduleState {
+  return normalize(localStorage.getItem(STORAGE_KEY));
+}
+
+// Optimistic local update + async PUT to the backend. Errors are intentionally
+// silent here so the UI stays responsive; the editor (DoctorScheduleStrip)
+// can wire a toast if it needs to surface failures.
 export function saveSchedule(state: ScheduleState) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const json = JSON.stringify(state);
+  localStorage.setItem(STORAGE_KEY, json);
+  void putClinicSchedule(json).catch(() => { /* swallow — local cache still valid */ });
+}
+
+// Fetch the canonical schedule from the backend and seed the local cache.
+// Idempotent — safe to call on every login / clinic switch.
+export async function hydrateScheduleFromBackend(): Promise<ScheduleState> {
+  try {
+    const json = await getClinicSchedule();
+    localStorage.setItem(STORAGE_KEY, json);
+    return normalize(json);
+  } catch {
+    // Network failure on boot — keep whatever's in cache so the UI still works
+    // offline. Next save will replay against the backend.
+    return loadSchedule();
+  }
 }
 
 // ─── Queries ─────────────────────────────────────────────────────────────────

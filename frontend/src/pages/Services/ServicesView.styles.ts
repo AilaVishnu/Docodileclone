@@ -1,0 +1,205 @@
+import { CSSProperties } from "react";
+import { colors, fonts, spacing, radii, strokes, fluidSpacing } from "../../styles/theme";
+import { tableHeadCell, tableDivider } from "../../styles/tableStyles";
+
+export const styles: Record<string, CSSProperties> = {
+  // Own scroll container filling <main> (like Appointments / Rx Pad / Patient
+  // Files) so the shared sticky <PageHeader> hugs the top. No top padding.
+  page: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    display: "flex",
+    flexDirection: "column",
+    padding: `0 ${fluidSpacing.outerX} ${fluidSpacing.outerY}`,
+    overflowY: "auto",
+    overflowX: "hidden",
+  },
+
+  // Content below the sticky header: full width, gapped, header→body gap on top.
+  content: {
+    width: "100%",
+    marginTop: "var(--main-gap, 24px)",
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.m,
+  },
+
+  header: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+
+  title: {
+    margin: 0,
+    textAlign: "center",
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h5,
+    lineHeight: fonts.lineHeight.h5,
+    fontWeight: fonts.weight.regular,
+    color: colors.neutral900,
+  },
+
+  toolbar: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.m,
+  },
+
+  searchBox: {
+    display: "flex",
+    alignItems: "center",
+    width: "100%",
+    maxWidth: 360,
+    height: "var(--search-h)",
+    gap: 12,
+    padding: "0 16px",
+    borderRadius: 55,
+    backgroundColor: colors.neutral100,
+    boxSizing: "border-box",
+  },
+
+  searchIcon: {
+    width: "var(--search-icon)",
+    height: "var(--search-icon)",
+    color: colors.neutral400,
+    flexShrink: 0,
+  },
+
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    fontFamily: fonts.family.primary,
+    fontSize: "var(--search-fs)",
+    color: colors.neutral900,
+  },
+
+  clearBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: "50%",
+    border: "none",
+    backgroundColor: colors.neutral200,
+    color: colors.neutral900,
+    cursor: "pointer",
+    fontSize: 14,
+    lineHeight: "18px",
+    padding: 0,
+    flexShrink: 0,
+  },
+
+  tableContainer: {
+    backgroundColor: colors.primary100,
+    borderRadius: "24px",
+    padding: "24px",
+    overflow: "visible",
+  },
+
+  table: {
+    width: "100%",
+    maxWidth: "100%",
+    borderCollapse: "collapse",
+    textAlign: "left",
+    tableLayout: "fixed",
+  },
+
+  // Header + cell match the shared queue table (tableStyles look + size-m
+  // density + responsive --queue-cell-padx column padding) so Catalog reads as
+  // the same row family.
+  th: {
+    ...tableHeadCell,
+    padding: "12px var(--queue-cell-padx, 28px)",
+    fontSize: fonts.size.m,
+    lineHeight: "20px",
+    letterSpacing: 0,
+    whiteSpace: "nowrap",
+  },
+
+  thRight: {
+    textAlign: "right",
+  },
+
+  tr: {
+    borderBottom: `1px solid ${colors.primary300}`,
+  },
+
+  td: {
+    padding: "10px var(--queue-cell-padx, 28px)",
+    fontSize: fonts.size.m,
+    color: colors.neutral900,
+    verticalAlign: "middle",
+    fontWeight: 400,
+    whiteSpace: "nowrap",
+    borderBottom: tableDivider,
+  },
+
+  tdName: {
+    fontWeight: fonts.weight.medium,
+  },
+
+  tdMuted: {
+    color: colors.alphaBlack3,
+  },
+
+  tdRight: {
+    textAlign: "right",
+  },
+
+  codeBadge: {
+    display: "inline-block",
+    fontSize: fonts.size.s,
+    fontWeight: fonts.weight.semibold,
+    color: colors.neutral700,
+    backgroundColor: colors.neutral100,
+    border: `${strokes.xs} solid ${colors.primary300}`,
+    borderRadius: radii.s,
+    padding: `2px ${spacing.xs}`,
+    letterSpacing: "0.04em",
+    fontFamily: fonts.family.primary,
+  },
+
+  actions: {
+    display: "flex",
+    justifyContent: "center",
+    gap: spacing.xs,
+  },
+
+  iconBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "32px",
+    height: "32px",
+    border: "none",
+    backgroundColor: "transparent",
+    borderRadius: radii.full,
+    cursor: "pointer",
+    color: colors.neutral900,
+  },
+
+  iconBtnDanger: {
+    color: colors.red200,
+  },
+
+  empty: {
+    padding: "48px",
+    textAlign: "center",
+    color: colors.neutral500,
+    fontSize: fonts.size.s,
+  },
+
+  emptyTitle: {
+    fontSize: fonts.size.m,
+    fontWeight: fonts.weight.semibold,
+    color: colors.neutral900,
+    marginBottom: spacing["2xs"],
+  },
+};

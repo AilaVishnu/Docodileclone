@@ -8,6 +8,10 @@ import java.util.UUID
 data class DoctorDTO(
     val id: UUID,
     val name: String,
-    val speciality: String?,
-    val registrationNo: String?
+    val department: String?,
+    val specialty: String?,
+    val registrationNo: String?,
+    val qualification: String?,
+    val medicalCouncil: String?,
+    val experienceYears: Int?
 )

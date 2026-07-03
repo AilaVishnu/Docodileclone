@@ -7,19 +7,17 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import org.hibernate.annotations.SQLRestriction
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
 @Entity
 @Table(name = "visit")
+@SQLRestriction("deleted_at IS NULL")
 class Visit(
     @Id
     var id: UUID = UUID.randomUUID(),
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "clinic_id", nullable = false)
-    var clinic: ClinicEntity? = null,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_id", nullable = false)
@@ -71,20 +69,33 @@ class Visit(
     @JoinColumn(name = "refer_doctor_id")
     var referDoctor: AppUser? = null,
 
+    // The referral doctor (from the Catalog directory) who referred the patient
+    // in — a denormalized name, printed as "Ref. by". Separate from referDoctor
+    // (a staff FK, kept for backward compatibility).
+    @Column(name = "referred_by") var referredBy: String? = null,
+
     @Column(name = "review_date") var reviewDate: LocalDate? = null,
     @Column(name = "review_days") var reviewDays: Int? = null,
     @Column(name = "review_notes") var reviewNotes: String? = null,
 
     // ── Session timing (Prescription form's SessionBar) ─────────────────
-    // Set when the doctor clicks Start Session on the prescription pad.
     @Column(name = "session_started_at") var sessionStartedAt: Instant? = null,
-    // Set when End Session fires; the bar locks at this instant.
     @Column(name = "session_ended_at")   var sessionEndedAt: Instant? = null,
-    // Final elapsed seconds shown on the bar at End. Cached separately
-    // so we don't have to recompute from started/ended (e.g. paused
-    // segments make a wall-clock diff incorrect).
     @Column(name = "session_duration_sec") var sessionDurationSec: Int? = null,
 
     @Column(name = "created_at") var createdAt: Instant? = null,
-    @Column(name = "updated_at") var updatedAt: Instant? = null
+
+    @Column(name = "updated_at") var updatedAt: Instant? = null,
+
+    @Column(name = "deleted_at") var deletedAt: Instant? = null,
+
+    // "<patientExternalRef>|<visitDate>" when this visit was bulk-imported.
+    // Null for visits created natively. Makes re-imports idempotent.
+    @Column(name = "external_ref") var externalRef: String? = null,
+
+    @Column(name = "appointment_id") var appointmentId: UUID? = null,
+
+    // Sticky "completed at least once" marker — stamped when session_ended_at
+    // is first set, never cleared on a later amend re-open.
+    @Column(name = "completed_at") var completedAt: java.time.Instant? = null
 )

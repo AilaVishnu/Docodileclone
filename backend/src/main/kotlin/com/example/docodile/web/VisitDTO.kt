@@ -12,6 +12,10 @@ data class VisitDTO(
     val patientId: UUID,
     val clinicId: UUID,
     val createdByDoctorId: UUID?,
+    // Prescribing doctor's name, resolved server-side so the prescription print
+    // shows it even when that doctor isn't in the caller's scoped /api/doctors
+    // list (different department, archived, or a non-doctor user printing).
+    val createdByDoctorName: String?,
     val visitDate: LocalDate,
 
     // Vitals + units
@@ -51,6 +55,7 @@ data class VisitDTO(
     // Referral + next review
     val referDoctorId: UUID?,
     val referDoctorName: String?,
+    val referredBy: String?,
     val reviewDate: LocalDate?,
     val reviewDays: Int?,
     val reviewNotes: String?,
@@ -60,7 +65,19 @@ data class VisitDTO(
     // the SessionBar's "Session Ended" pill.
     val sessionStartedAt: Instant?,
     val sessionEndedAt: Instant?,
+    // Sticky "completed at least once" (set on first completion, survives re-open).
+    val completedAt: Instant? = null,
     val sessionDurationSec: Int?,
+
+    // The appointment this visit belongs to (null for legacy/imported
+    // visits). Lets the pad show the visit tied to the open appointment.
+    val appointmentId: UUID?,
+
+    // The owning appointment's status (e.g. COMPLETED / IN_PROGRESS / AT_DOC),
+    // resolved server-side. Null when the visit has no appointment. Lets the
+    // prescription pad lock/label each visit tab from its OWN completion state
+    // rather than the appointment the chart was opened through.
+    val appointmentStatus: String?,
 
     val prescriptions: List<RxRowDTO>
 )

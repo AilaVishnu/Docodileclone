@@ -1,5 +1,5 @@
 import React from "react";
-import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { colors, fonts, radii, spacing, strokes, shadows, zIndex } from "../../styles/theme";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Generic popover menu — a click-trigger that opens a list of action items.
@@ -11,6 +11,8 @@ export type PopoverMenuItem = {
   label: string;
   onClick: () => void;
   destructive?: boolean;
+  /** Optional leading icon, rendered before the label. */
+  icon?: React.ReactNode;
 };
 
 type PopoverMenuProps = {
@@ -62,6 +64,7 @@ export function PopoverMenu({ trigger, items, align = "right", ariaLabel }: Popo
                 setOpen(false);
               }}
             >
+              {item.icon && <span style={styles.itemIcon}>{item.icon}</span>}
               {item.label}
             </button>
           ))}
@@ -97,11 +100,13 @@ const styles: Record<string, React.CSSProperties> = {
     padding: spacing["2xs"],
     display: "flex",
     flexDirection: "column",
-    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
-    zIndex: 1000,
+    boxShadow: shadows.menu,
+    zIndex: zIndex.popover,
   },
   item: {
-    display: "block",
+    display: "flex",
+    alignItems: "center",
+    gap: spacing.xs,
     width: "100%",
     textAlign: "left",
     padding: `${spacing.xs} ${spacing.s}`,
@@ -113,8 +118,18 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: fonts.lineHeight.s,
     color: colors.neutral900,
     borderRadius: radii.xs,
+    whiteSpace: "nowrap",
+  },
+  itemIcon: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 18,
+    height: 18,
+    flexShrink: 0,
+    color: "currentColor",
   },
   itemDestructive: {
-    color: "#c0392b",
+    color: colors.red200,
   },
 };

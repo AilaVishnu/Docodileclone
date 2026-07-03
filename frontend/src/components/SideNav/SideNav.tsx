@@ -1,20 +1,19 @@
 import React from 'react';
-import { 
-  HomeIcon, 
-  AppointmentsIcon, 
-  PrescriptionIcon, 
-  PatientFilesIcon, 
-  ServicesIcon, 
-  BillingIcon, 
-  BusinessIcon, 
-  PharmacyIcon 
-} from '../../iconsUtil';
+import { Icon } from "../Icon";
 import { SideNavItem } from './SideNavItem';
+import { SettingsNavItem } from './SettingsNavItem';
 import { ReactComponent as LogoSmall } from "../../assets/logo-small.svg";
-import { ReactComponent as LogoFull } from "../../assets/logo-full.svg";
-import { ReactComponent as ChevronLeftIcon } from "../../assets/chevron_left.svg";
-import { ReactComponent as ChevronRightIcon } from "../../assets/chevron_right.svg";
-import { fonts, colors, ThemeMode } from "../../styles/theme";
+import { colors } from "../../styles/theme";
+import { SettingsSection } from "../../pages/Settings/sections";
+import { LottieIcon } from "../Icon/LottieIcon";
+import homeLottie from "../../assets/lottie/home.json";
+import calendarLottie from "../../assets/lottie/calendar.json";
+import filesLottie from "../../assets/lottie/files.json";
+import pieChartLottie from "../../assets/lottie/pie-chart.json";
+import settingsLottie from "../../assets/lottie/settings.json";
+import patientLottie from "../../assets/lottie/patient.json";
+import catalogLottie from "../../assets/lottie/catalog.json";
+import medsLottie from "../../assets/lottie/meds.json";
 
 export type NavTab =
   | 'Home'
@@ -23,132 +22,97 @@ export type NavTab =
   | 'Patient Files'
   | 'Services'
   | 'Billing'
-  | 'Business'
+  | 'Stats'
   | 'Pharmacy'
-  | 'Design System';
+  | 'Docs'
+  | 'Settings';
 
 type SideNavProps = {
   activeTab: NavTab;
   onTabChange: (tab: NavTab) => void;
-  isExpanded: boolean;
-  onToggleExpand: () => void;
-  themeMode?: ThemeMode;
+  // Config sub-section: which Settings section is shown (for the hover flyout's
+  // highlight), and the callback to jump to one. Only meaningful for 'Settings'.
+  settingsSection?: SettingsSection;
+  onSettingsSection?: (section: SettingsSection) => void;
 };
 
-export function SideNav({ activeTab, onTabChange, isExpanded, onToggleExpand }: SideNavProps) {
+export function SideNav({ activeTab, onTabChange, settingsSection, onSettingsSection }: SideNavProps) {
   const styles = {
     container: {
-      width: isExpanded ? '204px' : '95px',
+      width: 'var(--sidenav-w)',
       height: '100vh',
       backgroundColor: colors.active.shade300,
       display: 'flex',
       flexDirection: 'column',
-      paddingTop: '19px',
       position: 'fixed' as const,
       left: 0,
       top: 0,
-      transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       zIndex: 3000,
     },
+    // Logo strip matches TopNav height so the mark shares the search bar's
+    // baseline. Centered — the compact sidebar has no room for padding.
     logoSection: {
-      padding: isExpanded ? '0 24px 32px 24px' : '0 0 32px 0',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: isExpanded ? 'flex-start' : 'center',
-      gap: '8px',
-      position: 'relative' as const,
-    },
-    logoText: {
-      fontSize: fonts.size.h5,
-      fontWeight: 500,
-      color: '#202020',
-      fontFamily: fonts.family.secondary,
-      fontStyle: 'italic',
-      letterSpacing: '-0.5px',
-    },
-    toggleButton: {
-      position: 'absolute' as const,
-      right: '-16px',
-      top: '50%',
-      transform: 'translateY(-50%)',
-      width: '32px',
-      height: '32px',
-      borderRadius: '50%',
-      backgroundColor: colors.active.shade300,
-      border: '1px solid rgba(0,0,0,0.05)',
+      height: 'var(--topnav-h)',
+      flexShrink: 0,
+      marginBottom: '16px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      cursor: 'pointer',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-      zIndex: 101,
-      transition: 'transform 0.3s ease',
     },
     navList: {
       display: 'flex',
       flexDirection: 'column',
-      gap: '4px',
+      gap: '8px',
     }
   } as const;
 
-  // Palette icon for the Design System menu entry. Remove this item (and the
-  // 'Design System' branch in NavTab) to hide the page from end users.
-  const DesignSystemIcon = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22a10 10 0 1 1 10-10c0 2-1.5 3-3 3h-2a2 2 0 0 0-2 2 2 2 0 0 1-2 2h-1Z" />
-      <circle cx="7.5" cy="10.5" r="1.2" />
-      <circle cx="12" cy="7" r="1.2" />
-      <circle cx="16.5" cy="10.5" r="1.2" />
-    </svg>
-  );
-
-  const menuItems: { label: NavTab; icon: React.ReactNode }[] = [
-    { label: 'Home', icon: <HomeIcon /> },
-    { label: 'Appointments', icon: <AppointmentsIcon /> },
-    { label: 'Prescription', icon: <PrescriptionIcon /> },
-    { label: 'Patient Files', icon: <PatientFilesIcon /> },
-    { label: 'Services', icon: <ServicesIcon /> },
-    { label: 'Billing', icon: <BillingIcon /> },
-    { label: 'Business', icon: <BusinessIcon /> },
-    { label: 'Pharmacy', icon: <PharmacyIcon /> },
-    { label: 'Design System', icon: <DesignSystemIcon /> },
+  // `label` is the routing key (the NavTab); `display` is the short name shown
+  // in the compact sidebar. Keep them separate so the wording can change
+  // without touching navigation / persisted tab state.
+  const menuItems: { label: NavTab; display: string; icon: React.ReactNode }[] = [
+    // Animated Lottie glyphs play a one-shot when their module becomes active
+    // (see LottieIcon). Home / Appointments / Patient Files / Stats / Settings are
+    // wired; the rest stay static <Icon>s until they get their own animated glyphs.
+    { label: 'Home', display: 'Home', icon: <LottieIcon animationData={homeLottie} active={activeTab === 'Home'} size={36} /> },
+    { label: 'Appointments', display: 'Appts', icon: <LottieIcon animationData={calendarLottie} active={activeTab === 'Appointments'} size={36} /> },
+    { label: 'Prescription', display: 'Rx Pad', icon: <LottieIcon animationData={filesLottie} active={activeTab === 'Prescription'} size={36} /> },
+    { label: 'Patient Files', display: 'Patients', icon: <LottieIcon animationData={patientLottie} active={activeTab === 'Patient Files'} size={36} /> },
+    { label: 'Services', display: 'Catalog', icon: <LottieIcon animationData={catalogLottie} active={activeTab === 'Services'} size={36} /> },
+    { label: 'Billing', display: 'Bills', icon: <Icon name="billing" tone="inherit" size={36} /> },
+    { label: 'Stats', display: 'Stats', icon: <LottieIcon animationData={pieChartLottie} active={activeTab === 'Stats'} size={36} /> },
+    { label: 'Pharmacy', display: 'Meds', icon: <LottieIcon animationData={medsLottie} active={activeTab === 'Pharmacy'} size={36} /> },
+    { label: 'Docs', display: 'Docs', icon: <Icon name="document-school" tone="inherit" size={36} /> },
+    { label: 'Settings', display: 'Config', icon: <LottieIcon animationData={settingsLottie} active={activeTab === 'Settings'} size={36} /> },
   ];
 
   return (
     <div style={styles.container}>
       <div style={styles.logoSection}>
-        {isExpanded ? (
-          <LogoFull style={{ width: 140, height: 42 }} />
-        ) : (
-          <LogoSmall style={{ width: 32, height: 32 }} />
-        )}
+        <LogoSmall style={{ height: 'var(--search-h)', width: 'var(--search-h)' }} />
       </div>
 
       <div style={styles.navList}>
-        {menuItems.map((item) => (
-          <SideNavItem
-            key={item.label}
-            label={item.label}
-            icon={item.icon}
-            active={activeTab === item.label}
-            onClick={() => onTabChange(item.label)}
-            isExpanded={isExpanded}
-          />
-        ))}
-      </div>
-
-      <div style={{ position: 'relative', marginTop: 'auto', marginBottom: '60px' }}>
-        <div 
-          style={styles.toggleButton} 
-          onClick={onToggleExpand}
-          title={isExpanded ? "Collapse" : "Expand"}
-        >
-          {isExpanded ? (
-            <ChevronLeftIcon style={{ width: 16, height: 16 }} />
+        {menuItems.map((item) =>
+          item.label === 'Settings' ? (
+            <SettingsNavItem
+              key={item.label}
+              label={item.display}
+              icon={item.icon}
+              active={activeTab === 'Settings'}
+              onOpen={() => onTabChange('Settings')}
+              activeSection={settingsSection}
+              onSelectSection={(s) => { onSettingsSection?.(s); onTabChange('Settings'); }}
+            />
           ) : (
-            <ChevronRightIcon style={{ width: 16, height: 16 }} />
-          )}
-        </div>
+            <SideNavItem
+              key={item.label}
+              label={item.display}
+              icon={item.icon}
+              active={activeTab === item.label}
+              onClick={() => onTabChange(item.label)}
+            />
+          )
+        )}
       </div>
     </div>
   );

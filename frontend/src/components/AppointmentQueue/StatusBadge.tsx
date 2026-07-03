@@ -1,20 +1,35 @@
-import React from "react";
-import { fonts, colors } from "../../styles/theme";
-import { ReactComponent as DangerTriangleIcon } from "../../assets/icons/danger-triangle.svg";
-import { ReactComponent as CheckCircleIcon } from "../../assets/icons/check-circle.svg";
-import { loadStartedSet } from "../../utils/sessionStarted";
+import React, { useState, useEffect } from "react";
+import { fonts, colors, radii } from "../../styles/theme";
+import { Icon } from "../Icon";
+import { RefundGlyph, WaivedGlyph } from "../BillStatusBadge/BillStatusBadge";
+
+// H:MM:SS once past an hour, MM:SS below.
+const formatTimer = (s: number) => {
+  const h = Math.floor(s / 3600);
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+};
+
+// A consultation counts live for this long; past it we stop ticking and show
+// a static "Since <start time>" instead — so a visit left open for hours
+// doesn't run a forever-counter, but is still clearly visible as in-progress.
+const SESSION_LIVE_SEC = 6 * 60 * 60;
+const formatSince = (iso: string) =>
+  `Since ${new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 export type AppointmentStatusValue =
+  | "UNSEEN"
   | "WAITING"
   | "IN_PROGRESS"
   | "COMPLETED"
   | "NO_SHOW"
   | "CANCELLED";
 
-export type PayStatusValue = "PAID" | "DUE" | "NO PAY";
+export type PayStatusValue = "PAID" | "DUE";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Token maps — directly from Figma variable defs
@@ -25,12 +40,18 @@ const STATUS_CONFIG: Record<
   string,
   { bg: string; color: string; label: string }
 > = {
-  BOOKED: { bg: colors.primary200, color: colors.neutral900, label: "Booked" },
+  // UNSEEN — a new appointment/patient that hasn't been opened/seen yet. Soft
+  // sage pill (secondary200) with dark text, same size/radius as every other
+  // status badge.
+  UNSEEN: { bg: colors.secondary200, color: colors.neutral900, label: "Unseen" },
+  BOOKED: { bg: colors.active.shade300, color: colors.neutral900, label: "Booked" },
   WAITING: { bg: colors.yellow100, color: colors.neutral900, label: "Waiting" },
-  SCHEDULED: { bg: colors.primary200, color: colors.neutral900, label: "Booked" },
+  // SCHEDULED is a backend alias of BOOKED (the server emits either for a
+  // pre-arrival appointment) — same pill, so the patient only ever sees "Booked".
+  SCHEDULED: { bg: colors.active.shade300, color: colors.neutral900, label: "Booked" },
   ARRIVED: { bg: colors.primary200, color: colors.neutral900, label: "Arrived" },
   IN_PROGRESS: { bg: colors.neutral100, color: colors.neutral900, label: "At Doc" },
-  COMPLETED: { bg: colors.green100, color: colors.secondary800, label: "Completed" },
+  COMPLETED: { bg: colors.secondary600, color: colors.neutral100, label: "Done" },
   NO_SHOW: { bg: colors.neutral400, color: colors.neutral100, label: "No Show" },
   CANCELLED: { bg: colors.red100, color: colors.neutral100, label: "Cancelled" },
 };
@@ -42,22 +63,28 @@ const PAY_CONFIG: Record<
   PAID: {
     color: colors.neutral900,
     label: "Paid",
-    icon: <CheckCircleIcon width={20} height={20} />,
+    icon: <Icon name="check-circle" size={24} />,
   },
+  // DUE is the single "owing" state. UNPAID / "NO PAY" / any unknown pay status
+  // all fall through to DUE below, so they render identically with no extra config.
   DUE: {
     color: colors.neutral900,
     label: "Due",
-    icon: <DangerTriangleIcon width={20} height={20} />,
+    icon: <Icon name="danger-triangle" size={24} />,
   },
-  UNPAID: {
+  // WAIVED — the charge was written off. Reuses the design-system waive glyph
+  // (soft-blue dash), so it reads as waived, never a Paid tick or Due ⚠.
+  WAIVED: {
     color: colors.neutral900,
-    label: "Due",
-    icon: <DangerTriangleIcon width={20} height={20} />,
+    label: "Waived",
+    icon: <WaivedGlyph size={24} />,
   },
-  "NO PAY": {
+  // REFUNDED — the payment was reversed. Reuses the design-system refund glyph
+  // (maroon back-arrow) so it reads as refunded, never a Paid tick.
+  REFUNDED: {
     color: colors.neutral900,
-    label: "Due",
-    icon: <DangerTriangleIcon width={20} height={20} />,
+    label: "Refunded",
+    icon: <RefundGlyph size={24} />,
   },
 };
 
@@ -76,19 +103,65 @@ type StatusBadgeProps = {
   patientId?: string;
   /** If true, badge is clickable and calls onClick */
   onClick?: () => void;
+  /**
+   * Prescription-queue use: when true and status is IN_PROGRESS, the badge
+   * reads "Ongoing" on sage (no live timer). The appointment queue instead
+   * passes `sessionStartedAt` to get the running live timer. One badge, both.
+   */
+  started?: boolean;
+  /**
+   * Backend session start (ISO). When set and status is IN_PROGRESS, the badge
+   * shows a live timer counting up from this instant — server-owned, so it's
+   * the real elapsed consultation time and stays correct across devices/reloads.
+   */
+  sessionStartedAt?: string;
 };
 
-export function StatusBadge({ status, patientId, onClick }: StatusBadgeProps) {
+export function StatusBadge({ status, started, sessionStartedAt, onClick }: StatusBadgeProps) {
   const key = status?.toUpperCase();
   const baseCfg = STATUS_CONFIG[key] ?? { bg: colors.neutral200, color: colors.neutral700, label: status };
-  // For IN_PROGRESS, swap the label to "In Progress" once the doctor has
-  // started the session for this patient (Start Session click on the
-  // PrescriptionPage's SessionBar). Until then the pill stays "At Doc".
-  const startedForPatient =
-    key === "IN_PROGRESS" && patientId ? loadStartedSet().has(patientId) : false;
-  const cfg = startedForPatient
-    ? { ...baseCfg, label: "In Progress" }
-    : baseCfg;
+
+  const [liveSeconds, setLiveSeconds] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (key !== "IN_PROGRESS" || !sessionStartedAt) { setLiveSeconds(null); return; }
+    const startMs = new Date(sessionStartedAt).getTime();
+    if (Number.isNaN(startMs)) { setLiveSeconds(null); return; }
+    const compute = () => Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+    setLiveSeconds(compute());
+    // Already past the live window → static "Since …", never start an interval.
+    if (compute() >= SESSION_LIVE_SEC) return;
+    const id = window.setInterval(() => {
+      const e = compute();
+      setLiveSeconds(e);
+      // Crossed the 6h mark while watching → stop ticking, switch to static.
+      if (e >= SESSION_LIVE_SEC) window.clearInterval(id);
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [key, sessionStartedAt]);
+
+  const cfg = key === "IN_PROGRESS" && liveSeconds != null
+    ? {
+        ...baseCfg,
+        // Live elapsed for the first 6h, then the static start time.
+        label: liveSeconds >= SESSION_LIVE_SEC && sessionStartedAt
+          ? formatSince(sessionStartedAt)
+          : formatTimer(liveSeconds),
+      }
+    : started && key === "IN_PROGRESS"
+      ? {
+          ...baseCfg,
+          // Prescription queue: a started session reads "Ongoing" on sage.
+          bg: colors.secondary100,
+          label: "Ongoing",
+        }
+      : baseCfg;
+
+  // Uniform across every status — Waiting / At Doc used to render at m (16)
+  // for emphasis, but that broke visual rhythm against the other s (14)
+  // states (Booked / No Show / Completed / …). Picking one keeps the queue
+  // row consistent; size.s matches the other badges.
+  const badgeFontSize = fonts.control.sm;
 
   return (
     <span
@@ -99,9 +172,9 @@ export function StatusBadge({ status, patientId, onClick }: StatusBadgeProps) {
         justifyContent: "center",
         backgroundColor: cfg.bg,
         color: cfg.color,
-        borderRadius: "4px",
+        borderRadius: radii.xs,
         padding: "4px 8px",
-        fontSize: fonts.size.xs,
+        fontSize: badgeFontSize,
         fontFamily: fonts.family.primary,
         fontWeight: fonts.weight.regular,
         lineHeight: "16px",
@@ -109,7 +182,7 @@ export function StatusBadge({ status, patientId, onClick }: StatusBadgeProps) {
         cursor: onClick ? "pointer" : "default",
         userSelect: "none",
         whiteSpace: "nowrap",
-        minWidth: "90px",
+        minWidth: key === "IN_PROGRESS" && liveSeconds != null ? "auto" : "90px",
         textAlign: "center" as const,
       }}
     >
@@ -127,27 +200,27 @@ type PayBadgeProps = {
 
 export function PayBadge({ status }: PayBadgeProps) {
   const key = status?.toUpperCase();
-  const cfg = PAY_CONFIG[key] ?? PAY_CONFIG["NO PAY"];
+  const cfg = PAY_CONFIG[key] ?? PAY_CONFIG.DUE;
 
   return (
     <span
+      // `title` is the native hover tooltip — shows "Paid" / "Due" / "No Pay"
+      // when the label text is hidden at 1024 (see globals.css).
+      title={cfg.label}
       style={{
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        gap: "4px",
-        width: "80px",
-        fontSize: fonts.size.s,
-        fontFamily: fonts.family.primary,
-        fontWeight: 400,
-        lineHeight: "16px",
+        // Icon only — the Paid/Due word is dropped at all sizes; the native
+        // `title` (above) provides the label on hover.
+        width: "auto",
         color: cfg.color,
       }}
     >
       <span
         style={{
-          width: 20,
-          height: 20,
+          width: 24,
+          height: 24,
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
@@ -156,7 +229,6 @@ export function PayBadge({ status }: PayBadgeProps) {
       >
         {cfg.icon}
       </span>
-      {cfg.label}
     </span>
   );
 }

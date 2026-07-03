@@ -3,15 +3,23 @@ import { Modal } from "../Modal";
 import { Card } from "../Card";
 import { StaffDetailsCard } from "../StaffDetailsCard";
 import { Button } from "../Button";
-import { styles, confirmStyles } from "./AddStaffModal.styles";
+import { Field } from "../Field";
+import { RadioGroup } from "../Radio";
+import { ModalHeader } from "../ModalHeader";
+import { styles } from "./AddStaffModal.styles";
+import { ConfirmDialog } from "../ConfirmDialog";
 import { AdditionalStaffDetailsCard } from "../AdditionalStaffDetailsCard";
 import { styles as roleStyles } from "../AdditionalStaffDetailsCard/AdditionalStaffDetailsCard.styles";
 import { StaffIllustration } from "./StaffIllustration";
-import { ReactComponent as RoleIcon } from "../../assets/Mask Happly.svg";
+import { Icon } from "../Icon";
 
 // Standard role options that appear as radios. "Other" is a separate entry
 // that reveals a free-text input for custom roles.
 const STANDARD_ROLES = ["Front Desk", "Doctor", "Nurse", "Pharmacy", "Lab"];
+
+// Clinical roles tied to a clinical department. Pharmacy/Lab are clinic-wide
+// services (no department), Front Desk and custom Other are admin/varied.
+const DEPARTMENT_REQUIRED_ROLES = ["Doctor", "Nurse"];
 
 
 export type StaffData = {
@@ -20,8 +28,12 @@ export type StaffData = {
   phone: string;
   gender: "male" | "female" | "other" | "";
   role: string;
-  speciality: string;
+  department: string;
+  specialty: string;
   registrationNo: string;
+  qualification: string;
+  medicalCouncil: string;
+  experienceYears: string;
 };
 
 type AddStaffModalProps = {
@@ -31,6 +43,9 @@ type AddStaffModalProps = {
   onDelete?: () => void;
   initialData?: StaffData;
   onShowToast?: (message: string) => void;
+  // Department names configured on the active clinic. Staff must pick one of
+  // these — they can't be assigned to a department the clinic doesn't offer.
+  clinicDepartments: string[];
 };
 
 export function AddStaffModal({
@@ -40,6 +55,7 @@ export function AddStaffModal({
   onDelete,
   initialData,
   onShowToast,
+  clinicDepartments,
 }: AddStaffModalProps) {
   // Local state for all fields
   const [name, setName] = useState("");
@@ -51,8 +67,12 @@ export function AddStaffModal({
   // "Other" radio is selected → free text input shown. Role value holds the
   // custom text the user types (or "" while input is empty).
   const [isOtherRole, setIsOtherRole] = useState(false);
-  const [speciality, setSpeciality] = useState("");
+  const [department, setDepartment] = useState("");
+  const [specialty, setSpecialty] = useState("");
   const [registrationNo, setRegistrationNo] = useState("");
+  const [qualification, setQualification] = useState("");
+  const [medicalCouncil, setMedicalCouncil] = useState("");
+  const [experienceYears, setExperienceYears] = useState("");
 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -72,8 +92,12 @@ export function AddStaffModal({
         // and isn't empty, the "Other" radio should be pre-selected with the
         // custom text already in the input.
         setIsOtherRole(!!initialData.role && !STANDARD_ROLES.includes(initialData.role));
-        setSpeciality(initialData.speciality);
+        setDepartment(initialData.department);
+        setSpecialty(initialData.specialty);
         setRegistrationNo(initialData.registrationNo);
+        setQualification(initialData.qualification);
+        setMedicalCouncil(initialData.medicalCouncil);
+        setExperienceYears(initialData.experienceYears);
       } else {
         // Reset form for "Add New"
         setName("Dr. ");
@@ -82,8 +106,12 @@ export function AddStaffModal({
         setGender("");
         setRole("Doctor");
         setIsOtherRole(false);
-        setSpeciality("");
+        setDepartment("");
+        setSpecialty("");
         setRegistrationNo("");
+        setQualification("");
+        setMedicalCouncil("");
+        setExperienceYears("");
       }
     }
   }, [isOpen, initialData]);
@@ -122,8 +150,13 @@ export function AddStaffModal({
       role: roleInvalid,
     };
 
+    // Department required for any clinical role; specialty + registration
+    // number are doctor-only.
+    if (DEPARTMENT_REQUIRED_ROLES.includes(role)) {
+      newErrors.department = !department;
+    }
     if (role === "Doctor") {
-      newErrors.speciality = !speciality;
+      newErrors.specialty = !specialty.trim();
       newErrors.registrationNo = !registrationNo.trim();
     }
 
@@ -137,7 +170,8 @@ export function AddStaffModal({
       if (newErrors.phone) messages.push("valid phone number");
       if (newErrors.gender) messages.push("gender");
       if (newErrors.role) messages.push("role");
-      if (newErrors.speciality) messages.push("speciality");
+      if (newErrors.department) messages.push("department");
+      if (newErrors.specialty) messages.push("specialty");
       if (newErrors.registrationNo) messages.push("registration number");
       onShowToast?.(`Please enter ${messages[0]}`);
       return;
@@ -149,77 +183,64 @@ export function AddStaffModal({
       phone,
       gender,
       role,
-      speciality: role === "Doctor" ? speciality : "",
+      department: DEPARTMENT_REQUIRED_ROLES.includes(role) ? department : "",
+      specialty: role === "Doctor" ? specialty : "",
       registrationNo: role === "Doctor" ? registrationNo : "",
+      qualification: role === "Doctor" ? qualification : "",
+      medicalCouncil: role === "Doctor" ? medicalCouncil : "",
+      experienceYears: role === "Doctor" ? experienceYears : "",
     });
   };
 
   return (
     <>
     <Modal isOpen={isOpen} onClose={onClose}>
-      {/* Header */}
-      <div style={styles.header}>
-        <h3 style={styles.title}>Add staff member</h3>
+      <ModalHeader title="Add staff member" onClose={onClose} />
 
-        <button style={styles.closeButton} onClick={onClose}>
-          ✕
-        </button>
-      </div>
-
-      {/* Role section — first after the heading. Drives everything else. */}
-      <Card style={{ ...roleStyles.card, marginBottom: 16 }}>
-        <div style={roleStyles.section}>
+      {/* Role section — first after the heading. "Role" + icon on the left,
+          options in a 3-col grid on the right. Drives everything else. */}
+      <Card style={{ ...roleStyles.card, marginTop: 16, marginBottom: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 40,
+            ...(errors.role ? { border: "1px solid red", borderRadius: "8px", padding: "8px" } : {}),
+          }}
+        >
           <div style={roleStyles.sectionTitle}>
-            <RoleIcon />
+            <Icon name="mask-happy" tone="inherit" />
             <span>Role</span>
           </div>
 
-          <div
-            style={{
-              ...roleStyles.radioGroup,
-              ...(errors.role ? { border: "1px solid red", borderRadius: "8px", padding: "8px" } : {}),
-            }}
-          >
-            {STANDARD_ROLES.map((r) => (
-              <label key={r} style={roleStyles.radioLabel}>
-                <input
-                  type="radio"
-                  name="role"
-                  checked={!isOtherRole && role === r}
-                  onChange={() => {
-                    setIsOtherRole(false);
-                    setRole(r);
-                  }}
-                  style={roleStyles.radioInput}
-                />
-                {r}
-              </label>
-            ))}
-            <label style={roleStyles.radioLabel}>
-              <input
-                type="radio"
-                name="role"
-                checked={isOtherRole}
-                onChange={() => {
+          <div style={{ flex: 1 }}>
+            <RadioGroup
+              name="role"
+              value={isOtherRole ? "Other" : role}
+              onChange={(r) => {
+                if (r === "Other") {
                   setIsOtherRole(true);
                   setRole(""); // clear so the user can type their custom role
-                }}
-                style={roleStyles.radioInput}
-              />
-              Other
-            </label>
-          </div>
-
-          {isOtherRole && (
-            <input
-              type="text"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              placeholder="Enter role"
-              style={roleStyles.otherRoleInput}
-              autoFocus
+                } else {
+                  setIsOtherRole(false);
+                  setRole(r);
+                }
+              }}
+              options={[...STANDARD_ROLES, "Other"]}
+              columns={3}
             />
-          )}
+            {isOtherRole && (
+              <div style={{ marginTop: 8 }}>
+                <Field
+                  variant="underline"
+                  value={role}
+                  onChange={setRole}
+                  placeholder="Enter role"
+                  autoFocus
+                />
+              </div>
+            )}
+          </div>
         </div>
       </Card>
 
@@ -240,13 +261,24 @@ export function AddStaffModal({
         />
       </div>
 
-      {/* Doctor-specific fields — only shown when role is Doctor. */}
-      {role === "Doctor" && (
+      {/* Clinical-role fields. Department shows for Doctor/Nurse/Pharmacy/Lab;
+          specialty and Reg. No. are doctor-only (handled inside the card). */}
+      {DEPARTMENT_REQUIRED_ROLES.includes(role) && (
         <AdditionalStaffDetailsCard
-          speciality={speciality}
-          setSpeciality={setSpeciality}
+          role={role}
+          department={department}
+          setDepartment={setDepartment}
+          specialty={specialty}
+          setSpecialty={setSpecialty}
           registrationNo={registrationNo}
           setRegistrationNo={setRegistrationNo}
+          qualification={qualification}
+          setQualification={setQualification}
+          medicalCouncil={medicalCouncil}
+          setMedicalCouncil={setMedicalCouncil}
+          experienceYears={experienceYears}
+          setExperienceYears={setExperienceYears}
+          clinicDepartments={clinicDepartments}
           errors={errors}
         />
       )}
@@ -255,14 +287,14 @@ export function AddStaffModal({
       <div style={styles.footer}>
         {initialData ? (
           <button style={styles.deleteButton} onClick={() => setShowDeleteConfirm(true)}>
-            Delete Staff
+            Remove Staff
           </button>
         ) : (
           <div />
         )}
 
         <div style={styles.footerRight}>
-          <Button variant="dangerLight" size="sm" onClick={onClose}>
+          <Button variant="light" size="sm" onClick={onClose}>
             Cancel
           </Button>
 
@@ -273,24 +305,19 @@ export function AddStaffModal({
       </div>
     </Modal>
 
-    {showDeleteConfirm && (
-      <div style={confirmStyles.overlay}>
-        <div style={confirmStyles.dialog}>
-          <h4 style={confirmStyles.title}>Are you sure?</h4>
-          <div style={confirmStyles.actions}>
-            <Button variant="dangerLight" size="sm" onClick={() => setShowDeleteConfirm(false)}>
-              Nope
-            </Button>
-            <Button variant="dark" size="sm" onClick={() => {
-              setShowDeleteConfirm(false);
-              onDelete?.();
-            }}>
-              Yes
-            </Button>
-          </div>
-        </div>
-      </div>
-    )}
+    <ConfirmDialog
+      isOpen={showDeleteConfirm}
+      title="Remove this staff member?"
+      message="They'll be removed from this clinic and can no longer log in or be booked. Their past appointments and prescriptions stay on record."
+      confirmLabel="Yes"
+      cancelLabel="Nope"
+      destructive
+      onConfirm={() => {
+        setShowDeleteConfirm(false);
+        onDelete?.();
+      }}
+      onCancel={() => setShowDeleteConfirm(false)}
+    />
     </>
   );
 }

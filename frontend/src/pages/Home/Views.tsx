@@ -1,26 +1,21 @@
 import React from 'react';
 import { AppointmentQueue } from '../../components/AppointmentQueue';
 import { PrescriptionPage } from '../PrescriptionPage';
-import { fonts } from '../../styles/theme';
+import { PatientFilesPage } from '../PatientFilesPage';
+import type { NavTab } from '../../components/SideNav';
+import type { Patient } from '../../hooks/usePatients';
 
-export function AppointmentsView({ isBooking, bookingKey, onBack, onEditStart }: { isBooking?: boolean, bookingKey?: number, onBack?: () => void, onEditStart?: () => void }) {
+export function AppointmentsView({ isBooking, bookingKey, onBack, onEditStart, onViewPatientFile }: { isBooking?: boolean, bookingKey?: number, onBack?: () => void, onEditStart?: () => void, onViewPatientFile?: (patient: Patient, appointmentId: string, doctorId: string) => void }) {
   return (
-    <AppointmentQueue isBooking={isBooking} bookingKey={bookingKey} onBack={onBack} onEditStart={onEditStart} />
+    <AppointmentQueue isBooking={isBooking} bookingKey={bookingKey} onBack={onBack} onEditStart={onEditStart} onViewPatientFile={onViewPatientFile} />
   );
 }
 
-export function PrescriptionView() {
-  return <PrescriptionPage />;
+export function PrescriptionView({ onNavigate, queueRefreshKey }: { onNavigate?: (tab: NavTab) => void; queueRefreshKey?: number }) {
+  return <PrescriptionPage onNavigate={onNavigate} queueRefreshKey={queueRefreshKey} />;
 }
 
-export function PatientFilesView() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <h2 style={{ fontSize: fonts.size.l, fontWeight: 600 }}>Patient Files</h2>
-      <div style={{ padding: '40px', background: 'white', borderRadius: '12px', textAlign: 'center', border: '1px dashed #ccc' }}>
-        Patient electronic medical records and file management.
-      </div>
-    </div>
-  );
+export function PatientFilesView({ onNavigate, initialSelectedId }: { onNavigate?: (tab: NavTab) => void; initialSelectedId?: string | null }) {
+  return <PatientFilesPage onNavigate={onNavigate} initialSelectedId={initialSelectedId} />;
 }
 // Add others as needed or just use a generic one

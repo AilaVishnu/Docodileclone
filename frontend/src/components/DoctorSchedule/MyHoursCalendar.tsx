@@ -269,18 +269,21 @@ const styles: Record<string, React.CSSProperties> = {
   // Graphic strip — the "photo" area on a real wall calendar
   graphic: {
     backgroundColor: colors.primary300,
-    padding: `${spacing["2xl"]} ${spacing.m} ${spacing.l}`,
-    minHeight: "132px",
+    // Padding + minHeight + month font + direction are all var-driven so 1024
+    // can collapse the strip and put month/year side-by-side without touching
+    // the 1440 baseline.
+    padding: `var(--home-cal-graphic-padtop, 32px) ${spacing.m} var(--home-cal-graphic-padbottom, 20px)`,
+    minHeight: "var(--home-cal-graphic-minh, 132px)",
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "var(--home-cal-graphic-dir, column)" as React.CSSProperties["flexDirection"],
     alignItems: "center",
     justifyContent: "center",
-    gap: "2px",
+    gap: "var(--home-cal-graphic-gap, 2px)",
     position: "relative",
   },
   graphicMonth: {
     fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h3,
+    fontSize: "var(--home-cal-month-fs)",
     fontWeight: 400,
     color: colors.neutral900,
     margin: 0,

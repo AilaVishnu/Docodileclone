@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { colors, fonts, radii, spacing } from '../../styles/theme';
 import { Button } from '../Button';
-import { MessageIcon, BellIcon } from '../../iconsUtil';
+import { Icon } from '../Icon';
 import { StaffIllustration } from '../AddStaffModal/StaffIllustration';
-import { ReactComponent as SearchIcon } from '../../assets/search.svg';
-import { ReactComponent as PlusIcon } from '../../assets/Plus.svg';
+import type { NavTab } from '../SideNav';
+import { SessionTrayButton } from './SessionTrayButton';
+import { HeaderPatientSearch } from './HeaderPatientSearch';
 
 type TopNavProps = {
   onBuildClinic?: () => void;
@@ -12,9 +13,23 @@ type TopNavProps = {
   onLogout?: () => void;
   onNewAppointment?: () => void;
   isBooking?: boolean;
+  // Overrides the default "New Appointment" CTA label. The Prescription page
+  // passes "New Prescription" since that's the user's intent there even
+  // though the action still opens the booking flow.
+  primaryActionLabel?: string;
+  // Colour treatment for the primary CTA. Defaults to the peach "primary"
+  // button; the Prescription/Bills pages pass "secondary" (green), and the
+  // Catalog/Meds pages pass "dark" so their CTA matches the section's own
+  // "Add Service" / "Add Stock" button.
+  primaryActionVariant?: "primary" | "secondary" | "dark";
+  // Hide the primary CTA entirely (e.g. Settings/Config has no create action).
+  hidePrimaryAction?: boolean;
+  // Switches the active home tab. Passed from HomePage so the SessionTray
+  // can route the doctor back to the Prescription form on click.
+  onNavigate?: (tab: NavTab) => void;
 };
 
-export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, isBooking }: TopNavProps) {
+export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppointment, isBooking, primaryActionLabel, primaryActionVariant = "primary", hidePrimaryAction, onNavigate }: TopNavProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -34,7 +49,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: `0 ${spacing.xl} 0 0`,
-      height: '70px',
+      height: 'var(--topnav-h)',
       backgroundColor: colors.active.shade300,
       width: '100%',
       zIndex: 3000,
@@ -57,8 +72,8 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      width: '48px',
-      height: '48px',
+      width: 'var(--topnav-iconbtn)',
+      height: 'var(--topnav-iconbtn)',
       borderRadius: '50%',
       backgroundColor: 'transparent',
       cursor: 'pointer',
@@ -73,8 +88,10 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       backgroundColor: colors.active.shade100,
       borderRadius: '55px',
       padding: '0 16px',
-      width: '364px',
-      height: '40px',
+      // Fixed width (no scaling). The flexible gap to the right-side actions
+      // is what makes the header responsive — see container justify-content.
+      width: 'var(--topnav-search-w)',
+      height: 'var(--search-h)',
       boxSizing: 'border-box',
       gap: '12px',
     },
@@ -84,7 +101,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       border: 'none',
       outline: 'none',
       fontFamily: fonts.family.primary,
-      fontSize: fonts.size.m,
+      fontSize: 'var(--search-fs)',
       color: colors.neutral900,
       padding: 0,
     },
@@ -92,8 +109,8 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       position: 'relative' as const,
     },
     profileAvatar: {
-      width: '48px',
-      height: '48px',
+      width: 'var(--topnav-avatar)',
+      height: 'var(--topnav-avatar)',
       borderRadius: '50%',
       overflow: 'hidden',
       display: 'flex',
@@ -111,10 +128,9 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       top: '56px',
       right: 0,
       backgroundColor: colors.neutral100,
-      borderRadius: radii.m,
+      borderRadius: radii.xl,
       boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-      border: `1px solid ${colors.neutral200}`,
-      padding: spacing.xs,
+      padding: `${spacing.s} ${spacing.xs}`,
       minWidth: '200px',
       display: 'flex',
       flexDirection: 'column' as const,
@@ -136,7 +152,7 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
       width: '100%',
     },
     dropdownItemHover: {
-      backgroundColor: colors.active.shade100,
+      backgroundColor: colors.active.shade200,
     },
     dropdownItemDestructive: {
       color: colors.red200,
@@ -164,6 +180,12 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
 
   const HoverAvatar = ({ onClick }: { onClick: () => void }) => {
     const [hovered, setHovered] = useState(false);
+    const rawRole = localStorage.getItem("docodile_role") ?? "ADMIN";
+    const rawGender = localStorage.getItem("docodile_gender") ?? "male";
+    const isAdmin = rawRole === "ADMIN";
+    const displayRole = isAdmin
+      ? "Doctor"
+      : rawRole.split("_").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
     return (
       <div
         style={{ ...styles.profileAvatar, ...(hovered ? styles.profileAvatarHover : {}) }}
@@ -172,8 +194,8 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
         onMouseLeave={() => setHovered(false)}
       >
         <StaffIllustration
-          role="Doctor"
-          gender="male"
+          role={displayRole}
+          gender={(isAdmin ? "male" : rawGender) as "male" | "female" | "other"}
           width="100%"
           height="100%"
           borderRadius="0"
@@ -203,42 +225,34 @@ export function TopNav({ onBuildClinic, onViewAllClinics, onLogout, onNewAppoint
 
   return (
     <div style={styles.container}>
-      {/* Search Bar */}
-      <div style={styles.searchBarContainer}>
-        <SearchIcon style={{ width: 20, height: 20, color: '#ABABAB' }} />
-        <input
-          type="text"
-          placeholder="Search for anything..."
-          className="topnav-search-input"
-          style={styles.searchInput}
-        />
-        <style>{`
-          .topnav-search-input::placeholder {
-            color: #ABABAB;
-            opacity: 1;
-          }
-        `}</style>
-      </div>
+      {/* Header patient search — type a name / T-number / phone, pick a
+          patient (standard "T12 : Name (M|age)  +phone" format), opens the
+          chart on the Info tab. */}
+      <HeaderPatientSearch onNavigate={onNavigate} />
 
       <div style={styles.actions}>
-        {!isBooking && (
+        {!isBooking && !hidePrimaryAction && (
           <Button
-            variant="primary"
+            // Peach "primary" by default; "secondary" = green (New Prescription /
+            // New Bill), "dark" = the section's own create colour (New service /
+            // Add Stock). White icon+label read on all three.
+            variant={primaryActionVariant}
             size="sm"
-            iconLeft={<PlusIcon style={{ width: 16, height: 16, fill: '#fff' }} />}
-            style={{ height: '40px', fontSize: fonts.size.s, padding: '0 16px' }}
+            iconLeft={<Icon name="plus" tone="inverse" style={{ width: 'var(--topnav-cta-icon)', height: 'var(--topnav-cta-icon)' }} />}
+            style={{ padding: '0 var(--topnav-cta-padx)' }}
             onClick={onNewAppointment}
           >
-            New Appointment
+            {primaryActionLabel ?? "New Appointment"}
           </Button>
         )}
 
         <div style={styles.iconGroup}>
+          {onNavigate && <SessionTrayButton onNavigate={onNavigate} />}
           <HoverIconButton>
-            <MessageIcon />
+            <Icon name="message" tone="inherit" />
           </HoverIconButton>
           <HoverIconButton>
-            <BellIcon />
+            <Icon name="bell" tone="inherit" />
           </HoverIconButton>
         </div>
 

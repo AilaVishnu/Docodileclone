@@ -2,16 +2,22 @@ package com.example.docodile.domain
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EntityListeners
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import org.hibernate.annotations.SQLRestriction
+import org.springframework.data.annotation.LastModifiedDate
+import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.Instant
 import java.util.UUID
 
+@EntityListeners(AuditingEntityListener::class)
 @Entity
 @Table(name = "rx_row")
+@SQLRestriction("deleted_at IS NULL")
 class RxRow(
     @Id
     var id: UUID = UUID.randomUUID(),
@@ -35,10 +41,27 @@ class RxRow(
 
     var frequency: String? = null,
 
+    // Dosing interval (daily / weekly / monthly / stat / sos …) — the
+    // "Frequency" dropdown on the pad. Distinct from `frequency` (the 1-0-1
+    // per-day pattern). See V47.
+    @Column(name = "frequency_interval")
+    var frequencyInterval: String? = null,
+
     var duration: String? = null,
 
     var notes: String? = null,
 
     @Column(name = "created_at")
-    var createdAt: Instant? = null
+    var createdAt: Instant? = null,
+
+    @Column(name = "deleted_at")
+    var deletedAt: Instant? = null,
+
+    // Provenance columns (deleted_by / updated_by) are intentionally NOT mapped:
+    // tenant schemas exclude created_by/updated_by/deleted_by per "rule 6"
+    // (enforced by TenantMigratorTest). Mapping them made Hibernate SELECT a
+    // non-existent column → every /visits read 500'd. Soft-delete uses deleted_at
+    // (+ @SQLRestriction) and audit uses updated_at only.
+    @LastModifiedDate
+    @Column(name = "updated_at") var updatedAt: Instant? = null,
 )

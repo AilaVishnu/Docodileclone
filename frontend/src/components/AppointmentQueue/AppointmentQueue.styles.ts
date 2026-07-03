@@ -1,13 +1,33 @@
 import { CSSProperties } from "react";
-import { colors, fonts } from "../../styles/theme";
+import { colors, fonts, fluidSpacing } from "../../styles/theme";
+import { tableHeadCell, tableDivider } from "../../styles/tableStyles";
 
 export const styles: Record<string, CSSProperties> = {
+  // Acts as its OWN scroll container (mirroring BookAppointment.overlay) so the
+  // sticky <PageHeader/> below can hug the very top of main. If we let main be
+  // the scroll container, its 40px paddingTop pushes any sticky child down by
+  // 40px — sticky positions against the scroll container's content box, not
+  // its padding edge. By absolute-filling main with paddingTop: 0 here, the
+  // header sits flush against the TopNav.
   container: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     display: "flex",
     flexDirection: "column",
-    width: "100%",
+    // No flex `gap` here: it would also space the doctor tab away from the
+    // table below it (the tab is a "folder tab" that visually connects to the
+    // table). The header's own `marginBottom` provides the only intended gap —
+    // between the sticky bar and the Tabs.
+    padding: `0 ${fluidSpacing.outerX} ${fluidSpacing.outerY}`,
+    overflowY: "auto",
+    overflowX: "hidden",
   },
 
+  // (Old inline header style — kept for any stragglers but no longer rendered;
+  // safe to remove once nothing references it.)
   header: {
     display: "flex",
     justifyContent: "space-between",
@@ -16,19 +36,19 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   title: {
+    margin: 0,
+    textAlign: "center" as const,
     fontFamily: fonts.family.secondary,
     fontSize: fonts.size.h5,
-    fontWeight: 400,
-    lineHeight: "34px",
+    lineHeight: fonts.lineHeight.h5,
+    fontWeight: fonts.weight.regular,
     color: colors.neutral900,
-    margin: 0,
-    fontStyle: "normal",
   },
 
   tableContainer: {
     backgroundColor: colors.primary100,
     borderRadius: "0 24px 24px 24px",
-    padding: "24px",
+    padding: "var(--queue-table-pad, 24px)",
     overflow: "visible",
   },
 
@@ -41,33 +61,31 @@ export const styles: Record<string, CSSProperties> = {
   },
 
   th: {
-    padding: "12px 28px",
-    borderBottom: `1px solid ${colors.primary300}`,
-    color: colors.alphaBlack3,
-    fontWeight: 400,
-    fontSize: fonts.size.s,
+    ...tableHeadCell, // shared: alphaBlack3 / 400 / primary300 divider
+    padding: "12px var(--queue-cell-padx, 28px)",
+    fontSize: fonts.size.m,
     lineHeight: "20px",
     letterSpacing: 0,
   },
 
   tr: {
-    borderBottom: `1px solid ${colors.primary300}`,
+    borderBottom: tableDivider,
     transition: "background-color 0.15s ease",
   },
 
   td: {
-    padding: "14px 28px",
-    fontSize: fonts.size.s,
+    padding: "10px var(--queue-cell-padx, 28px)",
+    fontSize: fonts.size.m,
     color: colors.neutral900,
     verticalAlign: "middle",
     fontWeight: 400,
     whiteSpace: "nowrap" as const,
   },
 
-  // Serial number cell
+  // Serial number cell — no horizontal padding so the "#" hugs the row edge.
   serialCell: {
-    padding: "14px 8px",
-    fontSize: fonts.size.s,
+    padding: "10px 0",
+    fontSize: fonts.size.m,
     color: colors.neutral900,
     verticalAlign: "middle",
     fontWeight: 400,
@@ -75,8 +93,11 @@ export const styles: Record<string, CSSProperties> = {
 
   // Name cell with gender/age sub-detail
   nameCell: {
-    padding: "14px 8px",
+    // left 0 to tighten the gap to the # column; overflow hidden so long
+    // names truncate at the 256px column cap (set in QueueTable colgroup).
+    padding: "10px 4px 10px 0",
     verticalAlign: "middle",
+    overflow: "hidden",
   },
 
   nameInner: {
@@ -84,14 +105,18 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     gap: "8px",
     whiteSpace: "nowrap" as const,
+    minWidth: 0,
   },
 
   namePrimary: {
-    fontSize: fonts.size.s,
+    fontSize: fonts.size.m,
     fontWeight: 400,
     color: colors.neutral900,
     lineHeight: "1.3",
     whiteSpace: "nowrap" as const,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    minWidth: 0,
   },
 
   nameMeta: {
@@ -120,7 +145,7 @@ export const styles: Record<string, CSSProperties> = {
 
   // Pay status cell (icon + text inline)
   payCell: {
-    padding: "14px 12px",
+    padding: "10px 12px",
     verticalAlign: "middle",
   },
 
@@ -128,7 +153,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     gap: "5px",
-    fontSize: fonts.size.s,
+    fontSize: fonts.size.m,
     fontWeight: 600,
   },
 
@@ -138,7 +163,7 @@ export const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     gap: "4px",
-    fontSize: fonts.size.s,
+    fontSize: fonts.size.m,
     lineHeight: "16px",
     fontWeight: 400,
     color: colors.neutral900,
@@ -147,19 +172,25 @@ export const styles: Record<string, CSSProperties> = {
   // Time
   time: {
     fontWeight: 400,
-    fontSize: fonts.size.s,
+    fontSize: fonts.size.m,
     color: colors.neutral800,
   },
 
   walkinBadge: {
     fontSize: fonts.size.caption,
-    padding: "2px 6px",
-    borderRadius: "4px",
-    backgroundColor: colors.secondary100,
-    color: colors.primary400,
-    marginLeft: "8px",
+    padding: "2px 8px",
+    borderRadius: "999px",
+    // Warm beige pill in the primary brand family — high enough contrast on
+    // the cream canvas that the WALK-IN marker is legible, and distinct from
+    // the existing status pills (Booked/Waiting/At Doc/Completed) so it
+    // reads as a separate type of metadata, not a status.
+    backgroundColor: colors.primary300,
+    color: colors.primary800,
     fontWeight: 700,
     textTransform: "uppercase" as const,
+    letterSpacing: "0.4px",
+    lineHeight: 1,
+    whiteSpace: "nowrap" as const,
   },
 
   payStatus: {
@@ -170,8 +201,8 @@ export const styles: Record<string, CSSProperties> = {
     background: "none",
     border: "none",
     cursor: "pointer",
-    padding: "6px 8px",
-    color: "#000",
+    padding: "6px 0",
+    color: colors.neutral900,
     borderRadius: "6px",
     display: "flex",
     alignItems: "center",
@@ -179,24 +210,28 @@ export const styles: Record<string, CSSProperties> = {
     transition: "background-color 0.15s ease",
   },
 
+  // Unified menu spec — see also TopNav.dropdown and StatusDropdown (inline).
+  // No border, radii.m (8) corners, soft shadow, padding spacing.xs (8).
   actionMenu: {
     position: "absolute" as const,
     left: "100%",
     top: 0,
     backgroundColor: colors.neutral100,
     borderRadius: "12px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
     zIndex: 100,
     minWidth: "200px",
-    padding: "8px",
-    border: `1px solid ${colors.neutral200}`,
+    padding: "12px 8px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
   },
 
   actionMenuItem: {
-    padding: "12px 16px",
+    padding: "10px 16px",
     cursor: "pointer",
     borderRadius: "8px",
-    fontSize: fonts.size.m,
+    fontSize: fonts.size.s,
     fontFamily: fonts.family.primary,
     color: colors.neutral900,
     transition: "background-color 0.15s",
@@ -240,8 +275,8 @@ export const getStatusLabel = (status: string): string => {
 export const getPayStyle = (status: string): CSSProperties => {
   switch (status?.toUpperCase()) {
     case "PAID":    return { color: colors.green200 };   // brand green
-    case "DUE":     return { color: colors.primary700 }; // warm warning — no amber in system
-    case "NO PAY":  return { color: colors.neutral400 };
+    case "DUE":
+    case "NO PAY":  return { color: colors.primary700 }; // owing → warm warning (no amber in system)
     default:        return { color: colors.neutral400 };
   }
 };

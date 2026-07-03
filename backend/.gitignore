@@ -38,3 +38,7 @@ out/
 
 ### Kotlin ###
 .kotlin
+
+# Local-only secrets / overrides — never commit
+application-local.properties
+backend/src/main/resources/application-local.properties

@@ -1,30 +1,79 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Tabs, TabItem } from "../Tabs";
 import { QueueTable, Appointment } from "./QueueTable";
 import { styles } from "./AppointmentQueue.styles";
-import { DatePicker } from "./DatePicker";
-import { colors } from "../../styles/theme";
+import { DatePicker } from "../DatePicker/DatePicker";
+import { colors, radii } from "../../styles/theme";
 import { BookAppointment, EditAppointmentData } from "./BookAppointment";
+import { PageHeader } from "../PageHeader/PageHeader";
+import { ChevronDown } from "../icons/ChevronDown";
+import { BillModal } from "../BillCard/BillModal";
 import { DoctorStatusCard } from "./DoctorStatusCard";
 import { HeatmapCard } from "./HeatmapCard";
 import { Toast } from "../Toast";
-import { Button } from "../Button";
-import { confirmStyles } from "../AddStaffModal/AddStaffModal.styles";
+import { resolveToastIcon } from "../Toast/toastIcon";
+import { ConfirmDialog } from "../ConfirmDialog";
 import { API_BASE_URL } from "../../apiConfig";
+import { listPharmacyStock } from "../../api/pharmacy";
+import { listServices } from "../../api/services";
+import { getActiveSessions } from "../../api/visits";
+import { recordPatientDeposit } from "../../api/patientSearch";
+import { listBills, chargeAppointment, payBill, type Bill } from "../../api/bills";
+import { RecentBills } from "../BillCard/RecentBills";
+import { BillReadModal } from "../../pages/Bills/BillReadModal";
+import { printBill, type PrintPatientMeta } from "../../pages/Bills/printBill";
 
 type Doctor = {
   id: string;
   name: string;
+  gender?: string;
+  role?: string;
 };
+
+type BillingMedicine = {
+  id: string;
+  name: string;
+  dosage?: string;
+  unitPrice: number;
+  qty: number;
+};
+
+// Stable empty list for a blank ("Create Bill") editor. Must be a constant —
+// a fresh `[]` each render would re-fire BillModal's seed effect (which the 3s
+// queue poll re-renders into) and wipe the bill on every tick.
+const NO_MEDS: BillingMedicine[] = [];
+
+// Patient label for the bill header — "name (G|years)", matching the queue row.
+// `ageMonths` is stored in months (the queue divides by 12).
+function patientLabel(name: string, gender?: string, ageMonths?: number): string {
+  const g = gender ? gender.charAt(0).toUpperCase() : "";
+  const years = ageMonths != null && ageMonths > 0 ? Math.floor(ageMonths / 12) : null;
+  const parts = [g, years != null ? String(years) : ""].filter(Boolean);
+  return parts.length ? `${name} (${parts.join("|")})` : name;
+}
 
 type AppointmentQueueProps = {
   isBooking?: boolean;
   bookingKey?: number;
   onBack?: () => void;
   onEditStart?: () => void;
+  onViewPatientFile?: (patient: import("../../hooks/usePatients").Patient, appointmentId: string, doctorId: string) => void;
 };
 
-export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }: AppointmentQueueProps) {
+// Receipt patient-meta pulled from the appointment a bill was opened under —
+// the appointment already carries the patient's demographics (age in months →
+// years for the receipt).
+function aptReceiptMeta(apt: Appointment): PrintPatientMeta {
+  const digits = (apt.patientPhone ?? "").replace(/\D/g, "").slice(-10);
+  return {
+    age: apt.patientAge != null && apt.patientAge > 0 ? Math.floor(apt.patientAge / 12) : undefined,
+    gender: apt.patientGender ?? undefined,
+    mobile: digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : (apt.patientPhone || undefined),
+    id: apt.patientDisplayNo != null ? `T${String(apt.patientDisplayNo).padStart(3, "0")}` : undefined,
+  };
+}
+
+export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart, onViewPatientFile }: AppointmentQueueProps) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [activeDoctorId, setActiveDoctorId] = useState<string>("");
   const [appointments, setAppointments] = useState<Record<string, Appointment[]>>({});
@@ -35,6 +84,104 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
   const [refreshKey, setRefreshKey] = useState(0);
   const [toastMessage, setToastMessage] = useState("");
   const [pendingCancelId, setPendingCancelId] = useState<string | null>(null);
+  const [medsBillingApt, setMedsBillingApt] = useState<Appointment | null>(null);
+  // An ADDITIONAL bill opens BLANK — the consultation + prescribed meds were
+  // already billed on the first invoice of the date. The FIRST bill (no prior
+  // bill that date) auto-seeds them. Derived from the live bill count so it can
+  // never get stuck on a stale flag.
+  const additionalBill = (medsBillingApt?.todayBillCount ?? 0) > 0;
+  // Recent Bills history (shown when the patient already has a bill today).
+  const [billsHistoryApt, setBillsHistoryApt] = useState<Appointment | null>(null);
+  const [historyBills, setHistoryBills] = useState<Bill[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  // A bill opened from the history → the read-only detail (BillReadModal). It
+  // swaps in over the history; closing it (or its "View bills" link) returns.
+  const [viewBill, setViewBill] = useState<Bill | null>(null);
+
+  const openBillsHistory = (apt: Appointment) => {
+    if (apt.patientArchived) {
+      setToastMessage(`${apt.patientName} is archived — restore the patient to continue.`);
+      return;
+    }
+    setBillsHistoryApt(apt);
+    setHistoryBills([]);
+    if (!apt.patientId) return;
+    setHistoryLoading(true);
+    listBills(apt.patientId)
+      .then(setHistoryBills)
+      .catch((err) => setToastMessage(`Couldn't load bills: ${(err as Error).message}`))
+      .finally(() => setHistoryLoading(false));
+  };
+  // appointmentId → backend session start (ISO) for in-progress consultations.
+  // Polled from the active-sessions endpoint; drives the live status-badge
+  // timer (the badge itself ticks each second from this start instant).
+  const [sessionStarts, setSessionStarts] = useState<Record<string, string>>({});
+
+  // Service name → catalog short-form ("Consultation" → "C"), so the queue's
+  // Service column shows the clinic's own short form instead of a truncated name.
+  const [serviceCodes, setServiceCodes] = useState<Record<string, string>>({});
+  useEffect(() => {
+    listServices()
+      .then((svcs) => {
+        const m: Record<string, string> = {};
+        svcs.forEach((s) => { if (s.code?.trim()) m[s.name.trim().toLowerCase()] = s.code.trim(); });
+        setServiceCodes(m);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () =>
+      getActiveSessions()
+        .then((sessions) => {
+          if (cancelled) return;
+          const map: Record<string, string> = {};
+          for (const s of sessions) {
+            if (s.appointmentId) map[s.appointmentId] = s.sessionStartedAt;
+          }
+          setSessionStarts(map);
+        })
+        .catch(() => { /* keep last good map on transient errors */ });
+    load();
+    // Poll fairly often so a freshly started/re-opened consultation's live
+    // timer shows up promptly (was 10s — felt laggy).
+    const id = window.setInterval(load, 3000);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [refreshKey]);
+  const [billingMedicines, setBillingMedicines] = useState<BillingMedicine[]>([]);
+  const [billingLoading, setBillingLoading] = useState(false);
+  // Clinic pharmacy inventory — drives both the unit prices used when
+  // seeding the bill from a prescription and the "Add medicine" catalog
+  // dropdown. Fetched once on mount; cheap (a few hundred SKUs at most)
+  // and the bill modal opens often enough that pre-fetching is a win.
+  const [pharmacyStock, setPharmacyStock] = useState<{ id: string; name: string; unitPrice: number }[]>([]);
+  useEffect(() => {
+    listPharmacyStock()
+      .then((meds) => {
+        // Collapse multiple batches of the same medicine name into one
+        // catalog row — pick the lowest in-stock unit price so the bill
+        // never overcharges for a med the clinic has cheaper batches of.
+        const byName = new Map<string, { id: string; name: string; unitPrice: number }>();
+        for (const m of meds) {
+          const key = m.name.trim().toLowerCase();
+          if (!key) continue;
+          const existing = byName.get(key);
+          if (!existing || m.unitPrice < existing.unitPrice) {
+            byName.set(key, { id: m.id, name: m.name.trim(), unitPrice: m.unitPrice });
+          }
+        }
+        setPharmacyStock(Array.from(byName.values()));
+      })
+      .catch(() => setPharmacyStock([]));
+  }, []);
+  // Lookup map keyed by lowercase med name. Used to attach a unit price
+  // when seeding billing rows from a prescription that has no price.
+  const priceByName = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const p of pharmacyStock) m.set(p.name.toLowerCase(), p.unitPrice);
+    return m;
+  }, [pharmacyStock]);
 
   const doStatusChange = async (aptId: string, newStatus: string) => {
     const token = localStorage.getItem("docodile_token");
@@ -83,30 +230,90 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
     }
   }, [bookingKey]);
 
+  // Fetch real prescription Rx rows for the selected patient when Bill Medicines opens
+  useEffect(() => {
+    if (!medsBillingApt?.patientId) {
+      setBillingMedicines([]);
+      return;
+    }
+    // Dispensary quantity is now derived server-side (RxRowDTO.dispenseQty), so
+    // bills and inventory share one rule. Default to 1 when the server can't
+    // compute it (SOS / "as directed"); the desk can still adjust.
+    const patientId = medsBillingApt.patientId;
+    setBillingLoading(true);
+    const token = localStorage.getItem("docodile_token");
+    fetch(`${API_BASE_URL}/api/patients/${patientId}/visits`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((visits: any[]) => {
+        // Bill the visit tied to *this* appointment, not "the patient's
+        // most recent visit". Otherwise a fresh walk-in (no Rx added yet)
+        // would leak medicines from the patient's previous visit into the
+        // bill. V45 links visits → appointments via appointment_id; rows
+        // that pre-date the migration fall back to a same-day match.
+        const apt = medsBillingApt;
+        const sameDay = (iso?: string | null): boolean => {
+          if (!iso || !apt?.rawScheduledTime) return false;
+          return iso.slice(0, 10) === apt.rawScheduledTime.slice(0, 10);
+        };
+        const matching =
+          visits.find((v: any) => v.appointmentId && apt?.id && v.appointmentId === apt.id) ??
+          visits.find((v: any) => sameDay(v.visitDate));
+        const rows: BillingMedicine[] = (matching?.prescriptions ?? [])
+          .filter((p: any) => p.medicine)
+          .map((p: any, i: number) => {
+            const name = p.medicine as string;
+            const stocked = priceByName.get(name.trim().toLowerCase());
+            return {
+              id: p.id ?? `rx-${i}`,
+              name,
+              dosage: [p.dosage, p.frequency, p.duration].filter(Boolean).join(" · ") || undefined,
+              // Look up the clinic's pharmacy unit price by name. Falls
+              // back to 0 for prescribed meds the clinic doesn't stock
+              // (doctor / pharmacy can override in the modal). inStock
+              // drives the modal's "not in inventory" highlight + the
+              // editable price field for that row.
+              unitPrice: stocked ?? 0,
+              inStock: stocked != null,
+              // qty = units/dose × doses/day × days, ceiling to a whole
+              // unit. The receptionist can still bump up/down in the
+              // modal if the doctor wrote SOS or fractional doses.
+              qty: p.dispenseQty ?? 1,
+            };
+          });
+        setBillingMedicines(rows);
+      })
+      .catch(() => setBillingMedicines([]))
+      .finally(() => setBillingLoading(false));
+  }, [medsBillingApt, priceByName]);
+
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       const token = localStorage.getItem("docodile_token");
-      const clinicId = localStorage.getItem("docodile_clinic_id");
 
-      if (!token || !clinicId) {
+      if (!token) {
         setIsLoading(false);
         return;
       }
 
       try {
-        // 1. Fetch Staff (to filter doctors)
+        // 1. Fetch doctors (clinic-scoped server-side via X-Tenant)
         if (doctors.length === 0) {
-          const staffRes = await fetch(`${API_BASE_URL}/api/tenant/clinics/${clinicId}/staff`, {
+          const doctorsRes = await fetch(`${API_BASE_URL}/api/doctors`, {
             headers: { Authorization: `Bearer ${token}` },
           });
 
-          if (staffRes.ok) {
-            const staffData = await staffRes.json();
-            const doctorList = staffData
-              .filter((s: any) => s.role === "DOCTOR")
-              .map((s: any) => ({ id: s.id, name: s.name }));
-            
+          if (doctorsRes.ok) {
+            const doctorsData = await doctorsRes.json();
+            const doctorList = doctorsData.map((d: any) => ({
+              id: d.id,
+              name: d.name,
+              gender: (d.gender ?? "").toLowerCase(),
+              role: "Doctor",
+            }));
+
             setDoctors(doctorList);
             if (doctorList.length > 0) {
               setActiveDoctorId(doctorList[0].id);
@@ -124,6 +331,9 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
           const aptData = await aptRes.json();
           const grouped: Record<string, Appointment[]> = {};
 
+          // Status is now derived server-side (AT_DOC→IN_PROGRESS, blank→WAITING,
+          // and pending-before-today→NO_SHOW) in getAppointmentsForClinic, so the
+          // queue just uses apt.status as returned — every client agrees.
           aptData.forEach((apt: any) => {
             if (!grouped[apt.doctorId]) {
               grouped[apt.doctorId] = [];
@@ -138,7 +348,9 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
               scheduledTime: apt.scheduledTime ? new Date(apt.scheduledTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Walk-in",
               rawScheduledTime: apt.scheduledTime || undefined,
               isWalkin: apt.isWalkin,
-              status: apt.status || "WAITING",
+              status: (apt.status || "WAITING") as Appointment["status"],
+              // Raw appointment pay status — kept as-is for the Edit form. The
+              // queue Pay badge is derived from the day's bills in QueueTable.
               payStatus: apt.payStatus || "DUE",
               paymentMethod: apt.paymentMethod || "",
               doctorId: apt.doctorId,
@@ -146,8 +358,19 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
               patientGender: apt.patientGender || "",
               patientDob: apt.patientDob || "",
               patientAge: apt.patientAge || undefined,
+              patientDisplayNo: apt.patientDisplayNo ?? null,
               notes: apt.notes || "",
               fee: apt.fee || 0,
+              pharmacyAmount: apt.pharmacyAmount || 0,
+              deposit: apt.patientDeposit || 0,
+              todayBillCount: apt.todayBillCount || 0,
+              todayDue: Number(apt.todayDue) || 0,
+              todayRefund: Number(apt.todayRefund) || 0,
+              apptBillCount: apt.apptBillCount || 0,
+              apptDue: Number(apt.apptDue) || 0,
+              apptRefund: Number(apt.apptRefund) || 0,
+              patientArchived: apt.patientArchived || false,
+              createdAt: apt.createdAt || undefined,
             });
           });
 
@@ -176,6 +399,9 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
     "COMPLETED": 3,
     "NO_SHOW": 4,
     "CANCELLED": 5,
+    // A never-opened At-Doc consultation swept stale by NoShowSweepJob — group
+    // it with the other terminal/missed states at the bottom of the queue.
+    "UNSEEN": 6,
   };
 
   const activeQueue = (activeDoctorId ? appointments[activeDoctorId] || [] : [])
@@ -197,7 +423,8 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
     });
   };
 
-  const dateText = isToday(selectedDate) ? "Today's" : formatDate(selectedDate);
+  const isQueueToday = isToday(selectedDate);
+  const dateText = isQueueToday ? "Today" : formatDate(selectedDate);
 
   if (isLoading && doctors.length === 0) {
     return <div style={{ padding: "40px", textAlign: "center" }}>Loading Queue...</div>;
@@ -205,37 +432,43 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
 
   return (
     <div style={styles.container}>
-      <header style={{ ...styles.header, marginBottom: "24px", position: "relative" }}>
-        <div style={{ flex: 1 }} />
-        <h2 style={{ ...styles.title, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
-          <span
-            onClick={() => setShowDatePicker(!showDatePicker)}
-            style={{
-              textDecoration: "underline",
-              cursor: "pointer",
-              color: colors.neutral900
-            }}
-          >
-            {dateText}
-          </span> Queue
-        </h2>
-
-        <div style={{ display: "flex", gap: "12px" }}>
-          {/* Internal booking trigger removed in favor of TopNav trigger */}
-        </div>
-
-        {showDatePicker && (
-          <DatePicker
-            selectedDate={selectedDate}
-            onSelect={(date) => {
-              setSelectedDate(date);
-              setShowDatePicker(false);
-            }}
-            onClose={() => setShowDatePicker(false)}
-            showDoneButton
-          />
-        )}
-      </header>
+      <PageHeader
+        style={{ marginBottom: "24px" }}
+        title={
+          <>
+            <span
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                cursor: "pointer",
+                color: colors.neutral900,
+                backgroundColor: "transparent",
+                border: `1px solid ${colors.primary400}`,
+                borderRadius: radii.m,
+                padding: "4px 12px",
+                position: "relative",
+                zIndex: showDatePicker ? 1100 : "auto",
+              }}
+            >
+              {dateText}
+              <ChevronDown open={showDatePicker} />
+              {showDatePicker && (
+                <DatePicker
+                  selectedDate={selectedDate}
+                  onSelect={(date) => {
+                    setSelectedDate(date);
+                    setShowDatePicker(false);
+                  }}
+                  onClose={() => setShowDatePicker(false)}
+                  showDoneButton
+                />
+              )}
+            </span> Queue
+          </>
+        }
+      />
 
       {(isBooking || editingAppointment) && (
         <BookAppointment
@@ -260,58 +493,131 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
             activeId={activeDoctorId}
             onSelect={setActiveDoctorId}
           />
-          <div style={{ display: "flex", gap: "24px", minWidth: 0, width: "100%" }}>
+          <div style={{ display: "flex", gap: "var(--queue-gap, 24px)", minWidth: 0, width: "100%" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
           <QueueTable
             appointments={activeQueue}
+            sessionStarts={sessionStarts}
+            serviceCodes={serviceCodes}
             doctorName={doctors.find(d => d.id === activeDoctorId)?.name}
             menuItems={[
               { label: "Edit Appointment", onClick: (apt) => {
+                if (apt.patientArchived) {
+                  setToastMessage(`${apt.patientName} is archived — restore the patient to continue.`);
+                  return;
+                }
+                // Locked = completed appointment, sent to the doctor (At Doc /
+                // in progress), OR booking older than 24h. The modal still opens
+                // with full details so the receptionist can review, just every
+                // field + save action is disabled. Once it's with the doctor the
+                // booking is in play and mustn't change under them.
+                const isCompleted = apt.status === "COMPLETED";
+                const isWithDoctor = apt.status === "IN_PROGRESS"; // "At Doc" / sent to doctor
+                const ageMs = apt.createdAt ? Date.now() - new Date(apt.createdAt).getTime() : 0;
+                const isPastWindow = apt.createdAt != null && ageMs > 24 * 60 * 60 * 1000;
+                // A billed-and-settled walk-in is a finished transaction — lock
+                // it whole (the bill can still be viewed/printed). Uses the same
+                // reliable paid signal as the queue Pay badge, not the stale
+                // appointment payStatus.
+                const billPaid = (apt.apptBillCount ?? 0) > 0
+                  ? (apt.apptDue ?? 0) <= 0 && (apt.apptRefund ?? 0) <= 0
+                  : apt.payStatus?.toUpperCase() === "PAID";
+                const paidWalkin = billPaid && !!apt.isWalkin;
+                const readOnly = isCompleted || isWithDoctor || isPastWindow || paidWalkin;
                 setEditingAppointment({
                   id: apt.id,
+                  patientId: apt.patientId,
                   patientName: apt.patientName,
                   patientPhone: apt.patientPhone,
                   patientEmail: apt.patientEmail,
                   patientGender: apt.patientGender,
                   patientDob: apt.patientDob,
                   patientAge: apt.patientAge,
+                  patientDisplayNo: apt.patientDisplayNo ?? null,
+                  isWalkin: !!apt.isWalkin,
                   service: apt.service,
                   type: apt.type,
                   scheduledTime: apt.rawScheduledTime || "",
                   doctorId: apt.doctorId || activeDoctorId,
                   payStatus: apt.payStatus,
                   paymentMethod: apt.paymentMethod,
+                  todayBillCount: apt.todayBillCount,
+                  apptBillCount: apt.apptBillCount,
+                  apptDue: apt.apptDue,
+                  apptRefund: apt.apptRefund,
                   notes: apt.notes,
                   fee: apt.fee,
+                  readOnly,
+                  readOnlyReason: isCompleted
+                    ? "Appointment is completed — view only."
+                    : isWithDoctor ? "Appointment is with the doctor — view only."
+                    : paidWalkin ? "Walk-in is billed & paid — view only."
+                    : isPastWindow ? "Edit window closed (24h after booking) — view only."
+                    : undefined,
                 });
                 onEditStart?.();
               } },
               { label: "View Patient File", onClick: (apt) => {
-                setToastMessage(`Opening ${apt.patientName}'s file...`);
+                // Block navigation for archived patients — the doctor needs
+                // to restore them first before adding to their chart.
+                if (apt.patientArchived) {
+                  setToastMessage(`${apt.patientName} is archived — restore the patient to continue.`);
+                  return;
+                }
+                // Pass the full patient + appointment context so the host can
+                // route directly into the patient's prescription/visit view
+                // (same as PrescriptionQueue's View Pad path) instead of just
+                // highlighting the row in the Patient Files index.
+                if (apt.patientId && onViewPatientFile) {
+                  onViewPatientFile({
+                    id: apt.patientId,
+                    name: apt.patientName,
+                    phone: apt.patientPhone ?? null,
+                    email: apt.patientEmail ?? null,
+                    gender: apt.patientGender ?? null,
+                    dob: apt.patientDob ?? null,
+                    age: apt.patientAge ?? null,
+                    displayNo: apt.patientDisplayNo ?? null,
+                    lastVisitDate: null,
+                    treatingDoctorIds: [],
+                    treatingDepartments: [],
+                  }, apt.id, apt.doctorId || activeDoctorId);
+                }
               } },
-              { label: "Bill Medicines", onClick: (apt) => {
-                setToastMessage(`Medicine billing for ${apt.patientName} coming soon`);
+              // Billing is ONE swapping item: before the day's first bill the
+              // kebab shows "Bill" (opens the editor). Once a bill exists for the
+              // appointment's date it disappears and "View/Create Bills" takes its
+              // place — the Recent Bills history, which carries its own
+              // "Create New Bill" for additional invoices.
+              { label: "Create Bill", visible: (apt) => !apt.todayBillCount, onClick: (apt) => {
+                if (apt.patientArchived) {
+                  setToastMessage(`${apt.patientName} is archived — restore the patient to continue.`);
+                  return;
+                }
+                setMedsBillingApt(apt);
               } },
-              { label: "Generate Bill", onClick: (apt) => {
-                setToastMessage(`Bill generated for ${apt.patientName}`);
-              } },
+              { label: "View/Create Bills", visible: (apt) => !!apt.todayBillCount, onClick: (apt) => openBillsHistory(apt) },
             ]}
-            onStatusChange={async (aptId, newStatus) => {
+            // Only today's queue can mutate appointment status — past
+            // and future dates render the badge read-only so a stray
+            // click can't rewrite history (or pre-empt tomorrow's flow).
+            onStatusChange={isQueueToday ? async (aptId, newStatus) => {
               if (newStatus === "CANCELLED") {
                 setPendingCancelId(aptId);
                 return;
               }
               await doStatusChange(aptId, newStatus);
-            }}
+            } : undefined}
           />
           </div>
           <div style={{ marginTop: "-30px", flexShrink: 0, display: "flex", flexDirection: "column" }}>
             <DoctorStatusCard
               doctorName={doctors.find(d => d.id === activeDoctorId)?.name || ""}
-              doctorGender="male"
+              doctorGender={doctors.find(d => d.id === activeDoctorId)?.gender || "male"}
+              doctorRole={doctors.find(d => d.id === activeDoctorId)?.role || "Doctor"}
               appointments={activeQueue}
             />
-            <HeatmapCard appointments={activeQueue} />
+            <HeatmapCard appointments={activeQueue} date={selectedDate} />
           </div>
           </div>
         </>
@@ -323,29 +629,163 @@ export function AppointmentQueue({ isBooking, bookingKey, onBack, onEditStart }:
 
       <Toast
         message={toastMessage}
+        {...resolveToastIcon(toastMessage)}
         isVisible={!!toastMessage}
         onClose={() => setToastMessage("")}
       />
 
-      {pendingCancelId && (
-        <div style={confirmStyles.overlay}>
-          <div style={confirmStyles.dialog}>
-            <h4 style={confirmStyles.title}>Are you sure?</h4>
-            <div style={confirmStyles.actions}>
-              <Button variant="dangerLight" size="sm" onClick={() => setPendingCancelId(null)}>
-                Nope
-              </Button>
-              <Button variant="dark" size="sm" onClick={() => {
-                const id = pendingCancelId;
-                setPendingCancelId(null);
-                if (id) doStatusChange(id, "CANCELLED");
-              }}>
-                Yes
-              </Button>
-            </div>
-          </div>
-        </div>
+      <ConfirmDialog
+        isOpen={!!pendingCancelId}
+        title="Are you sure?"
+        confirmLabel="Yes"
+        cancelLabel="Nope"
+        destructive
+        onConfirm={() => {
+          const id = pendingCancelId;
+          setPendingCancelId(null);
+          if (id) doStatusChange(id, "CANCELLED");
+        }}
+        onCancel={() => setPendingCancelId(null)}
+      />
+
+      <BillModal
+        isOpen={!!medsBillingApt}
+        onClose={() => setMedsBillingApt(null)}
+        // "View bills" (header) → drop back to the Recent Bills history. Only an
+        // additional bill has prior invoices to show; on a first bill the link
+        // stays hidden (onViewBills omitted).
+        onViewBills={additionalBill ? () => { const apt = medsBillingApt; setMedsBillingApt(null); if (apt) openBillsHistory(apt); } : undefined}
+        onBilled={async ({ method, lineItems, paid, note }) => {
+          // ONE atomic call: the server recomputes the totals from these line
+          // items, writes payment, creates the invoice, auto-covers from the
+          // deposit and deducts stock — so money + inventory never drift apart.
+          // `paid` is what was collected now; the server records any shortfall as due.
+          const aptId = medsBillingApt?.id;
+          const who = medsBillingApt?.patientName;
+          const isWaive = method === "Waive";
+          if (!aptId) { setToastMessage("No appointment to bill"); return; }
+          try {
+            const result = await chargeAppointment(aptId, { method, paidAmount: paid, items: lineItems, note });
+            const inr = result.bill.billed.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+            const baseMsg = isWaive ? `Bill waived for ${who}` : `₹${inr} billed via ${method} for ${who}`;
+            setRefreshKey((k) => k + 1);
+            // Refresh the local catalog so the next bill sees updated stock.
+            listPharmacyStock().then((meds) => {
+              const byName = new Map<string, { id: string; name: string; unitPrice: number }>();
+              for (const m of meds) {
+                const key = m.name.trim().toLowerCase();
+                if (!key) continue;
+                const existing = byName.get(key);
+                if (!existing || m.unitPrice < existing.unitPrice) {
+                  byName.set(key, { id: m.id, name: m.name.trim(), unitPrice: m.unitPrice });
+                }
+              }
+              setPharmacyStock(Array.from(byName.values()));
+            }).catch(() => {});
+            const shortFills = result.stock.applied.filter((a) => a.deducted < a.requested);
+            if (shortFills.length > 0) {
+              const names = shortFills.map((s) => `${s.name} (${s.deducted}/${s.requested})`).join(", ");
+              setToastMessage(`${baseMsg} · Short stock on: ${names}`);
+            } else if (result.stock.applied.length > 0) {
+              setToastMessage(`${baseMsg} · Inventory updated`);
+            } else {
+              setToastMessage(baseMsg);
+            }
+          } catch (err) {
+            setToastMessage(`Charge failed: ${(err as Error).message}`);
+          }
+        }}
+        patientName={medsBillingApt ? patientLabel(medsBillingApt.patientName, medsBillingApt.patientGender, medsBillingApt.patientAge) : ""}
+        patientId={medsBillingApt?.patientId}
+        // Blank for an additional bill (consultation + meds already invoiced);
+        // seeded with the prescribed meds for the first bill of the day.
+        medicines={additionalBill ? NO_MEDS : billingMedicines}
+        loading={additionalBill ? false : billingLoading}
+        // The patient's advance/deposit — seeds the Deposit field, adjusted via
+        // the drawer (add/refund) and auto-drawn on Charge & Bill. The backend
+        // owns the running net; we sync medsBillingApt so a re-open shows it.
+        initialDeposit={medsBillingApt?.deposit ?? 0}
+        onDeposit={async (amount, type, mode, details) => {
+          const patientId = medsBillingApt?.patientId;
+          if (!patientId) throw new Error("No patient to deposit against");
+          const { deposit } = await recordPatientDeposit(patientId, amount, type, mode, details);
+          setMedsBillingApt((cur) => (cur ? { ...cur, deposit } : cur));
+          setRefreshKey((k) => k + 1);
+          return deposit;
+        }}
+        // Use this clinic's pharmacy inventory as the Add-medicine
+        // catalog so prices match what the dispensary actually stocks.
+        // Falls back to the modal's hardcoded default when empty.
+        catalog={pharmacyStock.length > 0 ? pharmacyStock : undefined}
+        // The pending consultation/service for this appointment, seeded as the
+        // first bill line — only while it's still UNPAID (any status that isn't
+        // PAID/WAIVED; the backend uses "Unpaid"/"DUE" interchangeably), so a
+        // paid consultation isn't re-billed. This is the old "pending due",
+        // now itemized.
+        serviceName={medsBillingApt?.service?.trim() || "Consultation"}
+        serviceFee={
+          !additionalBill && medsBillingApt && !["PAID", "WAIVED"].includes((medsBillingApt.payStatus || "").toUpperCase())
+            ? (medsBillingApt.fee ?? 0)
+            : 0
+        }
+      />
+
+      <RecentBills
+        isOpen={!!billsHistoryApt && !viewBill}
+        onClose={() => setBillsHistoryApt(null)}
+        patientName={billsHistoryApt?.patientName || ""}
+        bills={historyBills}
+        loading={historyLoading}
+        // Invoice no / pencil → open that bill's read-only detail.
+        onView={(b) => setViewBill(b)}
+        // Row printer → the shared "Bill cum Receipt", with the patient meta the
+        // appointment carries.
+        onPrint={(b) => { if (billsHistoryApt) printBill({ ...b, patientName: billsHistoryApt.patientName }, aptReceiptMeta(billsHistoryApt)); }}
+        // Create New Bill → close the history and open the editor for another
+        // invoice. It opens blank automatically because the patient already has
+        // a bill for the date (additionalBill = todayBillCount > 0).
+        onCreateNew={() => {
+          const apt = billsHistoryApt;
+          setBillsHistoryApt(null);
+          if (apt) setMedsBillingApt(apt);
+        }}
+      />
+
+      {/* Read-only detail of a bill picked from the history (same screen the
+          clinic Bills page opens). patientName comes from the owning apt; the
+          header "View bills" link drops back to the history. */}
+      {viewBill && billsHistoryApt && (
+        <BillReadModal
+          // Key on paid too, so recording a payment remounts the detail with a
+          // fresh "Collect balance" input rather than a stale typed amount.
+          key={`${viewBill.id}:${viewBill.paid}`}
+          isOpen
+          onClose={() => setViewBill(null)}
+          bill={{ ...viewBill, patientName: billsHistoryApt.patientName, today: false }}
+          onViewBills={() => setViewBill(null)}
+          // Print / share the receipt with the patient meta + contact the
+          // appointment already carries (age in months → years, gender, phone,
+          // email, T-id).
+          onPrint={(b) => printBill(b, aptReceiptMeta(billsHistoryApt))}
+          share={{ patient: aptReceiptMeta(billsHistoryApt), phone: billsHistoryApt.patientPhone, email: billsHistoryApt.patientEmail, onError: setToastMessage }}
+          // Collect the (possibly partial) balance: record it, then update both
+          // the open detail and the history row behind it in place.
+          onRecordPayment={async (b, amount, method) => {
+            if (amount <= 0) return;
+            try {
+              const updated = await payBill(b.id, { paidAmount: amount, method });
+              setHistoryBills((list) => list.map((x) => (x.id === updated.id ? updated : x)));
+              setViewBill(updated);
+            } catch (e) {
+              setToastMessage((e as Error).message || "Couldn't record the payment");
+            }
+          }}
+          // Refund updates the history row behind the detail (the detail itself
+          // flips to Refunded in place).
+          onRefunded={(u) => setHistoryBills((list) => list.map((x) => (x.id === u.id ? u : x)))}
+        />
       )}
+
     </div>
   );
 }

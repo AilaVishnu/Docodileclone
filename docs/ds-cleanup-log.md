@@ -1,0 +1,377 @@
+# Design-system cleanup log
+
+Running record of the component-by-component review (Storybook localhost:6006). Each entry: what was reviewed, the decision, and where it was fixed. Newest first.
+
+## Category 8 — Icons: canonical `<Icon>` system built + every consumer migrated (2026-06-14)
+
+Closed the long-deferred icon work end to end (13 commits, `2e8a5f3` → `eb9f0db`).
+
+- **Component:** `components/Icon/Icon.tsx` — one `<Icon name size tone|color disabled>`; 24px/neutral900 default, currentColor-driven; `size={20}` + `disabled` are props (not new SVGs). `tone`: default/muted/disabled/inverse/inherit.
+- **Registry:** `iconRegistry.ts` — ~80 icons via **static** SVGR imports (CRA won't apply SVGR through `require.context` — learned the hard way: it yields URL strings). `MULTICOLOR_ICONS` keeps brand/illustrative glyphs on their palette. `Foundations/Icons` auto-renders the full set (was a hand-listed 25).
+- **Normalize:** monochrome icons' baked `#202020` (+ off-palette `#1C274C` slate) → `currentColor` so they recolour/disable/theme. Nav glyphs now follow active state like Settings already did.
+- **Migration:** all ~26 app consumers swapped from raw `ReactComponent`/`iconsUtil` to `<Icon>` — non-clinical first, then billing/session, then the AppointmentQueue family (story-verified), then the 31-icon Rx pad (subagent + my verify), then the date/time/patient fields. **`iconsUtil.tsx` deleted** — old system retired.
+- **Dedup:** kept the in-use glyph for `phone`/`plus` (dropped the dead `icons/` twins); the genuinely-different `calendar`/`pulse` coexist as `calendar-alt`/`pulse-alt`.
+- **Left raw (deliberate):** ZeroQueue + logos (illustrations); BuildYourClinic onboarding + AuditGallery showcase (separate dev surfaces). tsc + build green at every commit; per-component Storybook verification. Full detail in ui-decisions.md §8.
+
+## Loose ends — 3 flagged follow-ups closed (2026-06-13)
+
+- **Deleted the orphaned shared `QueueTable` mock** (`components/QueueTable/` — .tsx + .stories + index). It was a Tier-2 draft; with the queue migration reverted nothing imports it (verified 0 refs), so it's gone along with its `Components/QueueTable` story.
+- **Clinic-family tag pill unified** (Cat 6 follow-up): ClinicDisplayCard + ClinicInfoCard moved off `secondary300` → **`secondary700`** to match ClinicCard (the Figma-referenced fill; white text reads better on the darker sage).
+- **PatientFilesPage decoupled from the clinical queue** (Cat 7 follow-up): it no longer imports `AppointmentQueue.styles`. New `pages/PatientFilesPage/PatientFilesPage.styles.ts` exports `tableStyles`, composed from the shared `styles/tableStyles` primitives (`tableHeadCell` / `tableDivider`) — identical render, no cross-page dependency. Stale AuditGallery notes updated to say "resolved". `tsc` + build clean.
+
+## Decision — AppointmentQueue stays its own component (Tier-2 migration reverted)
+
+The Tier-2 experiment of migrating `AppointmentQueue/QueueTable.tsx` onto the shared `QueueTable` was **reverted** (commits c720bf1 + 78e8476 undone). The appointment queue is a component of its own and is left exactly as it was — it already uses the shared `StatusBadge` for status and the `PayBadge` icon for Pay, which is all that was wanted. Its Storybook story (`Patterns/AppointmentQueue/QueueTable`) is the original, untouched. The shared `QueueTable` reverts to its earlier draft/mock state; queues are not being merged into it.
+
+## Round 8 — radio font + tables Step 0 (booking-form components sequenced next)
+
+Reviewing the appointment booking page (BookAppointment). Shipped:
+- **Radio label font `control.sm` → `control.md`** — radios now match the input-field / select font at both tiers (the size the user liked). Applies app-wide (gender, role, payment, type).
+- **`Overview/Tables` page** (`src/sb/overviews/Tables.stories.tsx`) — "Step 0" for the tables consolidation: shows the canonical `DataGrid` (default + dense `s`) and a full **inventory** of every tabular surface with its build method + plan (rendered, fittingly, in a DataGrid with tier pills). Migration tiers (1/2/3) to be discussed.
+- **BillCard confirmed reuse-ready** (the "quick bill" component) — already a clean self-contained component with a clear prop interface + story; no change needed.
+
+- **PatientDetailsForm built + integrated** (`components/PatientDetailsForm/`) — the name/email/phone/DOB(digit-entry + calendar)/age/gender card lifted out of BookAppointment into a reusable, controlled component (`value`/`onChange` + parent-owned `dobDigits` + `patients` for autocomplete + `locked`/`onSelectExisting`). Story has Default / Locked / WithErrors. **Wired into BookAppointment** (the inline ~220-line card replaced with `<PatientDetailsForm>`); verified via the BookAppointment story — layout + behaviour identical.
+
+- **BookAppointment tidied** — removed the patient-card leftovers the extraction orphaned (state/consts/icon imports/PatientSearchRow/patientSuggStyle).
+- **DateField + TimeField built + integrated** (`components/DateField/`, `components/TimeField/`) — the appointment date/time trigger cards lifted into reusable components wrapping the existing `DatePicker` / `TimePicker`; trigger text moved to the **control-scale font** (was body `fs-m`). Wired into BookAppointment (date/time cards), DatePicker/TimePicker/ClockIcon imports dropped there. Stories: Empty / Filled / Disabled (+ WalkIn for TimeField). Verified — date still renders "13 Jun 2026" via `format={formatDate}`, no regression.
+
+- **#2 PatientDetailsForm reused in NewPrescriptionModal** — the add-patient view's hand-rolled name/phone/email/DOB-trigger/age/gender fields replaced with `<PatientDetailsForm>` (booking underline-card look, confirmed). Age format reconciled: HomePage `handleWalkinNew` now parses `"years / months"` (was `Number(age)*12`). Removed NewRx's now-dead phone/age/dob handlers + GENDERS/parseDdMmYyyy/`set` + DatePicker/CalendarIcon/RadioGroup imports. Verified — renders the patient card framed by doctor/service selects, no regression.
+
+- **Tables Tier 1 (started)** — **Archived patients** table migrated to `DataGrid` (columns + a Restore action render-prop; cream card + fetch/empty/error states kept). Added a `/api/patients/archived` MSW mock + `mockArchivedPatients` + an `ArchivedPatientsList` story (Default + Empty) so the page table is now verifiable in Storybook. Pattern for the rest: define `columns` (render-props for actions), keep the page's data/empty states, add a story.
+
+- **Services catalog → DataGrid** — in-place migration (Short Form badge / Name / Price / Duration / Discount / GST + edit/delete action cell), empty/loading/error moved out of the table. Added `/api/tenant/services` MSW mock + `mockServices` + a `ServicesView` story (Default + Empty). Verified — renders identically (badges, muted cols, formatted prices, actions).
+
+- **Pharmacy stock → DataGrid** — 12-col table migrated (right-aligned numerics, invoice link, delete/edit/adjust actions). Turned out to need neither zebra (trAlt was transparent) nor group headers (groupItems just orders); the real need was **horizontal scroll**, so added a `minWidth` prop to DataGrid (wraps in an overflow-x scroller). Presentational, so a `PharmacyListView` story (Default + Empty) with mock Meds — no API. Verified.
+- **DataGrid polish (catalog feedback):** default row padding 16→12; header font → `control.xs` (smaller, both tiers).
+
+Sequenced next (Tier 1 cont.):
+- **Stats "Overdue reviews"** — only remaining Tier-1 table; trivial 3-col, buried in StatsPage (no story), low value — fold in or skip.
+- **Tables Tier 2** — QueueTable **mock built** (`components/QueueTable/`, DRAFT): shared queue component — render-prop columns (status badge/dropdown, row actions), `rowTone(row)` status backgrounds, `groupBy(row)` separators. **Responsive via CSS-grid columns** (fixed px + flexible `fr`/`minmax`) — the clean equivalent of spacer columns; the story shows the same table at 1080px vs 720px adapting. **Review the mock, then migrate the real AppointmentQueue + PrescriptionQueue onto it** (one at a time, diff against live behaviour).
+
+## Round 7 — ModalHeader migration + AddStaff field pass
+
+- **6 modals migrated onto `ModalHeader`** — UploadModal, AddStaffModal, AddServiceModal, EditPatientModal (main header only — archive confirm left as-is per earlier call), NewPrescriptionModal, SchedulePresetsModal. Each now renders `<ModalHeader title=… subtitle=… onClose=… align=…>` instead of hand-rolling the header. Removed the per-file `header`/`title`/`subtitle` style objects + the now-unused `IconButton` imports (EditPatientModal keeps both — its archive confirm still uses them).
+- **Look unchanged** for all except **NewPrescriptionModal**, whose title was the lone outlier at **h6** → now **h5** (the standard). Slightly larger; deliberate consistency fix.
+- **AddStaffModal field pass** (AdditionalStaffDetailsCard) — every field is already a defined component (Field / Select / RadioGroup / MeasureField); nothing un-defined. Changes:
+  - **Qualification + Reg. No.** (and the two "Other" free-text inputs) `Field variant="underline"` → **`box`** (icons kept).
+  - **Experience** → **`MeasureField box unit="yrs"`** (matches AddServiceModal's Duration/Price fields); label "Experience (years)" → "Experience".
+  - **Field labels** (Department, Specialty, …) restyled to AddServiceModal's label (`size.xs` / medium / `neutral700`, no opacity).
+- **AddStaff layout pass** (follow-up): doctor fields now one **2-col grid** (equal columns — Reg. No. lines up under Experience; Medical Council no longer double-width); **icons removed** from Department/Specialty/Qualification/Medical Council/Reg. No.; labels tightened right above each input (`field` gap `2xs`). **Role block** restructured — "Role" + icon on the left, options in a **3-col grid** on the right (new `RadioGroup columns` prop), with space after the modal title.
+- Verified: `tsc` clean, `npm run build` clean, Storybook screenshots (AddStaffModal grid + 3-col role; UploadModal centered header).
+- Leftover (flagged, not done): NewPrescriptionModal's **Age** field is still a raw `<input>` (→ `Field`).
+
+## Round 6 — overlays (cont.): ModalHeader, Radio, Overlays catalog
+
+Reviewing the `Overview/Overlays` page modal-by-modal. Shipped:
+
+- **New `ModalHeader`** (`components/ModalHeader/`) — canonical modal header: serif **h5** title (+ optional subtitle) + the canonical `IconButton` close (✕). `align="left"` (close right) / `align="center"` (close pinned top-right); omit `onClose` for no close. Story has all 4 variants. (Migrating the 6 standard-header modals onto it is the next step — not yet done.)
+- **Modal default padding 32 → 24** (`spacing.xl`) — "24px on all sides" is now the standard for every modal that doesn't override. Full-bleed modals (BillModal, PrintPreviewModal, Pay Due) set padding 0 explicitly, so they're unaffected. Also shifts a few modals outside the review set (ImportData, Pharmacy add-stock, PrescriptionPage templates) to 24px.
+- **Overlays overview completed** — added triggers for ConfirmDialog, AddServiceModal, EditPatientModal, NewPrescriptionModal (was missing). Added a `/api/doctors` MSW mock + `mockDoctors` so NewPrescriptionModal's doctor picker populates. Basic-Modal demo rebuilt on `ModalHeader` + real Buttons.
+- **New `Radio` + `RadioGroup`** (`components/Radio/`) — fully custom radio (appearance:none) with a **neutral900 ring + dot** (the unchecked ring reads dark too, matching field icons — `accent-color` alone only tints the checked state). `options` take strings or `{label,value,color?,disabled?}` (per-option colour for the red "Waive"); `orientation`, group `disabled`. Story has gender / role / payment / disabled / column.
+- **7 radio sites migrated** → `RadioGroup`: gender (StaffDetailsCard), role (AddStaffModal), payment (BillMedicinesModal, BillCard — disabled when paid), gender+type (BookAppointment), gender (NewPrescriptionModal). AddStaffModal's hand-rolled **"Other role" text input → `Field`** (matched the Specialty/Council "Other" inputs).
+- **Dead code removed**: the `.dark-radio` global CSS (now owned by `Radio`) + the per-file `radioGroup`/`radioLabel`/`radioInput`/`genderGroup`/`radioRow`/`otherRoleInput` style objects across 6 files; trimmed now-unused imports.
+- Verified: `tsc` clean, `npm run build` clean, Storybook renders (AddStaffModal role+gender, BillMedicinesModal payment-with-red-Waive screenshotted).
+- Known leftovers (flagged, not done): NewPrescriptionModal's **Age** field is still a raw `<input>` (should be `Field`); BookAppointment `radioGroupInline`/`radioLabelSmall` styles are pre-existing dead; the 6 standard modals still hand-roll their header (ModalHeader migration pending).
+
+## Round 5 — overlays / confirm dialogs
+
+- **New shared `ConfirmDialog`** (`components/ConfirmDialog/`) — the one "are you sure?" dialog, built on `<Modal level="top">` (so it floats above whatever opened it). Props: `title`, `message?`, `confirmLabel`, `cancelLabel?`, `destructive?` (red confirm), `hideCancel?` (alert/single-button), `confirmDisabled?`. Story has Default / Destructive / Alert.
+- **New Button `danger` variant** — solid red CTA (`red100` → `red200` hover), added to `Button.styles.ts` + the variant union. Powers `ConfirmDialog destructive`.
+- **7 hand-rolled confirm overlays migrated** to `<ConfirmDialog>`, exact labels/handlers preserved:
+  - Remove staff (AddStaffModal) → **red**; Cancel appointment (AppointmentQueue) → **red**; End session (SessionBar) → **red**.
+  - Reset timer (SessionBar), Discard new-booking draft (HomePage), "Yes, add anyway" duplicate (BookAppointment) → **dark** (proceed/reset, not destructive).
+  - Walk-in failed (HomePage) → **alert** (`hideCancel`, single OK).
+- **`confirmStyles` deleted** from `AddStaffModal.styles.ts` + all four cross-folder imports removed (AppointmentQueue, SessionBar, HomePage, BookAppointment). Trimmed now-unused `zIndex`/`Button`/`radii` imports.
+- **Z-index bug fixed** — AppointmentQueue's cancel confirm rendered at the bare `confirmStyles.overlay` z-index (1100, *below* other modals); via `ConfirmDialog`/`Modal level="top"` it's now 4100.
+- **Pay Due popup → `Modal`** — the receipt popup (not a confirm) was borrowing `confirmStyles.overlay` as a backdrop; now wrapped in the canonical `<Modal level="top">` (transparent surface, no padding/radius/shadow; backdrop/esc-close off to keep its X/Cancel-only behaviour). No layout change.
+- Verified: `tsc --noEmit` clean, `npm run build` clean (net +184 B), Storybook all three stories render. Judgment call to flag: **only remove/cancel/end are red**; reset-timer + discard-draft stay dark — say if you want those red too.
+
+## Round 4 — buttons & chips
+
+- **Chip/badge fonts → control** — `Tag` + `StatusBadge` moved from body `fonts.size.s` to `fonts.control.sm` (and Switch hint → `control.xs`), so chips/badges step with the control scale at <1440 (same fix as inputs). Button already used `--btn-fs`.
+- **Token tidy** — Button border literal `1.5` → `strokes.s`; StatusBadge radius literal `"4px"` → `radii.xs`.
+- **Overview "+" fixed** — the Buttons & Chips overview's IconButton demos used the weak `＋` glyph; now render the rotated-✕ (same as the IconButton Plus story), so "+" is legible + consistent.
+- Left by decision: button **md-height stays 42** (sm already = input 40; forcing md→40 would collapse sm/md); **`secondary` button stays the always-green CTA** (doesn't theme-swap). Flag if you want either changed.
+
+## Round 3 — input consistency pass
+
+Audited every field (height / font / state colour / chevron / outline / fill) across both tiers. Shipped:
+- **Legible clear ✕** — new shared `ClearButton` (1.5px stroke, neutral900 SVG, = the canonical close glyph). Replaces the tiny `×` in the combobox (`SuggestionInput`) and the browser's native search ✕ on pill-search (suppressed in globals).
+- **Font tokens** — `Field` + `MeasureField` were on fluid *body* fonts (`fonts.size.*`); moved to *control* fonts (`fonts.control.*`) so all fields share the control scale (16→14 at <1440), matching `Select`.
+- **Dead CSS** — repointed the stale `.fill-input` globals rules (FillInput is gone) to `.text-input-field`.
+- Already consistent (no change): heights (`--input-h` 40/32; dense 28), fill (`primary100`), input placeholders (globally `neutral400`).
+
+Decisions applied:
+- **Chevron is now state-driven** (neutral300 idle → neutral900 open, matching Select; `SuggestionInput` updated, UnderlineSelect inherits it when it folds into Select).
+- **Outline keeps the warm `primary300` border on pill/cream** (box stays `neutral300`) — confirmed, no change.
+- **`TextInput` removed** — its 5 call sites repointed to `<Field variant="underline">`, component deleted. (Two files had a local `Field` helper, so they import it as `Field as TextField`.)
+
+- **Filled placeholder → `alphaBlack3`** (translucent) on all filled inputs (Field / Select / SuggestionInput / MeasureField) via an `is-filled` class — the empty-state text now reads on the cream instead of a flat grey.
+- **MeasureField** story reorganised to the matrix `(cream | box+prefix) × (unit-only | unit-switchable)` + `dense` shown as a size note. (with-unit vs dense = independent axes: unit = a chip, dense = 28px height.)
+
+- **`UnderlineSelect` slimmed to chip-only** — the dead serif "underline" variant removed; it's now purely the inline chip dropdown (the booking title), with a state-driven chevron + control-font menu items. Kept as a small dedicated component (the chip is a distinct inline control, used once); a full fold into `Select` would over-generalise Select for a single caller, so not done.
+
+**Input consolidation complete.** Deleted: FillInput, DosagePicker, TextInput. Merged: 4 dosing pickers → one `SuggestionInput`. Extended: `Field` (fill/align/list), `Select` (fill/chevron). Consistency: shared `ClearButton` (legible ✕), control fonts across all fields, state-driven chevron, alphaBlack3 filled-placeholder. UnderlineSelect slimmed.
+
+## Round 2 — input / field family
+
+### UnderlineSelect — chip text oversized in Storybook
+- **Finding:** only the `chip` variant is used in the app (`BookAppointment`, passing `fontSize="var(--btn-fs)"`); the `underline` variant is **unused** (only the drift-doc gallery references it). The component default font was `h4` (a heading size), so the chip looked huge in Storybook while the app looked right (it overrode the size).
+- **Fix:** `chip` now defaults to control text (`var(--btn-fs)` = 16px); the serif `underline` keeps `h4`. Callers can still override.
+- **Fixed in:** `Input/UnderlineSelect/UnderlineSelect.tsx`. ✅ done, verified (16px), pushed.
+
+### Unify the input + dropdown surface (decision: do A + B + C)
+- **No Pay = owing** (your call) → `getPayStyle` now renders `"NO PAY"` as the warm "Due" colour (was grey), matching the badge.
+- **Stage A ✅** — `Field` gains `fill: "outline" | "filled"` + `align` + `list`. Default `outline` ⇒ every existing field unchanged; box/pill can now be filled (cream, borderless).
+- **Stage B ✅** — `FillInput` folded into `Field` (`variant="box" fill="filled"`) and **deleted**; Bill modal line items + the inputs overview repointed.
+- **Stage C (in progress):**
+  - ✅ `DosagePicker` deleted — 0 app usages (dead code). If dosage entry is needed later it's `<Select fill="filled">`.
+  - ✅ `Select` extended with `fill` ("outline" | "filled") + `chevron` (on/off) — additive; its 9 existing usages are unchanged. Gives the outline/filled × chevron matrix.
+  - ✅ The 4 prescription-pad pickers (Duration / Frequency / Interval / When) now share one `SuggestionInput` combobox (`src/components/Input/SuggestionInput/`). ~653 lines of duplicate shell → 159 (thin wrappers) + 253 (shared). Each picker's props are byte-identical, so `PrescriptionPage` is untouched. Verified: tsc 0; DurationPicker auto-format ("3"→3 Days/Weeks/…) + WhenPicker chevron list both render & select.
+  - ⏳ Queued: remove `TextInput` (thin alias of `<Field variant="underline">` — 5 call sites) and `UnderlineSelect` (only the chip is used, in booking — fold into a Select pill, then delete). `MeasureField` keeps its behavior (its cream value box is conceptually a `Field` box-filled).
+- Verified: tsc 0 errors, CRA build compiles, Storybook (Field surfaces + Bill modal) render correctly. Pushed.
+
+## Round 1
+
+### IconButton — "+" button
+- **Observation:** the `+` in the Plus demo used a small `＋` character; looked weak next to the ✕.
+- **Decision:** make `+` by rotating the canonical ✕ close glyph 45° (same stroke weight, no new icon).
+- **Fixed in:** `IconButton/IconButton.stories.tsx` (the component is unchanged — reuses the built-in ✕). Pattern for the app: `<IconButton style={{ transform: 'rotate(45deg)' }} />`.
+- **Status:** ✅ done, verified, pushed.
+
+### StatusBadge — two "Booked" pills
+- **Observation:** catalog showed two "Booked" badges.
+- **Finding:** the backend emits **two status names — `BOOKED` and `SCHEDULED` — for the same pre-arrival state.** The badge already renders both as one "Booked" pill.
+- **Decision:** keep both in the code (removing one would break live data), document `SCHEDULED` as an alias, and show "Booked" once in the catalog. (A true single name is a backend change — out of frontend scope.)
+- **Fixed in:** `AppointmentQueue/StatusBadge.tsx` (comment), `StatusBadge.stories.tsx`, `ButtonsAndChips` overview.
+- **Status:** ✅ done, verified, pushed.
+
+### PayBadge — three look-alike states (Due / Unpaid / No Pay)
+- **Observation:** three pay badges looked identical.
+- **Finding:** `DUE`, `UNPAID`, `"NO PAY"` already rendered identically ("Due" + danger triangle).
+- **Decision:** `DUE` is the single owing state; any non-paid value falls through to it. Zero visual change, simpler config; `PayStatusValue` narrowed to `"PAID" | "DUE"`.
+- **Fixed in:** `AppointmentQueue/StatusBadge.tsx` (PAY_CONFIG + fallback + type), `PayBadge.stories.tsx`, `ButtonsAndChips` overview.
+- **⚠️ Open question for you:** elsewhere (`AppointmentQueue.styles`) `"NO PAY"` is drawn as neutral grey — which would suggest it means **"no charge"**, not "Due". If "No Pay" should mean *no charge* (no warning), that's a separate small fix — tell me and I'll align it.
+- **Status:** ✅ done (as Due), verified, pushed; semantic question above pending your call.
+
+
+---
+
+# Decisions archive — per-category canon & rationale
+
+> Migrated from the former `ui-decisions.md` on 2026-06-30. The *active* rules now live in
+> `frontend/CLAUDE.md` §4–5; this is the full per-category history & reasoning behind them.
+
+# Docodile UI — Design-System Decision Sheet
+
+> Living record of the visual-review pass. Each variant has a stable **ID** (shown in the `/audit` gallery).
+> Reply with verdicts by ID, e.g. *"BTN canonical is correct; CLOSE-1 is canonical, fix the rest; SB-icon → leave it."*
+>
+> **Legend:** ✅ canonical (the one to keep) · 🔧 fix to match canonical · 🗑️ remove/delete · 🤔 discuss · ⬜ pending review
+>
+> Nothing in the real app changes until a category is fully decided and you approve the fix phase.
+
+Review order: Buttons → Inputs → Dropdowns → Modals → Nav/Tabs → Cards → Tables → Icons → Colors/Tokens → Typography/Spacing → Pages. (Duplicates & merge candidates fall out of the above.)
+
+---
+
+## ✅ Implemented in code — 2026-06-11
+
+**New component:** `components/IconButton` — canonical close/icon button (32px circle, neutral700, hover tint, accessible `ariaLabel`, defaults to a ✕).
+
+**CLOSE-canon — done.** ~12 modal/panel close ✕ buttons replaced with `<IconButton>`: ChatPanel, BillMedicinesModal, AddServiceModal, AddReportModal, EditPatientModal (×2), NewPrescriptionModal, PrescriptionPage (Save-template + AI-SOAP modals), FileViewer, AddStaffModal, PharmacyView (shared `ModalHeader`). Dead `closeBtn`/`CloseIcon` styles removed. _Left as follow-up: chip-remove ✕ (Tag/Autocomplete), field-clear ✕, Toast dismiss._
+
+**CTA-canon — done.** Modal footers now use `<Button variant="light">` Cancel + `<Button variant="primary">` Save: EditPatient / AddReport / NewPrescription / AddService / Pharmacy / ImportData. **Retained:** the Archive-patient underline link, and Pharmacy's destructive `Remove` (`btnDanger`). Dead `btnPrimary`/`btnGhost`/`saveBtn`/`cancelBtn` styles removed.
+
+**dangerLight removed.** All 8 usages were Cancel/Nope buttons → switched to `light` (AppointmentQueue ×2, BookAppointment, AddStaffModal ×2, SessionBar ×2, HomePage). Variant deleted from `Button.styles.ts` + `Button.tsx` union + DesignSystem demo array.
+
+**Verified:** `tsc --noEmit` → 0 errors; webpack compiles clean; `/audit` gallery updated to show the shipped state. ⚠️ NOT visually verified in the running app (login wall) — recommend a manual click-through of the affected modals.
+
+**Also now done (2026-06-11):** `secondary`↔`secondarySolid` merge (secondary = secondary700 → 800 hover; TopNav repointed) · grey disabled for all 6 variants (filled neutral200/neutral500/no-stroke; outline neutral400) · `md` height +2px (44/36). **The Button category is fully implemented + committed (`batman`).**
+
+---
+
+## 1. Buttons & controls  — _status: ✅ FULLY IMPLEMENTED + committed (batman)_
+
+| ID | What it is | Source | Verdict | Canonical decision / fix note |
+|----|------------|--------|---------|-------------------------------|
+| BTN-* | Canonical `<Button>` — 8 variants × 4 sizes | `components/Button/Button.styles.ts` | ⬜ | Reference set — confirm this is the one true button |
+| CTA-1 | Modal primary, bg `primary700` (not theme-aware), `radii.full`, 10×20, no height | `EditPatientModal.tsx:768` | ⬜ | |
+| CTA-2 | Modal "save", bg `neutral900`, `radii.full`, 8×20 | `Services/AddServiceModal.styles.ts` | ⬜ | |
+| CTA-3 | Modal ghost/cancel, `1px primary300` pill, 10×20 | `EditPatientModal.tsx:758` | ⬜ | |
+| CTA-4 | Cancel as underlined text-link | `Services/AddServiceModal.styles.ts` | ⬜ | |
+| CTA-5 | Archive as `red100` underline text | `EditPatientModal.tsx:781` | ⬜ | |
+| CLOSE-1 | ✕ — 28×28, circle (50%), `neutral700` | `Chat/ChatPanel.tsx:762` | ⬜ | |
+| CLOSE-2 | ✕ — 28×28, square, `neutral500` | `BillMedicinesModal.tsx:576` | ⬜ | |
+| CLOSE-3 | ✕ — 28×28, square, `neutral500` | `Services/AddServiceModal.styles.ts:40` | ⬜ | |
+| CLOSE-4 | ✕ — unsized glyph, `size.m`, `neutral900` | `AddReportModal.tsx:491` | ⬜ | |
+| CLOSE-5 | ✕ — glyph, `fontSize 22`, `#666` (off-token) | `PrescriptionPage.tsx:3384` | ⬜ | |
+| SB-start | h40 `radii.full` `green200` | `SessionBar.tsx` | ⬜ | |
+| SB-pause | h40 `radii.full` `yellow200` | `SessionBar.tsx` | ⬜ | |
+| SB-stop | h32 `radii.xs` `red100` | `SessionBar.tsx` | ⬜ | |
+| SB-icon | h32 `radii.xs` icon-only (vs canonical 40/42) | `SessionBar.tsx` | ⬜ | |
+| TAG | `<Tag>` outline / filled + remove | `components/Tag/Tag.tsx` | ⬜ | |
+| SW | `<Switch>` sm / md | `components/Switch/Switch.tsx` | ⬜ | |
+
+### Button variant decisions — FINAL 2026-06-11 (8 → 6 variants)
+- **primary** — ✅ keep as-is.
+- **dark** — ✅ keep; hover neutral900 → neutral1000. _Already implemented ([Button.styles.ts:61]); no change._
+- **secondary** — 🔧 MERGE `secondary` + `secondarySolid` → one `secondary` using the **secondarySolid** values (default secondary700, hover secondary800, disabled secondary300); drop old `secondary` (800→700).
+  - Impact: `TopNav.tsx:249` `"secondarySolid"`→`"secondary"` + simplify ternary; remove `secondarySolid` from `Button.tsx` union. **LoginCard admin Sign-in** (`LoginCard.tsx:194,281`, currently `secondary`=800) shifts to the lighter 700 look + darken-on-hover — minor intended visual change.
+- **primaryLight** — ✅ KEEP (themed outline, active.shade600). Note: **0 current usages** — reserved for future themed secondary-outline actions.
+- **dangerLight** — 🗑️ REMOVE. Used 8× but ONLY as the red "Cancel/Nope" button in confirm dialogs (the destructive action is `dark`). Switch all 8 → `variant="light"` (neutral grey outline); remove the variant + type-union entry + DesignSystem demo entry.
+  - Sites → `light`: `AddStaffModal.tsx:310,330` · `BookAppointment.tsx:1201` · `AppointmentQueue.tsx:586,804` · `SessionBar.tsx:462,499` · `HomePage.tsx:353`.
+- **secondaryLight** — ✅ keep.  ·  **light** — ✅ keep.
+- **text = outline** (primaryLight / secondaryLight / light) — ✅ ALREADY the case in every state (verified rendered: primaryLight #E48647, secondaryLight #6C8145, light #202020, incl. disabled). No change.
+- **disabled** — ✅ APPROVED **grey**: filled (primary/dark/secondary) → neutral200 fill + neutral500 text + **no stroke**; outline (primaryLight/secondaryLight/light) → neutral400 border + matching neutral400 text. Apply to all 6 `disabled` blocks in Button.styles.ts.
+- **sizes** — ✅ sm unchanged (`--btn-sm-h` 40/32). md **+2px → 44/36** (was 42/34) for a real 4px gap. Fix: globals.css `--btn-md-h: 44` (:root) + `34→36` (compact media). Note `mdIcon` also reads `--btn-md-h`, so it tracks to 44/36 too (fine/consistent).
+- **responsiveness** — buttons step down one tier <1440 (h 40→32 / 42→34, fs 16→14) via --btn-* vars; padding/radius/border/icon fixed. ✅ confirmed behaviour.
+- **FINAL SET (6): `primary · dark · secondary · primaryLight · secondaryLight · light`**
+- _Design note: Cancel red→grey is a deliberate change to those 8 dialogs. The destructive confirm stays `dark` (filled black), NOT red — flagged, not changed (that was option 3, which you didn't pick)._
+
+## 2. Inputs — _✅ BUILT 2026-06-11_
+IDs: `INP-CANON/select/domain/box35/box40/pill`, `INV-1..4` + `INV-CANON`, `INP-FIELD*`.
+DECISION:
+- ✅ Approve one canonical `<Field variant size error>` component (3 looks).
+- **Looks kept, assigned by context (no field changes its look):** `underline` stays where underline is today; `box` stays where box is today; `pill` is ONLY for search inputs (e.g. PatientPicker search). Today's placement already matches, so this is a consolidation, not a re-style.
+- **Standardize heights + make them RESPONSIVE** — `<Field>` reads `--input-h` (40px baseline → **32px on the 1200–1439 tier**) + `--input-pady` (6→3), so every field compacts together on smaller laptops. Today only `TextInput` & `Select` honor this; DomainInput (54), the boxed inputs (35/40), PatientPicker pill (48) and the pickers hardcode their height and DON'T compact — a real bug the `<Field>` fixes. Kills the 35/40/48/54 scatter. DomainInput's suffix box is the one possible exception (confirm during build).
+- **One invalid state:** `red200` border + `redAlpha10` soft fill (INV-CANON) — replaces the 5 ad-hoc error looks incl. `rgba(255,0,0,0.05)` and raw `1px solid red`.
+- ✅ BUILT: new `components/Field` (underline/box/pill, responsive via `--input-h`, unified `red200 + redAlpha10` error). `TextInput` is now a thin alias of `<Field variant="underline">`. DomainInput made responsive + unified error; PatientPicker search → `<Field variant="pill">`; the boxed form inputs (Pharmacy / NewPrescription / EditPatient) now use `--input-h` so they compact on the lower tier. Also fixed a pre-existing React border-shorthand warning in Select + DomainInput.
+- _Optional follow-up:_ migrate every remaining inline form `<input>` to `<Field>`; make the Select/date-trigger buttons compact too (the agent flagged `selectInput`/`selectTrigger`/`dobTrigger` still hardcode their height).
+
+## 3. Dropdowns / selects — _✅ BUILT 2026-06-11_
+IDs: `MENU-select/primary/underline/picker/destructive`, `MENU-CANON`, `TRIG-*`.
+DECISION:
+- **Menu surface = thin warm border + soft shadow** (Option A = the `MENU-primary` look already used by ~22 files): bg neutral100, `1px primary300` border, `radii.m`, ONE soft shadow, hover `active.shade100`, selected `primary100` + `primary700` text.
+- **Reconcile the 2 outliers** to match: the official `Select` menu (today borderless + `2px 2px 12px` offset shadow) → add the `primary300` border + the standard shadow; `UnderlineSelect` (12px literal radius + `0 4px 20px` shadow) → `radii.m` + standard shadow.
+- **Add a `shadows` token** to theme.ts (one menu shadow, e.g. `0 4px 16px rgba(0,0,0,0.08)`) — kills the 8+ ad-hoc shadow strings; menus point at it.
+- ✅ **3 TYPES KEPT, each for a context** (2026-06-11 refinement): `primary` (the default bordered look), `underline` (sticky header ONLY), `picker` (Rx / prescription form). They share the bordered panel + chevron + responsive height, and differ only in their trigger + usage context.
+- ✅ **Unified the chevron**: all 3 types now use the canonical `ChevronDown` @ 16px. Select's flat 14×6 arrow and the pickers' `chevron-up.svg` (inverted rotation) were both swapped for it. (The rotation DIRECTION was already correct everywhere — only the icon changed.)
+- ✅ **Compact lower tier (<1440):** the 5 picker triggers now use `--input-h` (40 → 32 on the lower tier), matching the field compaction; Select already did; the underline trigger compacts via the type scale.
+- ✅ **Fixed off-token destructive colour** `#c0392b` → `red200` (PopoverMenu).
+- ✅ BUILT: `shadows` token added to theme.ts (`menu`/`modal`/`card`); `Select` + `UnderlineSelect` menus reconciled to the bordered look + `shadows.menu` + cream hover / `primary100` selected.
+- _Follow-up:_ point the ~22 menus that already hardcode `0 4px 16px rgba(0,0,0,0.08)` at `shadows.menu` (same value, single-source); optionally extract a shared `<Menu>`/`<Popover>` primitive so the panel isn't hand-rolled in ~22 files.
+
+## 4. Modals / dialogs — _✅ BUILT 2026-06-11_
+IDs: `MOD-canon`, `MOD-print/bill/service/presets/confirm/slot/ai`, `MOD-CANON-PROPOSED`.
+DECISION (approved the proposed canonical Modal, with 2 tweaks):
+- ✅ Adopt one canonical `<Modal>` shell: tokenized backdrop (one opacity, e.g. `alphaBlack3`), a real **`zIndex` scale** in theme.ts (fixes the 1000→4000 chaos + the base-Modal-sitting-under-its-own-confirm-dialog bug), one radius, one shadow (`shadows.modal`), Esc-to-close + scroll-lock by default.
+- 🔸 ~~**RETAIN each modal's existing background colour** — do NOT unify the surface.~~ **SUPERSEDED 2026-06-12 — surfaces ARE now unified, see "Modal surface + header canon" below.**
+- 🔸 **Close ✕ = the shared IconButton (CLOSE-CANON)** — already done for the ~12 modal closes converted in the Buttons phase; the canonical Modal uses IconButton for its header ✕.
+- ✅ BUILT: rebuilt `<Modal>` (tokenized backdrop / `shadows.modal` / `radii["2xl"]` + Esc + scroll-lock + `surface`/`width`/`level` props, back-compat defaults so the 16 existing callers are unchanged except the z-index fix). Added a `zIndex` scale to theme.ts (modal 4000 — above the sidebar; modalTop 4100 for confirm-over-modal). Migrated the 7 hand-rolled overlays onto `<Modal>` keeping their colours: PrintPreview, BillMedicines (surface transparent — preserves the zigzag), AddService, SchedulePresets, AddStaff delete-confirm (`level="top"`), slot-picker, AI-SOAP.
+- ⚠️ NOT click-tested live (login wall) — recommend a manual pass: open a couple of modals (do they appear ABOVE the sidebar now? does Esc close them? does the bill receipt's torn edge still show the dark backdrop?).
+
+### Modal surface + header canon — REVISED 2026-06-12 (the rulebook)
+Reviewed all ~15 modals side-by-side (audit + Storybook §17). They drifted: 3 surfaces (tray-tint `#F3F3DC` default · white · cream `#F9F9ED`), random widths (360/420/440/460/560/1000/1040), padding 0/24/32, title left vs centre, close as IconButton vs square SVG vs raw `×`. Decisions (user-approved):
+
+**Three modal TYPES:**
+| Type | When | Surface | Title | Close ✕ | Width | Footer |
+| --- | --- | --- | --- | --- | --- | --- |
+| **Confirm** | yes/no, cancel/confirm, "are you sure?", delete/archive | match the form/context surface (white default) | **centred** | top-right | S 400 | buttons centred (light Cancel + dark Confirm) |
+| **Form** | create/edit records (Edit patient, Add service, Pharmacy, New Rx…) | **white** (`neutral100`) | **left** | top-right | M 480 · L 560 | right-aligned (light Cancel + primary Save) |
+| **Workbench** | wide editors / receipts (Bill, Bill & medicines, Print preview) | white (`transparent` only for the torn-edge receipt) | left or section heading | top-right | XL 1040, `padding=0` + internal layout | in-layout (e.g. Pay + print/share icons) |
+
+**Universal (every modal):** radius `radii.2xl` (16) · backdrop `rgba(0,0,0,0.35)` · `shadows.modal` · **close is ALWAYS `<IconButton>` ✕, top-right** (never a raw `×` or one-off square button) · z-index from the scale (modal 4000 / modalTop 4100).
+
+**Width scale:** S 400 · M 480 · L 560 · XL 1040. Pick the nearest; don't invent new numbers.
+
+**Surface exceptions (explicit):**
+- **Add staff → cream `primary100`** (user wants this one to stay distinct from the white form crowd).
+- **Bill & medicines → `transparent`** (the two-card torn-edge receipt floats on the backdrop).
+- Everything else: forms + confirms = **white**.
+
+**Heading:** left for normal modals; **centred only for confirm-type** dialogs. Font = secondary serif, `fonts.size.h6`/`h5`.
+
+**Rollout = doc + Storybook reference only (2026-06-12).** Did NOT mass-migrate. Storybook §17 now shows the three types + the rulebook as the canonical reference. Per-modal migration to the canon is a later sweep (most forms still render the tray-tint default surface today). **A shared `ModalHeader` (title + ✕, alignment baked in) should be promoted from PharmacyView and used everywhere when the migration happens** — that's what stops the header drifting again.
+
+### Chevron icon — updated 2026-06-11
+The canonical `ChevronDown` now uses the path you provided (`M19 9L12 15L5 9`, strokeWidth 1.5), colour driven by the `color` prop (not hardcoded). Propagates to all 3 dropdown types.
+
+## 5. Nav / tabs (TABS only) — _✅ BUILT 2026-06-11_
+IDs: `TAB-block/rxfilter/stats/visit/pharmacy/connected/clinic`, `CHIP-conflict`, `HDR-pageheader/rx/settings`, `TAB-CANON`.
+DECISION (per A/B/C/D/E review):
+- **E = canonical** white-pill `<Tabs>`. ✅ Now has TWO sizes: `md` (the larger "E") and `size="sm"` (the smaller "visit"). RESPONSIVE: `md` compacts 40/r12 → 32/r8 below 1440 via new `--tab-md-h` / `--tab-md-r` vars (so at the lower tier all tabs read like the visit size; above 1440 both sizes are available).
+- **A (white-pill clones):** Rx-filter (`PrescriptionQueue.styles`) + Stats strip (`StatsPage`) aligned to the responsive `--tab-md-*` vars. (Full migration of these hand-rolled bars onto the `<Tabs>` component itself = optional follow-up; visually + responsively they now match.)
+- **B:** Pharmacy `togglePill` → the white pill (was an inverted dark pill, which even contradicted its own code comment) + responsive. The sort/range **chips RETAINED** as-is.
+- **C (legacy trapezoid)** + **D (headers: PageHeader / rxHeader / Settings)** — RETAINED as-is per your call.
+- _Not built:_ headers were explicitly kept, so the earlier "fold rxHeader/Settings into PageHeader" idea is dropped.
+- ⚠️ Not click-tested live (login wall) — recommend resizing the window across 1440 to confirm tabs compact.
+
+## 6. Cards — _✅ BUILT 2026-06-11_
+IDs: `CARD-R8/R16/R20`, `CARD-BG-*`, `CARD-canon/bill/clinic/clinicdisplay/clinicinfo/hint/staff/addstaff/docstatus/heatmap/login/kpi`, `CARD-CANON`.
+DECISION (per the 4-question review):
+- **Corners → 16 everywhere.** Snap ALL card surfaces to `radii.2xl(16)` — retiring the legacy `radii.primary(20)` *and* pulling the 8px staff/kpi tiles up to 16. One card radius. (radii.primary stays in theme.ts for Tabs/ClinicTabs/Modal/Workspace/SetupPassword — mopped up in their own categories.)
+- **Keep the soft shadow** on the clinic card. Both clinic cards are now `raised`; everything else flat.
+- **Keep all 3 paper colours** as meaningful variants: `sage`(secondary50)=clinic · `cream`(primary100)=staff/queue · `surface`(neutral100 white)=bills/stats. Login stays its own themed bg (just corner-snapped).
+- **Merge all 3 near-twin sets** at the surface level (not a risky whole-component collapse, since I can't click-test):
+  - **clinic** — ClinicCard + ClinicDisplayCard now both spread `cardSurface("sage","raised")` (ClinicCard *gains* the shadow; ClinicDisplay's literal shadow → `shadows.card` token; both → 16).
+  - **staff** — StaffDetailsCard + AdditionalStaffDetailsCard both spread `cardSurface("cream","none")` (8 → 16). Only their inner content gap still differs (intended).
+  - **queue-sidebar** — DoctorStatusCard + HeatmapCard both spread `cardSurface("cream","none")` (literal "20px" → 16).
+- ✅ BUILT: new **`cardSurface(variant, elevation)`** helper in `components/Card/Card.styles.ts` = ONE source for every card's paper (bg + 16 radius + optional `shadows.card`). The 6 merge-pair cards spread it; bespoke cards (Hint dashed, Login themed, Bill torn-edge) keep their look but got corner-snapped to 16; StatsPage `kpiCard` → 16. The `<Card>` component now also takes optional `variant`/`elevation`/`padding` props (defaulting to the legacy transparent shell, so the existing section-wrapper callers are untouched).
+- _Follow-up:_ (a) full component-collapse of the clinic family into one parametrised component — surfaces are unified, contents still live in separate files (**still open**); (b) ✅ DONE (2026-06-13) — the clinic-family **tag pill** is unified to `secondary700` (the Figma-referenced fill with white text that pops on cream); ClinicDisplayCard + ClinicInfoCard moved off the lower-contrast `secondary300` to match ClinicCard.
+- ⚠️ NOT click-tested live (login wall) — `tsc --noEmit` 0 errors. Spot-check please: clinic cards (rounder + now have a soft shadow), the staff form cards + Stats KPI tiles (8→16, slightly rounder), and the queue sidebar (doctor/heatmap corners).
+
+## 7. Tables / lists — _✅ BUILT 2026-06-11_
+IDs: `TBL-queue` (canonical), `TBL-rx/pharmacy/archived/stats`, `TBL-DIV`, `TBL-PILLS`, `TBL-CANON`.
+DECISION (per the 4-question review):
+- **Approach = unify the look only** (user had no preference; I took the safe path since the live app can't be click-tested behind the login wall). NO full `<DataTable>` component — that would rewrite each table's data/click/sort/timer logic blind. Left as a future option.
+- **Fix the Stats outlier.** Its header was `neutral500` / weight 500 vs everyone else's `alphaBlack3` / 400 — brought into line.
+- **Leave corners as-is.** The 10/16/24/asymmetric card radii were explicitly KEPT (incl. the appointment-queue table's intentional `"0 24px 24px 24px"` tab-tuck, which tucks it under its Tabs). No radius changes.
+- **Merge the two status pills** into one shared `StatusBadge`.
+- ✅ BUILT:
+  - New **`styles/tableStyles.ts`** — `tableHeadCell` (alphaBlack3 / weight 400 / `primary300` divider) + `tableDivider`. The 5 tables (AppointmentQueue, PrescriptionQueue, Pharmacy, ArchivedPatients, Stats) now spread `tableHeadCell` into their `th` and use `tableDivider` for row/cell borders. The 4 already-matching tables become a no-op single-source; Stats is the one visible fix.
+  - **Pill merge:** `StatusBadge` gained an optional **`started`** prop — when `started && status===IN_PROGRESS` it reads **"Ongoing" on `secondary100`** (no timer), matching the retired rx pill. The appointment queue's `patientId`→live-timer path is unchanged. `PrescriptionQueue` now renders `<StatusBadge started>`; the duplicate `StatusPill` + `pillStyles` were deleted, and dead `fonts`/`spacing` imports trimmed.
+- _Follow-up:_ (a) full `<DataTable>` component (**still open**); (b) ✅ DONE (2026-06-13) — the `PatientFilesPage` → `AppointmentQueue.styles` cross-page coupling is removed: PatientFilesPage now composes its table look in its own `PatientFilesPage.styles.ts`, built from the shared `tableStyles` primitives (`tableHeadCell` / `tableDivider`); identical rendering, no dependency on the queue component; (c) unknown rx statuses now render as a grey pill (StatusBadge fallback) instead of grey text — minor, arguably nicer.
+- ⚠️ NOT click-tested live (login wall) — `tsc --noEmit` 0 errors. Spot-check please: **prescription queue** pills (esp. a started session → "Ongoing" sage pill; and that the appointment queue's live timer is unaffected) and the **Stats** overdue/dues table header (now soft-black, lighter).
+
+## 8. Icons — _✅ BUILT: the canonical `<Icon>` system shipped 2026-06-14_
+IDs: `ICON-dups-1a..5b`, `ICON-chevron-1..3`, `ICON-close-1..4`, `ICON-size-*`, `ICON-color-*`, `ICON-CANON-*`.
+DECISION:
+- **Canonical approved** ("icon-canon proposed ones are fine"): one `<Icon name size color>` @24 + `currentColor`, every asset normalized to `viewBox 0 0 24 24`.
+- **Scope = SAFE CLEANUP ONLY** (user's pick, since the live app can't be click-tested behind the login wall). The risky/visual parts are deferred.
+- ✅ BUILT (shipped): **deleted the 8 truly-dead `.svg` files** (verified 0 refs): `circle-outline`, `circle-outline-2`, `chevron-down-dark`, `chevron-down-light`, `horizontal-line-short-2`, `vertical-line-tall`, `stethoscope-cup`, `curved-connector`. Gallery imports/tiles for those updated so the build stays green.
+  - ⚠️ **Audit was wrong:** it listed 11 dead files, but **3 are still in use** — `bill-check-small.svg` (PrescriptionPage:9), `users-group-rounded.svg` (PrescriptionPage:22), `paid-stamp.svg` (BillCard:6) — so only 8 were deleted.
+- ✅ DONE (2026-06-14) — the deferred work is built + shipped:
+  - **`components/Icon`** is the canonical icon: one `<Icon name size tone|color disabled>`, default **24px / neutral900**, `currentColor`-driven. `size={20}` (small) and `disabled` (→ neutral400) are **props, not new SVGs**; `tone="inherit"`/`"inverse"`/`color` cover the recolour cases.
+  - A **static registry** (`iconRegistry.ts`) holds ~80 icons — static imports, because CRA does NOT apply SVGR to `require.context` (a folder-auto registry silently yields URLs, not components). **`MULTICOLOR_ICONS`** flags brand/illustrative glyphs (check-circle, danger-triangle, paid-stamp, stopwatch, user, …) so `<Icon>` leaves their baked palette alone. **Foundations/Icons** now auto-renders every registered icon (was a hand-listed 25).
+  - **All app consumers migrated** to `<Icon>` (SideNav/TopNav, clinic + staff cards, billing, the whole AppointmentQueue family, the 31-icon Rx pad, pharmacy, the date/time/patient form fields), and **`iconsUtil.tsx` is deleted** — the old 24-wrapper system is gone.
+  - Normalized the monochrome icons' baked `#202020` / off-palette `#1C274C` slate → `currentColor` so they recolour/disable/theme.
+  - **Library review + dedup (2026-06-14):** removed dead twins + divider lines from the registry; fixed off-1.5 strokes (chat-dots; hourglass-line); then **merged the duplicate concepts to one glyph each** (user-picked): `calendar`, `pulse`, `mail` (was letter), `restart`, `bill-check` — the `-alt`/`-24`/`-small` names are retired and the screens re-pointed. The only intentional twins kept are **filled (multicolor status) vs line** for `hourglass`/`users-group`/`user` (DoctorStatusCard badges vs inline icons) — see the Foundations/Icons "Variants" story.
+  - _Still raw (deliberate, out of scope):_ ZeroQueue + logos (illustrations, not icons); the BuildYourClinic onboarding page + the AuditGallery showcase (separate dev surfaces). `tsc` + `build` green throughout; verified per-component in Storybook.
+- `tsc --noEmit` 0 errors.
+
+## 9. Colors outside tokens — _✅ BUILT 2026-06-11_
+IDs: `CLR-grey-1..9`, `CLR-amber-1..3`, `CLR-red-1..4`, `CLR-invalidfill-1/2`, `CLR-green-1..3`.
+DECISION (per verdicts):
+- **Grey ramp → neutral\*** — do all suggested: `#222`→neutral900 · `#555`→neutral700 · `#666`→neutral600 · `#888`→neutral500 · `#aaa`→neutral400 · `#bbb`→neutral300 · `#fafafa`→neutral150. (`#444`/`#999` had **no live usage** → skipped.)
+- **Amber banners → CLR-amber-3** (the tokenized look): `yellowAlpha10` fill / `yellow200` border / `neutral900` text. Both off-token banners (AddReportModal, PrescriptionPage.styles) repointed.
+- **Clinical reds → red100/200** — do suggested: `#E53E3E`/`#e53935`→red100 · `#b54040`→red200. (`#C0392B`/CLR-red-3 was **already fixed** in the Dropdowns phase → skipped.)
+- **Invalid-field tint → CLR-invalidfill-2** = `redAlpha10`. All 7 `rgba(255,0,0,0.05)` sites (TextInput.styles + 6× BookAppointment) repointed.
+- **Pharmacy CSV greens → secondary ONLY** (user override: "instead of green200, secondary only"): `#2C6E49` text/accent/border → `secondary600`; `#F1F8F3` fill → `secondary50`. No `green200` used. (Also converted the one `#2C6E49` in PrescriptionPage's AI-SOAP area for consistency.)
+- ✅ BUILT: ~25 literals across 10 files swapped to tokens (PharmacyView, PrescriptionPage(+.styles), HomePage, FileViewer, SetupPasswordPage, AddServiceModal, AddReportModal, TextInput.styles, BookAppointment). The 2 amber borders became template literals to interpolate `colors.yellow200`. `tsc --noEmit` 0 errors.
+- _Excluded (intentionally literal, untouched):_ art/illustration files + the print stylesheet.
+- ⚠️ NOT click-tested live (login wall). Spot-check: Pharmacy CSV import zone (greens now olive/sage; greys now neutral), the AI-SOAP amber banner (text now near-black on soft yellow), and an invalid form field tint (Book Appointment).
+
+## 10. Typography / spacing — _✅ REVIEWED + closed 2026-06-14_
+IDs: `TYPE-scale`+`TYPE-1..23`, `SPACE-scale`+`SPACE-1..9`, `RAD-scale`+`RAD-1..5`.
+- **Decision (user — "small safe wins only"):** the broad spacing (10px ×52, 6px ×20) + radius (9 ×25, 24/40/55) snapping was **SKIPPED** — high churn, real layout-shift risk on a clinical app that can't be fully click-tested, and imperceptible (6→8, 9→10). Not worth it.
+- **`radii.primary` (20)→16:** already retired from every real component (Card/Login/Hint use `radii["2xl"]`); only the AuditGallery dev pages still reference the token.
+- **Off-scale fonts (9/10px) + `fontWeight: 300`:** inspected — **intentional, not drift.** HeatmapCard/MyHoursCalendar 9/10px are dense weekly-grid micro-labels (20px cells; snapping to caption=11 would overflow); MemoBoard's 300 is a deliberately thin 26px "+" FAB glyph. **Left as-is.**
+- ✅ BUILT: **`icon.size` token** in `theme.ts` (`{ size: 24, sizeSmall: 20 }`); the shared `<Icon>` defaults to it.
+
+## 11–12. Duplicates / merge — flagged inline in categories 2–7 (picker family, autocompletes, clinic/staff/queue cards, the two tables/status-pills).
+
+## 13. Off-style pages — _✅ DONE 2026-06-14_
+IDs: `PAGE-*` rating table + `PAGE-setup/pharmacy/rx` drift mocks.
+- **Pharmacy CSV zone + Rx AI-modal/banners:** tokenized back in Category 9 (colours) — done.
+- **SetupPasswordPage rebuilt on shared comps (2026-06-14):** the 2 hand-rolled password inputs → `<Field variant="underline" type=password iconLeft={key} iconRight={eye toggle}>` and the submit → `<Button variant={staff ? "primary" : "secondary"}>`, mirroring LoginCard. `handleSubmit` made event-optional + Enter-to-submit on the fields; dead `fieldRow`/`input` styles removed; the page theme (admin green / staff peach) preserved. Added a `Patterns/SetupPassword` story (Staff/Admin/Expired) with a MemoryRouter decorator + `/auth/validate-token` MSW mock so it's verifiable. tsc + build clean; verified in Storybook.
+
+---
+
+### Token-level decisions (cascade into everything)
+| Topic | Question | Verdict |
+|-------|----------|---------|
+| `shadows` token | Add a shadow scale to `theme.ts`? (~12 ad-hoc recipes today) | ✅ DONE — `shadows.{menu,modal,card}` (Dropdowns/Modals/Cards phases) |
+| `zIndex` scale | Add a z-index scale? (raw 1000→4000 today) | ✅ DONE — `zIndex` scale added (Modals phase) |
+| `icon.size` token | Make 24px a real token (currently only a comment)? | ✅ DONE (2026-06-14) — `icon = { size: 24, sizeSmall: 20 }` in theme.ts; `<Icon>` defaults to it |
+| `radii.primary` (20) | Retire the legacy 20px radius in favour of 16? | ✅ DONE — retired from all real components (→16); only the AuditGallery dev pages still reference the token |

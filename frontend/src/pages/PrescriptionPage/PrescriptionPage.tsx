@@ -1,49 +1,58 @@
 import React from "react";
 import { styles } from "./PrescriptionPage.styles";
 import { pickAvatar } from "../../utils/avatar";
-// Action-list icons exported from Figma node 2059:6764 (currentColor-normalized)
-import { ReactComponent as VisitsIcon } from "../../assets/icons/visits.svg";
-import { ReactComponent as PulseIcon } from "../../assets/icons/pulse.svg";
-import { ReactComponent as FileIcon } from "../../assets/icons/file.svg";
-import { ReactComponent as HistoryIcon } from "../../assets/icons/history.svg";
-import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check-small.svg";
-// Contact-card icons exported from Figma node 2073:3264 (currentColor-normalized)
-import { ReactComponent as LetterIcon } from "../../assets/icons/letter.svg";
-import { ReactComponent as VideocameraIcon } from "../../assets/icons/videocamera.svg";
-import { ReactComponent as PenIcon } from "../../assets/icons/pen.svg";
-// Main content section icons exported from Figma node 2057:6283
-import { ReactComponent as HeartPulseIcon } from "../../assets/icons/heart-pulse.svg";
-import { ReactComponent as HourglassIcon } from "../../assets/icons/hourglass-line.svg";
-import { ReactComponent as ChatSquareCallIcon } from "../../assets/icons/chat-square-call.svg";
-import { ReactComponent as MagniferBugIcon } from "../../assets/icons/magnifer-bug.svg";
-import { ReactComponent as PillsIcon } from "../../assets/icons/pills.svg";
-import { ReactComponent as DocumentIcon } from "../../assets/icons/document-school.svg";
-import { ReactComponent as UsersIcon } from "../../assets/icons/users-group-rounded.svg";
-import { ReactComponent as RestartIcon } from "../../assets/icons/restart-24.svg";
-import { ReactComponent as ChevronIcon } from "../../assets/icons/chevron-up.svg";
-import { ReactComponent as MicIcon } from "../../assets/icons/microphone.svg";
-import { ReactComponent as RewindIcon } from "../../assets/icons/rewind-back-circle.svg";
-import { ReactComponent as ArrowLeftIcon } from "../../assets/icons/arrow-left.svg";
-import { ReactComponent as CalendarIcon } from "../../assets/icons/calendar.svg";
-import { ReactComponent as ReorderIcon } from "../../assets/icons/reorder.svg";
-import { ReactComponent as TuningIcon } from "../../assets/icons/tuning.svg";
-import { ReactComponent as DownloadIcon } from "../../assets/icons/download.svg";
-import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
-import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
-import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
+import { Icon } from "../../components/Icon";
+import { VisitTabs } from "../../components/VisitTabs";
+import { Card } from "../../components/Card";
+import { IconButton } from "../../components/IconButton";
+// MeasureField now renders only inside VitalsBlock (vitals cut over to the block).
 import { PopoverMenu } from "../../components/PopoverMenu/PopoverMenu";
 import { Toast } from "../../components/Toast";
-import { Autocomplete } from "../../components/Autocomplete/Autocomplete";
-import { AutocompleteTags } from "../../components/Autocomplete/AutocompleteTags";
+import { resolveToastIcon } from "../../components/Toast/toastIcon";
+// Field + MedicineAutocomplete + the Rx pickers now render only inside RxBlock.
+import { SectionBlock } from "../../components/SectionBlock";
+import { VitalsBlock } from "../../visit/blocks/VitalsBlock";
+import { HistoryBlock } from "../../visit/blocks/HistoryBlock";
+import { ComplaintsBlock, DiagnosisBlock, TestsBlock } from "../../visit/blocks/TagsBlock";
+import { NotesBlock } from "../../visit/blocks/NotesBlock";
+import { TextBlock } from "../../visit/blocks/TextBlock";
+import { RxBlock } from "../../visit/blocks/RxBlock";
+import { ReferBlock } from "../../visit/blocks/ReferBlock";
+import { ReviewBlock } from "../../visit/blocks/ReviewBlock";
 import { useDoctors } from "../../hooks/useDoctors";
-import { colors } from "../../styles/theme";
+import { useReferralDoctors } from "../../hooks/useReferralDoctors";
+import { colors, fonts, radii, spacing } from "../../styles/theme";
+import {
+  fetchPatientSummary,
+  generatePatientSummary,
+  parsePatientSummary,
+  getAIHealth,
+  type PatientSummary,
+} from "../../api/ai";
 import { PrescriptionQueue } from "./PrescriptionQueue";
 import { Patient } from "../../hooks/usePatients";
-import { SessionBar } from "../../components/SessionBar/SessionBar";
-import { useVisits } from "../../hooks/useVisits";
-import { createVisit, updateVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
+import {
+  consumePendingSessionNav,
+  type PendingSessionNav,
+} from "../../components/TopNav/SessionTrayButton";
 import { markStarted, unmarkStarted } from "../../utils/sessionStarted";
+import { markVisitCompleted, wasVisitCompleted } from "../../utils/visitCompleted";
+import { useVisits } from "../../hooks/useVisits";
+import { createVisit, updateVisit, deleteVisit, RxRowDTO, SaveVisitRequest, VisitDTO } from "../../api/visits";
+import { listRxTemplates, saveRxTemplate, deleteRxTemplate } from "../../api/rxTemplates";
+import { fetchLatestRxForMedicine, RxLatestDTO } from "../../api/rxHistory";
 import { API_BASE_URL } from "../../apiConfig";
+import { AddReportModal, AddReportRow } from "./AddReportModal";
+import { FileViewer } from "./FileViewer";
+import { EditPatientModal } from "./EditPatientModal";
+import { buildPrintHtml, openPrintWindow, downloadAsPdf, getDefaultTemplate, loadTemplates, PrintVisitData } from "../Settings";
+import { Modal } from "../../components/Modal/Modal";
+import { Button } from "../../components/Button";
+import { Select } from "../../components/Input/Select/Select";
+import { ViewToggle } from "../../components/ViewToggle";
+import { PatientRecordHeader, RecordSection } from "../../components/PatientRecordHeader";
+import { Tabs } from "../../components/Tabs";
+import { DataGrid } from "../../components/DataGrid/DataGrid";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrescriptionPage — base scaffold per Figma "Visits" design.
@@ -95,10 +104,46 @@ const VITAL_COLUMNS: VitalCell[][] = [
   [
     { label: "SPO2", unit: "%", unitWidth: 44 },
   ],
-  [
-    { label: "Hip", unit: "cm", unitWidth: 44 },
-  ],
 ];
+
+// Flattened, render-order list of the 10 vital cells. Keeps the original
+// `${columnIndex}-${rowIndex}` key so vitalState (built from VITAL_COLUMNS)
+// still resolves — only the layout changed (column-pairs → one responsive
+// grid). Row-major order reads BP·BMI / Height·Weight / … pairing related
+// vitals next to each other.
+const VITAL_CELLS: { cell: VitalCell; cellKey: string }[] = VITAL_COLUMNS.flatMap(
+  (col, ci) => col.map((cell, ri) => ({ cell, cellKey: `${ci}-${ri}` })),
+);
+
+// `${ci}-${ri}` cell key for each (uniquely-labelled) vital — used to wire the
+// BMI auto-calc to its Height + Weight inputs.
+const VITAL_KEY_BY_LABEL: Record<string, string> = {};
+VITAL_COLUMNS.forEach((col, ci) =>
+  col.forEach((v, ri) => { VITAL_KEY_BY_LABEL[v.label] = `${ci}-${ri}`; }),
+);
+const BMI_KEY = VITAL_KEY_BY_LABEL["BMI"];
+const HEIGHT_KEY = VITAL_KEY_BY_LABEL["Height"];
+const WEIGHT_KEY = VITAL_KEY_BY_LABEL["Weight"];
+
+// BMI = weight(kg) / height(m)². Height/Weight may be entered in imperial
+// units, so normalise to metric first (cm/in → m, kg/lb → kg). Returns "" when
+// either input is missing or non-positive, so the locked BMI field simply
+// blanks until both are present. BMI is always reported in kg/m².
+const computeBmi = (
+  height: VitalCellState | undefined,
+  weight: VitalCellState | undefined,
+): string => {
+  if (!height || !weight) return "";
+  const h = parseFloat(height.value);
+  const w = parseFloat(weight.value);
+  if (!Number.isFinite(h) || !Number.isFinite(w) || h <= 0 || w <= 0) return "";
+  const heightM = height.unit === "in" ? h * 0.0254 : h / 100; // cm is the default
+  const weightKg = weight.unit === "lb" ? w * 0.453592 : w;    // kg is the default
+  if (heightM <= 0) return "";
+  const bmi = weightKg / (heightM * heightM);
+  if (!Number.isFinite(bmi) || bmi <= 0) return "";
+  return bmi.toFixed(1);
+};
 
 // Figma node 2073:3030 — History section. 2×2 grid of cream-filled fields.
 // Each row carries the `field` key for the suggestion API
@@ -120,49 +165,12 @@ const splitTags = (raw: string): string[] =>
     .map((s) => s.trim())
     .filter(Boolean);
 
-// Override AutocompleteTags' default cream pill — the host already provides
-// the cream noteCardField wrapper, so the inner box stays transparent and
-// reserves room on the right for the absolute-positioned dictate icons.
-const NOTE_CARD_TAGBOX_STYLE: React.CSSProperties = {
-  backgroundColor: "transparent",
-  borderRadius: 0,
-  padding: 0,
-  alignItems: "flex-start",
-  alignContent: "flex-start",
-  paddingRight: 64,
-  width: "100%",
-  minHeight: 80,
-};
+// AutocompleteTags tagbox overrides now live inside the block components:
+// Complaints/Diagnosis in TagsBlock (noteTagbox), Tests in TestsBlock
+// (TESTS_TAGBOX_STYLE, in bottomRowStyles.ts).
 
-// Tests row — single-line field that grows vertically as chips wrap.
-const TESTS_TAGBOX_STYLE: React.CSSProperties = {
-  backgroundColor: "transparent",
-  borderRadius: 0,
-  padding: 0,
-  width: "100%",
-};
-
-// Figma node 2057:6381 — Rx table columns. Medicine flex-grows, Notes fills remainder.
-const RX_COLUMNS = ["#", "Medicine", "Dosage", "When", "Frequency", "Duration", "Notes"];
-
-// Unit toggles for clickable vital pills. Clicking a unit swaps to the
-// alternative unit and converts the displayed value. Units without an entry
-// in this map (BMI/kg/m², Pulse/bpm, SPO2/%) are non-toggleable.
-const convertNum = (v: string, factor: number, decimals = 1): string => {
-  const n = parseFloat(v);
-  return Number.isNaN(n) ? v : (n * factor).toFixed(decimals);
-};
-const convertTemp = (v: string, to: "F" | "C"): string => {
-  const n = parseFloat(v);
-  if (Number.isNaN(n)) return v;
-  return (to === "F" ? n * 9 / 5 + 32 : (n - 32) * 5 / 9).toFixed(1);
-};
-const convertBp = (v: string, to: "mmHg" | "kPa"): string =>
-  v.split("/").map((p) => {
-    const n = parseFloat(p.trim());
-    if (Number.isNaN(n)) return p;
-    return to === "kPa" ? (n * 0.133322).toFixed(1) : Math.round(n / 0.133322).toString();
-  }).join("/");
+// Vital unit-conversion helpers + the UNIT_TOGGLES map now live in VitalsBlock
+// (the page no longer renders the clickable unit pills directly).
 // Realistic human-range bounds per (vital, unit). Values outside these get a
 // visual warning state. BP sys/dia get separate keys ("BP_sys" / "BP_dia").
 type VitalRange = { min: number; max: number };
@@ -189,16 +197,6 @@ const isVitalValid = (rangeKey: string, value: string, unit: string): boolean =>
   return n >= r.min && n <= r.max;
 };
 
-const UNIT_TOGGLES: Record<string, { altUnit: string; convert: (v: string) => string }> = {
-  mmHg: { altUnit: "kPa", convert: (v) => convertBp(v, "kPa") },
-  kPa: { altUnit: "mmHg", convert: (v) => convertBp(v, "mmHg") },
-  cm: { altUnit: "in", convert: (v) => convertNum(v, 0.393701) },
-  in: { altUnit: "cm", convert: (v) => convertNum(v, 2.54) },
-  kg: { altUnit: "lb", convert: (v) => convertNum(v, 2.20462) },
-  lb: { altUnit: "kg", convert: (v) => convertNum(v, 0.453592) },
-  "°C": { altUnit: "°F", convert: (v) => convertTemp(v, "F") },
-  "°F": { altUnit: "°C", convert: (v) => convertTemp(v, "C") },
-};
 
 // Build per-cell vital state from the active visit's DTO. Keyed by
 // `${columnIndex}-${rowIndex}` so the duplicate "Hip" cell gets its own slot.
@@ -231,43 +229,109 @@ const buildVitalState = (visit: VisitDTO | undefined): Record<string, VitalCellS
   return state;
 };
 
+// A secondary dose line added via the "Then" plus icon on a medicine row.
+type ThenRow = { dosage: string; whenToTake: string; frequency: string; frequencyInterval: string; duration: string; notes: string };
+const blankThenRow = (): ThenRow => ({ dosage: "", whenToTake: "", frequency: "", frequencyInterval: "", duration: "", notes: "" });
+
 // Draft Rx row in component state — `id` may be null for fresh rows that
 // haven't been saved yet; otherwise carries the server-assigned UUID.
 type RxRowDraft = {
   id: string | null;
   position: number;
   medicine: string;
+  genericName: string;
   medicineNote: string;
   dosage: string;
   whenToTake: string;
   frequency: string;
+  frequencyInterval: string;
   duration: string;
   notes: string;
+  thenRows: ThenRow[];
 };
 
 const blankRxRow = (position: number): RxRowDraft => ({
   id: null,
   position,
   medicine: "",
+  genericName: "",
   medicineNote: "",
   dosage: "",
   whenToTake: "",
   frequency: "",
+  frequencyInterval: "",
   duration: "",
   notes: "",
+  thenRows: [],
 });
+
+// Services-style trailing row: keep every filled row (a medicine entered) in
+// order, followed by exactly one empty row to type the next medicine into.
+// Typing into the trailing empty fills it and a fresh empty re-appears. The
+// trailing empty carries no medicine, so the save path (which drops rows with
+// no medicine) already ignores it.
+const withTrailingRx = (rows: RxRowDraft[]): RxRowDraft[] => {
+  const filled = rows.filter((r) => r.medicine.trim() !== "");
+  const empty = rows.find((r) => r.medicine.trim() === "");
+  return [...filled, empty ?? blankRxRow(0)].map((r, i) => ({ ...r, position: i + 1 }));
+};
 
 const fromRxDTO = (dto: RxRowDTO): RxRowDraft => ({
   id: dto.id ?? null,
   position: dto.position,
   medicine: dto.medicine ?? "",
+  genericName: "",
   medicineNote: dto.medicineNote ?? "",
   dosage: dto.dosage ?? "",
   whenToTake: dto.whenToTake ?? "",
   frequency: dto.frequency ?? "",
+  frequencyInterval: dto.frequencyInterval ?? "",
   duration: dto.duration ?? "",
   notes: dto.notes ?? "",
+  thenRows: [],
 });
+
+// ── Prescription templates (clinic-shared, stored on the backend) ───────────
+// A reusable clinical template — complaints/diagnosis/tests/notes/review + the
+// Rx rows. Excludes vitals and history, which are per-patient measurements and
+// shouldn't be auto-filled from a template. The backend stores `content` as an
+// opaque JSON blob of exactly this shape (minus the name).
+// Per-section template kinds. Each card / footer has its own list — saving
+// from one card only surfaces in that card's Load list.
+type TemplateKind =
+  | "complaints"
+  | "diagnosis"
+  | "tests"
+  | "notes_for_patient"
+  | "private_notes"
+  | "rx";
+
+type SavedTemplate = { name: string; content: string };
+
+const tplStyles: Record<string, React.CSSProperties> = {
+  container: { display: "flex", flexDirection: "column", gap: spacing.m, width: 460, maxWidth: "92vw" },
+  header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: spacing.s },
+  title: { margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.regular, color: colors.neutral900 },
+  subtitle: { margin: "4px 0 0", fontSize: fonts.size.s, color: colors.neutral500 },
+  saveRow: { display: "flex", gap: spacing.s, alignItems: "center" },
+  input: { flex: 1, height: 40, boxSizing: "border-box", padding: `0 ${spacing.s}`, border: `1px solid ${colors.neutral300}`, borderRadius: radii.m, backgroundColor: colors.neutral150, fontFamily: fonts.family.primary, fontSize: fonts.control.md, color: colors.neutral900, outline: "none" },
+  saveBtn: { flexShrink: 0, height: 40, padding: "0 20px", border: "none", borderRadius: radii.full, backgroundColor: colors.primary700, color: colors.neutral100, fontFamily: fonts.family.primary, fontSize: fonts.control.md, cursor: "pointer" },
+  list: { display: "flex", flexDirection: "column", gap: spacing.xs, maxHeight: 280, overflowY: "auto" },
+  empty: { fontFamily: fonts.family.primary, fontSize: fonts.size.s, color: colors.neutral500, textAlign: "center", margin: `${spacing.m} 0` },
+  item: { display: "flex", alignItems: "center", gap: spacing.xs, backgroundColor: colors.neutral150, borderRadius: radii.m, paddingRight: spacing.xs },
+  itemName: { flex: 1, textAlign: "left", background: "transparent", border: "none", cursor: "pointer", padding: `10px ${spacing.s}`, fontFamily: fonts.family.primary, fontSize: fonts.control.md, color: colors.neutral900, borderRadius: radii.m },
+  itemDelete: { flexShrink: 0, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", color: colors.red100, cursor: "pointer", fontSize: 14, borderRadius: radii.s },
+};
+
+// Move-to-today confirmation dialog. Mirrors tplStyles' tokens so it reads as
+// part of the same modal family.
+const moveStyles: Record<string, React.CSSProperties> = {
+  container: { display: "flex", flexDirection: "column", gap: spacing.s, width: 420, maxWidth: "92vw" },
+  title: { margin: 0, fontFamily: fonts.family.secondary, fontSize: fonts.size.h5, lineHeight: fonts.lineHeight.h5, fontWeight: fonts.weight.regular, color: colors.neutral900 },
+  body: { margin: 0, fontFamily: fonts.family.primary, fontSize: fonts.size.s, lineHeight: fonts.lineHeight.s, color: colors.neutral700 },
+  bodyMuted: { margin: `${spacing.xs} 0 0`, fontFamily: fonts.family.primary, fontSize: fonts.size.s, color: colors.neutral500 },
+  actions: { display: "flex", justifyContent: "flex-end", gap: spacing.s, marginTop: spacing.s },
+};
 
 // Format a yyyy-MM-dd date as "DD MMM" (or "Today" if it's today's date).
 const formatVisitLabel = (iso: string): string => {
@@ -289,23 +353,75 @@ const todayIso = (): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
-// Format the secondary line of the patient identity card. Shape:
-// "(M|25)  9876543210" — gender shortened to M/F if needed; phone trailing.
-// Falls back gracefully when fields are missing.
-const formatPatientMeta = (
-  p: { gender: string | null; age: number | null; phone: string | null } | null
-): string => {
-  if (!p) return "";
-  const genderShort = (() => {
-    if (!p.gender) return "";
-    const g = p.gender.trim().toLowerCase();
-    if (g.startsWith("m")) return "M";
-    if (g.startsWith("f")) return "F";
-    return p.gender;
-  })();
-  const ageStr = p.age != null ? String(p.age) : "";
-  const head = genderShort || ageStr ? `(${[genderShort, ageStr].filter(Boolean).join("|")})` : "";
-  return [head, p.phone ?? ""].filter(Boolean).join("  ");
+// Build a new visit's save payload by carrying a source visit forward —
+// review patients usually get the same Rx with minor tweaks, so the doctor
+// edits from a copy instead of retyping. Carried over: history, diagnosis,
+// Rx, tests, all notes (patient / private / review), refer-to. Reset because
+// they're specific to each visit: vitals (measured fresh), the complaint
+// (reason for THIS visit), the review/follow-up date. `source` undefined
+// (no prior visit) yields a fully blank draft.
+const copyForwardDraft = (
+  source: VisitDTO | undefined,
+  opts: { visitDate: string; createdByDoctorId?: string | null; appointmentId?: string | null },
+): SaveVisitRequest => ({
+  visitDate: opts.visitDate,
+  // Per-visit — not carried forward.
+  bpSystolic: null, bpDiastolic: null, bpUnit: null,
+  bmi: null, bmiUnit: null, height: null, heightUnit: null,
+  weight: null, weightUnit: null, temperature: null, temperatureUnit: null,
+  pulse: null, pulseUnit: null, waist: null, waistUnit: null,
+  hip: null, hipUnit: null, spo2: null, spo2Unit: null,
+  complaints: null,
+  reviewDate: null, reviewDays: null,
+  // Carried forward from the source visit.
+  familyHistory: source?.familyHistory ?? null,
+  allergies: source?.allergies ?? null,
+  personalHistory: source?.personalHistory ?? null,
+  pastMedicalHistory: source?.pastMedicalHistory ?? null,
+  diagnosis: source?.diagnosis ?? null,
+  notesForPatient: source?.notesForPatient ?? null,
+  privateNotes: source?.privateNotes ?? null,
+  tests: source?.tests ?? null,
+  reviewNotes: source?.reviewNotes ?? null,
+  referDoctorId: null,
+  referredBy: source?.referredBy ?? null,
+  createdByDoctorId: opts.createdByDoctorId ?? null,
+  appointmentId: opts.appointmentId,
+  sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
+  prescriptions: (source?.prescriptions ?? []).map((p, i) => ({ ...p, id: null, position: i + 1 })),
+});
+
+// Total units to dispense for one Rx row:
+//   qty = ceil( units/dose × doses/day × days )
+// Returns null when any input is missing or unparseable (SOS, "As
+// directed", fractional dose with no clear duration) so the printed Rx
+// can simply show a blank Total column. Mirrors the formula used by
+// AppointmentQueue's Bill Medicines auto-quantity so the printed Rx and
+// the dispensary bill stay consistent.
+// Topical / liquid / per-pack forms (creams, lotions, drops, syrups…) ship as
+// a single unit (tube/bottle/bar), so their dispense quantity is 1 — not
+// doses × days like tablets/capsules.
+const PER_PACK_FORM = /cream|lotion|gel|ointment|\boil\b|shampoo|soap|wash|serum|sunscreen|balm|paste|scrub|spray|powder|syrup|suspension|solution|drop|moisturi|conditioner|foam|emulsion|liniment|tincture/i;
+const computeRxTotal = (medicine?: string | null, dosage?: string | null, frequency?: string | null, duration?: string | null): number | null => {
+  if (medicine && PER_PACK_FORM.test(medicine)) return 1;
+  const dosageMatch = (dosage ?? "").match(/([\d.]+)/);
+  const unitsPerDose = dosageMatch ? parseFloat(dosageMatch[1]) : 1;
+  const dosesPerDay = (frequency ?? "")
+    .split(/[-+,/\s]+/)
+    .map((p) => parseInt(p, 10))
+    .filter((n) => Number.isFinite(n))
+    .reduce((a, b) => a + b, 0);
+  const d = (duration ?? "").match(/(\d+)\s*(day|week|month|year|d|w|m|y)?/i);
+  if (!d) return null;
+  const n = parseInt(d[1], 10);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const unit = (d[2] ?? "day").toLowerCase();
+  const days = unit.startsWith("w") ? n * 7
+    : (unit.startsWith("mon") || unit === "m") ? n * 30
+    : unit.startsWith("y") ? n * 365
+    : n;
+  if (!dosesPerDay || !Number.isFinite(unitsPerDose) || unitsPerDose <= 0) return null;
+  return Math.ceil(unitsPerDose * dosesPerDay * days);
 };
 
 // Figma node 2059:6764 — patient-context action list.
@@ -316,138 +432,267 @@ const formatPatientMeta = (
 // inside the component from real data sources, not hardcoded here.
 type ActionMeta = { icon: React.ReactNode; label: string };
 const ACTION_META: ActionMeta[] = [
-  { icon: <VisitsIcon style={styles.actionIcon} />, label: "Visits" },
-  { icon: <PulseIcon style={styles.actionIcon} />, label: "Reports" },
-  { icon: <FileIcon style={styles.actionIcon} />, label: "Files" },
-  { icon: <HistoryIcon style={styles.actionIcon} />, label: "Timeline" },
-  { icon: <BillCheckIcon style={styles.actionIcon} />, label: "Bills" },
+  { icon: <Icon name="visits" tone="inherit" style={styles.actionIcon} />, label: "Visits" },
+  // Reports + Files merged into a single "Files" tab — category is now a
+  // first-class metadata field on each upload (Reports / Prescriptions /
+  // Observations / Admin / Other), with chip filtering below.
+  { icon: <Icon name="file" tone="inherit" style={styles.actionIcon} />, label: "Files" },
+  { icon: <Icon name="history" tone="inherit" style={styles.actionIcon} />, label: "Timeline" },
+  { icon: <Icon name="bill-check" tone="inherit" style={styles.actionIcon} />, label: "Bills" },
+  // Info appended at the END so the other action indices (Visits 0 … Bills 3)
+  // are untouched; the nav just RENDERS it first (see NAV_ORDER).
+  { icon: <Icon name="user-hands" tone="inherit" style={styles.actionIcon} />, label: "Info" },
 ];
 
-// Figma node 2073:3264 — contact/edit card. Three rows, no active state.
-const CONTACT_ACTIONS: { icon: React.ReactNode; label: string }[] = [
-  { icon: <LetterIcon style={styles.actionIcon} />, label: "Email Patient" },
-  { icon: <VideocameraIcon style={styles.actionIcon} />, label: "Video Call Patient" },
-  { icon: <PenIcon style={styles.actionIcon} />, label: "Edit Patient Info" },
-];
+// Display order for the section nav — Info (index 4) shows first, before Visits.
+const NAV_ORDER = [4, 0, 1, 2, 3];
+const INFO_ACTION = 4;
 
-// Figma node 2143:10730 — Reports view, swapped in when "Reports" is active.
-// AI Summary copy comes from the backend per-patient — left blank until wired.
-// TODO(backend): replace with `useAiSummary(patientId).text`.
-const AI_SUMMARY_TEXT = "";
 
-// List-view config — Reports (action 1) and Files (action 2) render the same
-// table/grid layout with their own header copy, tabs, and rows. Tab metadata
-// stays static; `rows` comes from the backend per-patient.
-// TODO(backend): replace empty `rows` arrays with fetched data, e.g.
-//   const { data: reports } = useReports(patientId);
-//   const { data: files }   = useFiles(patientId);
+// List-view config — single "Files" entry at action 1. Tabs are semantic
+// categories (not file formats) — the chip the user picks at upload time
+// drives both the table and these filter chips. NOTE: the Files tab's rows
+// come from `serverFiles` (fetched from the backend); `rows` here is only the
+// static config scaffold, not the live data.
 type ListViewConfig = {
   title: string;
   subtitle: string;
   addLabel: string;
   nameColumn: string;
+  dateColumn: string;
   tabs: readonly string[];
   rows: { name: string; category: string; date: string }[];
 };
 const LIST_VIEWS: Record<number, ListViewConfig> = {
   1: {
-    title: "Reports",
-    subtitle: "",
-    addLabel: "Add Report",
-    nameColumn: "Report name",
-    tabs: ["All Reports", "Blood", "Pathology"],
-    rows: [],
-  },
-  2: {
     title: "Files",
     subtitle: "",
     addLabel: "Add File",
     nameColumn: "File name",
-    tabs: ["All Files", "Documents", "Images"],
+    dateColumn: "Investigation date",
+    // Semantic categories — match the values used in AddReportModal's
+    // Category dropdown so chip filtering is exact-match against `row.category`.
+    // "All" is a virtual chip handled in `displayRows` (passes everything through).
+    tabs: ["All", "Reports", "Prescriptions", "Observations", "Admin", "Other"],
     rows: [],
   },
 };
 
-// Two-input BP cell: systolic + fixed `/` + diastolic. Auto-advances focus
-// to the diastolic input once the systolic input has 3 digits, or when the
-// user explicitly types `/`. Validation styling is driven by parent state.
-function BpInput({
-  valid, sysValid, diaValid,
-  sys, dia,
-  onSysChange, onDiaChange, onEnter,
-}: {
-  valid: boolean;
-  sysValid: boolean;
-  diaValid: boolean;
-  sys: string;
-  dia: string;
-  onSysChange: (v: string) => void;
-  onDiaChange: (v: string) => void;
-  onEnter: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-}) {
-  const diaRef = React.useRef<HTMLInputElement>(null);
-  const handleSysChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const next = e.target.value;
-    onSysChange(next);
-    if (next.length >= 3) diaRef.current?.focus();
-  };
-  const handleSysKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "/") {
-      e.preventDefault();
-      diaRef.current?.focus();
-      return;
-    }
-    onEnter(e);
-  };
-  return (
-    <div
-      style={{
-        ...styles.bpSplitInput,
-        ...(!valid ? styles.vitalInputValueInvalid : {}),
-      }}
-    >
-      <input
-        style={{ ...styles.bpHalfInput, ...(!sysValid ? styles.vitalInputInvalidText : {}) }}
-        value={sys}
-        onChange={handleSysChange}
-        onKeyDown={handleSysKeyDown}
-        inputMode="numeric"
-        aria-label="Systolic"
-        aria-invalid={!sysValid}
-      />
-      <span style={styles.bpSeparator}>/</span>
-      <input
-        ref={diaRef}
-        style={{ ...styles.bpHalfInput, ...(!diaValid ? styles.vitalInputInvalidText : {}) }}
-        value={dia}
-        onChange={(e) => onDiaChange(e.target.value)}
-        onKeyDown={onEnter}
-        inputMode="numeric"
-        aria-label="Diastolic"
-        aria-invalid={!diaValid}
-      />
-    </div>
-  );
+// (BpInput removed — the BP cell now uses the shared <MeasureField bp> with its
+// own auto-advance systolic→diastolic logic.)
+
+// Renders an image thumbnail for files — handles both local blob URLs and
+// auth-protected API download URLs by fetching with the JWT when needed.
+function AuthThumb({ fileUrl, mimeType, style }: { fileUrl: string | null | undefined; mimeType: string | null | undefined; style?: React.CSSProperties }) {
+  const isImage = (mimeType ?? "").startsWith("image/");
+  const [src, setSrc] = React.useState<string | null>(fileUrl && !fileUrl.startsWith(API_BASE_URL) ? fileUrl : null);
+
+  React.useEffect(() => {
+    if (!fileUrl || !isImage) { setSrc(null); return; }
+    if (!fileUrl.startsWith(API_BASE_URL)) { setSrc(fileUrl); return; }
+    let objectUrl: string | null = null;
+    const token = localStorage.getItem("docodile_token");
+    fetch(fileUrl, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.ok ? r.blob() : null)
+      .then((blob) => { if (blob) { objectUrl = URL.createObjectURL(blob); setSrc(objectUrl); } })
+      .catch(() => {});
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [fileUrl, isImage]);
+
+  if (!src) return null;
+  return <img src={src} alt="" style={style} />;
 }
 
-export function PrescriptionPage() {
+type PrescriptionPageProps = {
+  onNavigate?: (tab: import("../../components/SideNav").NavTab) => void;
+  // Bumped by HomePage after a walk-in is created so the queue refetches
+  // and the new "At Doc" card appears without a manual reload.
+  queueRefreshKey?: number;
+};
+
+export function PrescriptionPage({ onNavigate, queueRefreshKey }: PrescriptionPageProps = {}) {
+  // Drain any pending nav synchronously during the very first render so
+  // the form mounts with the right patient already selected — no brief
+  // flash of the patient picker before the chart opens.
+  const initialNavRef = React.useRef<PendingSessionNav | null | undefined>(undefined);
+  if (initialNavRef.current === undefined) {
+    initialNavRef.current = consumePendingSessionNav();
+  }
+  const initialNav = initialNavRef.current;
+
   // null → renders <PatientPicker>; otherwise renders the prescription form
   // scoped to that patient. Clicking "← back to patients" clears it.
-  const [selectedPatient, setSelectedPatient] = React.useState<Patient | null>(null);
+  const [selectedPatient, setSelectedPatient] = React.useState<Patient | null>(initialNav?.patient ?? null);
   const selectedPatientId = selectedPatient?.id ?? null;
   // The appointment row the doctor clicked View Pad on. Needed so the
   // Start Session / End Session actions can update the appointment's
   // backend status without bouncing back to the queue.
-  const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(initialNav?.appointmentId ?? null);
+  // Status of the selected appointment — gates the auto-create so a visit is
+  // only generated once the patient has been sent to the doctor (AT_DOC) or
+  // is already in session (IN_PROGRESS). Opening the pad on a still-BOOKED
+  // card shows past visits without spawning a new one.
+  const [selectedAppointmentStatus, setSelectedAppointmentStatus] = React.useState<string | null>(null);
+  // The date the queue was showing when the doctor clicked View Pad.
+  // Used as the visit date for auto-create so past-date queues don't
+  // create a visit stamped today.
+  const [queueDate, setQueueDate] = React.useState<string>(todayIso());
+  // Doctor who owns the queue entry the user just clicked View Pad on.
+  // Threaded into the visit's createdByDoctorId so the Patient Files filter
+  // (which scopes by treating doctor / department) can find this patient.
+  const [appointmentDoctorId, setAppointmentDoctorId] = React.useState<string | null>(null);
+
+  // Slot picker — when a patient is opened without a specific appointment
+  // (e.g. from Patient Files) and has 2+ appointments today, ask which slot
+  // this consultation is for before opening/creating its visit.
+  const [slotOptions, setSlotOptions] = React.useState<
+    { id: string; scheduledTime: string | null; doctorId: string | null; status?: string | null }[] | null
+  >(null);
+  const slotFetchedForRef = React.useRef<string | null>(null);
+  // Patient id for which the today-appointments check has finished. The
+  // auto-create effect waits on this so it never creates a visit before we
+  // know whether the doctor needs to pick a slot.
+  const [slotChecked, setSlotChecked] = React.useState<string | null>(null);
+
+  // If the doctor clicked an entry in the header session-tray, route them
+  // straight back to that patient's prescription form. Handled both on mount
+  // (component wasn't rendered yet) and via a custom event (already mounted).
+  // Where Back should route the doctor — set when the patient was
+  // opened from another screen (Patient Files, the session tray, etc.).
+  // Falls back to clearing selection so the prescription home picker
+  // reappears, matching the original behavior.
+  const [, setReturnTab] = React.useState<import("../../components/SideNav").NavTab | null>(
+    initialNav?.returnTab ?? null,
+  );
+  React.useEffect(() => {
+    // initialNav was already consumed at first render — we just listen
+    // for subsequent navs fired while the page is already mounted (e.g.
+    // the session tray in the top nav).
+    const handler = (e: Event) => {
+      const nav = (e as CustomEvent<PendingSessionNav>).detail;
+      setSelectedPatient(nav.patient);
+      setSelectedAppointmentId(nav.appointmentId);
+      if (nav.returnTab) setReturnTab(nav.returnTab);
+      // Always pin the section for the incoming patient — a file-view nav opens
+      // Info (4); a consultation/resume nav (no initialAction) opens Visits (0).
+      // Setting it unconditionally stops a previous patient's tab from bleeding
+      // over and suppressing the Visits-only slot check for the next one.
+      setActiveAction(nav.initialAction ?? 0);
+    };
+    window.addEventListener("docodile:session-nav", handler);
+    return () => window.removeEventListener("docodile:session-nav", handler);
+  }, []);
   // Visits for this patient. `useVisits(null)` returns []; switching to a
   // patient triggers the fetch.
   const { visits, loading: visitsLoading, loadedFor: visitsLoadedFor, refetch: refetchVisits } = useVisits(selectedPatientId);
   const [activeTab, setActiveTab] = React.useState(0);
-  const [activeAction, setActiveAction] = React.useState(0);
+  const [activeAction, setActiveAction] = React.useState(initialNav?.initialAction ?? 0);
+  // Prescription output language (drives the printed/shared Rx language). UI
+  // selector lives on the floating bar; wiring the actual translation is TBD.
+  const [language, setLanguage] = React.useState("English");
   const activeVisit: VisitDTO | undefined = visits[activeTab];
+  // Visit immediately before the currently-viewed tab — used by the rewind
+  // buttons to pull the previous prescription's data into the current form.
+  const prevVisit: VisitDTO | undefined = activeTab > 0 ? visits[activeTab - 1] : undefined;
   const [reviewDate, setReviewDate] = React.useState<Date | null>(null);
-  const [showReviewDatePicker, setShowReviewDatePicker] = React.useState(false);
-  const [rxRows, setRxRows] = React.useState<RxRowDraft[]>([]);
+  // Tracks unsaved edits since the visit loaded / was last saved. Surfaces
+  // the "Save changes" button on an already-completed visit only after the
+  // doctor actually edits. Set on form input + rx mutations, cleared on save
+  // and on visit change.
+  const [dirty, setDirty] = React.useState<boolean>(false);
+  // On an ALREADY-COMPLETED visit, "Save changes" shows only while there's a
+  // pending edit: set on edit, KEPT through the silent blur auto-save (so it
+  // stays available for a manual save), cleared only when the visit is saved /
+  // completed (explicit) or on tab switch. State so clearing re-renders it away.
+  const [pendingSave, setPendingSave] = React.useState<boolean>(false);
+  // Load-settling guard. When a visit's saved data is poured into the controlled
+  // form, a stray change event can bubble to the form-wrapper onChange (or a
+  // controlled child can re-emit) and look like a doctor edit — which would wrongly
+  // surface "Save changes" the instant the pad opens. We mark a short settling
+  // window on every (re)populate and ignore dirty-flagging during it; a real edit
+  // can't happen in the few ms before the first paint. flagDirty() is the single
+  // choke point every "this was a user edit" path goes through.
+  const loadSettlingRef = React.useRef<boolean>(true);
+  const flagDirty = React.useCallback(() => {
+    if (loadSettlingRef.current) return;
+    setDirty(true);
+  }, []);
+  const [rxRows, _setRxRows] = React.useState<RxRowDraft[]>([]);
+  // Every USER rx mutation (add / delete row, picker change, etc.) flags
+  // dirty. The visit-load populate and the async generic-name enrichment use
+  // the raw `_setRxRows` so loading a visit never looks like an edit.
+  const setRxRows = React.useCallback((value: React.SetStateAction<RxRowDraft[]>) => {
+    _setRxRows(value);
+    flagDirty();
+  }, [flagDirty]);
+  const [rxInteractions, setRxInteractions] = React.useState<Array<{ drug: string; interactsWith: string; comment: string }>>([]);
+
+  // Per-medicine autofill: index this patient's PAST prescriptions by medicine
+  // name (most recent wins), excluding the visit being edited. Visits arrive
+  // sorted ascending by date, so later iterations overwrite earlier ones.
+  const lastRxByMedicine = React.useMemo(() => {
+    const map = new Map<string, RxRowDTO>();
+    for (const v of visits) {
+      if (activeVisit && v.id === activeVisit.id) continue;
+      for (const rx of v.prescriptions ?? []) {
+        const key = (rx.medicine ?? "").trim().toLowerCase();
+        if (key) map.set(key, rx);
+      }
+    }
+    return map;
+  }, [visits, activeVisit]);
+
+  // When the doctor enters a medicine they've prescribed to this patient
+  // before, pre-fill that row from the last such prescription. Only fills
+  // empty fields, so it never clobbers what the doctor has already typed.
+  // Per-medicine clinic-wide cache for the autofill API — avoids re-fetching
+  // the same medicine within a session. Cleared on save so the doctor's just-
+  // saved edits become the new default the next time anyone prescribes it.
+  const clinicWideRxCacheRef = React.useRef<Map<string, RxLatestDTO | null>>(new Map());
+  const clinicWideRxFetchingRef = React.useRef<Set<string>>(new Set());
+
+  const applyAutofillFromRx = (rowIndex: number, prior: {
+    dosage?: string | null;
+    whenToTake?: string | null;
+    frequency?: string | null;
+    frequencyInterval?: string | null;
+    duration?: string | null;
+    notes?: string | null;
+  }) => {
+    setRxRows((prev) => prev.map((r, ix) => ix !== rowIndex ? r : {
+      ...r,
+      dosage: r.dosage || (prior.dosage ?? ""),
+      whenToTake: r.whenToTake || (prior.whenToTake ?? ""),
+      frequency: r.frequency || (prior.frequency ?? ""),
+      frequencyInterval: r.frequencyInterval || (prior.frequencyInterval ?? ""),
+      duration: r.duration || (prior.duration ?? ""),
+      notes: r.notes || (prior.notes ?? ""),
+    }));
+  };
+
+  const autofillRxFromHistory = (rowIndex: number, medicineName: string) => {
+    const key = medicineName.trim().toLowerCase();
+    if (!key) return;
+    // 1) Same-patient match first — instant from in-memory `visits`.
+    const samePatient = lastRxByMedicine.get(key);
+    if (samePatient) { applyAutofillFromRx(rowIndex, samePatient); return; }
+    // 2) Clinic-wide latest — cached after the first lookup per medicine. The
+    // backend returns whichever patient most recently had this medicine, so
+    // the doctor's just-saved edits become the default for the next entry.
+    const cache = clinicWideRxCacheRef.current;
+    if (cache.has(key)) {
+      const cached = cache.get(key);
+      if (cached) applyAutofillFromRx(rowIndex, cached);
+      return;
+    }
+    const inflight = clinicWideRxFetchingRef.current;
+    if (inflight.has(key)) return;
+    inflight.add(key);
+    void fetchLatestRxForMedicine(medicineName.trim(), activeVisit?.id ?? null)
+      .then((res) => { cache.set(key, res); if (res) applyAutofillFromRx(rowIndex, res); })
+      .catch(() => { /* silently ignore — autofill is opportunistic */ })
+      .finally(() => { inflight.delete(key); });
+  };
   const [reviewDays, setReviewDays] = React.useState<string>("");
   // Vital values + units (units are clickable to toggle between alternates
   // like cm↔in, kg↔lb, °C↔°F, mmHg↔kPa).
@@ -455,43 +700,151 @@ export function PrescriptionPage() {
     React.useState<Record<string, VitalCellState>>(() => buildVitalState(undefined));
   // History field values (Family History, Allergies, …). Controlled so the
   // <Autocomplete> dropdown can drive them. Reset on visit-tab change.
-  const [historyValues, setHistoryValues] =
+  const [historyValues, _setHistoryValues] =
     React.useState<Record<string, string>>(() =>
       Object.fromEntries(HISTORY_FIELDS.map((f) => [f.field, ""]))
     );
   // Diagnosis + Complaints + Tests are also suggestion-driven
   // (specialty-scoped via the same API).
-  const [diagnosisValue, setDiagnosisValue] = React.useState<string>("");
-  const [complaintsValue, setComplaintsValue] = React.useState<string>("");
-  const [testsValue, setTestsValue] = React.useState<string>("");
+  const [diagnosisValue, _setDiagnosisValue] = React.useState<string>("");
+  const [complaintsValue, _setComplaintsValue] = React.useState<string>("");
+  const [testsValue, _setTestsValue] = React.useState<string>("");
+  // Chip/tag + suggestion fields are click-driven (× to remove a chip, pick a
+  // suggestion) so they don't all bubble a form `onChange`. Wrap their setters
+  // to flag dirty on any user change; the visit-load populate uses the raw
+  // `_set*` versions so loading a visit is never treated as an edit.
+  const setHistoryValues = React.useCallback((value: React.SetStateAction<Record<string, string>>) => {
+    _setHistoryValues(value);
+    flagDirty();
+  }, [flagDirty]);
+  const setDiagnosisValue = React.useCallback((value: React.SetStateAction<string>) => {
+    _setDiagnosisValue(value);
+    flagDirty();
+  }, [flagDirty]);
+  const setComplaintsValue = React.useCallback((value: React.SetStateAction<string>) => {
+    _setComplaintsValue(value);
+    flagDirty();
+  }, [flagDirty]);
+  const setTestsValue = React.useCallback((value: React.SetStateAction<string>) => {
+    _setTestsValue(value);
+    flagDirty();
+  }, [flagDirty]);
   // Notes-for-Patient + Private Notes + Review-Notes are now controlled too
   // so we can serialize them on Save.
   const [notesForPatientValue, setNotesForPatientValue] = React.useState<string>("");
   const [privateNotesValue, setPrivateNotesValue] = React.useState<string>("");
   const [reviewNotesValue, setReviewNotesValue] = React.useState<string>("");
   const [saving, setSaving] = React.useState<boolean>(false);
-  // Form is non-interactive until the user clicks Start Session on the
-  // floating SessionBar. Pausing / ending re-locks. Visually unchanged
-  // while locked — only pointer-events are blocked.
-  const [formActive, setFormActive] = React.useState<boolean>(false);
-  // Refer-To doctor — clinic-scoped picker. `referDoctorId` holds the
-  // selected doctor's UUID; the visible label comes from the matching row
-  // in the `doctors` list fetched via useDoctors().
-  const [referDoctorId, setReferDoctorId] = React.useState<string | null>(null);
-  const [referOpen, setReferOpen] = React.useState(false);
-  const referWrapRef = React.useRef<HTMLDivElement>(null);
-  const { data: doctors } = useDoctors();
-  const referDoctorName = doctors.find((d) => d.id === referDoctorId)?.name ?? "";
+  // Dedicated flag for the "+ New Visit" action ONLY. The shared `saving` flag
+  // flips on every silent blur/debounce auto-save, which made the New Visit
+  // button flicker between "New Visit"/"Creating…" (and enabled/disabled) while
+  // the doctor typed. This tracks just the add-visit op so the button is stable.
+  const [addingVisit, setAddingVisit] = React.useState<boolean>(false);
+  // When completing an OLD, never-finished consultation, we don't complete it
+  // on its stale date — we move its data to a fresh visit dated today and drop
+  // the old one. This holds the original visit's date label while the
+  // confirmation dialog is open (null = closed).
+  const [moveToTodayDate, setMoveToTodayDate] = React.useState<string | null>(null);
+  // Bumped to force the visit form to reload its saved data (used to discard
+  // an edit when the move-to-today dialog is cancelled).
+  const [revertNonce, setRevertNonce] = React.useState(0);
+  // The visit id whose data the form currently holds. Updated (in state, so
+  // it flips atomically with the form fields) every time the form populates
+  // from a visit. handleSave refuses to write unless this matches the active
+  // visit — so during a visit switch the previous visit's form data can never
+  // be saved onto the newly-selected visit (the data-bleed-between-visits bug).
+  const [loadedVisitId, setLoadedVisitId] = React.useState<string | null>(null);
+  // Visits are loaded ASC by visit_date, so the latest one sits at the
+  // tail of the array — that's "today's visit", the one whose SessionBar
+  // Editability is purely a function of the visit's session lifecycle, not
+  // the calendar date or tab order: a visit is editable as long as its
+  // session hasn't been ended. Once the doctor ends the session the visit
+  // is locked permanently (read-only history). This intentionally covers
+  // past visits the doctor left open — they stay editable until ended.
+  // Editability runs on a 24h timer that STARTS when the View Pad is opened
+  // (sessionStartedAt) — NOT the visit date, and NOT the end of the
+  // consultation. While the session is open (un-ended) the pad stays editable
+  // regardless of age so the doctor can finish it; once ended/completed it
+  // stays editable for 24h FROM THE OPEN, then hard-locks. A visit that was
+  // never opened (no session start) falls back to its visit date so today's
+  // fresh visits are still editable.
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  const visitMs = activeVisit?.visitDate ? new Date(activeVisit.visitDate).getTime() : null;
+  const sessionStartMs = activeVisit?.sessionStartedAt ? new Date(activeVisit.sessionStartedAt).getTime() : null;
+  // Whether THIS visit is finished. For an appointment-linked visit that's the
+  // appointment's own status (read from the visit DTO, not the appointment the
+  // chart was opened through). A visit with NO appointment (e.g. a manually
+  // added "+ New Visit") has no status to flip, so we treat it as complete once
+  // its session has been ended — that's what "Complete visit" stamps.
+  const activeCompleted =
+    (activeVisit?.appointmentStatus ?? "").toUpperCase() === "COMPLETED" ||
+    (activeVisit != null && activeVisit.appointmentId == null && activeVisit.sessionEndedAt != null);
+  // An OPEN consultation: the pad was opened (session started) but the visit
+  // was never completed (no end) AND its appointment isn't already Completed.
+  // It must stay editable no matter how old the visit is — otherwise once it
+  // crosses the 24h mark it hard-locks with NO way to finish it, leaving the
+  // appointment stuck IN_PROGRESS forever. The !activeCompleted guard stops a
+  // finished visit whose end-time was never stamped (legacy/inconsistent data)
+  // from masquerading as an open session.
+  const hasOpenSession =
+    activeVisit?.sessionStartedAt != null &&
+    activeVisit?.sessionEndedAt == null &&
+    !activeCompleted;
+  const isWithinBuffer = (() => {
+    // Open consultation (pad opened, not yet ended) — always editable so it can
+    // be finished, regardless of age.
+    if (hasOpenSession) return true;
+    // Ended/completed → editable for 24h counted FROM when the pad was opened.
+    if (sessionStartMs != null && !Number.isNaN(sessionStartMs)) {
+      return Date.now() - sessionStartMs < ONE_DAY_MS;
+    }
+    // Never opened (no session start) → fall back to the visit date so a fresh
+    // today visit is editable until its date passes 24h.
+    return visitMs != null && !Number.isNaN(visitMs) && Date.now() - visitMs < ONE_DAY_MS;
+  })();
+  const isEditable = isWithinBuffer;
+
+  // Edit flag used by every gate below. The form is editable whenever the
+  // visit is within its edit window (today's / within 24h, or an open
+  // in-progress session) — no longer gated behind starting a session.
+  const canEditForm = isEditable;
+
+  // An editable visit that is OLDER than 24h and still in progress (never
+  // completed). Editing one of these shouldn't quietly amend a stale-dated
+  // record — instead we prompt to relocate it to today (see the move-to-today
+  // dialog). For such a visit to be editable at all it must be an open session
+  // (a never-started old visit is already locked), so this is precisely the
+  // "abandoned consultation the doctor is reopening days later" case.
+  const visitOlderThan24h =
+    visitMs != null && !Number.isNaN(visitMs) && Date.now() - visitMs > ONE_DAY_MS;
+  const isOldPending = canEditForm && !activeCompleted && visitOlderThan24h;
+
+  // On initial open of a patient, jump to the latest (today's) visit
+  // tab. Without this the tabs default to index 0, which is the OLDEST
+  // visit — confusing when the doctor expects to land on today.
+  // Tracked per-patient so we don't keep snapping the user back to the
+  // tail when they deliberately click an older tab.
+  const initializedTabForRef = React.useRef<string | null>(null);
   React.useEffect(() => {
-    if (!referOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (referWrapRef.current && !referWrapRef.current.contains(e.target as Node)) {
-        setReferOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [referOpen]);
+    if (selectedPatientId === null) {
+      initializedTabForRef.current = null;
+      return;
+    }
+    if (
+      visitsLoadedFor === selectedPatientId &&
+      visits.length > 0 &&
+      initializedTabForRef.current !== selectedPatientId
+    ) {
+      initializedTabForRef.current = selectedPatientId;
+      setActiveTab(visits.length - 1);
+    }
+  }, [selectedPatientId, visitsLoadedFor, visits.length]);
+  // "Referred by" — the referral doctor (from the Catalog directory) who
+  // referred the patient in. Holds the doctor's NAME (denormalized onto the
+  // visit + printed as "Ref. by"); the picker below lists referral doctors.
+  const [referredBy, setReferredBy] = React.useState<string | null>(null);
+  const { data: doctors } = useDoctors();
+  const referralDoctors = useReferralDoctors();
 
   // Next-Review date <-> days are linked. Picking a date computes the
   // whole-day delta from today; typing days computes today + days. Both
@@ -513,7 +866,7 @@ export function PrescriptionPage() {
   const pickReviewDate = (d: Date) => {
     setReviewDate(d);
     setReviewDays(String(Math.max(0, daysFromToday(d))));
-    setShowReviewDatePicker(false);
+    flagDirty();
   };
   const changeReviewDays = (raw: string) => {
     const cleaned = raw.replace(/\D/g, "");
@@ -525,76 +878,259 @@ export function PrescriptionPage() {
   // Uncontrolled inputs are remounted via the `key` on the visits wrapper
   // below so they pick up new defaultValues automatically.
   React.useEffect(() => {
+    // Open the load-settling window: any change events that fire while we pour
+    // this visit's data into the controlled form below must NOT be treated as
+    // doctor edits. Cleared after the first paint (rAF) — by then a real edit is
+    // the only thing that can flag dirty.
+    loadSettlingRef.current = true;
+    const raf = requestAnimationFrame(() => { loadSettlingRef.current = false; });
+    // Mark that the form now holds THIS visit's data (set in the same state
+    // batch as the fields below, so handleSave's guard sees them in sync).
+    setLoadedVisitId(activeVisit?.id ?? null);
     setReviewDate(activeVisit?.reviewDate ? new Date(activeVisit.reviewDate) : null);
     setReviewDays(activeVisit?.reviewDays != null ? String(activeVisit.reviewDays) : "");
     setReviewNotesValue(activeVisit?.reviewNotes ?? "");
-    setRxRows(
+
+    // Build the new rows first so we can also resolve genericNames against
+    // the same list — if we called setRxRows and then read rxRows in a
+    // separate effect the second effect would still see the old state.
+    const newRows = withTrailingRx(
       activeVisit?.prescriptions && activeVisit.prescriptions.length > 0
         ? activeVisit.prescriptions.map(fromRxDTO)
-        : Array.from({ length: 5 }, (_, i) => blankRxRow(i + 1))
+        : [],
     );
-    setShowReviewDatePicker(false);
+    _setRxRows(newRows); // load — not a user edit, don't flag dirty
+
+    // Resolve genericName for every row that has a medicine but no cached
+    // generic name (all rows on first load since fromRxDTO sets it to "").
+    const toResolve = newRows
+      .map((r, i) => ({ row: r, i }))
+      .filter(({ row }) => row.medicine.trim());
+    if (toResolve.length > 0) {
+      const token = localStorage.getItem("docodile_token") ?? "";
+      toResolve.forEach(({ row, i }) => {
+        fetch(`${API_BASE_URL}/api/medicines/search?q=${encodeURIComponent(row.medicine)}&limit=1`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((r) => r.ok ? r.json() : [])
+          .then((data: Array<{ genericName?: string; generic_name?: string }>) => {
+            const gn = data[0]?.genericName ?? data[0]?.generic_name ?? "Unknown";
+            // Background enrichment, not a user edit — raw setter, no dirty.
+            _setRxRows((prev) => prev.map((r, ix) => ix === i ? { ...r, genericName: gn } : r));
+          })
+          .catch(() => {});
+      });
+    }
+
     setVitalState(buildVitalState(activeVisit));
-    setHistoryValues({
+    // Load — raw setters so populating the form is not treated as an edit.
+    _setHistoryValues({
       family_history: activeVisit?.familyHistory ?? "",
       allergies: activeVisit?.allergies ?? "",
       personal_history: activeVisit?.personalHistory ?? "",
       past_medical_history: activeVisit?.pastMedicalHistory ?? "",
     });
-    setDiagnosisValue(activeVisit?.diagnosis ?? "");
-    setComplaintsValue(activeVisit?.complaints ?? "");
-    setTestsValue(activeVisit?.tests ?? "");
+    _setDiagnosisValue(activeVisit?.diagnosis ?? "");
+    _setComplaintsValue(activeVisit?.complaints ?? "");
+    _setTestsValue(activeVisit?.tests ?? "");
     setNotesForPatientValue(activeVisit?.notesForPatient ?? "");
     setPrivateNotesValue(activeVisit?.privateNotes ?? "");
-    setReferDoctorId(activeVisit?.referDoctorId ?? null);
-    setReferOpen(false);
-    // Dep is the visit id — using the activeVisit object would refire
-    // this on every refetch (auto-save returns a new object even when
-    // the data is unchanged), which would clobber whatever the doctor
-    // typed in the last 10s.
+    // Prefer the new referral field; fall back to the legacy staff-refer name
+    // so pre-existing visits still show their "Ref. by" value.
+    setReferredBy(activeVisit?.referredBy ?? activeVisit?.referDoctorName ?? null);
+    // Loading a visit is not an edit — clear any pending-edit state in the same
+    // effect that pours the data in, so the footer button reads "Complete visit"
+    // (not "Save changes") the instant a pre-filled pad opens. (editedSinceLoadRef
+    // is cleared by the visit-change reset effect / cancelMoveToToday.)
+    setDirty(false);
+    setPendingSave(false);
+    return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, activeVisit?.id]);
+  }, [activeTab, activeVisit?.id, revertNonce]);
 
-  // Auto-create today's draft when the patient has zero visits, so the
-  // form always has a row to write into. The ref-guard keeps React
-  // StrictMode (which double-invokes effects in dev) from creating a
-  // duplicate today-visit.
-  const autoCreatedForPatientRef = React.useRef<string | null>(null);
+  // Debounced auto-save whenever rxRows changes while a session is active.
+  // Pickers (WhenPicker, FrequencyPicker) are div/button elements — they
+  // never fire a blur that bubbles to the form wrapper, so relying solely
+  // on handleFormBlur would silently drop every picker selection.
+  // The ref holds the latest save function so the closure is never stale.
+  const latestSaveRef = React.useRef<() => void>(() => {});
+  latestSaveRef.current = () => {
+    // Suppressed while the move-to-today dialog is open so a debounced Rx edit
+    // can't slip onto the stale-dated visit before the doctor decides.
+    if (canEditForm && activeVisit && moveToTodayDate == null) void handleSave({ silent: true });
+  };
   React.useEffect(() => {
-    if (
-      selectedPatientId &&
-      !visitsLoading &&
-      // Only fire after a successful fetch has confirmed visits are empty
-      // for THIS patient. Without this guard the initial render (visits=[],
-      // loading=false) tricks the effect into POSTing a duplicate "today"
-      // visit on every reopen.
-      visitsLoadedFor === selectedPatientId &&
-      visits.length === 0 &&
-      autoCreatedForPatientRef.current !== selectedPatientId
-    ) {
-      autoCreatedForPatientRef.current = selectedPatientId;
-      const draft: SaveVisitRequest = {
-        visitDate: todayIso(),
-        bpSystolic: null, bpDiastolic: null, bpUnit: null,
-        bmi: null, bmiUnit: null, height: null, heightUnit: null,
-        weight: null, weightUnit: null, temperature: null, temperatureUnit: null,
-        pulse: null, pulseUnit: null, waist: null, waistUnit: null,
-        hip: null, hipUnit: null, spo2: null, spo2Unit: null,
-        familyHistory: null, allergies: null, personalHistory: null, pastMedicalHistory: null,
-        complaints: null, diagnosis: null, notesForPatient: null, privateNotes: null, tests: null,
-        referDoctorId: null,
-        reviewDate: null, reviewDays: null, reviewNotes: null,
-        sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
-        prescriptions: [],
-      };
-      void createVisit(selectedPatientId, draft).then(() => refetchVisits());
+    if (!canEditForm) return;
+    const timer = setTimeout(() => latestSaveRef.current(), 1500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rxRows]);
+
+  // Check drug interactions whenever the Rx medicine list changes.
+  // Sends saved medicine names to the backend which resolves generics itself —
+  // so warnings persist after page reload without needing to re-select.
+  React.useEffect(() => {
+    const medicines = rxRows.map((r) => r.medicine).filter(Boolean);
+    if (medicines.length < 2) { setRxInteractions([]); return; }
+    const timer = setTimeout(() => {
+      const token = localStorage.getItem("docodile_token") ?? "";
+      fetch(`${API_BASE_URL}/api/medicines/interactions?medicines=${encodeURIComponent(medicines.join(","))}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((r) => r.ok ? r.json() : [])
+        .then(setRxInteractions)
+        .catch(() => setRxInteractions([]));
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [rxRows]);
+
+  // Each appointment owns its own visit. Opening a pad from an appointment
+  // jumps to (or creates) the visit tagged with that appointment id — so a
+  // patient's two same-day appointments get two distinct visits, each with
+  // its own session, rather than reusing one stale today-visit.
+  //
+  // The ref-guard keeps React StrictMode (double-invokes effects in dev),
+  // and the async create→refetch window, from creating a duplicate.
+  const autoCreatedForApptRef = React.useRef<string | null>(null);
+  // One-shot "jump to this appointment's visit" — after the first open we
+  // stop forcing the tab so the doctor can browse previous visits freely.
+  const apptJumpedRef = React.useRef<string | null>(null);
+  // One-shot "jump to the unfinished session" for ambient (no-appointment)
+  // opens, so the doctor resumes where they left off without it overriding
+  // their tab choice afterwards.
+  const unfinishedJumpedForPatientRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!selectedPatientId || visitsLoading || visitsLoadedFor !== selectedPatientId) return;
+    // Wait until we've checked today's appointments, and don't create
+    // anything while the slot-picker popup is open — the doctor's choice
+    // decides which appointment's visit to create/open.
+    if (slotChecked !== selectedPatientId || slotOptions) return;
+
+    // ── Appointment context: one visit per appointment ──────────────────
+    if (selectedAppointmentId) {
+      const apptIdx = visits.findIndex((v) => v.appointmentId === selectedAppointmentId);
+      if (apptIdx >= 0) {
+        // This appointment already has its visit — open it ONCE. After that
+        // the doctor controls the tab, so they can browse earlier visits.
+        if (apptJumpedRef.current !== selectedAppointmentId) {
+          if (activeTab !== apptIdx) setActiveTab(apptIdx);
+          const v = visits[apptIdx];
+          if (v.visitDate && queueDate !== v.visitDate) setQueueDate(v.visitDate);
+          apptJumpedRef.current = selectedAppointmentId;
+        }
+        autoCreatedForApptRef.current = selectedAppointmentId;
+        return;
+      }
+      // No visit for this appointment yet — create one tagged with it.
+      // After refetch this effect re-runs and the branch above selects it.
+      // Gate: only when the receptionist has marked the patient as sent to
+      // the doctor (AT_DOC) or they're already in session (IN_PROGRESS).
+      // On a still-BOOKED card the pad opens but no visit is auto-spawned.
+      const apptStatus = (selectedAppointmentStatus ?? "").toUpperCase();
+      if (apptStatus !== "AT_DOC" && apptStatus !== "IN_PROGRESS") {
+        return;
+      }
+      if (autoCreatedForApptRef.current !== selectedAppointmentId) {
+        autoCreatedForApptRef.current = selectedAppointmentId;
+        // Carry the patient's most recent past visit forward (visits are
+        // sorted oldest→newest, so the last one is the latest). Review
+        // patients open pre-filled with their history / diagnosis / Rx /
+        // notes — vitals, complaint and review date start fresh.
+        const lastVisit = visits.length > 0 ? visits[visits.length - 1] : undefined;
+        const draft = copyForwardDraft(lastVisit, {
+          visitDate: queueDate,
+          createdByDoctorId: appointmentDoctorId,
+          appointmentId: selectedAppointmentId,
+        });
+        void createVisit(selectedPatientId, draft)
+          .then(() => refetchVisits())
+          .catch((err: Error) => showToast(err.message || "Failed to create visit"));
+      }
+      return;
     }
-  }, [selectedPatientId, visitsLoading, visitsLoadedFor, visits.length, refetchVisits]);
-  // Reset the auto-create guard whenever the user picks a different patient
-  // (or leaves and comes back to the same one).
+
+    // ── Ambient (no appointment): resume an unfinished session once ─────
+    const unfinishedIdx = visits.findIndex((v) => v.sessionStartedAt && !v.sessionEndedAt);
+    if (unfinishedIdx >= 0 && unfinishedJumpedForPatientRef.current !== selectedPatientId) {
+      const v = visits[unfinishedIdx];
+      if (activeTab !== unfinishedIdx) setActiveTab(unfinishedIdx);
+      if (v.visitDate && queueDate !== v.visitDate) setQueueDate(v.visitDate);
+      unfinishedJumpedForPatientRef.current = selectedPatientId;
+    }
+  }, [selectedPatientId, selectedAppointmentId, selectedAppointmentStatus, visitsLoading, visitsLoadedFor, visits, refetchVisits, queueDate, activeTab, appointmentDoctorId, slotChecked, slotOptions]);
+  // Reset the one-shot guards when the user leaves the patient.
   React.useEffect(() => {
-    if (selectedPatientId === null) autoCreatedForPatientRef.current = null;
+    if (selectedPatientId === null) {
+      autoCreatedForApptRef.current = null;
+      apptJumpedRef.current = null;
+      unfinishedJumpedForPatientRef.current = null;
+      slotFetchedForRef.current = null;
+      setSlotOptions(null);
+      setSlotChecked(null);
+      setSelectedAppointmentStatus(null);
+      // Back to the queue → next patient opened from the in-page queue starts on
+      // Visits, so its slot check runs (the queue onSelect doesn't set a section).
+      setActiveAction(0);
+    }
   }, [selectedPatientId]);
+
+  // When the doctor enters the Visits/consultation flow for a patient, look up
+  // the patient's appointments for today. With 2+, ask which slot this
+  // consultation is for (popup below) — a visit is only created once the doctor
+  // picks. With exactly 1, adopt it silently. With 0, leave the ambient flow
+  // (existing visits / "No visits yet").
+  // Only in the Visits section (activeAction 0): opening the patient FILE
+  // (Info / Files / Timeline / Bills) is just browsing, not starting a visit,
+  // so it must not prompt for a slot. Switching to the Visits tab runs it then.
+  React.useEffect(() => {
+    if (!selectedPatientId || visitsLoadedFor !== selectedPatientId) return;
+    if (activeAction !== 0) return;
+    if (slotFetchedForRef.current === selectedPatientId) return;
+    slotFetchedForRef.current = selectedPatientId;
+    const today = todayIso();
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = localStorage.getItem("docodile_token");
+        const res = await fetch(`${API_BASE_URL}/api/tenant/appointments?date=${today}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok || cancelled) return;
+        const all: Array<{ id: string; patientId: string; scheduledTime: string | null; doctorId: string | null; status?: string | null }> =
+          await res.json();
+        const mine = all.filter((a) => a.patientId === selectedPatientId);
+        if (cancelled) return;
+        if (mine.length >= 2) {
+          setSlotOptions(mine);
+        } else if (mine.length === 1) {
+          setSelectedAppointmentId(mine[0].id);
+          setSelectedAppointmentStatus(mine[0].status ?? null);
+          if (mine[0].doctorId) setAppointmentDoctorId(mine[0].doctorId);
+        }
+        // When the appointment was pre-selected (queue's View Pad), pick up
+        // its status from the same fetch so the auto-create gate works.
+        if (selectedAppointmentId) {
+          const match = all.find((a) => a.id === selectedAppointmentId);
+          if (match) setSelectedAppointmentStatus(match.status ?? null);
+        }
+      } catch {
+        /* ignore — fall back to the ambient flow */
+      } finally {
+        if (!cancelled) setSlotChecked(selectedPatientId);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedPatientId, visitsLoadedFor, activeAction]);
+
+  // Adopt the slot the doctor picked → the per-appointment auto-create
+  // effect then opens (or creates) that appointment's visit.
+  const chooseSlot = (a: { id: string; doctorId: string | null; status?: string | null }) => {
+    setSelectedAppointmentId(a.id);
+    setSelectedAppointmentStatus(a.status ?? null);
+    if (a.doctorId) setAppointmentDoctorId(a.doctorId);
+    setQueueDate(todayIso());
+    setSlotOptions(null);
+  };
 
   // When the view swaps from picker → form (or back), reset the scroll
   // position to the absolute top. The PrescriptionPage renders inside
@@ -627,34 +1163,43 @@ export function PrescriptionPage() {
   const showToast = (message: string) => setToast({ visible: true, message });
   const closeToast = () => setToast({ visible: false, message: "" });
 
-  const setVitalValue = (key: string, value: string) =>
-    setVitalState((prev) => ({ ...prev, [key]: { ...prev[key], value } }));
-  const validateVitalOnEnter = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    label: string,
-    value: string,
-    unit: string,
-    isBp = false,
-  ) => {
-    if (e.key !== "Enter") return;
-    if (isBp) {
-      const [sys = "", dia = ""] = value.split("/");
-      const sysOk = isVitalValid("BP_sys", sys, unit);
-      const diaOk = isVitalValid("BP_dia", dia, unit);
-      if (!sysOk || !diaOk) showToast(`Please enter a valid blood pressure (${unit})`);
-    } else {
-      if (!isVitalValid(label, value, unit)) {
-        showToast(`Please enter a valid ${label.toLowerCase()} (${unit})`);
-      }
-    }
-  };
-  const toggleVitalUnit = (key: string) =>
-    setVitalState((prev) => {
-      const cell = prev[key];
-      const toggle = UNIT_TOGGLES[cell.unit];
-      if (!toggle) return prev;
-      return { ...prev, [key]: { value: toggle.convert(cell.value), unit: toggle.altUnit } };
-    });
+  // Vitals editing (setVitalValue / toggleVitalUnit / validateVitalOnEnter)
+  // now lives inside VitalsBlock — the page only owns vitalState + setVitalState.
+
+  // BMI auto-calc, one half of the Height/Weight ⇄ BMI mutual exclusion. When
+  // Height or Weight is present, BMI is DERIVED from them (and locked). We only
+  // overwrite BMI while at least one of Height/Weight is filled — so a BMI typed
+  // DIRECTLY (with Height/Weight empty) is never wiped by this effect. A derived
+  // BMI is non-empty only when BOTH inputs are filled, so clearing either one
+  // blanks it via computeBmi → there's no stale value left to mislead the lock.
+  // Uses the raw setVitalState — recomputing BMI is never itself a doctor edit,
+  // so it must not flag dirty (the Height/Weight change that triggered it
+  // already did). buildSaveRequest reads BMI straight from vitalState, so the
+  // persisted value follows automatically.
+  const heightCellValue = vitalState[HEIGHT_KEY]?.value;
+  const heightCellUnit = vitalState[HEIGHT_KEY]?.unit;
+  const weightCellValue = vitalState[WEIGHT_KEY]?.value;
+  const weightCellUnit = vitalState[WEIGHT_KEY]?.unit;
+  React.useEffect(() => {
+    const hwFilled =
+      (heightCellValue ?? "").trim() !== "" || (weightCellValue ?? "").trim() !== "";
+    if (!hwFilled) return; // BMI is free for manual entry — don't overwrite it
+    const next = computeBmi(vitalState[HEIGHT_KEY], vitalState[WEIGHT_KEY]);
+    setVitalState((prev) =>
+      prev[BMI_KEY]?.value === next
+        ? prev
+        : { ...prev, [BMI_KEY]: { value: next, unit: prev[BMI_KEY]?.unit ?? "kg/m²" } },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heightCellValue, heightCellUnit, weightCellValue, weightCellUnit]);
+
+  // The mutual-exclusion lock state, derived from current values:
+  //  • Height/Weight present → BMI is locked (shows the auto-calculated value).
+  //  • BMI present with NO Height/Weight → Height + Weight are locked.
+  //  • everything empty → nothing locked (pick either method).
+  const vitalsHaveHeightWeight =
+    (heightCellValue ?? "").trim() !== "" || (weightCellValue ?? "").trim() !== "";
+  const lockBmiField = vitalsHaveHeightWeight;
 
   // List-view tab state — shared across Reports / Files. Defaults to the
   // first tab ("All Reports" / "All Files").
@@ -662,37 +1207,141 @@ export function PrescriptionPage() {
   // Toggle between the table layout (default) and the card grid layout
   // (Figma node 2143:11610). Driven by the list/widget icons in the tabs row.
   const [viewMode, setViewMode] = React.useState<"list" | "grid">("list");
-  // Tuning button dropdown items — open/close + outside-click handling lives
-  // inside <PopoverMenu>, so we just declare the actions here.
-  const tuningMenuItems = [
-    {
-      label: "+ New Visit",
-      onClick: () => void handleAddVisit(),
-    },
-    {
-      label: "Clear all",
-      onClick: () => {
-        setVitalState(buildVitalState(undefined));
-        setReviewDate(null);
-        setReviewDays("");
-        setReviewNotesValue("");
-        setRxRows(Array.from({ length: 5 }, (_, i) => blankRxRow(i + 1)));
-        setHistoryValues({
-          family_history: "", allergies: "", personal_history: "", past_medical_history: "",
-        });
-        setDiagnosisValue("");
-        setComplaintsValue("");
-        setTestsValue("");
-        setNotesForPatientValue("");
-        setPrivateNotesValue("");
-      },
-    },
-    {
-      label: "Saved templates",
-      onClick: () => {
-        // TODO: open Saved Templates picker once the backend exists.
-      },
-    },
+  // Per-section prescription templates (clinic-shared, backend-stored).
+  // Each card / footer has its own kind; saving from a kind only surfaces in
+  // that kind's Load list. The same modal serves both modes (load vs save),
+  // driven by `templatesKind` for which section it's scoped to.
+  const [showTemplates, setShowTemplates] = React.useState(false);
+  const [templatesMode, setTemplatesMode] = React.useState<"load" | "save">("load");
+  const [templatesKind, setTemplatesKind] = React.useState<TemplateKind>("rx");
+  const [templateName, setTemplateName] = React.useState("");
+  const [savedTemplates, setSavedTemplates] = React.useState<SavedTemplate[]>([]);
+  const [templatesBusy, setTemplatesBusy] = React.useState(false);
+
+  // What goes into `content` for each kind — only the relevant section's data,
+  // so a "Complaints" template stays a complaints blob and a load is scoped.
+  const buildTemplateContent = (kind: TemplateKind): string => {
+    switch (kind) {
+      case "complaints": return JSON.stringify({ complaints: complaintsValue });
+      case "diagnosis": return JSON.stringify({ diagnosis: diagnosisValue });
+      case "tests": return JSON.stringify({ tests: testsValue });
+      case "notes_for_patient": return JSON.stringify({ notesForPatient: notesForPatientValue });
+      case "private_notes": return JSON.stringify({ privateNotes: privateNotesValue });
+      case "rx": return JSON.stringify({ rxRows });
+    }
+  };
+
+  // Apply a loaded template's content to ONLY the kind's section, leaving
+  // every other field alone. Malformed JSON falls back to blanks.
+  const applyTemplateContent = (kind: TemplateKind, content: string) => {
+    let c: Record<string, unknown> = {};
+    try { c = JSON.parse(content) as Record<string, unknown>; } catch { /* keep blanks */ }
+    switch (kind) {
+      case "complaints": setComplaintsValue(typeof c.complaints === "string" ? c.complaints : ""); break;
+      case "diagnosis": setDiagnosisValue(typeof c.diagnosis === "string" ? c.diagnosis : ""); break;
+      case "tests": setTestsValue(typeof c.tests === "string" ? c.tests : ""); break;
+      case "notes_for_patient": setNotesForPatientValue(typeof c.notesForPatient === "string" ? c.notesForPatient : ""); break;
+      case "private_notes": setPrivateNotesValue(typeof c.privateNotes === "string" ? c.privateNotes : ""); break;
+      case "rx": {
+        const rows = Array.isArray(c.rxRows) ? (c.rxRows as RxRowDraft[]) : [];
+        // Reset ids/positions so loaded rows save as fresh Rx rows on this visit.
+        setRxRows(withTrailingRx(rows.map((r, i) => ({ ...r, id: null, position: i + 1, thenRows: r.thenRows ?? [] }))));
+        break;
+      }
+    }
+  };
+
+  const refreshTemplates = (kind: TemplateKind) =>
+    listRxTemplates(kind)
+      .then((rows) => setSavedTemplates(rows.map((r) => ({ name: r.name, content: r.content }))))
+      .catch((e: Error) => showToast(e.message || "Couldn't load templates"));
+
+  const openTemplates = (mode: "load" | "save", kind: TemplateKind) => {
+    setTemplatesMode(mode);
+    setTemplatesKind(kind);
+    setTemplateName("");
+    setShowTemplates(true);
+    void refreshTemplates(kind);
+  };
+
+  const handleSaveTemplate = () => {
+    const name = templateName.trim();
+    if (!name) { showToast("Enter a template name"); return; }
+    const kind = templatesKind;
+    const content = buildTemplateContent(kind);
+    setTemplatesBusy(true);
+    saveRxTemplate(name, content, kind)
+      .then(() => { setTemplateName(""); setShowTemplates(false); showToast(`Saved template "${name}"`); return refreshTemplates(kind); })
+      .catch((e: Error) => showToast(e.message || "Couldn't save template"))
+      .finally(() => setTemplatesBusy(false));
+  };
+
+  const handleLoadTemplate = (t: SavedTemplate) => {
+    applyTemplateContent(templatesKind, t.content);
+    setShowTemplates(false);
+    showToast(`Loaded "${t.name}"`);
+  };
+
+  const handleDeleteTemplate = (name: string) => {
+    const kind = templatesKind;
+    setTemplatesBusy(true);
+    deleteRxTemplate(name, kind)
+      .then(() => refreshTemplates(kind))
+      .catch((e: Error) => showToast(e.message || "Couldn't delete template"))
+      .finally(() => setTemplatesBusy(false));
+  };
+
+  // Clear all — wipes every field on the current prescription back to blank.
+  // Relocated out of the old "tuning" dropdown into the section action bar
+  // (it acts on the active prescription, same scope as Print / Download /
+  // Share). Constructive "+ New Visit" deliberately lives elsewhere (the visit
+  // tab strip) so a mis-click can never swap create-a-visit for wipe-the-form.
+  const handleClearAll = () => {
+    setVitalState(buildVitalState(undefined));
+    setReviewDate(null);
+    setReviewDays("");
+    setReviewNotesValue("");
+    setRxRows([blankRxRow(1)]);
+    setHistoryValues({
+      family_history: "", allergies: "", personal_history: "", past_medical_history: "",
+    });
+    setDiagnosisValue("");
+    setComplaintsValue("");
+    setTestsValue("");
+    setNotesForPatientValue("");
+    setPrivateNotesValue("");
+  };
+
+  // Download every file in the patient's Files tab (best-effort: triggers a
+  // browser download per file that has a URL).
+  const handleDownloadAllFiles = () => {
+    const downloadable = serverFiles.filter((f) => f.fileUrl);
+    if (!downloadable.length) {
+      showToast("No files to download");
+      return;
+    }
+    downloadable.forEach((f) => {
+      const a = document.createElement("a");
+      a.href = f.fileUrl as string;
+      a.download = f.name || "";
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+    showToast(`Downloading ${downloadable.length} file${downloadable.length === 1 ? "" : "s"}…`);
+  };
+
+  // Contact / patient actions — collapsed into the header "⋯" kebab so the
+  // sticky header carries the stable patient-level actions (call / email /
+  // video / edit) without crowding the section nav beside it.
+  const contactMenuItems = [
+    ...(selectedPatient?.phone
+      ? [{ icon: <Icon name="phone" tone="inherit" style={styles.kebabItemIcon} />, label: "Call patient", onClick: () => { window.location.href = `tel:${selectedPatient.phone}`; } }]
+      : []),
+    { icon: <Icon name="mail" tone="inherit" style={styles.kebabItemIcon} />, label: "Email patient", onClick: () => {} },
+    { icon: <Icon name="videocamera" tone="inherit" style={styles.kebabItemIcon} />, label: "Video call", onClick: () => {} },
+    { icon: <Icon name="pen" tone="inherit" style={styles.kebabItemIcon} />, label: "Edit patient info", onClick: () => setShowEditPatient(true) },
   ];
 
   // ── Header + right-area content driven by which left-rail action is active.
@@ -701,60 +1350,144 @@ export function PrescriptionPage() {
   // - Timeline / Bills: "coming soon" placeholder
   const listViewConfig = LIST_VIEWS[activeAction] ?? null;
 
-  // Client-side uploads for the Reports / Files list views, keyed by
-  // activeAction (1 = Reports, 2 = Files). Clicking the "+ Add" pill in the
-  // page header opens a native file picker; selected files are appended to
-  // this map so they show up immediately in the list/grid below.
-  // TODO(backend): on upload, also POST the file to /reports or /files.
-  type ListRow = { name: string; category: string; date: string };
-  const [uploadedItems, setUploadedItems] = React.useState<Record<number, ListRow[]>>({});
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const openFilePicker = () => fileInputRef.current?.click();
-  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    if (files.length === 0) return;
-    const today = new Date().toLocaleDateString("en-GB", {
-      day: "2-digit", month: "short", year: "2-digit",
-    });
-    const newRows: ListRow[] = files.map((f) => ({
-      name: f.name,
-      category: "Uploaded",
-      date: today,
-    }));
-    setUploadedItems((prev) => ({
-      ...prev,
-      [activeAction]: [...(prev[activeAction] ?? []), ...newRows],
-    }));
-    // Reset so selecting the same file twice still triggers onChange.
-    e.target.value = "";
+  type ListRow = {
+    id?: string;
+    fileId?: string;      // backend UUID — present for server-persisted files
+    name: string;
+    category: string;
+    date: string;
+    fileUrl?: string | null;
+    mimeType?: string | null;
   };
-  // Display rows = backend rows (empty for now) + client-side uploads.
-  const displayRows: ListRow[] = listViewConfig
-    ? [...listViewConfig.rows, ...(uploadedItems[activeAction] ?? [])]
+
+  // Server-persisted files for action 1 (Files tab). Populated on patient
+  // select and extended optimistically when the user uploads new files.
+  const [serverFiles, setServerFiles] = React.useState<ListRow[]>([]);
+
+  React.useEffect(() => {
+    if (!selectedPatientId) { setServerFiles([]); return; }
+    const token = localStorage.getItem("docodile_token");
+    fetch(`${API_BASE_URL}/api/patients/${selectedPatientId}/files`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.ok ? r.json() : [])
+      .then((dtos: Array<{ id: string; name: string; category: string | null; investigationDate: string | null; mimeType: string | null; createdAt: string }>) => {
+        setServerFiles(dtos.map((d) => ({
+          id: d.id,
+          fileId: d.id,
+          name: d.name,
+          category: d.category ?? "Other",
+          date: d.investigationDate
+            ? new Date(d.investigationDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })
+            : new Date(d.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }),
+          fileUrl: null,
+          mimeType: d.mimeType ?? null,
+        })));
+      })
+      .catch(() => setServerFiles([]));
+  }, [selectedPatientId]);
+
+  const [showAddModal, setShowAddModal] = React.useState(false);
+  const [showEditPatient, setShowEditPatient] = React.useState(false);
+  // AI Summary popover (opened from the ✨ button in the slim icon rail).
+  const [showAiSummary, setShowAiSummary] = React.useState(false);
+  // AI patient summary — fetched (cached, free) on patient change and shown in
+  // the ✨ card + popover; the popover's Generate button calls the paid POST.
+  const [aiSummary, setAiSummary] = React.useState<PatientSummary | null>(null);
+  const [aiStale, setAiStale] = React.useState(false);       // backend says new visits invalidated the cache
+  const [aiConfigured, setAiConfigured] = React.useState<boolean | null>(null);
+  const [aiGenerating, setAiGenerating] = React.useState(false);
+  const [aiError, setAiError] = React.useState<string | null>(null);
+
+  // Load the CACHED summary whenever the patient changes (never calls OpenAI).
+  React.useEffect(() => {
+    if (!selectedPatientId) { setAiSummary(null); setAiStale(false); setAiError(null); return; }
+    let cancelled = false;
+    setAiError(null);
+    (async () => {
+      try {
+        const health = await getAIHealth();
+        if (cancelled) return;
+        setAiConfigured(health.configured);
+        if (!health.configured) { setAiSummary(null); return; }
+        const resp = await fetchPatientSummary(selectedPatientId);
+        if (cancelled) return;
+        setAiStale(!resp.generated);
+        setAiSummary(resp.content ? parsePatientSummary(resp.content) : null);
+      } catch (e) {
+        if (!cancelled) setAiError((e as Error).message || "Couldn't load summary");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedPatientId]);
+
+  // Explicit (paid) generation — wired to the popover's Generate/Regenerate.
+  const handleGenerateSummary = async () => {
+    if (!selectedPatientId || aiGenerating) return;
+    setAiGenerating(true);
+    setAiError(null);
+    try {
+      const resp = await generatePatientSummary(selectedPatientId);
+      setAiStale(!resp.generated);
+      setAiSummary(resp.content ? parsePatientSummary(resp.content) : null);
+    } catch (e) {
+      setAiError((e as Error).message || "Couldn't generate summary");
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+  // The currently-open file row. null = list view.
+  const [viewerOpen, setViewerOpen] = React.useState<ListRow | null>(null);
+  const handleAddRows = (rows: AddReportRow[]) => {
+    // Always show every row immediately. fileId present = persisted on server.
+    // fileId absent = backend upload failed; still visible via local blob URL.
+    setServerFiles((prev) => [
+      ...rows.map((r) => ({
+        id: r.id,
+        fileId: r.fileId,
+        name: r.name,
+        category: r.category,
+        date: r.date,
+        fileUrl: r.fileUrl,
+        mimeType: r.mimeType,
+      })),
+      ...prev,
+    ]);
+  };
+  const removeRxRow = (rowIdx: number) =>
+    setRxRows((prev) => withTrailingRx(prev.filter((_, ri) => ri !== rowIdx)));
+  const addThenRow = (rowIdx: number) =>
+    setRxRows((prev) => prev.map((r, ri) => ri !== rowIdx ? r : { ...r, thenRows: [...r.thenRows, blankThenRow()] }));
+  const removeThenRow = (rowIdx: number, thenIdx: number) =>
+    setRxRows((prev) => prev.map((r, ri) => ri !== rowIdx ? r : { ...r, thenRows: r.thenRows.filter((_, ti) => ti !== thenIdx) }));
+  const updateThenField = (rowIdx: number, thenIdx: number, key: keyof ThenRow, value: string) =>
+    setRxRows((prev) => prev.map((r, ri) => ri !== rowIdx ? r : { ...r, thenRows: r.thenRows.map((t, ti) => ti !== thenIdx ? t : { ...t, [key]: value }) }));
+
+  // Display rows for the Files tab (action 1) come from serverFiles (backend).
+  // Other list-view actions use their config's static rows array.
+  const allRows: ListRow[] = listViewConfig
+    ? (activeAction === 1 ? serverFiles : listViewConfig.rows)
     : [];
+  const activeChipLabel = listViewConfig?.tabs[activeListTab] ?? "All";
+  const displayRows: ListRow[] = activeChipLabel === "All"
+    ? allRows
+    : allRows.filter((r) => r.category === activeChipLabel);
 
   // Action-list badge counts pulled from the same data sources the right
   // pane reads from. Timeline + Bills have no data layer yet so they show 0
   // until those features are built.
   const countFor = (actionIndex: number): number => {
+    if (actionIndex === 1) return serverFiles.length;
     const config = LIST_VIEWS[actionIndex];
-    if (config) {
-      return config.rows.length + (uploadedItems[actionIndex]?.length ?? 0);
-    }
+    if (config) return config.rows.length;
     if (actionIndex === 0) return visits.length; // Visits
-    return 0; // Timeline (3), Bills (4) — placeholders
+    return 0; // Timeline (2), Bills (3) — placeholders, post-merge indexes.
   };
-  const comingSoonLabel = activeAction === 3 ? "Timeline" : activeAction === 4 ? "Bills" : null;
-  const headerTitle =
-    listViewConfig?.title ?? comingSoonLabel ?? "Visits";
-  // Subtitle is derived from the displayed row count for list views (backend
-  // data + client uploads), defaults to a placeholder for Coming Soon, and
-  // stays static for the default Visits view.
-  const headerSubtitle = listViewConfig
-    ? `${listViewConfig.rows.length + (uploadedItems[activeAction]?.length ?? 0)} ${listViewConfig.title.toLowerCase()} on file`
-    : comingSoonLabel
-      ? "Coming soon"
-      : "Patient visit history and prescription";
+  // Action indices after the Reports/Files merge:
+  //   0 = Visits   1 = Files   2 = Timeline   3 = Bills
+  // Header label per section. Timeline (2) is implemented (a visit feed);
+  // only Bills (3) is still a "coming soon" placeholder.
+  const comingSoonLabel = activeAction === 3 ? "Bills" : null;
 
   // Each collapsible section starts expanded; clicking the header chevron toggles.
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({
@@ -764,9 +1497,6 @@ export function PrescriptionPage() {
   });
   const toggleSection = (key: string) =>
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
-
-  const formatReviewDate = (d: Date): string =>
-    d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
   // Build a SaveVisitRequest from the current form state. Vitals are
   // re-split for BP (sys/dia from the combined "sys/dia" cell value) and
@@ -813,7 +1543,8 @@ export function PrescriptionPage() {
       notesForPatient: notesForPatientValue || null,
       privateNotes: privateNotesValue || null,
       tests: testsValue || null,
-      referDoctorId: referDoctorId,
+      referDoctorId: null,
+      referredBy: referredBy,
       reviewDate: fmtDate(reviewDate),
       reviewDays: reviewDays.trim() === "" ? null : parseInt(reviewDays, 10),
       reviewNotes: reviewNotesValue || null,
@@ -821,13 +1552,15 @@ export function PrescriptionPage() {
       // so an in-progress timer survives auto-save round-trips. The
       // bar-driven handlers below also overwrite these explicitly on
       // Start / End.
-      sessionStartedAt: activeVisit?.sessionStartedAt ?? null,
-      sessionEndedAt: activeVisit?.sessionEndedAt ?? null,
-      sessionDurationSec: activeVisit?.sessionDurationSec ?? null,
+      // Re-opening a completed visit (reopenStartRef set) restarts the session:
+      // fresh start, cleared end/duration — so the queue timer runs again.
+      sessionStartedAt: reopenStartRef.current ?? activeVisit?.sessionStartedAt ?? null,
+      sessionEndedAt: reopenStartRef.current ? null : (activeVisit?.sessionEndedAt ?? null),
+      sessionDurationSec: reopenStartRef.current ? null : (activeVisit?.sessionDurationSec ?? null),
       prescriptions: rxRows
         .filter((r) =>
           r.medicine || r.medicineNote || r.dosage || r.whenToTake ||
-          r.frequency || r.duration || r.notes
+          r.frequency || r.frequencyInterval || r.duration || r.notes
         )
         .map((r, i) => ({
           id: r.id,
@@ -837,18 +1570,58 @@ export function PrescriptionPage() {
           dosage: r.dosage || null,
           whenToTake: r.whenToTake || null,
           frequency: r.frequency || null,
+          frequencyInterval: r.frequencyInterval || null,
           duration: r.duration || null,
           notes: r.notes || null,
         })),
     };
   };
 
+  // Vitals that fall outside their valid clinical range (mirrors the per-field
+  // validation rendered in the vitals grid). We never persist or complete a
+  // visit with clinically-impossible measurements — saving/completing is
+  // blocked and the offending fields are highlighted with a toast.
+  const invalidVitalLabels = VITAL_CELLS.filter(({ cell: v, cellKey }) => {
+    const cell = vitalState[cellKey];
+    // BMI: when DERIVED (Height/Weight present) it's locked, not typed — never
+    // block save on it; its inputs carry their own validation. When entered
+    // MANUALLY (no Height/Weight) it's a normal editable field, so range-check it.
+    if (v.label === "BMI") {
+      return !lockBmiField && !isVitalValid("BMI", cell.value, cell.unit);
+    }
+    if (v.label === "BP") {
+      const [sys = "", dia = ""] = cell.value.split("/");
+      return !(isVitalValid("BP_sys", sys, cell.unit) && isVitalValid("BP_dia", dia, cell.unit));
+    }
+    return !isVitalValid(v.label, cell.value, cell.unit);
+  }).map(({ cell: v }) => v.label);
+  const hasInvalidVitals = invalidVitalLabels.length > 0;
+
   const handleSave = async (opts?: { silent?: boolean }) => {
     if (!activeVisit || !selectedPatientId) return;
+    // Never write the form to a visit it wasn't loaded from. During a visit
+    // switch the active visit changes one render before the form repopulates;
+    // saving in that gap would copy the old visit's data onto the new one (and
+    // blank the old). Skip until the form has caught up to the active visit.
+    if (loadedVisitId !== activeVisit.id) return;
+    // Block saving invalid vitals. The fields are already highlighted inline;
+    // an explicit Save click also gets a toast (auto-saves stay silent).
+    if (hasInvalidVitals) {
+      if (!opts?.silent) showToast("Enter valid vitals before saving");
+      return;
+    }
     setSaving(true);
     try {
       await updateVisit(activeVisit.id, buildSaveRequest());
       await refetchVisits();
+      setDirty(false);
+      // The doctor's just-saved schedule is now the clinic's latest for any
+      // medicines in this visit — clear the autofill cache so the next entry
+      // re-fetches and reflects those edits.
+      clinicWideRxCacheRef.current.clear();
+      // Auto-saves stay silent; only explicit actions toast.
+      // Explicit (non-silent) save dismisses the "Save changes" button; the
+      // silent blur auto-save leaves it up so a manual save stays available.
       if (!opts?.silent) showToast("Visit saved");
     } catch (e) {
       // Auto-saves stay quiet on success but should still surface
@@ -866,28 +1639,79 @@ export function PrescriptionPage() {
   // blur, so one handler covers every input / textarea / dropdown.
   // No interval, no debounce: each save corresponds to a deliberate
   // hand-off between fields.
-  const handleFormBlur = React.useCallback(() => {
-    if (!formActive || !activeVisit) return;
+  // Not memoised — useCallback with [formActive, activeVisit?.id] would
+  // capture a stale handleSave whose buildSaveRequest closes over the rxRows
+  // from when the session started, dropping every edit made after that.
+  const handleFormBlur = () => {
+    if (!canEditForm || !activeVisit) return;
+    // Don't persist while the move-to-today dialog is deciding the fate of an
+    // edit — the change must not leak onto the stale-dated visit.
+    if (moveToTodayDate != null) return;
+    // Auto-save on blur works for every visit, including completed ones — a
+    // post-completion edit is persisted without reopening the appointment
+    // (handleSave changes no status). handleSave also clears the dirty flag,
+    // so the "Save changes" button hides again once the edit is saved.
     void handleSave({ silent: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formActive, activeVisit?.id]);
+  };
 
-  // Save on every Pause / Resume — the doctor's edits up to that moment
-  // get persisted even if they walk away with the session paused.
-  // formActive transitions cover Start (no-op effectively), Pause,
-  // Resume; End is handled in handleSessionEnd. We skip the very first
-  // render so we don't fire a save before the visit data has loaded.
-  const prevFormActiveRef = React.useRef<boolean | null>(null);
+  // "Was this visit edited since the doctor opened its tab?" — survives the
+  // silent blur auto-save (which clears `dirty` the moment focus leaves a
+  // field). We need a flag that DOESN'T reset on save so that completing an
+  // old, pending visit can tell "you changed something → move it to today"
+  // from "untouched → just end the consultation in place".
+  const editedSinceLoadRef = React.useRef(false);
+  // Flip-to-IN_PROGRESS guard — fires at most once per appointment so we don't
+  // re-patch the status on every dirty toggle.
+  const startedInProgressRef = React.useRef<string | null>(null);
+  // When the doctor edits an already-COMPLETED ("Done") visit we re-open it;
+  // this holds the fresh session start so buildSaveRequest restarts the timer.
+  const reopenStartRef = React.useRef<string | null>(null);
   React.useEffect(() => {
-    if (prevFormActiveRef.current === null) {
-      prevFormActiveRef.current = formActive;
-      return;
+    if (!dirty) return;
+    editedSinceLoadRef.current = true;
+    setPendingSave(true);
+    // Editing flips the appointment back to IN_PROGRESS (Ongoing) so the queue
+    // and the prescription card show a live consultation again — from AT_DOC
+    // (just sent to the doctor) and from COMPLETED (re-opening a "Done" visit).
+    // Re-opening a completed visit also RESTARTS its session timer (stamped into
+    // buildSaveRequest, persisted by the next auto-save). Once per appointment.
+    const apptId = activeVisit?.appointmentId;
+    const apptStatus = (activeVisit?.appointmentStatus ?? "").toUpperCase();
+    if (apptId &&
+        (apptStatus === "AT_DOC" || apptStatus === "COMPLETED") &&
+        startedInProgressRef.current !== apptId) {
+      startedInProgressRef.current = apptId;
+      if (apptId === selectedAppointmentId) setSelectedAppointmentStatus("IN_PROGRESS");
+      if (apptStatus === "COMPLETED") {
+        reopenStartRef.current = new Date().toISOString();
+        if (selectedPatient) markStarted(selectedPatient.id);
+        // Persist the restarted session NOW (not only on the next blur) so the
+        // queue's live timer appears promptly instead of after a delay.
+        void updateVisit(activeVisit.id, buildSaveRequest());
+      }
+      void patchAppointmentStatus(apptId, "IN_PROGRESS").then(() => refetchVisits());
     }
-    if (prevFormActiveRef.current === formActive) return;
-    prevFormActiveRef.current = formActive;
-    if (activeVisit) void handleSave({ silent: true });
+    // Editing an OLD, still-in-progress visit → ask to move it to today
+    // BEFORE the change settles onto the stale date. The blur/debounce
+    // auto-saves are blocked while this dialog is open (see handleFormBlur /
+    // latestSaveRef), so nothing lands on the old visit until the doctor
+    // decides. Cancel discards the edit; Continue relocates to today.
+    if (isOldPending && moveToTodayDate == null && activeVisit) {
+      setMoveToTodayDate(activeVisit.visitDate);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formActive, activeVisit?.id]);
+  }, [dirty]);
+
+  // A fresh visit (tab switch / patient change) starts clean — drop any
+  // unsaved-edit flag left from the previous visit.
+  React.useEffect(() => {
+    setDirty(false);
+    setPendingSave(false);
+    editedSinceLoadRef.current = false;
+    startedInProgressRef.current = null;
+    reopenStartRef.current = null;
+  }, [activeVisit?.id]);
+
 
   // Best-effort PATCH against the appointment status. Tries the
   // public /api/appointments endpoint first (broad role allowlist) and
@@ -912,57 +1736,217 @@ export function PrescriptionPage() {
     }
   };
 
-  const handleSessionStart = () => {
-    if (selectedPatient) markStarted(selectedPatient.id);
-    // Persist the session-start time on the visit row so other devices
-    // see when this prescription session began.
-    if (activeVisit) {
-      const req: SaveVisitRequest = {
-        ...buildSaveRequest(),
-        sessionStartedAt: new Date().toISOString(),
+  // Explicitly finish a consultation: save the current form and mark the
+  // linked appointment COMPLETED. This replaces "End Session" as the path to
+  // COMPLETED now that the session timer is being retired — without it, an
+  // appointment could never leave IN_PROGRESS and the queue/stats would stall.
+  // Footer "Complete visit" / "Save changes" → finish the active consultation
+  // in place. An old pending visit that the doctor edited has ALREADY been
+  // relocated to today at edit-time (see the move-to-today dialog), so by the
+  // time Complete is clicked there's never a stale date to worry about. An
+  // untouched old pending visit completes on its own date without fuss.
+  const handleCompleteVisit = async () => {
+    if (!activeVisit) return;
+    // Don't let a visit be completed/saved with out-of-range vitals — toast and
+    // highlight the offending fields instead of persisting bad data.
+    if (hasInvalidVitals) {
+      showToast("Enter valid vitals before completing");
+      return;
+    }
+    await completeVisitInPlace();
+  };
+
+  // Finish the active consultation on its own visit row: stamp the end time,
+  // persist the form, and flip its OWN appointment to COMPLETED (first time
+  // only). A visit with no appointment of its own is finished purely by the
+  // end-stamp — we never touch the entry appointment, which belongs to a
+  // different visit.
+  const completeVisitInPlace = async () => {
+    if (!activeVisit) return;
+    const apptId = activeVisit.appointmentId;
+    // currentlyCompleted gates the status patch (only flip → COMPLETED when the
+    // live status isn't already there). everCompleted is for the toast/label —
+    // true even on an amend re-open (live status back to IN_PROGRESS).
+    const currentlyCompleted = activeCompleted;
+    // Re-completing after an amend re-open (reopenStartRef set) → "Changes
+    // saved" rather than "Visit marked complete".
+    const everCompleted = currentlyCompleted || reopenStartRef.current != null;
+    // Stop the consultation timer and persist the form. The backend computes
+    // the duration from sessionStartedAt (set when the doctor opened the pad)
+    // to sessionEndedAt. On the FIRST completion we stamp the end time now;
+    // re-saving an already-completed visit preserves the original end time so
+    // the recorded duration isn't inflated.
+    // Fresh end time when re-completing a re-opened visit (reopenStartRef set);
+    // otherwise preserve the original end so re-saving doesn't inflate duration.
+    const endIso = (reopenStartRef.current ? null : activeVisit.sessionEndedAt) ?? new Date().toISOString();
+    const req: SaveVisitRequest = {
+      ...buildSaveRequest(),
+      sessionEndedAt: endIso,
+    };
+    await updateVisit(activeVisit.id, req);
+    // Mark this visit completed-at-least-once so the footer button switches to
+    // "Save changes" from now on (the live status flips back to IN_PROGRESS on
+    // a later amend re-open, so the button can't rely on status alone).
+    markVisitCompleted(activeVisit.id);
+    if (apptId && !currentlyCompleted) {
+      // Flip status to COMPLETED whenever it isn't already (first completion OR
+      // re-completing after an amend re-opened it to IN_PROGRESS).
+      await patchAppointmentStatus(apptId, "COMPLETED");
+      // Clear the "Ongoing" flag so the completed card shows Completed.
+      if (selectedPatient) unmarkStarted(selectedPatient.id);
+    }
+    // Refetch AFTER the status patch so the visit DTO carries the new
+    // appointmentStatus — the footer keys its label off the active visit.
+    await refetchVisits();
+    // Reflect completion locally too so the open-pad effect doesn't re-mark
+    // the patient Ongoing (it keys off selectedAppointmentStatus). Only when
+    // the visit we completed IS the entry appointment.
+    if (apptId && apptId === selectedAppointmentId) setSelectedAppointmentStatus("COMPLETED");
+    setDirty(false);
+    setPendingSave(false);
+    editedSinceLoadRef.current = false;
+    // Clear the re-open guards so a later edit re-opens it (timer + Ongoing)
+    // again. The footer label now keys off the completed-marker set above, so it
+    // stays "Save changes" even after the re-open flips status back to
+    // IN_PROGRESS.
+    startedInProgressRef.current = null;
+    reopenStartRef.current = null;
+    showToast(everCompleted ? "Changes saved" : "Visit marked complete");
+  };
+
+  // Confirm action for the "move to today" dialog (triggered the moment the
+  // doctor edits an OLD pending visit): clone the in-form data — including the
+  // edit that triggered this — into a fresh visit dated today, delete the
+  // stale pending visit, and land the doctor on the new today tab to keep
+  // working. The visit stays IN PROGRESS (no end stamp); the doctor completes
+  // it later like any other today visit.
+  const moveToToday = async () => {
+    if (!activeVisit || !selectedPatientId) { setMoveToTodayDate(null); return; }
+    // Same guard as save/complete — never relocate a visit carrying invalid
+    // vitals; keep the dialog open so the doctor can fix the highlighted fields.
+    if (hasInvalidVitals) { showToast("Enter valid vitals first"); return; }
+    setSaving(true);
+    const oldId = activeVisit.id;
+    const apptId = activeVisit.appointmentId;
+    const startedAt = activeVisit.sessionStartedAt;
+    const prevLen = visits.length; // net unchanged (one deleted, one created)
+    try {
+      const base = buildSaveRequest();
+      const draft: SaveVisitRequest = {
+        ...base,
+        visitDate: todayIso(),
+        // Carry the appointment link so the moved visit stays tied to the same
+        // booking; preserve the original start so the duration is honest.
+        appointmentId: apptId ?? undefined,
+        sessionStartedAt: startedAt ?? new Date().toISOString(),
+        sessionEndedAt: null,
+        sessionDurationSec: null,
+        prescriptions: base.prescriptions.map((p, i) => ({ ...p, id: null, position: i + 1 })),
       };
-      void updateVisit(activeVisit.id, req).then(() => refetchVisits());
+      await createVisit(selectedPatientId, draft);
+      await deleteVisit(oldId);
+      await refetchVisits();
+      setDirty(false);
+      editedSinceLoadRef.current = false;
+      // The new today visit sorts last; land the doctor on it to keep editing.
+      setActiveTab(Math.max(0, prevLen - 1));
+      showToast("Visit moved to today");
+    } catch (e) {
+      showToast(`Move failed: ${(e as Error).message}`);
+    } finally {
+      setSaving(false);
+      setMoveToTodayDate(null);
     }
   };
 
-  const handleSessionEnd = (totalSeconds: number) => {
-    if (selectedPatient) unmarkStarted(selectedPatient.id);
-    // Persist the locked-in duration on the visit so reopening the
-    // prescription on any device shows the same final time.
-    if (activeVisit) {
-      const req: SaveVisitRequest = {
-        ...buildSaveRequest(),
-        sessionEndedAt: new Date().toISOString(),
-        sessionDurationSec: totalSeconds,
-      };
-      void updateVisit(activeVisit.id, req).then(() => refetchVisits());
-    } else {
-      void handleSave();
-    }
-    // Move the appointment to COMPLETED so the queues show the right
-    // status next time they're viewed.
-    if (selectedAppointmentId) {
-      void patchAppointmentStatus(selectedAppointmentId, "COMPLETED");
-    }
+  // Cancel the move: discard the edit that triggered the dialog and restore
+  // the old pending visit's saved data, leaving it untouched on its own date.
+  // Bumping the nonce remounts the visit subtree (uncontrolled inputs reset to
+  // their defaultValues) and re-runs the populate effect (controlled state).
+  const cancelMoveToToday = () => {
+    setMoveToTodayDate(null);
+    setDirty(false);
+    setPendingSave(false);
+    editedSinceLoadRef.current = false;
+    setRevertNonce((n) => n + 1);
   };
+
+  // Opening the pad for an At Doc / In Progress patient flips the queue card
+  // from "At Doc" to "Ongoing" — the queue reads this per-patient "started"
+  // flag. This replaces the old "Start Session" trigger. Idempotent, so it's
+  // safe to run on every open (including a re-open).
+  React.useEffect(() => {
+    if (!selectedPatient || !selectedAppointmentId) return;
+    const apptStatus = (selectedAppointmentStatus ?? "").toUpperCase();
+    if (apptStatus === "AT_DOC" || apptStatus === "IN_PROGRESS") {
+      markStarted(selectedPatient.id);
+    }
+  }, [selectedPatient, selectedAppointmentId, selectedAppointmentStatus]);
+
+  // Opening the pad STARTS the consultation: the moment the doctor opens an
+  // appointment that's with them (At Doc), flip it to IN_PROGRESS (Ongoing) and
+  // stamp sessionStartedAt — no edit required. So the queue + card show Ongoing
+  // and the live timer runs from pad-open. Guarded to fire once per visit and
+  // never overwrite an existing start time.
+  const timerStartedForVisitRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!activeVisit || !selectedAppointmentId) return;
+    if (activeVisit.appointmentId !== selectedAppointmentId) return;
+    if (activeVisit.sessionStartedAt) return;
+    if (timerStartedForVisitRef.current === activeVisit.id) return;
+    const apptStatus = (selectedAppointmentStatus ?? "").toUpperCase();
+    if (apptStatus !== "AT_DOC" && apptStatus !== "IN_PROGRESS") return;
+    timerStartedForVisitRef.current = activeVisit.id;
+    // Flip AT_DOC → IN_PROGRESS right on open (not just on edit) so the queue
+    // reflects the live consultation immediately.
+    if (apptStatus === "AT_DOC") {
+      setSelectedAppointmentStatus("IN_PROGRESS");
+      void patchAppointmentStatus(selectedAppointmentId, "IN_PROGRESS");
+    }
+    const req: SaveVisitRequest = {
+      ...buildSaveRequest(),
+      sessionStartedAt: new Date().toISOString(),
+    };
+    void updateVisit(activeVisit.id, req).then(() => refetchVisits());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeVisit, selectedAppointmentId, selectedAppointmentStatus]);
 
   const handleAddVisit = async () => {
     if (!selectedPatientId) return;
     setSaving(true);
+    setAddingVisit(true);
     try {
+      // Persist any unsaved edits on the CURRENT visit before switching to the
+      // new one, so adding a visit can never appear to drop the previous one's
+      // data.
+      if (canEditForm && activeVisit && dirty) {
+        await handleSave({ silent: true });
+      }
+      // Carry the current visit's data into the new visit. Review patients
+      // usually get the same prescription with minor tweaks, so the doctor
+      // edits from a copy instead of retyping. Carried over: history,
+      // diagnosis, Rx, tests, all notes (patient / private / review). Reset
+      // because they're specific to each visit: vitals (measured fresh), the
+      // complaint (reason for THIS visit), the review/follow-up date, plus the
+      // technical fields (today's date, fresh session, no appointment link,
+      // and new Rx-row ids so they save as this visit's own rows).
+      const base = buildSaveRequest();
       const draft: SaveVisitRequest = {
+        ...base,
         visitDate: todayIso(),
+        appointmentId: undefined,
+        sessionStartedAt: null,
+        sessionEndedAt: null,
+        sessionDurationSec: null,
+        // Per-visit — do NOT carry forward.
         bpSystolic: null, bpDiastolic: null, bpUnit: null,
         bmi: null, bmiUnit: null, height: null, heightUnit: null,
         weight: null, weightUnit: null, temperature: null, temperatureUnit: null,
         pulse: null, pulseUnit: null, waist: null, waistUnit: null,
         hip: null, hipUnit: null, spo2: null, spo2Unit: null,
-        familyHistory: null, allergies: null, personalHistory: null, pastMedicalHistory: null,
-        complaints: null, diagnosis: null, notesForPatient: null, privateNotes: null, tests: null,
-        referDoctorId: null,
-        reviewDate: null, reviewDays: null, reviewNotes: null,
-        sessionStartedAt: null, sessionEndedAt: null, sessionDurationSec: null,
-        prescriptions: [],
+        complaints: null,
+        reviewDate: null, reviewDays: null,
+        prescriptions: base.prescriptions.map((p, i) => ({ ...p, id: null, position: i + 1 })),
       };
       await createVisit(selectedPatientId, draft);
       await refetchVisits();
@@ -973,6 +1957,143 @@ export function PrescriptionPage() {
       showToast(`Add visit failed: ${(e as Error).message}`);
     } finally {
       setSaving(false);
+      setAddingVisit(false);
+    }
+  };
+
+  // Share the prescription to the patient over WhatsApp via a click-to-chat
+  // link (wa.me) — opens WhatsApp pre-filled with the Rx as text to the
+  // patient's number; the doctor taps Send. No WhatsApp API / account needed.
+  const handleShareWhatsApp = () => {
+    if (!selectedPatient) { showToast("Select a patient first"); return; }
+    const digits = (selectedPatient.phone ?? "").replace(/\D/g, "");
+    if (!digits) { showToast("This patient has no phone number on file"); return; }
+    // India default: bare 10-digit numbers get a 91 country code; longer
+    // numbers are assumed to already carry one.
+    const intl = digits.length === 10 ? `91${digits}` : digits;
+
+    const meds = rxRows
+      .filter((r) => r.medicine.trim())
+      .map((r, i) => {
+        const schedule = [r.frequency, r.whenToTake, r.frequencyInterval, r.duration]
+          .map((s) => s.trim()).filter(Boolean).join(" · ");
+        const head = `${i + 1}. ${r.medicine.trim()}${schedule ? ` — ${schedule}` : ""}`;
+        return r.notes.trim() ? `${head}\n   (${r.notes.trim()})` : head;
+      });
+    if (meds.length === 0) { showToast("Add a medicine before sharing"); return; }
+
+    // TODO(plan-3): source clinic name from a settings endpoint
+    const clinicName = "";
+    const lines = [
+      `*${clinicName}*`,
+      `Prescription for ${selectedPatient.name}`,
+      `Date: ${activeVisit?.visitDate ?? todayIso()}`,
+      "",
+      "Medicines:",
+      ...meds,
+    ];
+    if (reviewDate) {
+      const r = `${reviewDate.getFullYear()}-${String(reviewDate.getMonth() + 1).padStart(2, "0")}-${String(reviewDate.getDate()).padStart(2, "0")}`;
+      lines.push("", `Next review: ${r}`);
+    }
+
+    window.open(`https://wa.me/${intl}?text=${encodeURIComponent(lines.join("\n"))}`, "_blank");
+  };
+
+  // ── Print prescription ──────────────────────────────────────────────────
+  // Assemble a PrintVisitData payload from the current patient + visit + form
+  // state and hand it to the configured print template. The template tells
+  // us whether to render header/footer (Blank A4) or text-only (pre-printed
+  // letterhead) and which patient fields to show. Auto-saves first so the
+  // print reflects the latest edits.
+  const handlePrintPrescription = async (action: "print" | "download" = "print") => {
+    // The default-template cache is primed by the editor (Settings → Print
+    // template). If the user prints without visiting Settings first this
+    // session, fetch lazily so we never miss a configured template.
+    let template = getDefaultTemplate();
+    if (!template) {
+      try {
+        await loadTemplates();
+        template = getDefaultTemplate();
+      } catch (e) {
+        showToast(`Couldn't load print template: ${(e as Error).message}`);
+        return;
+      }
+    }
+    if (!template) {
+      showToast("No print template — set one up in Settings → Print template");
+      return;
+    }
+    if (!selectedPatient || !activeVisit) {
+      showToast("Nothing to print yet");
+      return;
+    }
+    if (canEditForm) {
+      try { await handleSave({ silent: true }); } catch {}
+    }
+    const vitalsForPrint: { label: string; value: string }[] = [];
+    const v = activeVisit;
+    if (v.bpSystolic && v.bpDiastolic) {
+      vitalsForPrint.push({ label: "BP", value: `${v.bpSystolic}/${v.bpDiastolic} ${v.bpUnit ?? "mmHg"}` });
+    }
+    if (v.pulse)       vitalsForPrint.push({ label: "Pulse", value: `${v.pulse} ${v.pulseUnit ?? ""}`.trim() });
+    if (v.spo2)        vitalsForPrint.push({ label: "SpO₂",  value: `${v.spo2} ${v.spo2Unit ?? "%"}`.trim() });
+    if (v.temperature) vitalsForPrint.push({ label: "Temp",  value: `${v.temperature} ${v.temperatureUnit ?? ""}`.trim() });
+    if (v.weight)      vitalsForPrint.push({ label: "Weight", value: `${v.weight} ${v.weightUnit ?? "kg"}` });
+    if (v.height)      vitalsForPrint.push({ label: "Height", value: `${v.height} ${v.heightUnit ?? "cm"}` });
+    if (v.bmi)         vitalsForPrint.push({ label: "BMI",   value: `${v.bmi}`.trim() });
+
+    const visitIndex = visits.findIndex((vv) => vv.id === activeVisit.id);
+    const data: PrintVisitData = {
+      patientName: selectedPatient.name,
+      patientAge: selectedPatient.age != null ? `${Math.floor(selectedPatient.age / 12)}y` : null,
+      patientGender: selectedPatient.gender,
+      patientPhone: selectedPatient.phone,
+      patientAddress: null, // Patient type has no address yet.
+      patientId: selectedPatient.id,
+      visitNumber: visitIndex >= 0 ? visits.length - visitIndex : null, // newest = highest #
+      visitDate: activeVisit.visitDate,
+      visitTime: new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }),
+      referredBy: referredBy || null,
+      // Prefer the server-resolved name (works even when the prescriber isn't in
+      // the caller's scoped doctors list); fall back to the loaded list.
+      doctorName: activeVisit.createdByDoctorName ?? doctors.find((d) => d.id === activeVisit.createdByDoctorId)?.name ?? null,
+      doctorCredentials: null,
+      complaints: complaintsValue,
+      diagnosis: diagnosisValue,
+      vitals: vitalsForPrint,
+      tests: testsValue,
+      notesForPatient: notesForPatientValue,
+      rx: rxRows.map((r) => ({
+        medicine: r.medicine ?? null,
+        genericName: r.genericName ?? null,
+        dosage: r.dosage ?? null,
+        whenToTake: r.whenToTake ?? null,
+        frequency: r.frequency ?? null,
+        frequencyInterval: r.frequencyInterval ?? null,
+        duration: r.duration ?? null,
+        notes: r.notes ?? null,
+        // Total units to dispense — mirrors the Bill Medicines modal's
+        // auto-quantity so the printed Rx and the dispensary bill stay
+        // consistent. Returns null when any field is unparseable (SOS,
+        // "As directed") and the column shows blank.
+        totalQty: computeRxTotal(r.medicine, r.dosage, r.frequency, r.duration),
+      })),
+      reviewDate: reviewDate ? `${reviewDate.getFullYear()}-${String(reviewDate.getMonth() + 1).padStart(2, "0")}-${String(reviewDate.getDate()).padStart(2, "0")}` : null,
+      reviewNotes: reviewNotesValue,
+    };
+    const html = buildPrintHtml(template, data);
+    if (action === "download") {
+      const fname = `prescription-${selectedPatient.name.replace(/\s+/g, "_")}-${queueDate}`;
+      try {
+        await downloadAsPdf(html, fname);
+      } catch (e) {
+        showToast(`Couldn't download: ${(e as Error).message}`);
+      }
+    } else {
+      // Browser's native print dialog — user picks destination (printer or
+      // Save as PDF). Skips the custom preview modal entirely.
+      openPrintWindow(html);
     }
   };
 
@@ -982,9 +2103,12 @@ export function PrescriptionPage() {
     return (
       <div ref={pageRootRef}>
         <PrescriptionQueue
-          onSelect={(patient, appointmentId) => {
+          refreshKey={queueRefreshKey}
+          onSelect={(patient, appointmentId, date, doctorId) => {
+            setQueueDate(date);
             setSelectedPatient(patient);
             setSelectedAppointmentId(appointmentId);
+            setAppointmentDoctorId(doctorId);
           }}
         />
       </div>
@@ -996,12 +2120,26 @@ export function PrescriptionPage() {
   // user sees a brief unfilled state, then activeVisit lands and every
   // field pops in at once — perceived as a jerk.
   if (visitsLoadedFor !== selectedPatientId) {
+    // A patient is already selected (e.g. opened from Patient Files) but
+    // their visits haven't been fetched yet — show a quiet loading
+    // skeleton instead of flashing the queue picker, which would be a
+    // misleading screen on its way to the actual chart.
+    if (selectedPatientId !== null) {
+      return (
+        <div ref={pageRootRef} style={{ padding: 40, textAlign: "center", color: colors.neutral500, fontFamily: "'Inter', sans-serif", fontSize: 14 }}>
+          Loading patient file…
+        </div>
+      );
+    }
     return (
       <div ref={pageRootRef}>
         <PrescriptionQueue
-          onSelect={(patient, appointmentId) => {
+          refreshKey={queueRefreshKey}
+          onSelect={(patient, appointmentId, date, doctorId) => {
+            setQueueDate(date);
             setSelectedPatient(patient);
             setSelectedAppointmentId(appointmentId);
+            setAppointmentDoctorId(doctorId);
           }}
         />
       </div>
@@ -1010,240 +2148,228 @@ export function PrescriptionPage() {
 
   return (
     <div ref={pageRootRef} style={styles.page}>
-      {/* Header — title + subtitle swap based on which left-rail action is
-          active. Reports view also surfaces an "+ Add Report" pill on the
-          right (Figma node 2143:11171). */}
-      <header style={styles.header}>
-        <div style={styles.headerLeft}>
-          <button
-            type="button"
-            style={styles.backButton}
-            aria-label="Back to patients"
-            onClick={() => {
-              setSelectedPatient(null);
-              setSelectedAppointmentId(null);
-            }}
-          >
-            <ArrowLeftIcon width={24} height={24} />
-          </button>
-        </div>
-        <div style={styles.headerRight}>
-          <div style={styles.headerTitleGroup}>
-            <h2 style={styles.title}>{headerTitle}</h2>
-            <p style={styles.subtitle}>{headerSubtitle}</p>
-          </div>
-          {listViewConfig && (
-            <>
-              <button
-                type="button"
-                style={{
-                  ...styles.addReportButton,
-                  ...(formActive ? null : { opacity: 0.55, cursor: "not-allowed" }),
-                }}
-                onClick={openFilePicker}
-                disabled={!formActive}
-                title={!formActive ? "Start a session to upload" : undefined}
-              >
-                <span style={styles.addReportPlus}>+</span>
-                <span>{listViewConfig.addLabel}</span>
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                onChange={handleFilesSelected}
-                style={{ display: "none" }}
-              />
-            </>
-          )}
-          {/* Save button removed — saves are now auto-triggered every 30s
-              while a session is running, plus on End Session. */}
-        </div>
-      </header>
+      {/* Sticky record header — back · patient name · section nav (Info first
+          via NAV_ORDER) · contact "⋯" kebab. Now the shared, reusable
+          <PatientRecordHeader> (Patterns) rather than hand-built markup. */}
+      <PatientRecordHeader
+        title={selectedPatient?.name ?? ""}
+        onBack={() => {
+          setSelectedPatient(null);
+          setSelectedAppointmentId(null);
+        }}
+        backLabel="Back to patients"
+        navLabel="Patient record sections"
+        sections={NAV_ORDER.map(
+          (i): RecordSection => ({
+            id: String(i),
+            label: ACTION_META[i].label,
+            icon: ACTION_META[i].icon,
+            badge: countFor(i),
+          })
+        )}
+        activeId={String(activeAction)}
+        onSelect={(id) => setActiveAction(Number(id))}
+        actions={
+          <PopoverMenu
+            trigger={<span style={styles.kebabTrigger} aria-hidden="true">⋯</span>}
+            items={contactMenuItems}
+            ariaLabel="Patient contact and actions"
+          />
+        }
+      />
 
       <div style={styles.body}>
-        {/* ─── Left column ──────────────────────────────────────────── */}
-        <aside style={styles.leftColumn}>
-          <div style={styles.patientWrapper}>
-            <div style={styles.avatar}>
-              <img
-                src={pickAvatar({
-                  gender: selectedPatient?.gender,
-                  // backend stores age in months; the picker buckets in years
-                  ageYears:
-                    selectedPatient?.age != null
-                      ? Math.floor(selectedPatient.age / 12)
-                      : null,
-                })}
-                alt=""
-                width={72}
-                height={72}
-                style={{ display: "block", objectFit: "contain" }}
-              />
-            </div>
-            <div style={styles.patientCard}>
-              <p style={styles.patientPrimary}>{selectedPatient?.name ?? ""}</p>
-              <p style={styles.patientSecondary}>
-                {formatPatientMeta(selectedPatient)}
-              </p>
-            </div>
-          </div>
-
-          <div style={styles.actionList}>
-            {ACTION_META.map((a, i) => {
-              const isActive = activeAction === i;
-              return (
-                <div
-                  key={a.label}
-                  style={{
-                    ...styles.actionRow,
-                    ...(isActive ? styles.actionRowActive : {}),
-                  }}
-                  onClick={() => setActiveAction(i)}
-                >
-                  {a.icon}
-                  <span style={styles.actionLabel}>{a.label}</span>
-                  <span
-                    style={{
-                      ...styles.actionBadge,
-                      ...(isActive ? styles.actionBadgeActive : {}),
-                    }}
-                  >
-                    {countFor(i)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* AI Summary card — Figma node 2143:11160. Static cream tile with
-              a serif heading and a paragraph-s body summarizing the patient. */}
-          <div style={styles.aiSummaryCard}>
-            <h4 style={styles.aiSummaryTitle}>AI Summary</h4>
-            <p style={styles.aiSummaryBody}>{AI_SUMMARY_TEXT}</p>
-          </div>
-
-          <div style={styles.shareCard}>
-            {CONTACT_ACTIONS.map((a) => (
-              <div key={a.label} style={styles.actionRow}>
-                {a.icon}
-                <span style={styles.actionLabel}>{a.label}</span>
-              </div>
-            ))}
-          </div>
-        </aside>
-
-        {/* ─── Right area — content swapped via activeAction. Locked
+        {/* ─── Form area — content swapped via activeAction. Locked
               behind the session: until the user clicks Start on the
               SessionBar, pointer-events are blocked and the content fades
               very slightly so the form reads as "frozen". */}
         <div
           style={{
             ...styles.rightArea,
-            ...(formActive
+            // The lock applies ONLY to the prescription form (action 0). The
+            // other chart sections — Files (1), Timeline (2), Bills (3),
+            // Info (4) — stay fully usable (Add file etc.) regardless of the
+            // visit's editability; locking a past/unstarted visit must not
+            // freeze the whole chart.
+            ...(canEditForm || activeAction !== 0
               ? null
               // Mostly readable while locked — labels stay legible so the
-              // doctor can scan the form before starting a session. Clicks
-              // are still blocked via pointer-events:none.
+              // doctor can scan the form. Clicks are blocked via
+              // pointer-events:none. Past visits hit this unconditionally so
+              // they read as historic only.
               : { pointerEvents: "none", opacity: 0.75, userSelect: "none" }),
             transition: "opacity 0.15s ease",
           }}
-          aria-disabled={!formActive}
+          aria-disabled={!canEditForm && activeAction === 0}
+          // Any descendant input/textarea/select change bubbles here — flag
+          // unsaved edits so the "Save changes" button surfaces on an
+          // already-completed visit only after the doctor actually edits.
+          // flagDirty() ignores the stray change events that fire while a
+          // visit's data is loading into the controlled form (load-settling
+          // guard), so opening a pre-filled pad never looks pre-edited.
+          onChange={() => { if (canEditForm) flagDirty(); }}
           // Save-on-blur: any descendant input / textarea / select that
           // loses focus triggers a silent save. React.onBlur surfaces the
           // bubbled focusout, so a single handler at the form root covers
           // every field below without needing to wire each one.
           onBlur={handleFormBlur}>
 
-          {comingSoonLabel ? (
+          {activeAction === INFO_ACTION ? (
+            // Info — reuses the New Appointment cards: ID/avatar card, a
+            // read-only basic-info card, and an AI summary card (in the Bill
+            // card's slot).
+            <div style={styles.infoGrid}>
+              <Card style={styles.infoIdCard}>
+                <img
+                  src={pickAvatar({
+                    gender: selectedPatient?.gender,
+                    ageYears: selectedPatient?.age != null ? Math.floor(selectedPatient.age / 12) : null,
+                  })}
+                  alt=""
+                  style={styles.infoAvatar}
+                />
+                <h1 style={styles.infoIdText}>
+                  {selectedPatient?.displayNo != null ? `T${selectedPatient.displayNo}` : "T---"}
+                </h1>
+              </Card>
+
+              <Card style={styles.infoFieldsCard}>
+                {[
+                  { icon: <Icon name="user" tone="inherit" style={styles.infoRowIcon} />, label: "Name", value: selectedPatient?.name },
+                  { icon: <Icon name="mail" tone="inherit" style={styles.infoRowIcon} />, label: "Email", value: selectedPatient?.email },
+                  { icon: <Icon name="phone" tone="inherit" style={styles.infoRowIcon} />, label: "Phone", value: selectedPatient?.phone },
+                  { icon: <Icon name="calendar" tone="inherit" style={styles.infoRowIcon} />, label: "Age", value: selectedPatient?.age != null ? `${Math.floor(selectedPatient.age / 12)} yrs` : null },
+                  { icon: <Icon name="user" tone="inherit" style={styles.infoRowIcon} />, label: "Gender", value: selectedPatient?.gender },
+                ].map((f) => (
+                  <div key={f.label} style={styles.infoRow}>
+                    {f.icon}
+                    <div style={styles.infoValue}>{f.value || "—"}</div>
+                  </div>
+                ))}
+              </Card>
+
+              <Card style={styles.infoAiCard}>
+                <div style={styles.infoAiHead}>
+                  <span style={styles.infoAiSparkle} aria-hidden="true">✨</span>
+                  <span style={styles.infoAiTitle}>AI summary</span>
+                </div>
+                <p style={styles.infoAiBody}>
+                  {aiConfigured === false
+                    ? "AI is not configured for this clinic."
+                    : aiSummary?.summary
+                      ? aiSummary.summary
+                      : "No summary yet — open AI Summary to generate one."}
+                </p>
+              </Card>
+            </div>
+          ) : activeAction === 2 ? (
+            // Timeline — chronological feed of the patient's visits (newest
+            // first), each with a short synopsis (complaints → diagnosis).
+            // File / Rx events interleave here once an activity feed exists.
+            <div style={styles.timeline}>
+              {visits.length === 0 ? (
+                <p style={styles.comingSoonBody}>No visits yet.</p>
+              ) : (
+                <div style={styles.timelineList}>
+                  <div style={styles.timelineLine} aria-hidden />
+                  {visits.map((v, i) => ({ v, n: i + 1 })).reverse().map(({ v, n }) => {
+                    const parts: string[] = [];
+                    if (v.complaints) parts.push(v.complaints);
+                    if (v.diagnosis) parts.push(`Dx: ${v.diagnosis}`);
+                    const synopsis = parts.join(" · ");
+                    return (
+                      <div key={v.id} style={styles.timelineItem}>
+                        <span style={styles.timelineDot}><Icon name="visits" tone="inherit" style={styles.timelineDotIcon} /></span>
+                        <div style={styles.timelineContent}>
+                          <div style={styles.timelineHead}>
+                            <span style={styles.timelineTitle}>{`Visit ${n}`}</span>
+                            <span style={styles.timelineDate}>{formatVisitLabel(v.visitDate)}</span>
+                          </div>
+                          <p style={styles.timelineSynopsis}>{synopsis || "Consultation"}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : comingSoonLabel ? (
             <div style={styles.comingSoon}>
-              <h3 style={styles.comingSoonTitle}>{comingSoonLabel}</h3>
+              {/* Section title moved into the sticky <PageHeader/>; only the
+                  "Coming soon" body remains here. */}
               <p style={styles.comingSoonBody}>Coming soon</p>
             </div>
           ) : listViewConfig ? (
             <>
-              {/* List-view tabs — same pill style as the visit tabs but with
-                the category filters from the active config. */}
+              {/* List-view tabs — styled to match the Rx Pad home page
+                filter pills (View all / At Doc / …) with tier-responsive
+                horizontal padding. */}
               <div style={styles.tabsBar}>
-                {listViewConfig.tabs.map((label, i) => (
-                  <div
-                    key={label}
-                    style={{ ...styles.tab, ...(activeListTab === i ? styles.tabActive : styles.tabInactive) }}
-                    onClick={() => setActiveListTab(i)}
-                  >
-                    <span style={styles.tabLabel}>{label}</span>
-                  </div>
-                ))}
-                <div style={styles.reportViewToggle}>
-                  <button
-                    type="button"
-                    style={{
-                      ...styles.reportViewToggleButton,
-                      ...(viewMode === "list" ? styles.reportViewToggleButtonActive : {}),
-                    }}
-                    onClick={() => setViewMode("list")}
-                    aria-label="List view"
-                    aria-pressed={viewMode === "list"}
-                  >
-                    <ListSortIcon width={24} height={24} />
-                  </button>
-                  <button
-                    type="button"
-                    style={{
-                      ...styles.reportViewToggleButton,
-                      ...(viewMode === "grid" ? styles.reportViewToggleButtonActive : {}),
-                    }}
-                    onClick={() => setViewMode("grid")}
-                    aria-label="Grid view"
-                    aria-pressed={viewMode === "grid"}
-                  >
-                    <WidgetIcon width={24} height={24} />
-                  </button>
-                </div>
+                <Tabs
+                  variant="block"
+                  size="sm"
+                  inline
+                  items={listViewConfig.tabs.map((label, i) => ({ id: String(i), label }))}
+                  activeId={String(activeListTab)}
+                  onSelect={(id) => setActiveListTab(Number(id))}
+                />
+                <ViewToggle value={viewMode} onChange={setViewMode} style={{ marginLeft: "auto" }} />
               </div>
 
               {viewMode === "list" ? (
-                /* List table — header row of column captions + data rows. */
-                <div style={styles.reportsTable}>
-                  <div style={styles.reportsHeaderRow}>
-                    <span style={{ textAlign: "center" }}>#</span>
-                    <span></span>
-                    <span>{listViewConfig.nameColumn}</span>
-                    <span style={{ textAlign: "center" }}>Category</span>
-                    <span style={{ textAlign: "center" }}>Date</span>
-                    <span style={{ textAlign: "center" }}>Actions</span>
-                  </div>
-                  {displayRows.map((r, i) => (
-                    <div key={i} style={styles.reportRow}>
-                      <span style={styles.reportSerial}>{i + 1}</span>
-                      <div style={styles.reportMicChip}>
-                        <MicIcon width={24} height={24} />
+                /* List table — the shared DataGrid (Catalog-styled). Whole row
+                   opens the file in the viewer. */
+                <DataGrid
+                  rows={displayRows}
+                  rowKey={(r, i) => r.id ?? i}
+                  onRowClick={(r) => setViewerOpen(r)}
+                  columns={[
+                    { key: "n", header: "#", width: 40, align: "center", render: (_r, i) => i + 1 },
+                    { key: "mic", header: "", width: 48, align: "center", render: () => <Icon name="microphone" size={24} tone="inherit" /> },
+                    { key: "name", header: listViewConfig.nameColumn, align: "left", render: (r) => r.name },
+                    { key: "cat", header: "Category", width: 140, render: (r) => r.category },
+                    { key: "date", header: listViewConfig.dateColumn, width: 140, render: (r) => r.date },
+                    { key: "act", header: "Actions", width: 110, render: () => (
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: spacing.s }}>
+                        <Icon name="download" size={24} tone="inherit" />
+                        <Icon name="menu" size={20} tone="inherit" />
                       </div>
-                      <span style={styles.reportName}>{r.name}</span>
-                      <span style={styles.reportCell}>{r.category}</span>
-                      <span style={styles.reportCell}>{r.date}</span>
-                      <div style={styles.reportActions}>
-                        <DownloadIcon width={24} height={24} />
-                        <ReorderIcon width={20} height={20} style={styles.reorderHandle} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ) },
+                  ]}
+                />
               ) : (
                 /* Grid view — Figma node 2143:11610. Cream cards with a white
                    inner tile (file thumbnail placeholder + mic chip) and
                    name + date + size below. Kebab handle in top-right. */
                 <div style={styles.reportsGrid}>
+                  {/* Add-file affordance lives in the floating action bar now. */}
                   {displayRows.map((r, i) => (
-                    <div key={i} style={styles.reportCard}>
+                    <div
+                      key={r.id ?? i}
+                      style={{ ...styles.reportCard, cursor: "pointer" }}
+                      onClick={() => setViewerOpen(r)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setViewerOpen(r);
+                        }
+                      }}
+                    >
                       <div style={styles.reportCardThumb}>
-                        <FileIcon style={styles.reportCardThumbIcon} />
+                        <AuthThumb
+                          fileUrl={r.fileUrl ?? (r.fileId && selectedPatientId ? `${API_BASE_URL}/api/patients/${selectedPatientId}/files/${r.fileId}/download` : null)}
+                          mimeType={r.mimeType}
+                          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                        {!(r.mimeType ?? "").startsWith("image/") && <Icon name="file" tone="inherit" style={styles.reportCardThumbIcon} />}
                         <span style={styles.reportCardMic}>
-                          <MicIcon width={20} height={20} />
+                          <Icon name="microphone" size={20} tone="inherit" />
                         </span>
                       </div>
                       <div style={styles.reportCardKebab}>
-                        <ReorderIcon width={20} height={20} />
+                        <Icon name="menu" size={20} tone="inherit" />
                       </div>
                       <div style={styles.reportCardFooter}>
                         <span style={styles.reportCardName}>{r.name}</span>
@@ -1258,575 +2384,600 @@ export function PrescriptionPage() {
               )}
             </>
           ) : (
-            <>
-              {/* Visit tabs — sit OUTSIDE the cream sheet, above it. The tuning
-              button (Figma node 2133:9927) is pushed to the far right of the
-              row to filter / reconfigure the current visit's view. Each tab
-              loads that visit's prescription data into the form below. */}
-              <div style={styles.tabsBar}>
-                {visits.map((v, i) => (
-                  <div
-                    key={v.id}
-                    style={{ ...styles.tab, ...(activeTab === i ? styles.tabActive : styles.tabInactive) }}
-                    onClick={() => setActiveTab(i)}
-                  >
-                    <span style={styles.tabCaption}>{`visit ${i + 1}`}</span>
-                    <span style={styles.tabLabel}>{formatVisitLabel(v.visitDate)}</span>
-                  </div>
-                ))}
-                {/* "+ New Visit" lives inside the tuning dropdown now —
-                    see tuningMenuItems above. */}
-                <div style={styles.tuningWrap}>
-                  <PopoverMenu
-                    trigger={<TuningIcon width={24} height={24} />}
-                    items={tuningMenuItems}
-                    ariaLabel="Visit settings"
-                  />
-                </div>
+            selectedPatientId &&
+            !visitsLoading &&
+            visitsLoadedFor === selectedPatientId &&
+            visits.length === 0 &&
+            !selectedAppointmentId
+          ) ? (
+            // Patient opened with no visits and no appointment (just added
+            // or freshly migrated) — offer to create the first visit rather
+            // than dropping straight into a blank session form.
+            <section style={styles.rightColumn}>
+              <div style={styles.noVisits}>
+                <Icon name="visits" size={40} tone="inherit" style={styles.noVisitsIcon} />
+                <h3 style={styles.noVisitsTitle}>No visits yet</h3>
+                <p style={styles.noVisitsText}>
+                  This patient has no recorded visits. Create one to start
+                  charting today's consultation.
+                </p>
+                <button
+                  type="button"
+                  style={styles.noVisitsBtn}
+                  onClick={handleAddVisit}
+                  disabled={saving}
+                >
+                  {saving ? "Creating…" : "Create visit"}
+                </button>
               </div>
+            </section>
+          ) : (
+            <>
+              {/* Visit tabs — sit OUTSIDE the cream sheet, above it. Each tab
+              loads that visit's prescription data into the form below.
+              `pointerEvents: auto` is forced on so the tabs remain clickable
+              even when the form below has `pointer-events: none` (locked past
+              visit / pre-Start state) — the doctor must always be able to
+              navigate back to today to start the session. */}
+              <VisitTabs
+                style={{ ...styles.tabsBar, pointerEvents: "auto", paddingLeft: spacing.xl, paddingRight: spacing.xl }}
+                tabs={visits.map((v) => ({ id: v.id, label: formatVisitLabel(v.visitDate) }))}
+                activeIndex={activeTab}
+                onSelect={setActiveTab}
+                onAddVisit={handleAddVisit}
+                addingVisit={addingVisit}
+              />
 
               {/* Cream sheet wrapping all visit-content sections. Keyed by the
               active tab so React unmounts/remounts the subtree on switch,
               giving uncontrolled inputs fresh defaultValues for that visit. */}
-              <section key={`visit-${activeTab}`} style={styles.rightColumn}>
+              <section key={`visit-${activeTab}-${revertNonce}`} style={styles.rightColumn}>
 
                 {/* Vitals */}
-                <div style={styles.sectionCard}>
-                  <div style={styles.sectionHeader}>
-                    <div style={styles.sectionTitleWrap}>
-                      <HeartPulseIcon style={styles.sectionIcon} />
-                      <h3 style={styles.sectionTitle}>Vitals</h3>
-                    </div>
-                    <button
-                      type="button"
-                      style={styles.sectionToggle}
-                      onClick={() => toggleSection("vitals")}
-                      aria-label={openSections.vitals ? "Collapse Vitals" : "Expand Vitals"}
-                    >
-                      <ChevronIcon
-                        style={{
-                          ...styles.sectionIcon,
-                          transform: openSections.vitals ? "rotate(0deg)" : "rotate(180deg)",
-                          transition: "transform 0.15s ease",
-                        }}
-                      />
-                    </button>
-                  </div>
-                  {openSections.vitals && (
-                    <div style={styles.vitalsGrid}>
-                      {VITAL_COLUMNS.map((col, ci) => (
-                        <div key={ci} style={styles.vitalColumn}>
-                          {col.map((v, ri) => {
-                            const cellKey = `${ci}-${ri}`;
-                            const cell = vitalState[cellKey];
-                            const canToggle = !!UNIT_TOGGLES[cell.unit];
-                            // BP is rendered as two inputs separated by a fixed `/`.
-                            // The combined "sys/dia" string still lives in vitalState
-                            // so unit conversion (mmHg↔kPa) keeps working.
-                            const isBp = v.label === "BP";
-                            const [bpSys = "", bpDia = ""] = isBp ? cell.value.split("/") : [];
-                            const setBpPart = (sys: string, dia: string) =>
-                              setVitalValue(cellKey, `${sys}/${dia}`);
-                            // Range validation per (label, unit). Out-of-range values
-                            // get a soft red tint; empty values stay neutral.
-                            const sysValid = isBp ? isVitalValid("BP_sys", bpSys, cell.unit) : true;
-                            const diaValid = isBp ? isVitalValid("BP_dia", bpDia, cell.unit) : true;
-                            const valueValid = isBp ? sysValid && diaValid : isVitalValid(v.label, cell.value, cell.unit);
-                            const rangeForLabel = isBp ? VITAL_RANGES.BP_sys?.[cell.unit] : VITAL_RANGES[v.label]?.[cell.unit];
-                            const rangeHint = rangeForLabel
-                              ? `Valid: ${rangeForLabel.min}–${rangeForLabel.max} ${cell.unit}`
-                              : undefined;
-                            return (
-                              <div key={ri} style={styles.vitalCell}>
-                                <span style={styles.vitalLabel}>{v.label}</span>
-                                <div style={styles.vitalInputRow} title={!valueValid ? rangeHint : undefined}>
-                                  {isBp ? (
-                                    <BpInput
-                                      valid={valueValid}
-                                      sysValid={sysValid}
-                                      diaValid={diaValid}
-                                      sys={bpSys}
-                                      dia={bpDia}
-                                      onSysChange={(v2) => setBpPart(v2, bpDia)}
-                                      onDiaChange={(v2) => setBpPart(bpSys, v2)}
-                                      onEnter={(e) => validateVitalOnEnter(e, v.label, cell.value, cell.unit, true)}
-                                    />
-                                  ) : (
-                                    <input
-                                      style={{
-                                        ...styles.vitalInputValue,
-                                        ...(!valueValid ? styles.vitalInputValueInvalid : {}),
-                                      }}
-                                      placeholder={v.placeholder ?? ""}
-                                      value={cell.value}
-                                      onChange={(e) => setVitalValue(cellKey, e.target.value)}
-                                      onKeyDown={(e) => validateVitalOnEnter(e, v.label, cell.value, cell.unit)}
-                                      aria-invalid={!valueValid}
-                                    />
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={canToggle ? () => toggleVitalUnit(cellKey) : undefined}
-                                    style={{
-                                      ...styles.vitalUnit,
-                                      width: v.unitWidth ?? 44,
-                                      cursor: canToggle ? "pointer" : "default",
-                                      ...(!valueValid ? styles.vitalUnitInvalid : {}),
-                                    }}
-                                    title={canToggle ? `Switch to ${UNIT_TOGGLES[cell.unit].altUnit}` : undefined}
-                                  >
-                                    {cell.unit}
-                                  </button>
-                                </div>
-                                {!valueValid && (
-                                  <span style={styles.vitalErrorMessage}>
-                                    {rangeForLabel
-                                      ? `Enter valid details (${rangeForLabel.min}–${rangeForLabel.max} ${cell.unit})`
-                                      : "Enter valid details"}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <SectionBlock title="Vitals" icon="heart-pulse" surface="card" collapsible open={openSections.vitals} onToggle={() => toggleSection("vitals")}>
+                  <VitalsBlock value={vitalState} onChange={setVitalState} />
+                </SectionBlock>
 
                 {/* History — Figma node 2073:3030 (2×2 grid, cream-filled fields) */}
-                <div style={styles.sectionCard}>
-                  <div style={styles.sectionHeader}>
-                    <div style={styles.sectionTitleWrap}>
-                      <HourglassIcon style={styles.sectionIcon} />
-                      <h3 style={styles.sectionTitle}>History</h3>
-                    </div>
-                    <button
-                      type="button"
-                      style={styles.sectionToggle}
-                      onClick={() => toggleSection("history")}
-                      aria-label={openSections.history ? "Collapse History" : "Expand History"}
-                    >
-                      <ChevronIcon
-                        style={{
-                          ...styles.sectionIcon,
-                          transform: openSections.history ? "rotate(0deg)" : "rotate(180deg)",
-                          transition: "transform 0.15s ease",
-                        }}
-                      />
-                    </button>
-                  </div>
-                  {openSections.history && (
-                    <div style={styles.historyGrid}>
-                      {HISTORY_FIELDS.map((f) => {
-                        const raw = historyValues[f.field] ?? "";
-                        const tags = splitTags(raw);
-                        return (
-                          // Plain <div> instead of <label>: a label forwards clicks
-                          // to the first focusable child, and once chips exist the
-                          // first focusable child is the leftmost chip's ✕ button —
-                          // so clicking the label text would silently remove a tag.
-                          <div key={f.label} style={styles.fieldGroup}>
-                            <span style={styles.fieldLabel}>{f.label}</span>
-                            <AutocompleteTags
-                              field={f.field}
-                              value={tags}
-                              onChange={(next) =>
-                                setHistoryValues((prev) => ({
-                                  ...prev,
-                                  [f.field]: next.join(", "),
-                                }))
-                              }
-                              placeholder={f.placeholder}
-                              ariaLabel={f.label}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                <SectionBlock title="History" icon="hourglass-line" surface="card" collapsible open={openSections.history} onToggle={() => toggleSection("history")}>
+                  <HistoryBlock
+                    value={{
+                      family_history: splitTags(historyValues.family_history ?? ""),
+                      allergies: splitTags(historyValues.allergies ?? ""),
+                      personal_history: splitTags(historyValues.personal_history ?? ""),
+                      past_medical_history: splitTags(historyValues.past_medical_history ?? ""),
+                    }}
+                    onChange={(next) =>
+                      setHistoryValues((prev) => ({
+                        ...prev,
+                        family_history: (next.family_history ?? []).join(", "),
+                        allergies: (next.allergies ?? []).join(", "),
+                        personal_history: (next.personal_history ?? []).join(", "),
+                        past_medical_history: (next.past_medical_history ?? []).join(", "),
+                      }))
+                    }
+                  />
+                </SectionBlock>
 
-                {/* Figma node 2057:6283 — Complaints + Diagnosis cards laid out
-              side-by-side. Each card is a multi-line cream textarea with the
-              dictate icons docked at the bottom-right corner and a kebab
-              handle in the section header. */}
+                {/* Complaints + Diagnosis — side-by-side bento cards (block components) */}
                 <div style={styles.noteCardsRow}>
-                  <div style={styles.noteCard}>
-                    <div style={styles.noteCardHeader}>
-                      <div style={styles.sectionTitleWrap}>
-                        <ChatSquareCallIcon style={styles.sectionIcon} />
-                        <h3 style={styles.sectionTitle}>Complaints</h3>
-                      </div>
-                      <ReorderIcon style={styles.reorderHandle} width={24} height={24} />
-                    </div>
-                    <div style={styles.noteCardField}>
-                      <AutocompleteTags
-                        field="complaints"
-                        value={splitTags(complaintsValue)}
-                        onChange={(next) => setComplaintsValue(next.join(", "))}
-                        placeholder="Type here..."
-                        ariaLabel="Complaints"
-                        containerStyle={NOTE_CARD_TAGBOX_STYLE}
+                  <SectionBlock
+                    title="Complaints"
+                    icon="chat-dots"
+                    surface="card"
+                    collapsible={false}
+                    actions={
+                      <PopoverMenu
+                        trigger={<Icon name="menu" size={24} tone="inherit" style={styles.reorderHandle} />}
+                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "complaints") }]}
+                        ariaLabel="Template options"
                       />
-                      <span style={styles.noteCardDictate}>
-                        <RewindIcon width={20} height={20} />
-                        <MicIcon width={20} height={20} />
-                      </span>
-                    </div>
-                  </div>
-                  <div style={styles.noteCard}>
-                    <div style={styles.noteCardHeader}>
-                      <div style={styles.sectionTitleWrap}>
-                        <MagniferBugIcon style={styles.sectionIcon} />
-                        <h3 style={styles.sectionTitle}>Diagnosis</h3>
-                      </div>
-                      <ReorderIcon style={styles.reorderHandle} width={24} height={24} />
-                    </div>
-                    <div style={styles.noteCardField}>
-                      <AutocompleteTags
-                        field="diagnosis"
-                        value={splitTags(diagnosisValue)}
-                        onChange={(next) => setDiagnosisValue(next.join(", "))}
-                        placeholder="Type here..."
-                        ariaLabel="Diagnosis"
-                        containerStyle={NOTE_CARD_TAGBOX_STYLE}
+                    }
+                  >
+                    <ComplaintsBlock
+                      value={{ tags: splitTags(complaintsValue) }}
+                      onChange={(next) => setComplaintsValue(next.tags.join(", "))}
+                      onCopyPrev={() => prevVisit?.complaints && setComplaintsValue(prevVisit.complaints)}
+                      copyPrevDisabled={!prevVisit?.complaints || !canEditForm}
+                      onLoadTemplate={() => openTemplates("load", "complaints")}
+                    />
+                  </SectionBlock>
+                  <SectionBlock
+                    title="Diagnosis"
+                    icon="magnifer-bug"
+                    surface="card"
+                    collapsible={false}
+                    actions={
+                      <PopoverMenu
+                        trigger={<Icon name="menu" size={24} tone="inherit" style={styles.reorderHandle} />}
+                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "diagnosis") }]}
+                        ariaLabel="Template options"
                       />
-                      <span style={styles.noteCardDictate}>
-                        <RewindIcon width={20} height={20} />
-                        <MicIcon width={20} height={20} />
-                      </span>
-                    </div>
-                  </div>
+                    }
+                  >
+                    <DiagnosisBlock
+                      value={{ tags: splitTags(diagnosisValue) }}
+                      onChange={(next) => setDiagnosisValue(next.tags.join(", "))}
+                      onCopyPrev={() => prevVisit?.diagnosis && setDiagnosisValue(prevVisit.diagnosis)}
+                      copyPrevDisabled={!prevVisit?.diagnosis || !canEditForm}
+                      onLoadTemplate={() => openTemplates("load", "diagnosis")}
+                    />
+                  </SectionBlock>
                 </div>
 
                 {/* Prescription table */}
-                <div style={styles.sectionCard}>
-                  <div style={styles.sectionHeader}>
-                    <div style={styles.sectionTitleWrap}>
-                      <PillsIcon style={styles.sectionIcon} />
-                      <h3 style={styles.sectionTitle}>Rx</h3>
-                    </div>
-                    <button
-                      type="button"
-                      style={styles.sectionToggle}
-                      onClick={() => toggleSection("rx")}
-                      aria-label={openSections.rx ? "Collapse Rx" : "Expand Rx"}
-                    >
-                      <ChevronIcon
-                        style={{
-                          ...styles.sectionIcon,
-                          transform: openSections.rx ? "rotate(0deg)" : "rotate(180deg)",
-                          transition: "transform 0.15s ease",
-                        }}
-                      />
-                    </button>
-                  </div>
-                  {openSections.rx && (
-                    <div style={styles.rxTable}>
-                      <div style={styles.rxHeaderRow}>
-                        {RX_COLUMNS.map((c) => (
-                          <span
-                            key={c}
-                            style={{ textAlign: c === "Medicine" ? "left" : "center" }}
-                          >
-                            {c}
-                          </span>
-                        ))}
-                      </div>
-                      {rxRows.map((row, i) => {
-                        const updateField = (key: keyof RxRowDraft, value: string) =>
-                          setRxRows((prev) => prev.map((r, ix) => (ix === i ? { ...r, [key]: value } : r)));
-                        return (
-                          <div key={row.id ?? `draft-${i}`} style={styles.rxRow}>
-                            <span style={styles.rxSerial}>{i + 1}</span>
-                            <div style={styles.rxMedicineCell}>
-                              <input
-                                style={styles.rxMedicineInput}
-                                placeholder="Medicine"
-                                value={row.medicine}
-                                onChange={(e) => updateField("medicine", e.target.value)}
-                              />
-                              <div style={styles.rxMedicineNote}>
-                                <PenIcon width={12} height={12} />
-                                <input
-                                  style={styles.rxMedicineNoteInput}
-                                  placeholder="Medicine"
-                                  value={row.medicineNote}
-                                  onChange={(e) => updateField("medicineNote", e.target.value)}
-                                />
-                              </div>
-                            </div>
-                            <input
-                              style={styles.rxCell}
-                              placeholder="Dosage"
-                              value={row.dosage}
-                              onChange={(e) => updateField("dosage", e.target.value)}
-                            />
-                            <input
-                              style={styles.rxCell}
-                              placeholder="When"
-                              value={row.whenToTake}
-                              onChange={(e) => updateField("whenToTake", e.target.value)}
-                            />
-                            <input
-                              style={styles.rxCell}
-                              placeholder="Frequency"
-                              value={row.frequency}
-                              onChange={(e) => updateField("frequency", e.target.value)}
-                            />
-                            <input
-                              style={styles.rxCell}
-                              placeholder="Duration"
-                              value={row.duration}
-                              onChange={(e) => updateField("duration", e.target.value)}
-                            />
-                            <input
-                              style={styles.rxCell}
-                              placeholder="Notes"
-                              value={row.notes}
-                              onChange={(e) => updateField("notes", e.target.value)}
-                            />
-                          </div>
-                        );
-                      })}
-                      {/* Figma node 2143:10552 — "Add Medicine" footer row (white, with
-                  dictate icons + drag handle). Clicking "+" or the label
-                  appends one more empty row to the Rx table. */}
-                      <div style={styles.addMedicineRow}>
-                        <button
-                          type="button"
-                          style={styles.addMedicinePlus}
-                          onClick={() => setRxRows((rows) => [...rows, blankRxRow(rows.length + 1)])}
-                          aria-label="Add medicine row"
-                        >
-                          +
-                        </button>
-                        <button
-                          type="button"
-                          style={styles.addMedicineText}
-                          onClick={() => setRxRows((rows) => [...rows, blankRxRow(rows.length + 1)])}
-                        >
-                          Add Medicine
-                        </button>
-                        <span style={styles.dictateIcons}>
-                          <RewindIcon width={20} height={20} />
-                          <MicIcon width={20} height={20} />
-                        </span>
-                        <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <SectionBlock title="Rx" icon="pills" surface="card" collapsible open={openSections.rx} onToggle={() => toggleSection("rx")}>
+                  <RxBlock
+                    rows={rxRows}
+                    interactions={rxInteractions}
+                    onUpdateField={(index, key, value) =>
+                      setRxRows((prev) => prev.map((r, ix) => (ix === index ? { ...r, [key]: value } : r)))
+                    }
+                    onMedicineChange={(index, v) => {
+                      setRxRows((prev) => withTrailingRx(prev.map((r, ix) => ix === index ? { ...r, medicine: v, genericName: "" } : r)));
+                      autofillRxFromHistory(index, v);
+                    }}
+                    onMedicineSelect={(index, name, genericName) => {
+                      setRxRows((prev) => withTrailingRx(prev.map((r, ix) => ix === index ? { ...r, medicine: name, genericName } : r)));
+                      autofillRxFromHistory(index, name);
+                    }}
+                    onAddThenRow={addThenRow}
+                    onRemoveRxRow={removeRxRow}
+                    onUpdateThenField={updateThenField}
+                    onRemoveThenRow={removeThenRow}
+                    copyPrevDisabled={!prevVisit?.prescriptions?.length || !canEditForm}
+                    onCopyPrev={() => {
+                      if (prevVisit?.prescriptions?.length) {
+                        setRxRows(withTrailingRx(prevVisit.prescriptions.map((dto, i) => ({ ...fromRxDTO(dto), id: null, position: i + 1 }))));
+                      }
+                    }}
+                    onLoadTemplate={() => openTemplates("load", "rx")}
+                    onSaveTemplate={() => openTemplates("save", "rx")}
+                  />
+                </SectionBlock>
 
                 {/* Notes for Patient + Private Notes — same card pattern as
               Complaints/Diagnosis, but Private Notes uses a neutral grey fill
               to visually separate "patient-facing" from "internal" notes. */}
                 <div style={styles.noteCardsRow}>
-                  <div style={styles.noteCard}>
-                    <div style={styles.noteCardHeader}>
-                      <div style={styles.sectionTitleWrap}>
-                        <DocumentIcon style={styles.sectionIcon} />
-                        <h3 style={styles.sectionTitle}>Notes for Patient</h3>
-                      </div>
-                      <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
-                    </div>
-                    <div style={styles.noteCardField}>
-                      <textarea
-                        style={styles.noteCardTextarea}
-                        placeholder="Type here..."
-                        value={notesForPatientValue}
-                        onChange={(e) => setNotesForPatientValue(e.target.value)}
+                  <SectionBlock
+                    title="Notes for Patient"
+                    icon="document-school"
+                    surface="card"
+                    collapsible={false}
+                    actions={
+                      <PopoverMenu
+                        trigger={<Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />}
+                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "notes_for_patient") }]}
+                        ariaLabel="Template options"
                       />
-                      <span style={styles.noteCardDictate}>
-                        <RewindIcon width={20} height={20} />
-                        <MicIcon width={20} height={20} />
-                      </span>
-                    </div>
-                  </div>
-                  <div style={{ ...styles.noteCard, ...styles.noteCardPrivate }}>
-                    <div style={styles.noteCardHeader}>
-                      <div style={styles.sectionTitleWrap}>
-                        <UsersIcon style={styles.sectionIcon} />
-                        <h3 style={styles.sectionTitle}>Private Notes</h3>
-                      </div>
-                      <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
-                    </div>
-                    <div style={{ ...styles.noteCardField, ...styles.noteCardFieldPrivate }}>
-                      <textarea
-                        style={styles.noteCardTextarea}
-                        placeholder="Type here..."
-                        value={privateNotesValue}
-                        onChange={(e) => setPrivateNotesValue(e.target.value)}
+                    }
+                  >
+                    <NotesBlock
+                      value={{ text: notesForPatientValue }}
+                      onChange={(next) => setNotesForPatientValue(next.text)}
+                      onCopyPrev={() => prevVisit?.notesForPatient && setNotesForPatientValue(prevVisit.notesForPatient)}
+                      copyPrevDisabled={!prevVisit?.notesForPatient || !canEditForm}
+                      onLoadTemplate={() => openTemplates("load", "notes_for_patient")}
+                    />
+                  </SectionBlock>
+                  <SectionBlock
+                    title="Private Notes"
+                    icon="users-group-rounded"
+                    surface="card"
+                    collapsible={false}
+                    actions={
+                      <PopoverMenu
+                        trigger={<Icon name="menu" size={20} tone="inherit" style={styles.reorderHandle} />}
+                        items={[{ label: "Save as template", onClick: () => openTemplates("save", "private_notes") }]}
+                        ariaLabel="Template options"
                       />
-                    </div>
-                  </div>
+                    }
+                  >
+                    <TextBlock
+                      value={{ text: privateNotesValue }}
+                      onChange={(next) => setPrivateNotesValue(next.text)}
+                      variant="private"
+                    />
+                  </SectionBlock>
                 </div>
 
                 {/* Bottom rows — Figma node 2057:6494 */}
                 <div style={styles.bottomRows}>
                   {/* Tests — dictatable with mic/rewind */}
-                  <div style={styles.noteRow}>
-                    <div style={styles.noteLabel}>
-                      <DocumentIcon style={styles.sectionIcon} />
-                      <span style={styles.noteLabelText}>Tests</span>
-                    </div>
-                    <div style={styles.noteFieldWrap}>
-                      <AutocompleteTags
-                        field="tests"
-                        value={splitTags(testsValue)}
-                        onChange={(next) => setTestsValue(next.join(", "))}
-                        placeholder="Add tests..."
-                        ariaLabel="Tests"
-                        containerStyle={TESTS_TAGBOX_STYLE}
-                      />
-                      <span style={styles.dictateIcons}>
-                        <RewindIcon width={20} height={20} />
-                        <MicIcon width={20} height={20} />
-                      </span>
-                    </div>
-                    <ReorderIcon style={styles.reorderHandle} width={20} height={20} />
-                  </div>
-                  {/* Refer to — dropdown of doctors in the current clinic
-                (fetched from /api/doctors, which filters by the caller's
-                clinicId via the JWT). Click the pill to open; selecting a
-                doctor sets referDoctorId and closes the menu. */}
-                  <div style={styles.noteRow}>
-                    <div style={styles.noteLabel}>
-                      <UsersIcon style={styles.sectionIcon} />
-                      <span style={styles.noteLabelText}>Refer to</span>
-                    </div>
-                    <div ref={referWrapRef} style={{ position: "relative" }}>
-                      <div
-                        style={styles.referDropdown}
-                        onClick={() => setReferOpen((v) => !v)}
-                        role="button"
-                        aria-haspopup="listbox"
-                        aria-expanded={referOpen}
-                      >
-                        <span
-                          style={{
-                            ...styles.referText,
-                            ...(referDoctorName ? { color: colors.neutral900 } : {}),
-                          }}
-                        >
-                          {referDoctorName || "select doctor"}
-                        </span>
-                        <span style={styles.referChevron}>
-                          <ChevronIcon
-                            width={16}
-                            height={16}
-                            style={{ transform: referOpen ? "rotate(0deg)" : "rotate(180deg)" }}
-                          />
-                        </span>
-                      </div>
-                      {referOpen && (
-                        <div style={styles.referMenu}>
-                          {doctors.length === 0 ? (
-                            <div style={styles.referMenuEmpty}>No doctors in this clinic</div>
-                          ) : (
-                            doctors.map((d) => (
-                              <button
-                                key={d.id}
-                                type="button"
-                                style={styles.referMenuItem}
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  setReferDoctorId(d.id);
-                                  setReferOpen(false);
-                                }}
-                              >
-                                <span style={styles.referMenuItemName}>{d.name}</span>
-                                {d.speciality && (
-                                  <span style={styles.referMenuItemMeta}>{d.speciality}</span>
-                                )}
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <TestsBlock
+                    value={{ tags: splitTags(testsValue) }}
+                    onChange={(next) => setTestsValue(next.tags.join(", "))}
+                    onCopyPrev={() => prevVisit?.tests && setTestsValue(prevVisit.tests)}
+                    copyPrevDisabled={!prevVisit?.tests || !canEditForm}
+                    onLoadTemplate={() => openTemplates("load", "tests")}
+                    onSaveTemplate={() => openTemplates("save", "tests")}
+                  />
+                  {/* Referred by — the referral doctor (from the Catalog
+                directory) who referred this patient in. Selecting one stores
+                its name on the visit and prints as "Ref. by". */}
+                  <ReferBlock
+                    options={referralDoctors}
+                    value={referredBy}
+                    onChange={(name) => { setReferredBy(name); flagDirty(); }}
+                  />
                   {/* Next Review — date picker + "or ___ days" + notes field */}
-                  <div style={styles.noteRow}>
-                    <div style={styles.noteLabel}>
-                      <RestartIcon style={styles.sectionIcon} />
-                      <span style={styles.noteLabelText}>Next Review</span>
-                    </div>
-                    <div style={styles.reviewRow}>
-                      <div style={{ position: "relative", flexShrink: 0 }}>
-                        <div
-                          style={styles.reviewDate}
-                          onClick={() => setShowReviewDatePicker((v) => !v)}
-                        >
-                          <CalendarIcon width={24} height={24} style={{ color: "currentColor" }} />
-                          <span
-                            style={{
-                              ...styles.reviewDateText,
-                              color: reviewDate ? "inherit" : styles.reviewDateText.color,
-                            }}
-                          >
-                            {reviewDate ? formatReviewDate(reviewDate) : "Select Date"}
-                          </span>
-                        </div>
-                        {showReviewDatePicker && (
-                          <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, zIndex: 1100 }}>
-                            <DatePicker
-                              selectedDate={reviewDate ?? new Date()}
-                              onSelect={pickReviewDate}
-                              onClose={() => setShowReviewDatePicker(false)}
-                              style={{ top: "auto", bottom: "8px" }}
-                              disablePast
-                            />
-                          </div>
-                        )}
-                      </div>
-                      <span style={styles.reviewOr}>or</span>
-                      <div style={styles.reviewDaysWrap}>
-                        <input
-                          style={styles.reviewDaysInput}
-                          value={reviewDays}
-                          onChange={(e) => changeReviewDays(e.target.value)}
-                          inputMode="numeric"
-                          placeholder=""
-                        />
-                        <span style={styles.reviewDaysLabel}>days</span>
-                      </div>
-                      <input
-                        style={styles.reviewLong}
-                        placeholder="Notes for Review..."
-                        value={reviewNotesValue}
-                        onChange={(e) => setReviewNotesValue(e.target.value)}
-                      />
-                    </div>
-                  </div>
+                  <ReviewBlock
+                    date={reviewDate}
+                    days={reviewDays}
+                    notes={reviewNotesValue}
+                    onPickDate={pickReviewDate}
+                    onDaysChange={changeReviewDays}
+                    onNotesChange={setReviewNotesValue}
+                  />
                 </div>
               </section>
             </>
           )}
         </div>
       </div>
-      <Toast message={toast.message} isVisible={toast.visible} onClose={closeToast} />
-      {/* Floating session toolbar (Figma node 2255:10871) — fixed at the
-          bottom of the viewport so the prescription form scrolls behind it. */}
-      {/* Only mount once the visit fetch has resolved for this patient.
-          Otherwise the bar mounts first with no storageKey, briefly renders
-          its idle Start Session state, then remounts with the real visit
-          id and flips to Running/Paused — visible as a one-frame jerk. */}
-      {visitsLoadedFor === selectedPatientId && (
-        <SessionBar
-          // Remount per-visit so the bar reads the persisted state for the
-          // active visit rather than carrying state across visit switches.
-          key={activeVisit?.id ?? "no-visit"}
-          storageKey={activeVisit?.id}
-          onPrint={() => showToast("Print: not wired yet")}
-          onDownload={() => showToast("Download: not wired yet")}
-          onShare={() => showToast("Share: not wired yet")}
-          onActiveChange={setFormActive}
-          onStart={handleSessionStart}
-          onEnd={handleSessionEnd}
-        />
+      <Toast message={toast.message} {...resolveToastIcon(toast.message)} isVisible={toast.visible} onClose={closeToast} />
+
+      {/* Prescription templates — save the current Rx + clinical fields under a
+          name, or load a saved one to auto-fill. Clinic-shared (backend). */}
+      <Modal isOpen={showTemplates} onClose={() => setShowTemplates(false)}>
+        <div style={tplStyles.container}>
+          <header style={tplStyles.header}>
+            <div>
+              <h2 style={tplStyles.title}>
+                {templatesMode === "save" ? "Save as template" : "Load template"}
+              </h2>
+              <p style={tplStyles.subtitle}>
+                {templatesMode === "save"
+                  ? "Name this prescription so you can reuse it later."
+                  : "Pick a saved template to auto-fill the prescription."}
+              </p>
+            </div>
+            <IconButton ariaLabel="Close" onClick={() => setShowTemplates(false)} />
+          </header>
+
+          {templatesMode === "save" ? (
+            <div style={tplStyles.saveRow}>
+              <input
+                style={tplStyles.input}
+                placeholder="Template Name"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSaveTemplate(); }}
+                autoFocus
+              />
+              <button type="button" style={tplStyles.saveBtn} onClick={handleSaveTemplate} disabled={templatesBusy}>
+                Save
+              </button>
+            </div>
+          ) : (
+            <div style={tplStyles.list}>
+              {savedTemplates.length === 0 ? (
+                <p style={tplStyles.empty}>No saved templates yet.</p>
+              ) : (
+                savedTemplates.map((t) => (
+                  <div key={t.name} style={tplStyles.item}>
+                    <button type="button" style={tplStyles.itemName} onClick={() => handleLoadTemplate(t)} title="Load this template">
+                      {t.name}
+                    </button>
+                    <button type="button" style={tplStyles.itemDelete} onClick={() => handleDeleteTemplate(t.name)} disabled={templatesBusy} title="Delete template">
+                      ✕
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Move-to-today confirmation — fires when the doctor edits an OLD,
+          still-in-progress visit. Continuing relocates the visit's data to a
+          fresh visit dated today and removes the stale one; cancelling
+          discards the edit and leaves the old visit untouched. */}
+      <Modal isOpen={moveToTodayDate != null} onClose={cancelMoveToToday}>
+        <div style={moveStyles.container}>
+          <h2 style={moveStyles.title}>Move this visit to today?</h2>
+          <p style={moveStyles.body}>
+            Visit data of <strong>{moveToTodayDate ? formatVisitLabel(moveToTodayDate) : ""}</strong>{" "}
+            will be moved to today&rsquo;s date.
+          </p>
+          <p style={moveStyles.body}>
+            The {moveToTodayDate ? formatVisitLabel(moveToTodayDate) : ""} visit entry will be removed.
+          </p>
+          <p style={moveStyles.bodyMuted}>Do you want to continue?</p>
+          <div style={moveStyles.actions}>
+            <Button variant="light" size="sm" onClick={cancelMoveToToday} disabled={saving}>
+              Cancel
+            </Button>
+            <Button variant="secondary" size="sm" onClick={moveToToday} disabled={saving}>
+              {saving ? "Moving…" : "Continue"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ─── Floating bottom bar — the ACTIVE SECTION'S actions. Section nav
+          + contact actions moved up to the sticky header; this bar now adapts
+          to which section is open. Output actions (Download / Print / Share)
+          group on the left; the destructive Clear all is set apart behind a
+          divider. Coming-soon sections (Timeline / Bills) render no bar. */}
+      {activeAction <= 1 && (
+        <div style={styles.bottomBar}>
+          {activeAction === 0 ? (
+            <>
+              {/* Complete visit / Save changes — on any EDITABLE visit (today /
+                  within 24h, or an open in-progress session). canEditForm
+                  hard-locks visits past their 24h window, so a historic visit
+                  shows no button. The label + visibility key off whether THIS VISIT
+                  has ever been completed (persisted: COMPLETED status, or the
+                  localStorage marker set on first completion — both survive
+                  navigation), NOT the live IN_PROGRESS status:
+                    • NEVER completed (fresh At-Doc, OR a session left running in
+                      progress) → "Complete visit", ALWAYS visible — even while
+                      editing, and even when re-opened later — so the doctor can
+                      always end the consultation. It never flips to "Save" before
+                      the first completion.
+                    • Completed at least once → amend mode: "Save changes" shown
+                      while there's a pending edit OR while a re-opened session is
+                      still RUNNING (so the doctor can always end a live timer),
+                      hidden only once the session is ended AND nothing is pending.
+                  Both labels run the SAME action — save the form + end/(re)complete
+                  the visit. Clear all stays throughout the 24h window. */}
+              {canEditForm
+                && (() => {
+                // "Completed at least once" — server-owned Visit.completedAt is
+                // the source of truth (survives amend re-opens, follows the
+                // patient across devices); the localStorage flag is a fallback
+                // for visits saved before the field existed / pre-restart.
+                const everCompleted =
+                  activeCompleted
+                  || activeVisit?.completedAt != null
+                  || (activeVisit ? wasVisitCompleted(activeVisit.id) : false);
+                // A live (running) session — the timer is going (started, not yet
+                // ended). The doctor may have stepped out mid-treatment leaving it
+                // running on purpose, so the button must stay available to END it
+                // even with no pending edit.
+                const liveSession =
+                  activeVisit?.sessionStartedAt != null && activeVisit?.sessionEndedAt == null;
+                // Completed → amend mode: hidden only when the session is already
+                // ended AND there's nothing pending. A re-opened completed visit
+                // whose timer is still running keeps the button (to end it). The
+                // load-settling guard keeps a freshly-opened completed pad from
+                // phantom-dirtying itself into "Save changes".
+                if (everCompleted && !liveSession && !dirty && !pendingSave) return null;
+                return (
+                  <button
+                    type="button"
+                    style={{ ...styles.barBtn, backgroundColor: colors.red100, color: colors.neutral100 }}
+                    // onMouseDown + preventDefault so it runs before the focused
+                    // field blurs (the blur's silent auto-save would otherwise
+                    // race the click).
+                    onMouseDown={(e) => { e.preventDefault(); void handleCompleteVisit(); }}
+                  >
+                    <Icon name="check" size={18} tone="inherit" />
+                    <span>{everCompleted ? "Save changes" : "Complete visit"}</span>
+                  </button>
+                );
+              })()}
+              {/* Language selector — picks the printed/shared prescription
+                  language. Compact Select sized to match the bar buttons. */}
+              <div style={{ width: 128, "--input-h": "36px" } as React.CSSProperties}>
+                <Select options={["English", "Hindi", "Telugu", "Tamil", "Kannada"]} value={language} onChange={setLanguage} />
+              </div>
+              <button type="button" style={styles.barBtn} onClick={() => handlePrintPrescription("download")}>
+                <Icon name="download" size={18} tone="inherit" />
+                <span>Download</span>
+              </button>
+              <button type="button" style={styles.barBtn} onClick={() => handlePrintPrescription("print")}>
+                <Icon name="printer" size={18} tone="inherit" />
+                <span>Print</span>
+              </button>
+              <button type="button" style={styles.barBtn} onClick={handleShareWhatsApp}>
+                <Icon name="share" size={18} tone="inherit" />
+                <span>Share</span>
+              </button>
+              {/* Clear all wipes the prescription — available the whole time a
+                  visit is editable (today / within its 24h window), whether or
+                  not it's been completed. It disappears only when the visit
+                  hard-locks (date past 24h). The green Complete/Save button is
+                  what toggles with completion; Clear all stays put. */}
+              {canEditForm && (
+                <>
+                  <div style={styles.barDivider} aria-hidden />
+                  <button type="button" style={{ ...styles.barBtn, ...styles.barBtnDanger }} onClick={handleClearAll}>
+                    <Icon name="trash" size={18} tone="inherit" />
+                    <span>Clear all</span>
+                  </button>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <button type="button" style={styles.barBtn} onClick={() => setShowAddModal(true)}>
+                <Icon name="file" size={18} tone="inherit" />
+                <span>Add file</span>
+              </button>
+              <button type="button" style={styles.barBtn} onClick={handleDownloadAllFiles}>
+                <Icon name="download" size={18} tone="inherit" />
+                <span>Download all</span>
+              </button>
+            </>
+          )}
+        </div>
       )}
+
+      {showAiSummary && (
+        <>
+          <div style={styles.aiPopoverBackdrop} onClick={() => setShowAiSummary(false)} />
+          <div style={styles.aiPopover} role="dialog" aria-label="AI Summary">
+            <h4 style={styles.aiSummaryTitle}>AI Summary</h4>
+            {aiConfigured === false ? (
+              <p style={styles.aiSummaryBody}>AI is not configured for this clinic.</p>
+            ) : aiError ? (
+              <p style={styles.aiSummaryBody}>{aiError}</p>
+            ) : aiGenerating && !aiSummary ? (
+              <p style={styles.aiSummaryBody}>Generating…</p>
+            ) : aiSummary?.summary ? (
+              <>
+                <p style={styles.aiSummaryBody}>{aiSummary.summary}</p>
+                {aiSummary.activeConditions.length > 0 && (
+                  <p style={styles.aiSummaryBody}><strong>Active conditions:</strong> {aiSummary.activeConditions.join(", ")}</p>
+                )}
+                {aiSummary.allergies.length > 0 && (
+                  <p style={styles.aiSummaryBody}><strong>Allergies:</strong> {aiSummary.allergies.join(", ")}</p>
+                )}
+                {aiSummary.riskFlags.length > 0 && (
+                  <p style={styles.aiSummaryBody}><strong>Risk flags:</strong> {aiSummary.riskFlags.join(", ")}</p>
+                )}
+                {aiSummary.lastVisitGist && (
+                  <p style={styles.aiSummaryBody}><strong>Last visit:</strong> {aiSummary.lastVisitGist}</p>
+                )}
+                {aiStale && <p style={styles.aiSummaryStale}>New visits since this summary — regenerate for the latest.</p>}
+              </>
+            ) : (
+              <p style={styles.aiSummaryBody}>No summary yet for this patient.</p>
+            )}
+            {aiConfigured !== false && (
+              <button type="button" style={styles.aiGenerateBtn} onClick={handleGenerateSummary} disabled={aiGenerating}>
+                {aiGenerating ? "Generating…" : aiSummary?.summary ? "Regenerate" : "Generate"}
+              </button>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Add File modal. Drag-drop or click-to-choose, multi-file, per-file
+          metadata (name, category, investigation date, tie-to-visit, notes).
+          One unified flow now that Reports + Files are a single tab. */}
+      <AddReportModal
+        isOpen={showAddModal}
+        visits={visits}
+        defaultVisitId={activeVisit?.id ?? null}
+        patientId={selectedPatientId}
+        onClose={() => setShowAddModal(false)}
+        onAdd={handleAddRows}
+      />
+
+      <EditPatientModal
+        isOpen={showEditPatient}
+        patient={selectedPatient}
+        onClose={() => setShowEditPatient(false)}
+        onSave={(updated) => {
+          if (selectedPatient) setSelectedPatient({ ...selectedPatient, ...updated });
+        }}
+        onSaved={() => showToast("Patient info saved")}
+        onArchived={() => {
+          showToast("Patient archived");
+          // Drop the now-hidden patient from local selection so the queue
+          // re-fetches a fresh active-only list on next mount.
+          setSelectedPatient(null);
+        }}
+        onError={(msg) => showToast(msg)}
+      />
+
+      {/* File viewer modal — opens when a row in the Files list is clicked.
+          Shows the file with the annotation toolbar; close × dismisses.
+          For server-only files (fileUrl null, fileId set) the viewer shows
+          a download button; FileViewer fetches bytes lazily if needed. */}
+      <Modal isOpen={viewerOpen !== null} onClose={() => setViewerOpen(null)} surface="transparent" padding={0} shadow="none">
+        {viewerOpen && (
+          <FileViewer
+            file={{
+              id: viewerOpen.id ?? viewerOpen.fileId ?? "file",
+              name: viewerOpen.name,
+              fileUrl: viewerOpen.fileUrl
+                ? viewerOpen.fileUrl
+                : viewerOpen.fileId && selectedPatientId
+                  ? `${API_BASE_URL}/api/patients/${selectedPatientId}/files/${viewerOpen.fileId}/download`
+                  : null,
+              mimeType: viewerOpen.mimeType ?? null,
+            }}
+            onBack={() => setViewerOpen(null)}
+          />
+        )}
+      </Modal>
+
+      {/* Slot picker — patient has 2+ appointments today and was opened
+          without a specific one. Asks which slot this consultation is for. */}
+      <Modal
+        isOpen={!!slotOptions}
+        onClose={() => setSlotOptions(null)}
+        surface={colors.primary100}
+        width={460}
+      >
+        <div style={slotPickerStyles.card}>
+          <h3 style={slotPickerStyles.title}>Choose an appointment slot</h3>
+          <p style={slotPickerStyles.sub}>
+            {selectedPatient?.name ?? "This patient"} has more than one appointment
+            today. Pick the slot you're starting this consultation for.
+          </p>
+          <div style={slotPickerStyles.slots}>
+            {(slotOptions ?? []).map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                style={slotPickerStyles.slotBtn}
+                onClick={() => chooseSlot(a)}
+              >
+                {formatSlot(a.scheduledTime)}
+              </button>
+            ))}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
+
+// "25 May 2026 at 10:05 PM" for the appointment-slot picker.
+function formatSlot(iso: string | null): string {
+  if (!iso) return "Appointment";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "Appointment";
+  const datePart = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  const timePart = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  return `${datePart} at ${timePart}`;
+}
+
+const slotPickerStyles: Record<string, React.CSSProperties> = {
+  card: {
+    display: "flex",
+    flexDirection: "column",
+    gap: spacing.s,
+    textAlign: "center",
+  },
+  title: {
+    margin: 0,
+    fontFamily: fonts.family.secondary,
+    fontSize: fonts.size.h6,
+    fontWeight: fonts.weight.regular,
+    color: colors.neutral900,
+  },
+  sub: {
+    margin: 0,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.neutral600,
+    lineHeight: 1.5,
+  },
+  slots: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: spacing.s,
+    justifyContent: "center",
+    marginTop: spacing.s,
+  },
+  slotBtn: {
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.control.sm,
+    color: colors.neutral900,
+    backgroundColor: colors.neutral100,
+    border: `1px solid ${colors.primary300}`,
+    borderRadius: radii.full,
+    padding: "10px 20px",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+};
+

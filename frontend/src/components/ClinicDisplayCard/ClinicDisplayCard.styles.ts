@@ -1,16 +1,17 @@
 import { colors, fonts, radii, spacing, strokes } from "../../styles/theme";
+import { cardSurface } from "../Card/Card.styles";
 
 export const styles = {
   card: {
-    backgroundColor: colors.secondary50,
-    borderRadius: radii.xxl,
-    padding: spacing.xxl,
+    // Sage clinic surface — shared with ClinicCard via cardSurface
+    // (the lone literal shadow is now the shadows.card token).
+    ...cardSurface("sage", "raised"),
+    padding: spacing["2xl"],
     width: "373px",
     display: "flex",
     flexDirection: "column" as const,
     gap: spacing.xl,
     position: "relative" as const,
-    boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
   },
   header: {
     display: "flex",
@@ -95,7 +96,7 @@ export const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.secondary300,
+    backgroundColor: colors.secondary700,
     color: colors.neutral100,
     padding: "4px 12px",
     borderRadius: radii.pill,

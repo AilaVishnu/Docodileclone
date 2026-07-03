@@ -45,3 +45,38 @@ export function unmarkStarted(patientId: string): Set<string> {
   persist(set);
   return set;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Live timer lookup — resolves the active session timer for a patient by
+// scanning docodile_session_meta for a matching patient.id, then reading
+// elapsed seconds from docodile_session_state. Returns null when the
+// patient has no active (non-ended) session.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SESSION_META_KEY = "docodile_session_meta";
+const SESSION_STATE_KEY = "docodile_session_state";
+
+type _SessionMeta = { visitId: string; patient: { id: string } };
+type _SessionState = { baseSeconds: number; runStartedAtMs: number | null; paused: boolean; ended: boolean };
+
+export function getSessionSecondsForPatient(patientId: string): number | null {
+  try {
+    const metaRaw = localStorage.getItem(SESSION_META_KEY);
+    const stateRaw = localStorage.getItem(SESSION_STATE_KEY);
+    if (!metaRaw) return null;
+    const metaMap = JSON.parse(metaRaw) as Record<string, _SessionMeta>;
+    const stateMap = stateRaw ? (JSON.parse(stateRaw) as Record<string, _SessionState>) : {};
+    for (const visitId of Object.keys(metaMap)) {
+      const meta = metaMap[visitId];
+      if (meta.patient.id !== patientId) continue;
+      const state = stateMap[visitId];
+      if (!state || state.ended) return null;
+      return state.runStartedAtMs == null
+        ? state.baseSeconds
+        : state.baseSeconds + Math.max(0, Math.floor((Date.now() - state.runStartedAtMs) / 1000));
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}

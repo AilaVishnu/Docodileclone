@@ -14,6 +14,7 @@ export type RxRowDTO = {
   dosage?: string | null;
   whenToTake?: string | null;
   frequency?: string | null;
+  frequencyInterval?: string | null;
   duration?: string | null;
   notes?: string | null;
 };
@@ -23,6 +24,9 @@ export type VisitDTO = {
   patientId: string;
   clinicId: string;
   createdByDoctorId: string | null;
+  // Prescribing doctor's name, resolved server-side (robust for the print even
+  // when the doctor isn't in the caller's scoped /api/doctors list).
+  createdByDoctorName: string | null;
   visitDate: string; // ISO yyyy-MM-dd
 
   bpSystolic: string | null; bpDiastolic: string | null; bpUnit: string | null;
@@ -48,6 +52,9 @@ export type VisitDTO = {
 
   referDoctorId: string | null;
   referDoctorName: string | null;
+  /** Referral doctor (from the Catalog directory) who referred the patient in —
+   *  a denormalized name, printed as "Ref. by". */
+  referredBy: string | null;
   reviewDate: string | null;
   reviewDays: number | null;
   reviewNotes: string | null;
@@ -56,17 +63,34 @@ export type VisitDTO = {
   // the doctor has interacted with Start / End on the floating bar.
   sessionStartedAt: string | null;
   sessionEndedAt: string | null;
+  // Sticky "completed at least once" — survives amend re-opens (unlike
+  // sessionEndedAt). Server-owned replacement for the localStorage flag.
+  completedAt: string | null;
   sessionDurationSec: number | null;
+
+  // The appointment this visit belongs to (null for legacy/imported visits).
+  appointmentId: string | null;
+
+  // The owning appointment's status (COMPLETED / IN_PROGRESS / AT_DOC / …),
+  // resolved server-side. Null when the visit has no appointment. Lets the pad
+  // lock/label each visit tab from its OWN completion state.
+  appointmentStatus: string | null;
 
   prescriptions: RxRowDTO[];
 };
 
 // Same shape as VisitDTO minus server-generated fields. Used for both POST
 // and PUT — full-replacement semantics on update (Rx rows wholesale-replaced).
+// `createdByDoctorId` is server-set today (current user) but accepted in the
+// payload too so the frontend can tag visits with the appointment's owning
+// doctor when a receptionist/admin opens View Pad on the doctor's behalf.
 export type SaveVisitRequest = Omit<
   VisitDTO,
-  "id" | "patientId" | "clinicId" | "createdByDoctorId" | "referDoctorName"
->;
+  "id" | "patientId" | "clinicId" | "createdByDoctorId" | "createdByDoctorName" | "referDoctorName" | "appointmentId" | "appointmentStatus" | "completedAt"
+> & {
+  createdByDoctorId?: string | null;
+  appointmentId?: string | null;
+};
 
 const authHeaders = (): HeadersInit => {
   const token = localStorage.getItem("docodile_token");
@@ -88,6 +112,27 @@ export const listVisits = (patientId: string): Promise<VisitDTO[]> =>
 export const getVisit = (visitId: string): Promise<VisitDTO> =>
   fetch(`${API_BASE_URL}/api/visits/${visitId}`, { headers: authHeaders() })
     .then((r) => handle<VisitDTO>(r));
+
+// One in-progress consultation (pad opened, not yet completed). Drives the
+// live Active Sessions indicator. `sessionStartedAt` is server-owned, so the
+// elapsed timer is accurate across devices/refreshes.
+export type ActiveSession = {
+  visitId: string;
+  patientId: string;
+  appointmentId: string | null;
+  sessionStartedAt: string; // ISO instant
+  name: string;
+  phone: string | null;
+  email: string | null;
+  gender: string | null;
+  dob: string | null;
+  age: number | null;
+  displayNo: number | null;
+};
+
+export const getActiveSessions = (): Promise<ActiveSession[]> =>
+  fetch(`${API_BASE_URL}/api/active-sessions`, { headers: authHeaders() })
+    .then((r) => handle<ActiveSession[]>(r));
 
 export const createVisit = (patientId: string, body: SaveVisitRequest): Promise<VisitDTO> =>
   fetch(`${API_BASE_URL}/api/patients/${patientId}/visits`, {

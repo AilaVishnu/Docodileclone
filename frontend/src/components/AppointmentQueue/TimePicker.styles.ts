@@ -1,25 +1,64 @@
 import { CSSProperties } from "react";
-import { colors, radii, fonts, spacing } from "../../styles/theme";
+import { colors, fonts } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
+  backdrop: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    zIndex: 1050,
+  },
+
   overlay: {
-    position: "absolute",
-    top: "100%",
+    // Center on the viewport (was anchored to the parent chip, which could
+    // push the popup off-screen on narrower viewports like 1024).
+    position: "fixed",
+    top: "50%",
     left: "50%",
-    transform: "translateX(-50%)",
-    zIndex: 1000,
-    marginTop: "8px",
+    transform: "translate(-50%, -50%)",
+    zIndex: 1100,
   },
 
   container: {
     backgroundColor: colors.neutral100,
-    width: "240px",
+    width: "280px",
     padding: "16px",
     borderRadius: "20px",
     boxShadow: "2px 2px 16px 0px rgba(0,0,0,0.12)",
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "12px",
+  },
+
+  sectionLabel: {
+    fontSize: fonts.size.xs,
+    color: colors.neutral500,
+    fontWeight: 500,
+    marginBottom: "6px",
+  },
+
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(6, 1fr)",
+    gap: "4px",
+  },
+
+  cell: {
+    padding: "8px 0",
+    textAlign: "center",
+    cursor: "pointer",
+    borderRadius: "6px",
+    fontSize: fonts.size.s,
+    color: colors.neutral700,
+    border: `1px solid ${colors.neutral200}`,
+    backgroundColor: "transparent",
+    userSelect: "none",
+  },
+
+  selectedCell: {
+    backgroundColor: colors.active.shade600,
+    color: colors.neutral100,
+    borderColor: colors.active.shade600,
   },
 
   header: {
@@ -119,7 +158,25 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: fonts.size.m,
     fontWeight: 500,
     cursor: "pointer",
-    width: "100%",
+    flex: 1,
     marginTop: "4px",
+  },
+
+  actionsRow: {
+    display: "flex",
+    gap: "8px",
+  },
+
+  nowButton: {
+    backgroundColor: "transparent",
+    color: colors.neutral900,
+    border: `1px solid ${colors.neutral300}`,
+    borderRadius: "999px",
+    padding: "10px 18px",
+    fontSize: fonts.size.m,
+    fontWeight: 500,
+    cursor: "pointer",
+    marginTop: "4px",
+    whiteSpace: "nowrap" as const,
   },
 };

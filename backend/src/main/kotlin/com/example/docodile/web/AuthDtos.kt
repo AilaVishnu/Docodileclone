@@ -1,15 +1,6 @@
 package com.example.docodile.web
 
-import java.util.UUID
-
-
 data class LoginRequest(
-    val email: String,
-    val password: String
-)
-
-data class StaffLoginRequest(
-    val domain: String,
     val email: String,
     val password: String
 )
@@ -17,6 +8,10 @@ data class StaffLoginRequest(
 data class LoginResponse(
     val token: String,
     val role: String,
-    val clinicId: UUID?,
-    val clinicName: String
+    val gender: String?,
+    val mfaPending: Boolean = false
+)
+
+data class ForgotPasswordRequest(
+    val email: String,
 )

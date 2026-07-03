@@ -3,13 +3,17 @@ import { API_BASE_URL } from "../../apiConfig";
 import { Patient } from "../../hooks/usePatients";
 import { pickAvatar } from "../../utils/avatar";
 import { Button } from "../../components/Button";
-import { DatePicker } from "../../components/AppointmentQueue/DatePicker";
+import { DatePicker } from "../../components/DatePicker/DatePicker";
 import { loadStartedSet } from "../../utils/sessionStarted";
-import { ReactComponent as ListSortIcon } from "../../assets/icons/list-sort.svg";
-import { ReactComponent as WidgetIcon } from "../../assets/icons/widget.svg";
-import { ReactComponent as RestartIcon } from "../../assets/icons/restart-24.svg";
-import { colors, fonts, radii, spacing } from "../../styles/theme";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
+import { ChevronDown } from "../../components/icons/ChevronDown";
+import { StatusBadge } from "../../components/AppointmentQueue/StatusBadge";
+import { Tabs } from "../../components/Tabs";
+import { ViewToggle } from "../../components/ViewToggle";
+import { colors, radii } from "../../styles/theme";
 import { styles } from "./PrescriptionQueue.styles";
+import { Toast } from "../../components/Toast";
+import { resolveToastIcon } from "../../components/Toast/toastIcon";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal landing of the Prescription page — Figma 2282:17378.
@@ -27,28 +31,33 @@ type AppointmentRow = {
   patientGender: string | null;
   patientDob: string | null;
   patientAge: number | null; // months
+  patientDisplayNo: number | null; // per-clinic "T###" number
   service: string | null;
   type: string | null;
   status: string | null;
   scheduledTime: string | null;
+  doctorId: string;
+  patientArchived?: boolean;
 };
 
-type StatusFilter = "all" | "AT_DOC" | "IN_PROGRESS" | "WAITING" | "COMPLETED";
+type StatusFilter = "all" | "AT_DOC" | "IN_PROGRESS" | "COMPLETED";
 type ViewMode = "grid" | "list";
 
 type PrescriptionQueueProps = {
-  onSelect: (patient: Patient, appointmentId: string) => void;
+  onSelect: (patient: Patient, appointmentId: string, queueDate: string, doctorId: string) => void;
+  // Bumped by the parent (HomePage) after a walk-in is created, so this
+  // queue refetches today's appointments and the new card appears.
+  refreshKey?: number;
 };
 
 const TAB_ITEMS: { id: StatusFilter; label: string }[] = [
   { id: "all", label: "View all" },
   { id: "AT_DOC", label: "At Doc" },
-  { id: "IN_PROGRESS", label: "In Progress" },
-  { id: "WAITING", label: "Waiting" },
+  { id: "IN_PROGRESS", label: "Ongoing" },
   { id: "COMPLETED", label: "Completed" },
 ];
 
-export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
+export function PrescriptionQueue({ onSelect, refreshKey }: PrescriptionQueueProps) {
   const [appointments, setAppointments] = useState<AppointmentRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +71,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
   // this device. Loaded on mount and on every fetch (so transitions made
   // inside the form propagate back when the user returns to the queue).
   const [startedSet, setStartedSet] = useState<Set<string>>(loadStartedSet);
+  const [toastMsg, setToastMsg] = useState<string>("");
   useEffect(() => {
     setStartedSet(loadStartedSet());
   }, [appointments]);
@@ -82,6 +92,12 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return (await r.json()) as AppointmentRow[];
       })
+      // Legacy walk-in rows may carry "AT_DOC" — the existing pill/filter/group
+      // code is keyed off "IN_PROGRESS", so normalise at ingest and let the
+      // started-set decide the visual ("At Doc" vs "In Progress").
+      .then((rows) => rows.map((a) => (
+        a.status === "AT_DOC" ? { ...a, status: "IN_PROGRESS" } : a
+      )))
       .then(setAppointments)
       .catch((e) => {
         if ((e as Error).name === "AbortError") return;
@@ -90,12 +106,14 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [selectedDate]);
+  }, [selectedDate, refreshKey]);
 
   const filtered = useMemo(() => {
-    // Only patients actually present at the clinic appear in this queue —
-    // skip Booked (not yet checked in), Cancelled, and No-Show.
-    const HIDDEN_STATUSES = new Set(["BOOKED", "CANCELLED", "NO_SHOW"]);
+    // The Rx pad is the doctor's queue: a patient only appears once the front
+    // desk has SENT them to the doctor (status IN_PROGRESS / "At Doc"). So skip
+    // WAITING (checked in but not sent yet) along with Booked / Cancelled /
+    // No-Show. What's left is At Doc, Ongoing (Start Session clicked), Completed.
+    const HIDDEN_STATUSES = new Set(["BOOKED", "CANCELLED", "NO_SHOW", "WAITING"]);
     const visible = appointments.filter(
       (a) => a.status == null || !HIDDEN_STATUSES.has(a.status),
     );
@@ -123,8 +141,9 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
     );
   }, [appointments, statusFilter, startedSet]);
 
-  // Patient T-ID is the same client-side counter used by BookAppointment —
-  // keyed by appointment id, so look up the same map here.
+  // Patient T-ID — the real per-clinic number now comes from the backend
+  // (apt.patientDisplayNo). This legacy localStorage map is kept only as a
+  // fallback for rows that predate the backend backfill (displayNo null).
   const patientIdMap = useMemo<Record<string, number>>(() => {
     try {
       return JSON.parse(localStorage.getItem("docodile_patient_map") || "{}");
@@ -134,18 +153,30 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
   }, []);
 
   const handleViewPad = (apt: AppointmentRow) => {
+    // Archived patients stay visible in the queue (the receptionist still
+    // needs to see who was scheduled) but the doctor can't open the pad —
+    // archiving is the signal to stop adding to that patient's chart.
+    if (apt.patientArchived) {
+      setToastMsg(`${apt.patientName} is archived — restore the patient to continue.`);
+      return;
+    }
     // Just open the form; the "started" flag now flips when the doctor
     // clicks Start Session inside the form (handled by PrescriptionPage).
     const patient: Patient = {
       id: apt.patientId,
       name: apt.patientName,
       phone: apt.patientPhone,
+      email: null,
       gender: apt.patientGender,
       dob: apt.patientDob,
       age: apt.patientAge,
+      displayNo: apt.patientDisplayNo,
       lastVisitDate: null,
+      treatingDoctorIds: [],
+      treatingDepartments: [],
     };
-    onSelect(patient, apt.id);
+    const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
+    onSelect(patient, apt.id, dateStr, apt.doctorId);
   };
 
   const renderCards = () => {
@@ -177,7 +208,7 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
           <PatientCard
             key={apt.id}
             apt={apt}
-            tNumber={patientIdMap[apt.id]}
+            tNumber={apt.patientDisplayNo ?? patientIdMap[apt.id]}
             started={startedSet.has(apt.patientId)}
             mode={viewMode}
             onViewPad={() => handleViewPad(apt)}
@@ -189,81 +220,62 @@ export function PrescriptionQueue({ onSelect }: PrescriptionQueueProps) {
 
   const isToday = sameDay(selectedDate, new Date());
   const dateLabel = isToday
-    ? "Today’s"
+    ? "Today"
     : selectedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
 
   return (
     <div style={styles.page}>
-      <h1 style={styles.title}>
-        <span
-          onClick={() => setShowDatePicker((v) => !v)}
-          style={{
-            textDecoration: "underline",
-            cursor: "pointer",
-            color: colors.neutral900,
-          }}
-        >
-          {dateLabel}
-        </span>{" "}
-        Queue
-      </h1>
-
-      {showDatePicker && (
-        <div style={{ position: "relative", alignSelf: "center" }}>
-          <DatePicker
-            selectedDate={selectedDate}
-            onSelect={(d) => {
-              setSelectedDate(d);
-              setShowDatePicker(false);
-            }}
-            onClose={() => setShowDatePicker(false)}
-            showDoneButton
-          />
-        </div>
-      )}
+      <PageHeader
+        title={
+          <>
+            <span
+              onClick={() => setShowDatePicker((v) => !v)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                cursor: "pointer",
+                color: colors.neutral900,
+                backgroundColor: "transparent",
+                border: `1px solid ${colors.primary400}`,
+                borderRadius: radii.m,
+                padding: "4px 12px",
+                position: "relative",
+                zIndex: showDatePicker ? 1100 : "auto",
+              }}
+            >
+              {dateLabel}
+              <ChevronDown open={showDatePicker} />
+              {showDatePicker && (
+                <DatePicker
+                  selectedDate={selectedDate}
+                  onSelect={(d) => {
+                    setSelectedDate(d);
+                    setShowDatePicker(false);
+                  }}
+                  onClose={() => setShowDatePicker(false)}
+                  showDoneButton
+                />
+              )}
+            </span>{" "}
+            Queue
+          </>
+        }
+      />
 
       <div style={styles.controls}>
-        <div style={styles.tabs} role="tablist" aria-label="Filter by status">
-          {TAB_ITEMS.map((t) => {
-            const active = t.id === statusFilter;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                style={{ ...styles.tab, ...(active ? styles.tabActive : null) }}
-                onClick={() => setStatusFilter(t.id)}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
+        <Tabs
+          variant="block"
+          items={TAB_ITEMS}
+          activeId={statusFilter}
+          onSelect={(id) => setStatusFilter(id as StatusFilter)}
+        />
 
-        <div style={styles.viewToggle} aria-label="View mode">
-          <button
-            type="button"
-            style={{ ...styles.viewBtn, ...(viewMode === "list" ? styles.viewBtnActive : null) }}
-            onClick={() => setViewMode("list")}
-            aria-label="List view"
-            aria-pressed={viewMode === "list"}
-          >
-            <ListSortIcon width={20} height={20} />
-          </button>
-          <button
-            type="button"
-            style={{ ...styles.viewBtn, ...(viewMode === "grid" ? styles.viewBtnActive : null) }}
-            onClick={() => setViewMode("grid")}
-            aria-label="Grid view"
-            aria-pressed={viewMode === "grid"}
-          >
-            <WidgetIcon width={20} height={20} />
-          </button>
-        </div>
+        <ViewToggle value={viewMode} onChange={setViewMode} />
       </div>
 
       {renderCards()}
+      <Toast message={toastMsg} {...resolveToastIcon(toastMsg)} isVisible={!!toastMsg} onClose={() => setToastMsg("")} />
     </div>
   );
 }
@@ -310,13 +322,12 @@ function PatientCard({
       />
       <div style={isList ? styles.cardListBody : styles.cardBody}>
         <p style={styles.cardTitle}>
-          <span style={styles.cardTitleName}>{tId}: {apt.patientName}</span>
-          {meta && (
-            <>
-              <br />
-              <span style={styles.cardTitleMeta}>{meta}</span>
-            </>
-          )}
+          {/* Two lines: T-number on top, then "<name> (M|64)". Both truncate
+              with an ellipsis instead of wrapping. */}
+          <span style={{ ...styles.cardTitleName, display: "block", maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tId}</span>
+          <span style={{ ...styles.cardTitleMeta, display: "block", maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {apt.patientName}{meta ? ` ${meta}` : ""}
+          </span>
         </p>
         <div style={styles.cardRows}>
           <CardRow label="Service" value={abbreviateService(apt.service)} />
@@ -324,7 +335,6 @@ function PatientCard({
             label="Type"
             value={
               <span style={styles.typeRow}>
-                <RestartIcon width={18} height={18} />
                 {apt.type ?? "—"}
               </span>
             }
@@ -332,7 +342,7 @@ function PatientCard({
           <CardRow label="Time" value={time} />
           <CardRow
             label="Status"
-            value={<StatusPill status={apt.status} started={started} />}
+            value={apt.status ? <StatusBadge status={apt.status} started={started} /> : "—"}
           />
         </div>
         <div style={styles.cardFooter}>
@@ -344,6 +354,11 @@ function PatientCard({
 }
 
 // ─── List view (Appointment Queue-style table) ───────────────────────────────
+
+// Spacer cells between data columns — bottom border continues across the row
+// so the row underline reads as a single line. Mirrors the QueueTable pattern.
+const spacerTh: React.CSSProperties = { borderBottom: `1px solid ${colors.primary300}`, padding: 0 };
+const spacerTd: React.CSSProperties = { padding: 0 };
 
 function PatientListTable({
   appointments,
@@ -362,33 +377,50 @@ function PatientListTable({
   return (
     <div style={styles.tableWrap}>
       <table style={styles.table}>
+        {/* Spacer-cell pattern matches AppointmentQueue's QueueTable —
+            fixed widths for every data column, one flexible spacer absorbs
+            leftover width, the rest are uniform inter-column gaps. */}
         <colgroup>
-          <col style={{ width: 48 }} />
-          <col style={{ width: "26%" }} />
-          <col style={{ width: "16%" }} />
-          <col style={{ width: "12%" }} />
-          <col style={{ width: "10%" }} />
-          <col style={{ width: "10%" }} />
-          <col style={{ width: "12%" }} />
-          <col style={{ width: 120 }} />
+          <col style={{ width: "56px" }} />        {/* # (T-number, e.g. T001) */}
+          <col />                                   {/* flex spacer — absorbs leftover */}
+          <col style={{ width: "var(--queue-name-w)" }} />  {/* Name (256 / 200, truncates) */}
+          <col />
+          <col style={{ width: "140px" }} />       {/* Phone (fits "+91 98888 88888") */}
+          <col />
+          <col style={{ width: "72px" }} />        {/* Service */}
+          <col />
+          <col style={{ width: "72px" }} />        {/* Type (text only) */}
+          <col />
+          <col style={{ width: "84px" }} />        {/* Time */}
+          <col />
+          <col style={{ width: "98px" }} />        {/* Status */}
+          <col />
+          <col style={{ width: "120px" }} />       {/* View Pad button */}
         </colgroup>
         <thead>
           <tr>
-            <th style={styles.th}>#</th>
-            <th style={styles.th}>Name</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Phone</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Service</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Type</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Time</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Status</th>
-            <th style={styles.th} />
+            <th style={{ ...styles.th, textAlign: "left", paddingLeft: 8, paddingRight: 0 }}>#</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "left", paddingLeft: 0, paddingRight: "4px" }}>Name</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Phone</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Service</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Type</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Time</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Status</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, paddingLeft: 0, paddingRight: 0 }} />
           </tr>
         </thead>
         <tbody>
           {appointments.map((apt, index) => {
             const ageYears =
               apt.patientAge != null ? Math.floor(apt.patientAge / 12) : null;
-            const tNum = patientIdMap[apt.id];
+            const tNum = apt.patientDisplayNo ?? patientIdMap[apt.id];
             const started = startedSet.has(apt.patientId);
             const rowBg = rowBgFor(apt.status, started);
             const group = groupKeyFor(apt, startedSet);
@@ -399,7 +431,7 @@ function PatientListTable({
               <React.Fragment key={apt.id}>
                 {isNewGroup && (
                   <tr>
-                    <td colSpan={8} style={{ height: 40, border: "none", padding: 0 }}>
+                    <td colSpan={15} style={{ height: 40, border: "none", padding: 0 }}>
                       <div
                         style={{
                           height: "100%",
@@ -420,52 +452,65 @@ function PatientListTable({
                   </tr>
                 )}
                 <tr style={{ ...styles.tr, backgroundColor: rowBg }}>
-                <td style={styles.tdSerial}>
-                  {tNum
-                    ? `T${String(tNum).padStart(3, "0")}`
-                    : String(index + 1).padStart(2, "0")}
-                </td>
-                <td style={styles.tdName}>
-                  <span style={styles.tdNameInner}>
-                    <span style={styles.tdNamePrimary}>{apt.patientName}</span>
-                    {(apt.patientGender || ageYears != null) && (
-                      <span style={styles.tdNameMeta}>
-                        {apt.patientGender
-                          ? apt.patientGender.charAt(0).toUpperCase()
-                          : "?"}
-                        {ageYears != null && (
-                          <>
-                            <span style={styles.tdNameDivider}>|</span>
-                            {ageYears}y
-                          </>
-                        )}
-                      </span>
-                    )}
-                  </span>
-                </td>
-                <td style={{ ...styles.td, textAlign: "center" }}>
-                  {apt.patientPhone ?? "—"}
-                </td>
-                <td style={{ ...styles.td, textAlign: "center" }}>
-                  {abbreviateService(apt.service)}
-                </td>
-                <td style={{ ...styles.td, textAlign: "center" }}>
-                  <span style={styles.typeRow}>
-                    <RestartIcon width={18} height={18} />
-                    {apt.type ?? "—"}
-                  </span>
-                </td>
-                <td style={{ ...styles.td, textAlign: "center" }}>
-                  {formatTime(apt.scheduledTime)}
-                </td>
-                <td style={{ ...styles.td, textAlign: "center" }}>
-                  <StatusPill status={apt.status} started={started} />
-                </td>
-                <td style={{ ...styles.td, textAlign: "center" }}>
-                  <Button variant="dark" size="sm" onClick={() => onViewPad(apt)}>
-                    View Pad
-                  </Button>
-                </td>
+                  {/* # — T-number with "T---" placeholder when the patient
+                      isn't yet in the local id map (no fallback to a row
+                      index — keep the column uniformly T-prefixed). */}
+                  <td style={{ ...styles.tdSerial, paddingLeft: 8, paddingRight: 0 }}>
+                    {tNum ? `T${String(tNum).padStart(3, "0")}` : "T---"}
+                  </td>
+                  <td style={spacerTd} aria-hidden />
+
+                  {/* Name — "<name> (M|64)" inline, single font style. */}
+                  <td style={{ ...styles.tdName, paddingLeft: 0, paddingRight: "4px" }}>
+                    <span style={styles.tdNamePrimary}>
+                      {apt.patientName}
+                      {(() => {
+                        const g = apt.patientGender ? apt.patientGender.charAt(0).toUpperCase() : "";
+                        const parts = [g, ageYears != null ? String(ageYears) : ""].filter(Boolean);
+                        return parts.length ? ` (${parts.join("|")})` : "";
+                      })()}
+                    </span>
+                  </td>
+                  <td style={spacerTd} aria-hidden />
+
+                  {/* Phone */}
+                  <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
+                    {apt.patientPhone ?? "—"}
+                  </td>
+                  <td style={spacerTd} aria-hidden />
+
+                  {/* Service */}
+                  <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
+                    {abbreviateService(apt.service)}
+                  </td>
+                  <td style={spacerTd} aria-hidden />
+
+                  {/* Type — plain "New" / "Review" label (icons removed). */}
+                  <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
+                    <span style={styles.typeRow}>
+                      {apt.type ?? "—"}
+                    </span>
+                  </td>
+                  <td style={spacerTd} aria-hidden />
+
+                  {/* Time */}
+                  <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
+                    {formatTime(apt.scheduledTime)}
+                  </td>
+                  <td style={spacerTd} aria-hidden />
+
+                  {/* Status */}
+                  <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
+                    {apt.status ? <StatusBadge status={apt.status} started={started} /> : "—"}
+                  </td>
+                  <td style={spacerTd} aria-hidden />
+
+                  {/* View Pad */}
+                  <td style={{ ...styles.td, textAlign: "center", paddingLeft: 0, paddingRight: 0 }}>
+                    <Button variant="dark" size="sm" onClick={() => onViewPad(apt)}>
+                      View Pad
+                    </Button>
+                  </td>
                 </tr>
               </React.Fragment>
             );
@@ -477,69 +522,27 @@ function PatientListTable({
 }
 
 function CardRow({ label, value }: { label: string; value: React.ReactNode }) {
+  // Text values (Service / Type / Time) truncate with an ellipsis inside the
+  // 80px column. Skip the truncation for ReactNode values (Status pill) so
+  // the pill's own min-width is not clipped by the column.
+  const isText = typeof value === "string" || typeof value === "number";
+  const truncate: React.CSSProperties = {
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  };
   return (
     <div style={styles.row}>
-      <span style={styles.rowLabel}>{label}</span>
-      <span style={styles.rowValue}>{value}</span>
+      <span style={{ ...styles.rowLabel, ...truncate }}>{label}</span>
+      <span style={{ ...styles.rowValue, ...(isText ? truncate : {}) }}>{value}</span>
     </div>
   );
 }
 
-// Queue status pill — Figma "Queue Status" component (566:10938 + 566:10941).
-// Caption-size text on a 4px-radius colored pill. Backgrounds:
-//   At Doc      — neutral/100 (white)
-//   In Progress — secondary/100 (sage)
-//   Waiting     — yellow/100
-//   Completed   — green/100
-function StatusPill({
-  status,
-  started,
-}: {
-  status: string | null;
-  started: boolean;
-}) {
-  if (!status) return <>—</>;
-  type PillKey = "AT_DOC" | "IN_PROGRESS" | "WAITING" | "COMPLETED";
-  const variant: PillKey | null = (() => {
-    if (status === "IN_PROGRESS") return started ? "IN_PROGRESS" : "AT_DOC";
-    if (status === "WAITING") return "WAITING";
-    if (status === "COMPLETED") return "COMPLETED";
-    return null;
-  })();
-  if (!variant) return <span style={pillStyles.fallback}>{status}</span>;
-  const META: Record<PillKey, { bg: string; label: string }> = {
-    AT_DOC: { bg: colors.neutral100, label: "At Doc" },
-    IN_PROGRESS: { bg: colors.secondary100, label: "In Progress" },
-    WAITING: { bg: colors.yellow100, label: "Waiting" },
-    COMPLETED: { bg: colors.green100, label: "Completed" },
-  };
-  const { bg, label } = META[variant];
-  return <span style={{ ...pillStyles.base, backgroundColor: bg }}>{label}</span>;
-}
-
-const pillStyles: Record<string, React.CSSProperties> = {
-  base: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: `${spacing["2xs"]} ${spacing.xs}`,
-    minWidth: 90,
-    borderRadius: radii.xs,
-    color: colors.neutral900,
-    fontFamily: fonts.family.primary,
-    // control.xs (static 12px) so the pill text never grows with the
-    // page-level fluid type ramp; matches Figma 566:10941 caption.
-    fontSize: fonts.control.xs,
-    lineHeight: fonts.lineHeight.xs,
-    fontWeight: fonts.weight.regular,
-  },
-  fallback: {
-    color: colors.neutral500,
-    fontFamily: fonts.family.primary,
-    fontSize: fonts.control.xs,
-    lineHeight: fonts.lineHeight.xs,
-  },
-};
+// StatusPill removed — the prescription queue now renders the shared
+// <StatusBadge started> from components/AppointmentQueue/StatusBadge (one badge
+// system across both queues). Its IN_PROGRESS+started case reads "Ongoing" on
+// sage, matching the old pill.
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 

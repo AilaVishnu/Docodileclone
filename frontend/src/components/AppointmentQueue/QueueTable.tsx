@@ -1,11 +1,10 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { styles } from "./AppointmentQueue.styles";
 import { fonts, colors } from "../../styles/theme";
 import { StatusBadge, PayBadge } from "./StatusBadge";
-import { ReactComponent as StarOutlineIcon } from "../../assets/icons/star.svg";
-import { ReactComponent as ReorderDotsIcon } from "../../assets/icons/reorder.svg";
-import { ReactComponent as RestartArrowIcon } from "../../assets/icons/restart.svg";
+import { Icon } from "../Icon";
 import { ZeroQueue } from "./ZeroQueue";
+import { loadStartedSet } from "../../utils/sessionStarted";
 
 export type AppointmentStatus =
   | "WAITING"
@@ -26,6 +25,8 @@ export type Appointment = {
   patientGender?: string;
   patientDob?: string;
   patientAge?: number;
+  /** Per-clinic sequential patient number ("T###"). */
+  patientDisplayNo?: number | null;
   type: "New" | "Review";
   service?: string;
   scheduledTime: string;
@@ -37,11 +38,43 @@ export type Appointment = {
   doctorId?: string;
   notes?: string;
   fee?: number;
+  /** Latest pharmacy (medicines) bill total, written by the single Bill flow
+   *  alongside the consultation `fee` — kept separate so finance can split
+   *  consultation vs pharmacy revenue. */
+  pharmacyAmount?: number;
+  /** The patient's running advance/deposit balance. Seeds the bill's Deposit
+   *  field and auto-covers the bill on Charge & Bill; adjusted via the drawer. */
+  deposit?: number;
+  /** Bills the patient already has for this date. 0 → kebab shows "Bill";
+   *  > 0 → it shows "Create Bill" + "View Bills". Per-patient (kebab only). */
+  todayBillCount?: number;
+  /** Per-patient day totals — the Pay-badge FALLBACK when this appointment has
+   *  no linked bill (a standalone New Bill): a clean day (nothing due/refunded)
+   *  reads Paid instead of a false Due. Refund/due here never bleed onto the
+   *  badge — those stay on the specific appointment that owns them. */
+  todayDue?: number;
+  todayRefund?: number;
+  /** Stats for the bills linked to THIS appointment (not the patient's other
+   *  visits) — drive the Pay badge per appointment: has a bill + nothing due →
+   *  Paid, any due → Due, any refund → Refunded. */
+  apptBillCount?: number;
+  apptDue?: number;
+  apptRefund?: number;
+  /** True when the linked patient has been archived. Drives "patient is
+   *  archived" toasts in queue/pad navigation. */
+  patientArchived?: boolean;
+  /** Wall-clock ISO when the appointment was created. Used to gate the
+   *  24h "edit window" — past that, Edit Appointment is suppressed. */
+  createdAt?: string;
 };
 
 type MenuItem = {
   label: string;
   onClick: (appointment: Appointment) => void;
+  // Optional per-row gate — return false to omit this menu item for a
+  // given appointment. Lets the parent show an action only for the rows it
+  // applies to, without duplicating menus.
+  visible?: (appointment: Appointment) => boolean;
 };
 
 type QueueTableProps = {
@@ -49,8 +82,32 @@ type QueueTableProps = {
   doctorName?: string;
   menuItems?: MenuItem[];
   onStatusChange?: (appointmentId: string, newStatus: string) => void;
+  /** appointmentId → backend session start (ISO) for in-progress visits.
+   *  Drives the live consultation timer on the IN_PROGRESS status badge. */
+  sessionStarts?: Record<string, string>;
+  /** Service name (lowercased) → the clinic's catalog short form ("consultation"
+   *  → "C"). Drives the Service column abbreviation. */
+  serviceCodes?: Record<string, string>;
 };
 
+// A stored service ("Consultation", or "Consultation + Dressing") → the clinic's
+// catalog short forms ("C", "C + D"). Falls back to the raw name when a service
+// has no short form in the catalog (the cell ellipsis truncates it).
+function abbreviateService(service: string, codes?: Record<string, string>): string {
+  return service
+    .split("+")
+    .map((part) => {
+      const name = part.trim();
+      return (codes && codes[name.toLowerCase()]) || name;
+    })
+    .join(" + ");
+}
+
+// Front-desk status actions. Completion is intentionally NOT here — only the
+// doctor marks a visit complete (via "Complete visit" on the prescription pad).
+// UNSEEN is also intentionally absent: it's an AUTO-only state set by the
+// NoShowSweepJob when an At-Doc pad is never opened within 24h, never by hand
+// (the backend rejects a manual UNSEEN too).
 const STATUS_OPTIONS = [
   { label: "No-Show", value: "NO_SHOW" },
   { label: "Arrived", value: "WAITING" },
@@ -58,14 +115,77 @@ const STATUS_OPTIONS = [
   { label: "Cancel", value: "CANCELLED" },
 ];
 
-function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
+// Display phone as bare local digits: drop a leading 91 country code and any
+// spaces/symbols ("+91 98765 43210" -> "9876543210").
+function formatPhone(raw: string): string {
+  if (!raw) return raw;
+  const digits = raw.replace(/\D/g, "");
+  return digits.length > 10 && digits.startsWith("91") ? digits.slice(2) : digits;
+}
+
+// The Pay badge shown in the queue. Reflects THIS appointment's own bill(s):
+// anything still owed → Due, else any refund → Refunded, else Paid. Keyed per
+// appointment so a refund/payment on one visit never colours another visit for
+// the same patient.
+//
+// When this appointment has no bill of its own, fall back to the patient's day
+// but ONLY for a clean settled state (a bill exists, nothing due, nothing
+// refunded) → Paid — so a standalone New Bill payment isn't shown as a false
+// Due. A refund/due elsewhere does NOT bleed here (it stays on the appointment
+// that owns it); anything unclear falls through to the appointment's payStatus.
+function payBadgeFor(apt: Appointment): string {
+  // A waive is a settled write-off — never a Paid tick. Detected from the
+  // appointment's own status (set to WAIVED at booking / charge).
+  const waived = apt.payStatus?.toUpperCase() === "WAIVED";
+  if ((apt.apptBillCount ?? 0) > 0) {
+    if ((apt.apptDue ?? 0) > 0) return "DUE";
+    if ((apt.apptRefund ?? 0) > 0) return "REFUNDED";
+    if (waived) return "WAIVED";
+    return "PAID";
+  }
+  if (waived) return "WAIVED";
+  if ((apt.todayBillCount ?? 0) > 0 && (apt.todayDue ?? 0) <= 0 && (apt.todayRefund ?? 0) <= 0) return "PAID";
+  return apt.payStatus || "DUE";
+}
+
+// Empty flexible spacer cells placed between every column. Being the only
+// width-less columns (table-layout: fixed), they share the leftover width
+// EQUALLY, so the inter-column gaps stretch/squeeze together.
+const spacerTh: React.CSSProperties = { borderBottom: `1px solid ${colors.primary300}`, padding: 0 };
+const spacerTd: React.CSSProperties = { padding: 0 };
+
+function StatusDropdown({ appointment, currentStatus, onStatusChange, sessionStartedAt }: {
   appointment: Appointment;
   currentStatus: string;
   onStatusChange: (appointmentId: string, newStatus: string) => void;
+  sessionStartedAt?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  // "In progress" = the consultation session is live. The server owns this
+  // (sessionStartedAt, per appointment, from getActiveSessions) — that's the
+  // source of truth across devices; the per-device localStorage flag is only a
+  // fallback for before the session map has loaded.
+  const [localStarted, setLocalStarted] = useState(() =>
+    appointment.patientId ? loadStartedSet().has(appointment.patientId) : false
+  );
+  const timerStarted = !!sessionStartedAt || localStarted;
   const ref = useRef<HTMLDivElement>(null);
-  const isLocked = currentStatus?.toUpperCase() === "COMPLETED";
+  // Lock the status badge while the doctor's actually in a session for
+  // this patient — but only if the appointment is in flight. A stale
+  // "started" flag from a previous appointment (the flag persists in
+  // localStorage indefinitely) shouldn't block status changes on a new
+  // BOOKED / AT_DOC row.
+  const isLocked = currentStatus === "COMPLETED"
+    || (timerStarted && (currentStatus === "IN_PROGRESS" || currentStatus === "AT_DOC"));
+
+  useEffect(() => {
+    if (!appointment.patientId) return;
+    const pid = appointment.patientId;
+    const interval = setInterval(() => {
+      setLocalStarted(loadStartedSet().has(pid));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [appointment.patientId]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -79,22 +199,25 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
     <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
       <StatusBadge
         status={currentStatus}
-        patientId={appointment.patientId}
+        sessionStartedAt={sessionStartedAt}
         onClick={isLocked ? undefined : () => setIsOpen(!isOpen)}
       />
       {isOpen && (
         <div style={{
+          // Unified menu spec — see also TopNav.dropdown and actionMenu styles.
           position: "absolute",
           top: "calc(100% + 4px)",
           left: "50%",
           transform: "translateX(-50%)",
           backgroundColor: colors.neutral100,
           borderRadius: "12px",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
           zIndex: 100,
-          minWidth: "150px",
-          padding: "6px",
-          border: `1px solid #e5e7eb`,
+          minWidth: "160px",
+          padding: "12px 8px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "4px",
         }}>
           {STATUS_OPTIONS.map((opt) => (
             <div
@@ -103,15 +226,16 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
                 onStatusChange(appointment.id, opt.value);
                 setIsOpen(false);
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.neutral150; }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.active.shade200; }}
               onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
               style={{
-                padding: "10px 14px",
+                padding: "10px 16px",
                 cursor: "pointer",
                 borderRadius: "8px",
                 fontSize: fonts.size.s,
-                fontWeight: 500,
                 color: colors.neutral900,
+                fontFamily: fonts.family.primary,
+                transition: "background-color 0.15s",
               }}
             >
               {opt.label}
@@ -127,20 +251,7 @@ function StatusDropdown({ appointment, currentStatus, onStatusChange }: {
 
 // ── Type badge (☆ New / ↺ Review) ────────────────────────────────────────
 function TypeBadge({ type }: { type: "New" | "Review" }) {
-  if (type === "New") {
-    return (
-      <span style={styles.typeBadge}>
-        <StarOutlineIcon width={18} height={18} style={{ flexShrink: 0 }} />
-        New
-      </span>
-    );
-  }
-  return (
-    <span style={styles.typeBadge}>
-      <RestartArrowIcon width={18} height={18} style={{ flexShrink: 0 }} />
-      Review
-    </span>
-  );
+  return <span style={styles.typeBadge}>{type === "New" ? "New" : "Review"}</span>;
 }
 
 // ── Three-dot action menu ─────────────────────────────────────────────────
@@ -170,14 +281,8 @@ function ActionMenu({
       <button
         style={styles.actionButton}
         onClick={() => setIsOpen(!isOpen)}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.backgroundColor = colors.neutral150;
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
-        }}
       >
-        <ReorderDotsIcon width={18} height={18} />
+        <Icon name="menu" size={24} tone="inherit" />
       </button>
       {isOpen && (
         <div
@@ -186,7 +291,7 @@ function ActionMenu({
             ...(openUpward ? { top: "auto", bottom: "100%" } : {}),
           }}
         >
-          {menuItems.map((item, i) => (
+          {menuItems.filter((item) => item.visible?.(appointment) !== false).map((item, i) => (
             <div
               key={i}
               style={styles.actionMenuItem}
@@ -195,7 +300,7 @@ function ActionMenu({
                 setIsOpen(false);
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = colors.neutral150;
+                e.currentTarget.style.backgroundColor = colors.active.shade200;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = "transparent";
@@ -216,7 +321,24 @@ export function QueueTable({
   doctorName,
   menuItems,
   onStatusChange,
+  sessionStarts,
+  serviceCodes,
 }: QueueTableProps) {
+  // Patient T-id map — same localStorage-backed counter that BookAppointment
+  // and PrescriptionQueue use. Keyed by appointment id; missing keys render
+  // a "T---" placeholder so the column stays uniform width.
+  const patientIdMap = useMemo<Record<string, number>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("docodile_patient_map") || "{}");
+    } catch {
+      return {};
+    }
+  }, []);
+  const tIdFor = (aptId: string) => {
+    const n = patientIdMap[aptId];
+    return n ? `T${String(n).padStart(3, "0")}` : "T---";
+  };
+
   if (appointments.length === 0) {
     return <ZeroQueue />;
   }
@@ -224,34 +346,57 @@ export function QueueTable({
     <div style={styles.tableContainer}>
       <table style={styles.table}>
         <colgroup>
-          <col style={{ width: "40px" }} />
-          <col style={{ width: "28%" }} />
-          <col style={{ width: "14%" }} />
-          <col style={{ width: "9%" }} />
-          <col style={{ width: "9%" }} />
-          <col style={{ width: "9%" }} />
-          <col style={{ width: "11%" }} />
-          <col style={{ width: "11%" }} />
-          <col style={{ width: "48px" }} />
+          {/* Every real column is a fixed-width cap. The one empty spacer
+              (after Name) is the only flexible column, so it absorbs all
+              leftover width: Name stays capped at 256 (truncates), the 3-dots
+              stays exactly 24px, and the name↔phone gap stretches/squeezes as
+              the queue resizes. */}
+          <col style={{ width: "56px" }} />   {/* # (T-number e.g. T001) */}
+          <col />
+          <col style={{ width: "var(--queue-name-w)" }} />  {/* Name (256 / 200, truncates) */}
+          <col />
+          <col style={{ width: "108px" }} />  {/* Phone */}
+          <col />
+          <col style={{ width: "72px" }} />   {/* Service */}
+          <col />
+          <col style={{ width: "96px" }} />   {/* Type */}
+          <col />
+          <col style={{ width: "84px" }} />   {/* Time */}
+          <col />
+          <col style={{ width: "98px" }} />   {/* Status */}
+          <col />
+          <col style={{ width: "44px" }} />   {/* Pay (icon only) */}
+          <col />
+          <col style={{ width: "24px" }} />   {/* 3-dots */}
         </colgroup>
         <thead>
           <tr>
-            <th style={{ ...styles.th, paddingLeft: "8px", paddingRight: "8px" }}>#</th>
-            <th style={{ ...styles.th, paddingLeft: "8px", paddingRight: "8px" }}>Name</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Phone</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Service</th>
-            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "8px", paddingRight: "8px" }}>Type</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Time</th>
+            {/* Real header cells with empty flexible spacer <th>s between them
+                (matching the colgroup) so the inter-column gaps stretch equally. */}
+            <th style={{ ...styles.th, textAlign: "left", paddingLeft: 8, paddingRight: 0 }}>#</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "left", paddingLeft: "0", paddingRight: "4px" }}>Name</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Phone</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Service</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Type</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Time</th>
+            <th style={spacerTh} aria-hidden />
             <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Status</th>
-            <th style={{ ...styles.th, textAlign: "center" }}>Pay</th>
-            <th style={styles.th}></th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>Pay</th>
+            <th style={spacerTh} aria-hidden />
+            <th style={{ ...styles.th, paddingLeft: 0, paddingRight: 0 }}></th>
           </tr>
         </thead>
         <tbody>
           {appointments.length === 0 ? (
             <tr>
               <td
-                colSpan={9}
+                colSpan={17}
                 style={{
                   ...styles.td,
                   textAlign: "center",
@@ -275,7 +420,7 @@ export function QueueTable({
               return (
                 <React.Fragment key={apt.id}>
                   {isNewGroup && (
-                    <tr><td colSpan={9} style={{ height: "40px", border: "none", padding: 0 }}>
+                    <tr><td colSpan={17} style={{ height: "40px", border: "none", padding: 0 }}>
                       <div style={{
                         height: "100%",
                         display: "flex",
@@ -302,41 +447,33 @@ export function QueueTable({
                       (e.currentTarget as HTMLElement).style.backgroundColor = baseBg;
                     }}
                   >
-                    {/* # */}
-                    <td style={styles.serialCell}>
-                      {apt.status === "IN_PROGRESS"
-                        ? String(appointments.filter((a, i) => i <= index && a.status === "IN_PROGRESS").length).padStart(2, "0")
-                        : "-"}
+                    {/* # — T-number (e.g. T001). Falls back to "T---" when
+                        the appointment is not in the local id map. */}
+                    <td style={{ ...styles.serialCell, paddingLeft: 8 }}>
+                      {tIdFor(apt.id)}
                     </td>
 
-                    {/* Name + gender/age */}
+                    <td style={spacerTd} aria-hidden />
+
+                    {/* Name — "<name> (M|64)" all in one style. */}
                     <td style={styles.nameCell}>
-                      <div style={styles.nameInner}>
-                        <span style={styles.namePrimary}>{apt.patientName}</span>
-                        {(apt.patientGender || apt.patientAge) && (
-                          <span style={styles.nameMeta}>
-                            {apt.patientGender && (
-                              <span>{apt.patientGender.charAt(0).toUpperCase()}</span>
-                            )}
-                            {apt.patientGender && apt.patientAge && (
-                              <span style={styles.nameMetaDot}>|</span>
-                            )}
-                            {apt.patientAge != null && apt.patientAge > 0 && (() => {
-                              const years = Math.floor(apt.patientAge / 12);
-                              const months = apt.patientAge % 12;
-                              let label = "";
-                              if (years > 0 && months > 0) label = `${years}y ${months}m`;
-                              else if (years > 0) label = `${years}y`;
-                              else label = `${months}m`;
-                              return <span>{label}</span>;
-                            })()}
-                          </span>
-                        )}
-                      </div>
+                      <span style={styles.namePrimary}>
+                        {apt.patientName}
+                        {(() => {
+                          const g = apt.patientGender ? apt.patientGender.charAt(0).toUpperCase() : "";
+                          const years = apt.patientAge != null && apt.patientAge > 0 ? Math.floor(apt.patientAge / 12) : null;
+                          const parts = [g, years != null ? String(years) : ""].filter(Boolean);
+                          return parts.length ? ` (${parts.join("|")})` : "";
+                        })()}
+                      </span>
                     </td>
 
-                    {/* Phone */}
-                    <td style={{ ...styles.td, textAlign: "center" }}>{apt.patientPhone}</td>
+                    <td style={spacerTd} aria-hidden />
+
+                    {/* Phone — bare 10 digits (no +91, no mid-space) to save width */}
+                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>{formatPhone(apt.patientPhone)}</td>
+
+                    <td style={spacerTd} aria-hidden />
 
                     {/* Service */}
                     <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px", maxWidth: 0 }}>
@@ -348,50 +485,57 @@ export function QueueTable({
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {apt.service
-                          ? apt.service
-                            .replace(/Consultation/gi, "C")
-                            .replace(/Hydrafacial/gi, "HF")
-                            .replace(/Laser Hair Removal/gi, "LHR")
-                            .replace(/Skin Tag Removal/gi, "SKR")
-                            .replace(/Acne Scar Treatment/gi, "AST")
-                          : "—"}
+                        {apt.service ? abbreviateService(apt.service, serviceCodes) : "—"}
                       </div>
                     </td>
 
+                    <td style={spacerTd} aria-hidden />
+
                     {/* Type */}
-                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "8px", paddingRight: "8px" }}>
+                    <td style={{ ...styles.td, textAlign: "center", padding: "10px 4px" }}>
                       <TypeBadge type={apt.type} />
                     </td>
 
-                    {/* Time */}
-                    <td style={{ ...styles.td, textAlign: "center" }}>
-                      <span style={styles.time}>{apt.scheduledTime}</span>
-                      {apt.isWalkin && (
-                        <span style={styles.walkinBadge}>Walk-in</span>
-                      )}
+                    <td style={spacerTd} aria-hidden />
+
+                    {/* Time + Walk-in tag — stacked so the pill doesn't collide
+                        with the Status column when the row is narrow. */}
+                    <td style={{ ...styles.td, textAlign: "center", padding: "10px 4px" }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                        <span style={styles.time}>{apt.scheduledTime}</span>
+                        {apt.isWalkin && (
+                          <span style={styles.walkinBadge}>Walk-in</span>
+                        )}
+                      </div>
                     </td>
 
+                    <td style={spacerTd} aria-hidden />
+
                     {/* Status badge */}
-                    <td style={{ ...styles.td, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
+                    <td style={{ ...styles.td, textAlign: "center", padding: "10px 4px" }}>
                       {onStatusChange ? (
                         <StatusDropdown
                           appointment={apt}
                           currentStatus={apt.status}
                           onStatusChange={onStatusChange}
+                          sessionStartedAt={sessionStarts?.[apt.id]}
                         />
                       ) : (
-                        <StatusBadge status={apt.status} patientId={apt.patientId} />
+                        <StatusBadge status={apt.status} sessionStartedAt={sessionStarts?.[apt.id]} />
                       )}
                     </td>
 
+                    <td style={spacerTd} aria-hidden />
+
                     {/* Pay status */}
-                    <td style={{ ...styles.payCell, textAlign: "center" }}>
-                      <PayBadge status={apt.payStatus} />
+                    <td style={{ ...styles.payCell, textAlign: "center", paddingLeft: "4px", paddingRight: "4px" }}>
+                      <PayBadge status={payBadgeFor(apt)} />
                     </td>
 
-                    {/* Action menu */}
-                    <td style={{ ...styles.td, padding: "14px 24px 14px 8px" }}>
+                    <td style={spacerTd} aria-hidden />
+
+                    {/* Action menu — zero horizontal padding */}
+                    <td style={{ ...styles.td, padding: "10px 0" }}>
                       {menuItems && menuItems.length > 0 ? (
                         <ActionMenu
                           appointment={apt}
@@ -400,7 +544,7 @@ export function QueueTable({
                         />
                       ) : (
                         <button style={styles.actionButton}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <circle cx="12" cy="5" r="1.5" fill="#000" />
                             <circle cx="12" cy="12" r="1.5" fill="#000" />
                             <circle cx="12" cy="19" r="1.5" fill="#000" />

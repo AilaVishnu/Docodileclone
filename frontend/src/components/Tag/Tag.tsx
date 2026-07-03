@@ -49,23 +49,21 @@ export function Tag({
           style={removeStyle}
         >
           {isFilled ? (
-            // Filled variant uses the larger close-circle glyph from
-            // Figma's icon set so the ✕ reads against the saturated bg.
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1" />
+            // Plain ✕ (no surrounding circle).
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
               <path
-                d="M4.5 4.5L9.5 9.5M9.5 4.5L4.5 9.5"
+                d="M3 3L9 9M9 3L3 9"
                 stroke="currentColor"
-                strokeWidth="1"
+                strokeWidth="1.5"
                 strokeLinecap="round"
               />
             </svg>
           ) : (
-            <svg width="6" height="6" viewBox="0 0 6 6" fill="none" aria-hidden="true">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
               <path
-                d="M1 1L5 5M5 1L1 5"
+                d="M2 2L8 8M8 2L2 8"
                 stroke="currentColor"
-                strokeWidth="1"
+                strokeWidth="1.5"
                 strokeLinecap="round"
               />
             </svg>
@@ -82,14 +80,14 @@ const styles: Record<string, CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: spacing["2xs"],
-    padding: `${spacing["3xs"]} ${spacing.xs}`,
+    gap: spacing.xs,
+    padding: `${spacing["2xs"]} ${spacing.s}`,
     backgroundColor: colors.neutral100,
     border: `${strokes.xs} solid ${colors.secondary100}`,
     borderRadius: radii.full,
     fontFamily: fonts.family.primary,
-    fontSize: fonts.size.xs,
-    lineHeight: fonts.lineHeight.xs,
+    fontSize: fonts.control.sm,
+    lineHeight: fonts.lineHeight.s,
     color: colors.neutral900,
     whiteSpace: "nowrap" as const,
   },
@@ -98,15 +96,16 @@ const styles: Record<string, CSSProperties> = {
     backgroundColor: colors.secondary700,
     border: "none",
     color: colors.neutral100,
+    // 4px vertical (from base) / 8px horizontal both sides → 4,8,4,8.
     paddingLeft: spacing.xs,
-    paddingRight: spacing["2xs"],
+    paddingRight: spacing.xs,
   },
   removeButton: {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    width: 12,
-    height: 12,
+    width: 16,
+    height: 16,
     padding: 0,
     background: "transparent",
     border: "none",

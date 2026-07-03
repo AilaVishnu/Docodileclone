@@ -17,19 +17,6 @@ export const styles: Record<string, CSSProperties> = {
     boxSizing: "border-box",
   },
 
-  clinicName: {
-    fontFamily: fonts.family.secondary,
-    fontSize: fonts.size.h5,
-    fontWeight: fonts.weight.regular,
-    color: colors.neutral900,
-    margin: 0,
-    marginBottom: spacing["2xs"],
-    // Truncate long display names so heading doesn't break the card
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-
   // ─── Domain box (same as ClinicCard.domainBox) ──────────────────────────
   domainBox: {
     display: "flex",
@@ -150,8 +137,10 @@ export const styles: Record<string, CSSProperties> = {
     resize: "none" as const,
     overflowWrap: "anywhere" as const,
     wordBreak: "break-word" as const,
-    // Address is typically multi-line — give it space for ~4 rows
-    minHeight: 96,
+    // Fixed height (~3 rows). Longer addresses scroll INSIDE this field
+    // rather than expanding the row / pushing the form taller.
+    height: 72,
+    overflowY: "auto" as const,
   },
 
   fieldError: {
@@ -161,7 +150,9 @@ export const styles: Record<string, CSSProperties> = {
   // ─── Specialty row (icon + tags + add) ──────────────────────────────────
   specialtyRow: {
     display: "flex",
-    alignItems: "flex-start",
+    // Center the icon + tags/input so the "Add department" placeholder sits
+    // vertically centered in the row (not pinned to the top).
+    alignItems: "center",
     gap: spacing.xs,
     backgroundColor: colors.alphaBlack0,
     borderRadius: radii.m,
@@ -182,7 +173,7 @@ export const styles: Record<string, CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     gap: 4,
-    backgroundColor: colors.secondary300,
+    backgroundColor: colors.secondary700,
     color: colors.neutral100,
     borderRadius: radii.pill,
     padding: "3px 10px",

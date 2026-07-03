@@ -1,7 +1,9 @@
 import { CSSProperties } from "react";
-import { colors, radii, fonts } from "../../styles/theme";
+import { colors, radii, fonts, spacing } from "../../styles/theme";
 
 export const styles: Record<string, CSSProperties> = {
+  // ── "connected" variant — used by ClinicTabs. Rounded-top trapezoid
+  //    tabs that visually attach to the content panel below. ───────
   container: {
     display: "flex",
     alignItems: "flex-end",
@@ -10,7 +12,7 @@ export const styles: Record<string, CSSProperties> = {
 
   tab: {
     padding: "12px 36px",
-    borderRadius: `${radii.primary}px ${radii.primary}px 0 0`,
+    borderRadius: `${radii["2xl"]}px ${radii["2xl"]}px 0 0`,
     border: 0,
     borderBottom: 0,
     backgroundColor: colors.secondary100,
@@ -19,7 +21,9 @@ export const styles: Record<string, CSSProperties> = {
     cursor: "pointer",
     position: "relative",
     color: colors.neutral700,
-    transition: "all 0.2s ease",
+    transition:
+      "background-color var(--motion-base) var(--ease-standard), " +
+      "color var(--motion-base) var(--ease-standard)",
     outline: "none",
     boxShadow: "none",
     maxWidth: 200,
@@ -51,6 +55,94 @@ export const styles: Record<string, CSSProperties> = {
     opacity: 0.5,
     cursor: "pointer",
     display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+
+  // ── "block" variant — matches the Stats module's tab strip. Pill-shaped
+  //    rounded blocks, no visual attachment to the content below. ─────
+  blockContainer: {
+    display: "flex",
+    alignItems: "center",
+    width: "100%",
+    gap: spacing.s,
+    flexWrap: "wrap",
+  },
+  blockStrip: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: spacing.xs,
+    flexWrap: "wrap",
+  },
+  blockTab: {
+    // Responsive: 40 / radius 12 at >=1440, compacts to 32 / radius 8 below.
+    height: "var(--tab-md-h, 40px)",
+    padding: `${spacing.xs} ${spacing.m}`,
+    borderRadius: "var(--tab-md-r, 12px)",
+    border: "none",
+    outline: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.alphaBlack0,
+    color: colors.alphaBlack3,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.m,
+    lineHeight: fonts.lineHeight.m,
+    cursor: "pointer",
+    maxWidth: 320,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    transition:
+      "background-color var(--motion-base) var(--ease-standard), " +
+      "color var(--motion-base) var(--ease-standard)",
+  },
+  // sm size — the smaller "visit" tab: always compact (32 / radius 8), 14px text.
+  blockTabSm: {
+    height: 32,
+    padding: `${spacing["2xs"]} ${spacing.s}`,
+    borderRadius: radii.m,
+    border: "none",
+    outline: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.alphaBlack0,
+    color: colors.neutral500,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.s,
+    cursor: "pointer",
+    maxWidth: 320,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    transition:
+      "background-color var(--motion-base) var(--ease-standard), " +
+      "color var(--motion-base) var(--ease-standard)",
+  },
+  blockTabActive: {
+    backgroundColor: colors.neutral100,
+    color: colors.neutral900,
+  },
+  blockActionsContainer: {
+    display: "flex",
+    marginLeft: "auto",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  blockActionButton: {
+    height: 40,
+    padding: `${spacing.xs} ${spacing.m}`,
+    borderRadius: radii.xl,
+    border: "none",
+    outline: "none",
+    backgroundColor: "transparent",
+    color: colors.neutral700,
+    fontFamily: fonts.family.primary,
+    fontSize: fonts.size.m,
+    cursor: "pointer",
+    display: "inline-flex",
     alignItems: "center",
     gap: "8px",
   },

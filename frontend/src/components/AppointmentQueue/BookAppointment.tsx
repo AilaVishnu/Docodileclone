@@ -1,29 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { styles } from "./BookAppointment.styles";
-import { colors, fonts, spacing, strokes } from "../../styles/theme";
-import { DatePicker } from "./DatePicker";
-import { TimePicker } from "./TimePicker";
-import {
-  StethoscopeIcon,
-  PulseIcon,
-  UserHandsIcon,
-  LetterIcon,
-  PhoneIcon,
-  CalendarIcon,
-  HashtagIcon,
-  ClockIcon,
-  PlusIcon
-} from "../../iconsUtil";
+import { colors, fonts, spacing } from "../../styles/theme";
+import { Icon } from "../Icon";
 import { Card } from "../Card/Card";
+import { PageHeader } from "../PageHeader/PageHeader";
+import { Switch } from "../Switch/Switch";
 import { BillCard } from "../BillCard/BillCard";
 import { UnderlineSelect } from "../Input/UnderlineSelect/UnderlineSelect";
 import { Select } from "../Input/Select/Select";
 import { Toast } from "../Toast";
+import { resolveToastIcon } from "../Toast/toastIcon";
+import { ConfirmDialog } from "../ConfirmDialog";
+import { RadioGroup } from "../Radio";
+import { PatientDetailsForm } from "../PatientDetailsForm";
+import { DateField } from "../DateField";
+import { TimeField } from "../TimeField";
 import { API_BASE_URL } from "../../apiConfig";
-import { ReactComponent as TrashIcon } from "../../assets/icons/trash.svg";
-import { ReactComponent as EditPencilIcon } from "../../assets/icons/edit-pencil.svg";
-import { ReactComponent as BillCheckIcon } from "../../assets/icons/bill-check.svg";
-import { ReactComponent as ArrowIcon } from "../../assets/Arrow Right.svg";
+import { listServices, ServiceDTO } from "../../api/services";
+import { listBills, type Bill } from "../../api/bills";
 import { pickAvatar } from "../../utils/avatar";
 
 type Doctor = {
@@ -33,12 +27,22 @@ type Doctor = {
 
 export type EditAppointmentData = {
   id: string;
+  // The DB patient UUID — used to load this patient's real bills (the paid
+  // bill card opens the actual saved invoice, not a rebuilt one).
+  patientId?: string;
   patientName: string;
   patientPhone: string;
   patientEmail?: string;
   patientGender?: string;
   patientDob?: string;
   patientAge?: number;
+  // Backend-issued per-clinic patient number (the real "T###" code). Pass
+  // it through here so the Edit Appointment header can render the same
+  // T### the queue shows, instead of falling back to "T---".
+  patientDisplayNo?: number | null;
+  // Sticky walk-in flag — when reopening a walk-in appointment the time
+  // pill should still read "Walk-in" instead of the wall-clock time.
+  isWalkin?: boolean;
   service?: string;
   type: string;
   scheduledTime: string;
@@ -47,6 +51,19 @@ export type EditAppointmentData = {
   paymentMethod?: string;
   notes?: string;
   fee?: number;
+  // The day's bill stats for this patient — the reliable "is this settled?"
+  // signal (billed + nothing due → paid), same as the queue Pay badge. The
+  // appointment's own payStatus can be stale for bills raised outside the
+  // appointment-charge flow.
+  todayBillCount?: number;
+  apptBillCount?: number;
+  apptDue?: number;
+  apptRefund?: number;
+  // When set, every input renders disabled and the save action is
+  // suppressed — useful for viewing the booking details of completed
+  // or out-of-window appointments without allowing edits.
+  readOnly?: boolean;
+  readOnlyReason?: string;
 };
 
 type BookAppointmentProps = {
@@ -74,30 +91,50 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     return { date: d, timeStr: `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")} ${period}` };
   };
 
-  const SERVICE_PRICES: Record<string, number> = {
-    "Consultation": 500,
-    "PRP": 1500,
-    "Hydrafacial": 2000,
-    "Laser Hair Removal": 2500,
-    "Skin Tag Removal": 1000,
-    "Acne Scar Treatment": 3000,
-  };
+  // Services + prices come from the clinic's services catalog. Mounted-once
+  // fetch; the bill totals recompute reactively as the map fills in.
+  const [serviceCatalog, setServiceCatalog] = useState<ServiceDTO[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    listServices()
+      .then((list) => { if (!cancelled) setServiceCatalog(list); })
+      .catch(() => { /* leave empty — the dropdown will just have no options */ });
+    return () => { cancelled = true; };
+  }, []);
+  const SERVICE_PRICES: Record<string, number> = React.useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const s of serviceCatalog) map[s.name] = Number(s.price);
+    return map;
+  }, [serviceCatalog]);
+  const SERVICE_OPTIONS = React.useMemo(
+    () => serviceCatalog.map((s) => s.name),
+    [serviceCatalog]
+  );
 
   const initTime = editingAppointment ? parseScheduledTime(editingAppointment.scheduledTime) : null;
 
   const [selectedDoctorId, setSelectedDoctorId] = useState(
     editingAppointment?.doctorId || initialDoctorId || (doctors.length > 0 ? doctors[0].id : "")
   );
+  const [overridePatientNumber, setOverridePatientNumber] = useState<number | null>(null);
   const currentCounter = parseInt(localStorage.getItem("docodile_patient_counter") || "0", 10);
   const patientMap: Record<string, number> = JSON.parse(
     localStorage.getItem("docodile_patient_map") || "{}"
   );
   const editingPatientNumber = editingAppointment ? patientMap[editingAppointment.id] : undefined;
+  // Prefer the backend's per-clinic display_no (V46), which is the same T###
+  // the queue / Patient Files / Prescription pad all show. Fall back to the
+  // legacy localStorage map for old rows that pre-date the backfill, and
+  // finally "T---" if we truly have nothing.
   const patientId = editingAppointment
-    ? editingPatientNumber
-      ? "T" + String(editingPatientNumber).padStart(3, "0")
-      : "T---"
-    : "T" + String(currentCounter + 1).padStart(3, "0");
+    ? editingAppointment.patientDisplayNo != null
+      ? "T" + String(editingAppointment.patientDisplayNo).padStart(3, "0")
+      : editingPatientNumber
+        ? "T" + String(editingPatientNumber).padStart(3, "0")
+        : "T---"
+    : overridePatientNumber
+      ? "T" + String(overridePatientNumber).padStart(3, "0")
+      : "T" + String(currentCounter + 1).padStart(3, "0");
   const [form, setForm] = useState({
     name: editingAppointment?.patientName || "",
     email: editingAppointment?.patientEmail || "",
@@ -111,23 +148,43 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       : [],
     date: initTime?.date || new Date(),
     time: initTime?.timeStr || "",
-    paymentMethod: editingAppointment?.paymentMethod || "",
+    // Walk-in flag — when true the time pill renders "Walk-in" instead of
+    // the wall-clock time, and isWalkin=true is sent to the backend so the
+    // queue card / billing flow treats it the same as a queue-side walk-in.
+    isWalkin: !!editingAppointment?.isWalkin,
+    // A WAIVED appointment reads back as the "Waive" channel at a full 100%
+    // write-off (its fee holds the pre-waive service amount).
+    paymentMethod: editingAppointment?.payStatus?.toUpperCase() === "WAIVED" ? "Waive" : (editingAppointment?.paymentMethod || ""),
     note: editingAppointment?.notes || "",
     subtotal: editingAppointment?.fee || 0,
     tax: "" as string,
-    discount: 0.0,
+    discount: editingAppointment?.payStatus?.toUpperCase() === "WAIVED" ? 100 : 0.0,
   });
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [showDobPicker, setShowDobPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [dobDigits, setDobDigits] = useState("");
   const [toastMessage, setToastMessage] = useState("");
+  // Same-day-duplicate confirmation. Holds the in-flight booking args
+  // (payStatus, successMessage) plus the prompt message — drives the
+  // "Are you sure?" dialog rendered near the bottom of the JSX.
+  const [pendingDupe, setPendingDupe] = useState<
+    { payStatus: string; successMessage?: string; message: string } | null
+  >(null);
   const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
-  const [discountMode, setDiscountMode] = useState<"%" | "₹">("₹");
+  const [discountMode, setDiscountMode] = useState<"%" | "₹">(editingAppointment?.payStatus?.toUpperCase() === "WAIVED" ? "%" : "₹");
+  // "Advanced" toggle in the page header — reveals extra fields. Wiring the
+  // extra fields is deferred; for now this state is set but unused.
+  const [isAdvanced, setIsAdvanced] = useState(false);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
-  const monthInputRef = React.useRef<HTMLInputElement>(null);
+  const [allPatients, setAllPatients] = useState<any[]>([]);
+  // When the user picks an existing patient from the search dropdown (or is
+  // editing an existing appointment), the patient identity fields lock so
+  // staff can't accidentally rewrite a patient's name/phone/dob. The user
+  // can click "Clear" to release the lock and start a new patient entry.
+  const [lockedPatientId, setLockedPatientId] = useState<string | null>(
+    editingAppointment ? "editing" : null
+  );
+  const patientFieldsLocked = lockedPatientId !== null;
   const [isDirty, setIsDirty] = useState(false);
   const initialRenderRef = React.useRef(true);
   useEffect(() => {
@@ -172,17 +229,13 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.discount, discountMode, form.services]);
 
-  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const hasDob = dobDigits.length > 0;
-  const hasManualAge = !hasDob && form.age.replace(/[^0-9]/g, "").length > 0;
-
   const formatDob = (digits: string): string => {
     const dd = digits.slice(0, 2);
     const mm = digits.slice(2, 4);
     const yyyy = digits.slice(4, 8);
     if (digits.length <= 2) return dd;
-    if (digits.length <= 4) return `${dd} ${mm}`;
-    return `${dd} ${mm} ${yyyy}`;
+    if (digits.length <= 4) return `${dd}-${mm}`;
+    return `${dd}-${mm}-${yyyy}`;
   };
 
   const calcAge = (digits: string): string => {
@@ -199,6 +252,60 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     if (today.getDate() < birth.getDate()) months--;
     if (months < 0) { years--; months += 12; }
     return `${years} / ${months}`;
+  };
+
+  // Fetch existing patients for autocomplete suggestions.
+  useEffect(() => {
+    const token = localStorage.getItem("docodile_token") ?? "";
+    fetch(`${API_BASE_URL}/api/patients`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.ok ? r.json() : [])
+      .then(setAllPatients)
+      .catch(() => {});
+  }, []);
+
+  const fillFromPatient = (p: any) => {
+    const clean = (p.phone ?? "").replace(/\D/g, "").slice(-10);
+    const formattedPhone = clean.length === 10
+      ? `+91 ${clean.substring(0, 5)} ${clean.substring(5)}`
+      : (p.phone ?? "");
+    let newDobDigits = "";
+    if (p.dob) {
+      const parts = String(p.dob).split("-");
+      if (parts.length === 3) newDobDigits = parts[2] + parts[1] + parts[0];
+    }
+    // Look up previously assigned T-number for this patient via their phone.
+    const phoneMap: Record<string, number> = JSON.parse(localStorage.getItem("docodile_patient_phone_map") || "{}");
+    const existingNumber = clean ? phoneMap[clean] ?? null : null;
+    setOverridePatientNumber(existingNumber);
+    setForm((prev) => ({
+      ...prev,
+      name: p.name ?? "",
+      phone: formattedPhone,
+      gender: p.gender ?? prev.gender,
+      dob: newDobDigits ? formatDob(newDobDigits) : prev.dob,
+      age: newDobDigits ? calcAge(newDobDigits) : (p.age ? `${Math.floor(p.age / 12)} / ${p.age % 12}` : prev.age),
+    }));
+    if (newDobDigits) setDobDigits(newDobDigits);
+    // Lock identity fields so the staff can't drift this picked patient's
+    // saved data through accidental keystrokes.
+    setLockedPatientId(p.id);
+  };
+
+  // Release the identity lock and clear the form so the user can enter a
+  // brand-new patient (the dropdown only locks; this is the explicit unlock).
+  const clearSelectedPatient = () => {
+    setLockedPatientId(null);
+    setOverridePatientNumber(null);
+    setDobDigits("");
+    setForm((prev) => ({
+      ...prev,
+      name: "",
+      email: "",
+      phone: "",
+      gender: "",
+      dob: "",
+      age: "",
+    }));
   };
 
   // Pre-fill DOB when editing
@@ -231,7 +338,12 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
     return cleaned.length === 10;
   };
 
-  const handleBook = async (payStatus: string, successMessage?: string) => {
+  const handleBook = async (payStatus: string, successMessage?: string, force: boolean = false) => {
+    // Payment method is only required when the booking is being marked
+    // Paid right now. "Book Now Pay Later" keeps the bill open and
+    // shouldn't force the receptionist to pick a channel they don't yet
+    // know — the patient settles at the counter later.
+    const requiresPaymentMethod = payStatus === "Paid";
     const newErrors: Record<string, boolean> = {
       name: !form.name.trim(),
       email: !!form.email.trim() && !isValidEmail(form.email),
@@ -240,7 +352,7 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       doctor: !activeDoctor,
       services: form.services.length === 0,
       time: !form.time,
-      paymentMethod: !form.paymentMethod,
+      paymentMethod: requiresPaymentMethod && !form.paymentMethod,
     };
     setErrors(newErrors);
     const firstError =
@@ -260,6 +372,46 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
     setSubmitting(true);
     try {
+      // Duplicate check — surface a confirm prompt if this patient (phone
+      // AND name, matching the backend's resolution rule) already has an
+      // appointment on the selected date. `force` skips this on the
+      // re-submit triggered by the confirmation modal.
+      if (!editingAppointment && !force) {
+        const dateStr = `${form.date.getFullYear()}-${String(form.date.getMonth() + 1).padStart(2, "0")}-${String(form.date.getDate()).padStart(2, "0")}`;
+        const aptsRes = await fetch(`${API_BASE_URL}/api/tenant/appointments?date=${dateStr}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("docodile_token")}` },
+        });
+        if (aptsRes.ok) {
+          const apts: any[] = await aptsRes.json();
+          const phoneClean = form.phone.replace(/\D/g, "").slice(-10);
+          const nameClean = form.name.trim().toLowerCase();
+          const duplicates = phoneClean
+            ? apts.filter((a) =>
+                (a.patientPhone ?? "").replace(/\D/g, "").slice(-10) === phoneClean &&
+                (a.patientName ?? "").trim().toLowerCase() === nameClean
+              )
+            : [];
+          if (duplicates.length > 0) {
+            const fmtT = (iso: string) => {
+              const d = new Date(iso);
+              return Number.isNaN(d.getTime())
+                ? ""
+                : d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+            };
+            const timeStr = duplicates
+              .map((a: any) => fmtT(a.scheduledTime))
+              .filter(Boolean)
+              .join(", ");
+            setPendingDupe({
+              payStatus,
+              successMessage,
+              message: `${form.name} already has an appointment on ${formatDate(form.date)}${timeStr ? ` at ${timeStr}` : ""}. Add another?`,
+            });
+            return;
+          }
+        }
+      }
+
       const { hour, minute } = parseTimeTo24h(form.time);
       const scheduledTime = new Date(form.date);
       scheduledTime.setHours(hour, minute, 0, 0);
@@ -283,11 +435,22 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
           String(scheduledTime.getMinutes()).padStart(2, "0") + ":00",
         type: form.type,
         service: form.services.join(" + "),
-        isWalkin: false,
-        paymentMethod: form.paymentMethod,
+        isWalkin: form.isWalkin,
+        // Persist whatever payment channel the desk picked (Cash/Card/UPI/Waive)
+        // so it survives a reload / reopen — it's the chosen/intended method.
+        // Paid vs unpaid is governed by payStatus, not this field, so a stored
+        // method on an unpaid row isn't "already paid", just the selected channel.
+        paymentMethod: form.paymentMethod || null,
         notes: form.note || null,
-        fee: total > 0 ? total : null,
-        payStatus,
+        // A waive is a full write-off: the total nets to ₹0, but we still record
+        // the SERVICE amount (subtotal) as the fee so a WAIVED invoice can be
+        // minted for it. Otherwise the fee is the net charged.
+        fee: form.paymentMethod === "Waive" ? (subtotal > 0 ? subtotal : null) : (total > 0 ? total : null),
+        payStatus: form.paymentMethod === "Waive" ? "WAIVED" : payStatus,
+        // Tells the backend to skip its own same-day duplicate check.
+        // Only true on the second submit after the user confirmed the
+        // duplicate in the modal below.
+        force,
       };
 
       const url = editingAppointment
@@ -305,8 +468,11 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
       if (res.ok) {
         if (!editingAppointment) {
           const prev = parseInt(localStorage.getItem("docodile_patient_counter") || "0", 10);
-          const assigned = prev + 1;
-          localStorage.setItem("docodile_patient_counter", String(assigned));
+          // Reuse the existing patient's T-number if we selected from suggestions.
+          const assigned = overridePatientNumber ?? (prev + 1);
+          if (!overridePatientNumber) {
+            localStorage.setItem("docodile_patient_counter", String(assigned));
+          }
           try {
             const savedApt = await res.clone().json();
             if (savedApt?.id) {
@@ -314,12 +480,33 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               map[savedApt.id] = assigned;
               localStorage.setItem("docodile_patient_map", JSON.stringify(map));
             }
+            // Persist phone → T-number so future bookings for this patient reuse it.
+            const phoneClean = form.phone.replace(/\D/g, "").slice(-10);
+            if (phoneClean) {
+              const phoneMap = JSON.parse(localStorage.getItem("docodile_patient_phone_map") || "{}");
+              if (!phoneMap[phoneClean]) {
+                phoneMap[phoneClean] = assigned;
+                localStorage.setItem("docodile_patient_phone_map", JSON.stringify(phoneMap));
+              }
+            }
           } catch {}
         }
         onBack(successMessage || (editingAppointment ? "Appointment updated successfully" : "Appointment booked successfully"));
       } else {
         try {
           const err = await res.json();
+          // 409 from the backend = same-day duplicate the client check
+          // missed (stale data / direct API call). Same prompt either way.
+          if (res.status === 409 && err?.duplicate && !editingAppointment) {
+            // Backend caught a duplicate the client check missed (e.g. stale
+            // data). Same confirm dialog as above.
+            setPendingDupe({
+              payStatus,
+              successMessage,
+              message: err.error || `${form.name} already has an appointment on ${formatDate(form.date)}. Add another?`,
+            });
+            return;
+          }
           setToastMessage(err.error || err.message || "Failed to book appointment");
         } catch {
           setToastMessage(`Failed to book appointment (${res.status})`);
@@ -346,7 +533,60 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
   const taxAmount = taxMode === "%" ? subtotal * taxVal / 100 : taxVal;
   const discountVal = Number(form.discount) || 0;
   const discountAmount = discountMode === "%" ? subtotal * discountVal / 100 : discountVal;
-  const total = subtotal + taxAmount - discountAmount;
+  // Floor at ₹0 — the discount is clamped at the card, but a bill can never be
+  // negative regardless of how the numbers are entered.
+  const total = Math.max(0, subtotal + taxAmount - discountAmount);
+
+  // Is the appointment's bill settled? Prefer the day's bills (billed + nothing
+  // due → paid), the same reliable signal as the queue Pay badge; the
+  // appointment's own payStatus can be stale for bills raised outside the
+  // charge flow. Drives the card's paid/locked read-only view.
+  // THIS appointment's own bill is settled (nothing owed) → paid OR refunded.
+  // Per-appointment (not the patient's other visits), so a refund on another
+  // visit never locks/settles this one. "Paid" is the stricter subset used for
+  // the green stamp + lock: settled AND not refunded — a refund is never a tick.
+  const hasApptBill = (editingAppointment?.apptBillCount ?? 0) > 0;
+  // Settled = paid, refunded OR waived (all "nothing owed"). WAIVED counts even
+  // without a loaded bill so a waived appointment reads read-only, not editable.
+  const billSettled = editingAppointment
+    ? (hasApptBill ? (editingAppointment.apptDue ?? 0) <= 0 : ["PAID", "WAIVED"].includes(editingAppointment.payStatus?.toUpperCase() || ""))
+    : false;
+
+  // Load this appointment's actual saved bill, so the card's expand opens the
+  // real invoice (BillReadModal) — the linked bill if one exists, else the
+  // patient's most recent. For any settled bill (paid or refunded) so a refund
+  // is viewable too.
+  const [apptBill, setApptBill] = useState<(Bill & { patientName: string; today: boolean }) | null>(null);
+  useEffect(() => {
+    const pid = editingAppointment?.patientId;
+    if (!pid || !billSettled) { setApptBill(null); return; }
+    let cancelled = false;
+    listBills(pid)
+      .then((bills) => {
+        if (cancelled) return;
+        // Strictly THIS appointment's own bill (linked by appointmentId) — same
+        // rule as the queue's per-appointment Pay badge, so the two never
+        // disagree. A bill not tied to this appointment (standalone New Bill, or
+        // another visit's) is not shown here; the card falls back to its preview.
+        const linked = bills.find((b) => b.appointmentId === editingAppointment?.id);
+        setApptBill(linked ? { ...linked, patientName: editingAppointment?.patientName || "Patient", today: false } : null);
+      })
+      .catch(() => { if (!cancelled) setApptBill(null); });
+    return () => { cancelled = true; };
+  }, [editingAppointment?.patientId, editingAppointment?.id, editingAppointment?.patientName, billSettled]);
+
+  // "Paid" (the green stamp) is the stricter subset of settled: not refunded and
+  // not waived — a refund or a write-off is never a Paid tick.
+  const billWaived = editingAppointment?.payStatus?.toUpperCase() === "WAIVED" || apptBill?.payStatus?.toUpperCase() === "WAIVED";
+  const billIsPaid = billSettled
+    && !billWaived
+    && (editingAppointment?.apptRefund ?? 0) <= 0
+    && (apptBill?.refund ?? 0) <= 0;
+
+  // The bill card is read-only (inputs frozen) whenever the bill is settled OR
+  // the whole form is locked (completed / at-doc / paid-walk-in / past 24h) — but
+  // it stays interactive so Print / Share / expand keep working in those states.
+  const billCardReadOnly = billSettled || !!editingAppointment?.readOnly;
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-GB", {
@@ -358,32 +598,68 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
   return (
     <div style={styles.overlay}>
-      <header style={styles.header}>
-        <button style={styles.backButton} onClick={() => onBack()} title="Back to Appointments">
-          <ArrowIcon style={{ width: 16, height: 16, transform: "rotate(180deg)" }} />
-        </button>
+      <PageHeader
+        onBack={() => onBack()}
+        backLabel="Back to Appointments"
+        // Span the full bar (no content cap) and use TopNav's right padding
+        // (spacing.xl = 24px) so the Advanced toggle right-aligns with the
+        // avatar at any viewport.
+        innerStyle={{ maxWidth: "none", paddingRight: spacing.xl }}
+        title={
+          editingAppointment ? (
+            "Edit Appointment"
+          ) : (
+            <>
+              Book an appointment for{" "}
+              <UnderlineSelect
+                options={doctors.map(d => ({ label: d.name, value: d.id }))}
+                value={selectedDoctorId}
+                onChange={(val) => setSelectedDoctorId(val)}
+                placeholder="Select Doctor"
+              />
+            </>
+          )
+        }
+        actions={
+          <label style={{ display: "inline-flex", alignItems: "center", gap: spacing.xs, cursor: "pointer", fontSize: fonts.size.s, color: colors.neutral900, fontFamily: fonts.family.primary, userSelect: "none" }}>
+            Advanced
+            <Switch checked={isAdvanced} onChange={setIsAdvanced} size="sm" ariaLabel="Advanced booking mode" />
+          </label>
+        }
+      />
 
-        <div style={styles.titleContainer}>
-          <h2 style={styles.title}>
-            {editingAppointment ? (
-              "Edit Appointment"
-            ) : (
-              <>
-                Book an appointment for{" "}
-                <UnderlineSelect
-                  options={doctors.map(d => ({ label: d.name, value: d.id }))}
-                  value={selectedDoctorId}
-                  onChange={(val) => setSelectedDoctorId(val)}
-                  placeholder="Select Doctor"
-                  fontSize={fonts.size.h5}
-                />
-              </>
-            )}
-          </h2>
+      {editingAppointment?.readOnly && (
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          margin: `0 ${spacing.xl}`,
+        }}>
+          <div style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: spacing.xs,
+            padding: `${spacing["2xs"]} ${spacing.m}`,
+            backgroundColor: colors.primary200,
+            color: colors.primary800,
+            borderRadius: 999,
+            fontFamily: fonts.family.primary,
+            fontSize: fonts.size.xs,
+            fontWeight: fonts.weight.medium,
+            lineHeight: fonts.lineHeight.s,
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <span>{editingAppointment.readOnlyReason ?? "This appointment is locked — view only."}</span>
+          </div>
         </div>
-      </header>
+      )}
 
-      <div style={styles.grid}>
+      <div style={{
+        ...styles.grid,
+        ...(editingAppointment?.readOnly ? { pointerEvents: "none" as const, opacity: 0.85 } : {}),
+      }}>
         {/* Patient ID Card — avatar above the ID. Avatar reacts to the gender +
             age the user has filled in below. */}
         <Card style={{ ...styles.card, ...styles.patientIdCard }}>
@@ -399,210 +675,24 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         </Card>
 
         {/* Patient Details Card */}
-        <Card style={{ ...styles.card, ...styles.formCard }}>
-          <div>
-            <div style={{ ...styles.iconField, ...(errors.name ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
-              <UserHandsIcon style={styles.iconFieldIcon} />
-              <input
-                style={styles.iconFieldInput}
-                placeholder="Name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
-            </div>
-            {errors.name && (
-              <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
-                Please enter patient name
-              </div>
-            )}
-          </div>
+        <PatientDetailsForm
+          style={{ gridColumn: "2", gridRow: "1" }}
+          value={{ name: form.name, email: form.email, phone: form.phone, dob: form.dob, age: form.age, gender: form.gender }}
+          onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
+          errors={{ name: errors.name, email: errors.email, phone: errors.phone, dob: errors.dob }}
+          dobDigits={dobDigits}
+          setDobDigits={setDobDigits}
+          patients={allPatients}
+          onSelectExisting={fillFromPatient}
+          locked={patientFieldsLocked || billSettled}
+          showClearLink={patientFieldsLocked && lockedPatientId !== "editing" && !billSettled}
+          onClearLocked={clearSelectedPatient}
+        />
 
-          <div style={styles.row}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ ...styles.iconField, ...(errors.email ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
-                <LetterIcon style={styles.iconFieldIcon} />
-                <input
-                  style={styles.iconFieldInput}
-                  type="text"
-                  placeholder="hello@example.com"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  onBlur={() => setForm((prev) => ({ ...prev, email: prev.email.trim().toLowerCase() }))}
-                />
-              </div>
-              {errors.email && (
-                <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
-                  Please enter a valid email
-                </div>
-              )}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ ...styles.iconField, ...(errors.phone ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
-              <PhoneIcon style={styles.iconFieldIcon} />
-              <input
-                style={styles.iconFieldInput}
-                placeholder="+91 XXXXX XXXXX"
-                value={form.phone}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9+ ]/g, "");
-                  // Extract only digits to check length
-                  let digits = val.replace(/\D/g, "");
-                  if (digits.startsWith("91") && digits.length > 10) digits = digits.substring(2);
-                  if (digits.length > 10) return; // Block input beyond 10 digits
-                  setForm({ ...form, phone: val });
-                }}
-                onBlur={() => {
-                  let clean = form.phone.replace(/\D/g, "");
-                  if (clean.startsWith("91") && clean.length > 10) clean = clean.substring(2);
-                  clean = clean.substring(0, 10);
-                  if (clean.length === 0) { setForm((prev) => ({ ...prev, phone: "" })); return; }
-                  if (clean.length > 5) {
-                    setForm((prev) => ({ ...prev, phone: `+91 ${clean.substring(0, 5)} ${clean.substring(5)}` }));
-                  } else {
-                    setForm((prev) => ({ ...prev, phone: `+91 ${clean}` }));
-                  }
-                }}
-              />
-            </div>
-              {errors.phone && (
-                <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
-                  Please enter a valid phone number
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div style={styles.row}>
-            <div style={{ ...styles.iconField, position: "relative", flex: 1, minWidth: 0, ...(errors.dob ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
-              <span
-                onClick={() => {
-                  if (hasManualAge) setForm((prev) => ({ ...prev, age: "", dob: "" }));
-                  setShowDobPicker(true);
-                }}
-                style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: spacing.xs, opacity: hasManualAge ? 0.4 : 1 }}
-              >
-                <CalendarIcon style={styles.iconFieldIcon} />
-                <span style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>DOB</span>
-              </span>
-              <input
-                style={{ ...styles.iconFieldInput, opacity: hasManualAge ? 0.4 : 1 }}
-                type="text"
-                placeholder="dd mm yyyy"
-                onFocus={() => { if (hasManualAge) setForm((prev) => ({ ...prev, age: "", dob: "" })); }}
-                value={formatDob(dobDigits)}
-                onKeyDown={(e) => {
-                  if (e.key === "Backspace") {
-                    e.preventDefault();
-                    const next = dobDigits.slice(0, -1);
-                    setDobDigits(next);
-                    setForm((prev) => ({ ...prev, dob: formatDob(next), age: next.length === 8 ? calcAge(next) : "" }));
-                  } else if (/^[0-9]$/.test(e.key) && dobDigits.length < 8) {
-                    e.preventDefault();
-                    const next = dobDigits + e.key;
-                    setDobDigits(next);
-                    setForm((prev) => ({ ...prev, dob: formatDob(next), age: calcAge(next) }));
-                  }
-                }}
-                onChange={() => { }}
-              />
-              {showDobPicker && (
-                <div style={{ position: "absolute", bottom: "100%", left: 0, zIndex: 1100 }}>
-                  <DatePicker
-                    selectedDate={new Date()}
-                    onSelect={(date: Date) => {
-                      const dd = String(date.getDate()).padStart(2, "0");
-                      const mm = String(date.getMonth() + 1).padStart(2, "0");
-                      const yyyy = String(date.getFullYear());
-                      const digits = dd + mm + yyyy;
-                      setDobDigits(digits);
-                      setForm((prev) => ({ ...prev, dob: formatDob(digits), age: calcAge(digits) }));
-                      setShowDobPicker(false);
-                    }}
-                    onClose={() => setShowDobPicker(false)}
-                  />
-                </div>
-              )}
-            </div>
-            <div style={{ fontSize: fonts.size.m, color: colors.neutral900 }}>or</div>
-            <div
-              style={{
-                ...styles.iconField,
-                flex: 1,
-                minWidth: 0,
-                gap: spacing.xs,
-                justifyContent: "flex-start",
-                ...(errors.dob ? { borderBottomColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}),
-              }}
-            >
-              <span style={{ fontSize: fonts.size.m, color: colors.neutral900, opacity: hasDob ? 0.4 : 1 }}>Age</span>
-              <input
-                className="text-input-field"
-                style={{ ...styles.iconFieldInput, width: 32, flex: "0 0 auto", borderBottom: "none", textAlign: "center", MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
-                type="number"
-                min="0"
-                max="150"
-                placeholder="-"
-                onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
-                value={form.age.split("/")[0]?.trim() || ""}
-                onChange={(e) => {
-                  const y = e.target.value;
-                  const m = form.age.split("/")[1]?.trim() || "";
-                  setDobDigits("");
-                  setForm({ ...form, age: (y || m) ? `${y || "0"} / ${m || "0"}` : "", dob: "" });
-                  if (y.length >= 2) monthInputRef.current?.focus();
-                }}
-              />
-              <style>{`
-                input[type=number]::-webkit-outer-spin-button,
-                input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-                input[type=number] { -moz-appearance: textfield; }
-              `}</style>
-              <span style={{ fontSize: fonts.size.m, color: colors.neutral400, opacity: hasDob ? 0.4 : 1 }}>yrs</span>
-              <input
-                ref={monthInputRef}
-                className="text-input-field"
-                style={{ ...styles.iconFieldInput, width: 32, flex: "0 0 auto", borderBottom: "none", textAlign: "center", MozAppearance: "textfield", opacity: hasDob ? 0.4 : 1 } as any}
-                type="number"
-                min="0"
-                max="11"
-                placeholder="-"
-                onFocus={() => { if (hasDob) { setDobDigits(""); setForm((prev) => ({ ...prev, age: "", dob: "" })); } }}
-                value={form.age.split("/")[1]?.trim() || ""}
-                onChange={(e) => {
-                  let m = e.target.value;
-                  const n = parseInt(m, 10);
-                  if (m !== "" && (isNaN(n) || n < 0 || n > 11)) return;
-                  const y = form.age.split("/")[0]?.trim() || "";
-                  setDobDigits("");
-                  setForm({ ...form, age: (y || m) ? `${y || "0"} / ${m || "0"}` : "", dob: "" });
-                }}
-              />
-              <span style={{ fontSize: fonts.size.m, color: colors.neutral400, opacity: hasDob ? 0.4 : 1 }}>mos</span>
-            </div>
-          </div>
-          {errors.dob && (
-            <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginTop: 2, marginLeft: 4 }}>
-              Please enter date of birth or age
-            </div>
-          )}
-
-          <div style={{ ...styles.radioGroup, marginTop: "8px" }}>
-            {["Male", "Female", "Other"].map((g) => (
-              <label key={g} style={styles.radioLabel}>
-                <input
-                  type="radio"
-                  name="gender"
-                  checked={form.gender === g}
-                  onChange={() => setForm({ ...form, gender: g })}
-                />
-                {g}
-              </label>
-            ))}
-          </div>
-        </Card>
-
-        {/* Billing Card */}
-        <div style={{ gridColumn: "3", gridRow: "1 / span 2", alignSelf: "stretch" }}>
+        {/* Billing Card — stays interactive even when the form is locked, for any
+            SETTLED bill (paid OR refunded), so the desk can still view / print /
+            expand it. Its own inputs are frozen via the card's locked/isPaid. */}
+        <div style={{ gridColumn: "3", gridRow: "1 / span 2", alignSelf: "stretch", ...(billCardReadOnly ? { pointerEvents: "auto" as const } : {}) }}>
           <BillCard
             paymentMethod={form.paymentMethod}
             onPaymentMethodChange={(m) => {
@@ -628,90 +718,58 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             total={Math.round(total)}
             onTaxModeChange={setTaxMode}
             onDiscountModeChange={setDiscountMode}
+            discountMode={discountMode}
             services={form.services.map(svc => ({ name: svc, price: SERVICE_PRICES[svc] || 0 }))}
-            isPaid={editingAppointment?.payStatus?.toUpperCase() === "PAID"}
+            isPaid={billIsPaid}
+            locked={billCardReadOnly}
+            settled={billSettled}
+            paidBill={apptBill ?? undefined}
+            onBillRefunded={(u) => setApptBill({ ...u, today: false })}
+            onToast={setToastMessage}
+            requireInvoiceToPrint
+            invoiceToastMessage={editingAppointment
+              ? "No invoice yet — bill this appointment to generate the receipt, then print."
+              : "No invoice yet — book the appointment to generate the bill, then print."}
+            patientName={form.name}
+            patientMeta={{
+              age: form.age ? (parseInt(form.age.split("/")[0]?.trim() || "", 10) || undefined) : undefined,
+              gender: form.gender || undefined,
+              mobile: form.phone || undefined,
+            }}
           />
         </div>
 
         <div style={styles.scheduleColumn}>
           {/* Schedule Mini Cards Stack */}
           <Card style={{ ...styles.card, ...styles.scheduleMiniCard }}>
-            <div style={styles.radioGroup}>
-              {["New", "Review"].map((t) => (
-                <label key={t} style={styles.radioLabel}>
-                  <input
-                    type="radio"
-                    name="type"
-                    checked={form.type === t}
-                    onChange={() => setForm({ ...form, type: t })}
-                  />
-                  {t}
-                </label>
-              ))}
-            </div>
+            <RadioGroup
+              name="type"
+              value={form.type}
+              onChange={(t) => setForm({ ...form, type: t })}
+              options={["New", "Review"]}
+              disabled={billSettled || !!editingAppointment?.readOnly}
+            />
           </Card>
 
-          <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative" }}>
-            <div
-              style={{ ...styles.iconField, borderBottom: "none", cursor: "pointer", padding: 0 }}
-              onClick={() => setShowDatePicker(true)}
-            >
-              <CalendarIcon style={styles.iconFieldIcon} />
-              <span style={{ fontSize: fonts.size.m, color: form.date ? colors.neutral900 : colors.neutral400 }}>
-                {formatDate(form.date) || "Select Date"}
-              </span>
-            </div>
-            {showDatePicker && (
-              <div style={{ position: "absolute", bottom: "100%", left: "50%", zIndex: 1100 }}>
-                <DatePicker
-                  selectedDate={form.date}
-                  onSelect={(date: Date) => {
-                    setForm({ ...form, date });
-                    setShowDatePicker(false);
-                  }}
-                  onClose={() => setShowDatePicker(false)}
-                  style={{ top: "auto", bottom: "8px" }}
-                  disablePast
-                />
-              </div>
-            )}
-          </Card>
+          <DateField
+            value={form.date}
+            onChange={(date) => setForm({ ...form, date })}
+            format={formatDate}
+            disablePast
+            disabled={!!editingAppointment && form.isWalkin}
+            disabledTitle="Walk-in date can't be edited"
+          />
 
-          <Card style={{ ...styles.card, ...styles.scheduleMiniCard, position: "relative", ...(errors.time ? { borderColor: colors.red200, backgroundColor: "rgba(255,0,0,0.05)" } : {}) }}>
-            <div
-              style={{ ...styles.iconField, borderBottom: "none", cursor: "pointer", padding: 0 }}
-              onClick={() => setShowTimePicker(true)}
-            >
-              <ClockIcon style={styles.iconFieldIcon} />
-              <span style={{ fontSize: fonts.size.m, color: form.time ? colors.neutral900 : colors.neutral400 }}>
-                {form.time || "Select Time"}
-              </span>
-            </div>
-            {showTimePicker && (
-              <>
-                <div
-                  style={{
-                    position: "fixed",
-                    inset: 0,
-                    backgroundColor: "rgba(0, 0, 0, 0.5)",
-                    zIndex: 1050,
-                  }}
-                  onClick={() => setShowTimePicker(false)}
-                />
-                <div style={{ position: "absolute", bottom: "100%", left: "50%", zIndex: 1100 }}>
-                  <TimePicker
-                    initialTime={form.time}
-                    onSelect={(time: string) => {
-                      setForm({ ...form, time });
-                      setShowTimePicker(false);
-                    }}
-                    onClose={() => setShowTimePicker(false)}
-                    style={{ top: "auto", bottom: "8px" }}
-                  />
-                </div>
-              </>
-            )}
-          </Card>
+          <TimeField
+            value={form.time}
+            onChange={(time) => setForm({ ...form, time, isWalkin: false })}
+            onWalkin={(time) => setForm({ ...form, time, isWalkin: true })}
+            selectedDate={form.date}
+            isWalkin={form.isWalkin}
+            invalid={!!errors.time}
+            disabled={!!editingAppointment && form.isWalkin}
+            disabledTitle="Walk-in time can't be edited"
+          />
           {errors.time && (
             <div style={{ color: colors.red200, fontSize: fonts.size.xs, marginLeft: 4 }}>
               Please select a time
@@ -722,20 +780,32 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         {/* Appointment Details Card */}
         <Card style={{ ...styles.card, ...styles.appointmentDetailsCard }}>
           {(() => {
-            const doctorLocked = editingAppointment?.payStatus?.toUpperCase() === "PAID";
+            // Also lock on readOnly — the row's own `pointerEvents: "auto"`
+            // overrides the parent grid's readOnly pointer-events block, so
+            // we have to re-assert it here. Same on the Service row below.
+            // Settled (paid, waived OR refunded) → the visit's money is fixed, so
+            // its service/doctor can't change; only date/time (reschedule) stays.
+            const paidLocked = billSettled;
+            const doctorLocked = paidLocked || !!editingAppointment?.readOnly;
+            // Only dim at the row level when *paid* is the lock reason —
+            // when it's just readOnly the parent grid is already at 0.85
+            // opacity, and multiplying with 0.6 here makes the text barely
+            // legible.
+            const rowOpacity = paidLocked && !editingAppointment?.readOnly ? 0.6 : 1;
             return (
               <div style={styles.appointmentRow}>
                 <div style={styles.appointmentLabelGroup}>
-                  <StethoscopeIcon style={styles.appointmentIcon} />
+                  <Icon name="stethoscope" tone="inherit" style={styles.appointmentIcon} />
                   <label style={styles.fieldLabel}>Doctor</label>
                 </div>
-                <div style={{ flex: 1, pointerEvents: doctorLocked ? "none" : "auto", opacity: doctorLocked ? 0.6 : 1 }}>
+                <div style={{ flex: 1, pointerEvents: doctorLocked ? "none" : "auto", opacity: rowOpacity }}>
                   <Select
                     options={doctors.map(d => ({ label: d.name, value: d.id }))}
                     value={selectedDoctorId}
                     onChange={(val: string) => setSelectedDoctorId(val)}
                     placeholder="Select Doctor"
                     error={errors.doctor}
+                    disabled={doctorLocked}
                   />
                 </div>
               </div>
@@ -743,18 +813,24 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
           })()}
 
           {(() => {
-            const servicesLocked = editingAppointment?.payStatus?.toUpperCase() === "PAID";
+            // Settled (paid, waived OR refunded) → the visit's money is fixed, so
+            // its service/doctor can't change; only date/time (reschedule) stays.
+            const paidLocked = billSettled;
+            const servicesLocked = paidLocked || !!editingAppointment?.readOnly;
+            // See doctor row above — don't multiply with parent grid's 0.85
+            // when readOnly already dims the whole thing.
+            const rowOpacity = paidLocked && !editingAppointment?.readOnly ? 0.6 : 1;
             return <>
               {form.services.map((svc, i) => (
                 <div key={i} style={styles.appointmentRow}>
                   <div style={styles.appointmentLabelGroup}>
-                    <PulseIcon style={styles.appointmentIcon} />
+                    <Icon name="pulse" tone="inherit" style={styles.appointmentIcon} />
                     <label style={styles.fieldLabel}>Service</label>
                   </div>
-                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", pointerEvents: servicesLocked ? "none" : "auto", opacity: servicesLocked ? 0.6 : 1 }}>
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", pointerEvents: servicesLocked ? "none" : "auto", opacity: rowOpacity }}>
                     <div style={{ flex: 1 }}>
                       <Select
-                        options={["Consultation", "PRP", "Hydrafacial", "Laser Hair Removal", "Skin Tag Removal", "Acne Scar Treatment"]}
+                        options={SERVICE_OPTIONS}
                         value={svc}
                         onChange={(val: string) => {
                           const updated = [...form.services];
@@ -762,9 +838,14 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                           setForm({ ...form, services: updated });
                         }}
                         placeholder="Select Service"
+                        disabled={servicesLocked}
                       />
                     </div>
                     {!servicesLocked ? (
+                      // Any service — including the last one — can be removed;
+                      // the user can re-pick via "Add Service". Booking stays
+                      // gated on having at least one service (submit validation),
+                      // so clearing the only row just blocks Book until re-added.
                       <button
                         onClick={() => {
                           const removed = form.services[i];
@@ -772,9 +853,19 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
                           setForm({ ...form, services: updated });
                           setToastMessage(`${removed} removed`);
                         }}
-                        style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center", flexShrink: 0 }}
+                        title="Remove service"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          opacity: 1,
+                          padding: "4px",
+                          display: "flex",
+                          alignItems: "center",
+                          flexShrink: 0,
+                        }}
                       >
-                        <TrashIcon width={20} height={20} />
+                        <Icon name="trash" size={20} tone="inherit" />
                       </button>
                     ) : (
                       <div style={{ width: "28px", flexShrink: 0 }} />
@@ -785,13 +876,13 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
               {!servicesLocked && (
                 <div style={styles.appointmentRow}>
                   <div style={styles.appointmentLabelGroup}>
-                    <PulseIcon style={styles.appointmentIcon} />
+                    <Icon name="pulse" tone="inherit" style={styles.appointmentIcon} />
                     <label style={styles.fieldLabel}>Service</label>
                   </div>
                   <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px" }}>
                     <div style={{ flex: 1 }}>
                       <Select
-                        options={["Consultation", "PRP", "Hydrafacial", "Laser Hair Removal", "Skin Tag Removal", "Acne Scar Treatment"]}
+                        options={SERVICE_OPTIONS}
                         value=""
                         onChange={(val: string) => setForm({ ...form, services: [...form.services, val] })}
                         placeholder="+ Add Service"
@@ -810,27 +901,32 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
         <div style={styles.footerButtonGroup}>
           {editingAppointment ? (
             <>
-              {isDirty && (
+              {!editingAppointment.readOnly && isDirty && (
                 <button style={styles.pillButtonPrimary} onClick={() => handleBook(editingAppointment.payStatus || "Unpaid")} disabled={submitting}>
-                  <EditPencilIcon width={18} height={18} style={{ color: colors.neutral100 }} />
+                  <Icon name="edit-pencil" size={18} tone="inverse" />
                   {submitting ? "Saving..." : "Save Edits"}
                 </button>
               )}
-              {editingAppointment.payStatus?.toUpperCase() !== "PAID" && (
-                <button style={styles.pillButtonPayDue} onClick={() => handleBook("Paid", "Payment is done")} disabled={submitting}>
-                  <BillCheckIcon width={20} height={20} style={{ color: colors.neutral100 }} />
-                  {submitting ? "Saving..." : "Pay Due"}
-                </button>
-              )}
+              {/* "Pay Due" button removed per product feedback — payment is
+                  handled exclusively via the queue's Mark-as-Paid kebab
+                  action / Bill Medicines flow, so an extra CTA on the Edit
+                  Appointment view was redundant. */}
             </>
           ) : (
             <>
-              <button style={styles.pillButtonSecondary} onClick={() => handleBook("Unpaid")} disabled={submitting}>
-                <PlusIcon style={{ width: "20px", height: "20px" }} />
+              <button
+                style={{
+                  ...styles.pillButtonSecondary,
+                  ...(form.paymentMethod === "Waive" ? { opacity: 0.38, cursor: "not-allowed" } : {}),
+                }}
+                onClick={() => handleBook("Unpaid")}
+                disabled={submitting || form.paymentMethod === "Waive"}
+              >
+                <Icon name="calendar" size={20} tone="inherit" />
                 {submitting ? "Booking..." : "Book Now Pay Later"}
               </button>
               <button style={styles.pillButtonPrimary} onClick={() => handleBook("Paid")} disabled={submitting}>
-                <CalendarIcon style={{ width: "20px", height: "20px", color: colors.neutral100 }} />
+                <Icon name="verified-badge" size={20} tone="inverse" />
                 {submitting ? "Booking..." : "Pay & Book"}
               </button>
             </>
@@ -840,9 +936,25 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
 
       <Toast
         message={toastMessage}
+        {...resolveToastIcon(toastMessage)}
         isVisible={!!toastMessage}
         onClose={() => setToastMessage("")}
+      />
+
+      <ConfirmDialog
+        isOpen={!!pendingDupe}
+        title="Are you sure?"
+        message={pendingDupe?.message}
+        confirmLabel="Yes, add anyway"
+        cancelLabel="Nope"
+        onConfirm={() => {
+          const p = pendingDupe;
+          setPendingDupe(null);
+          if (p) void handleBook(p.payStatus, p.successMessage, true);
+        }}
+        onCancel={() => setPendingDupe(null)}
       />
     </div>
   );
 }
+
