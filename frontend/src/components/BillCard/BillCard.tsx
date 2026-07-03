@@ -51,6 +51,10 @@ type BillCardProps = {
    *  hasn't been booked/settled has no invoice, so Print toasts instead. Used by
    *  the booking card, where the invoice is only minted server-side on booking. */
   requireInvoiceToPrint?: boolean;
+  /** Message for the no-invoice Print toast. Lets the host word it for context —
+   *  "book the appointment…" for a new booking vs "bill this appointment…" when
+   *  editing an already-booked (pay-later) appointment. */
+  invoiceToastMessage?: string;
 };
 
 export function BillCard({
@@ -79,6 +83,7 @@ export function BillCard({
   onBillRefunded,
   onToast,
   requireInvoiceToPrint = false,
+  invoiceToastMessage,
 }: BillCardProps) {
   const [taxMode, setTaxMode] = useState<"%" | "₹">("%");
   // Discount unit is controlled by the owner when `discountModeProp` is given
@@ -144,7 +149,7 @@ export function BillCard({
     // A booking card prints only a real, saved invoice — a draft that hasn't
     // been booked/settled yet has no invoice to print.
     if (requireInvoiceToPrint && !paidBill) {
-      onToast?.("No invoice yet — book the appointment to generate the bill, then print.");
+      onToast?.(invoiceToastMessage || "No invoice yet — book the appointment to generate the bill, then print.");
       return;
     }
     // Nothing billed yet → nudge to fill the bill rather than print a ₹0 receipt.

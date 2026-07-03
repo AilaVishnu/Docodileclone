@@ -727,6 +727,9 @@ export function BookAppointment({ doctors, initialDoctorId, onBack, editingAppoi
             onBillRefunded={(u) => setApptBill({ ...u, today: false })}
             onToast={setToastMessage}
             requireInvoiceToPrint
+            invoiceToastMessage={editingAppointment
+              ? "No invoice yet — bill this appointment to generate the receipt, then print."
+              : "No invoice yet — book the appointment to generate the bill, then print."}
             patientName={form.name}
             patientMeta={{
               age: form.age ? (parseInt(form.age.split("/")[0]?.trim() || "", 10) || undefined) : undefined,
