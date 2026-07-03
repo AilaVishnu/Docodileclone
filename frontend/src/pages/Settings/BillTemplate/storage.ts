@@ -13,6 +13,7 @@ import {
   BillTemplateDTO,
 } from "../../../api/billTemplates";
 import { DEFAULT_BILL_TEMPLATE, BillTemplate } from "./types";
+import { getClinic, primeClinicIdentity } from "../../../api/clinic";
 
 // Forward-compatible decoder: rows persisted before a new field existed come
 // back without that key. Backfill from DEFAULT_BILL_TEMPLATE so the editor +
@@ -54,8 +55,16 @@ export async function ensureBillSeed(): Promise<BillTemplate[]> {
   const existing = await loadBillTemplates();
   if (existing.length > 0) return existing;
   // First load for this clinic — create the default template server-side so
-  // there's always at least one row.
-  const seed: BillTemplate = { id: "", ...DEFAULT_BILL_TEMPLATE };
+  // there's always at least one row, pre-filling the letterhead from the
+  // clinic's own profile so a new clinic's receipts show its real identity.
+  const clinic = await getClinic().catch(() => null);
+  const seed: BillTemplate = {
+    id: "",
+    ...DEFAULT_BILL_TEMPLATE,
+    clinicName: clinic?.name || DEFAULT_BILL_TEMPLATE.clinicName,
+    clinicAddress: clinic?.address || DEFAULT_BILL_TEMPLATE.clinicAddress,
+    clinicPhone: clinic?.phone || DEFAULT_BILL_TEMPLATE.clinicPhone,
+  };
   const created = await createBillTemplate({
     name: seed.name,
     isDefault: true,
@@ -68,7 +77,10 @@ export async function ensureBillSeed(): Promise<BillTemplate[]> {
 
 // Prime the cache once for the renderer (buildBillHtml). Never throws — a
 // failure just leaves the cache empty and the renderer falls back to defaults.
+// Also primes the clinic identity so the receipt/share fall back to the real
+// clinic name/address/phone when the template letterhead is blank.
 export async function ensureBillTemplatesLoaded(): Promise<void> {
+  await primeClinicIdentity();
   if (loadedOnce) return;
   try { await loadBillTemplates(); } catch { loadedOnce = true; }
 }
