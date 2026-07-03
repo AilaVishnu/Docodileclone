@@ -236,6 +236,8 @@ class VisitService(
             // table, swap to that lookup.)
             doc?.takeIf { true }
         }
+        // Referral doctor name (from the Catalog directory) — printed as "Ref. by".
+        visit.referredBy = r.referredBy?.trim()?.takeUnless { it.isEmpty() }
         // Next review
         visit.reviewDate = r.reviewDate
         visit.reviewDays = r.reviewDays
@@ -359,6 +361,7 @@ class VisitService(
         tests = this.tests,
         referDoctorId = this.referDoctor?.id,
         referDoctorName = this.referDoctor?.name,
+        referredBy = this.referredBy,
         reviewDate = this.reviewDate,
         reviewDays = this.reviewDays,
         reviewNotes = this.reviewNotes,

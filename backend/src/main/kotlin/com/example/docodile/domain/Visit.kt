@@ -69,6 +69,11 @@ class Visit(
     @JoinColumn(name = "refer_doctor_id")
     var referDoctor: AppUser? = null,
 
+    // The referral doctor (from the Catalog directory) who referred the patient
+    // in — a denormalized name, printed as "Ref. by". Separate from referDoctor
+    // (a staff FK, kept for backward compatibility).
+    @Column(name = "referred_by") var referredBy: String? = null,
+
     @Column(name = "review_date") var reviewDate: LocalDate? = null,
     @Column(name = "review_days") var reviewDays: Int? = null,
     @Column(name = "review_notes") var reviewNotes: String? = null,

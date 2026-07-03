@@ -53,6 +53,7 @@ data class SaveVisitRequest(
 
     // Referral + next review
     val referDoctorId: UUID? = null,
+    val referredBy: String? = null,
     val reviewDate: LocalDate? = null,
     val reviewDays: Int? = null,
     val reviewNotes: String? = null,

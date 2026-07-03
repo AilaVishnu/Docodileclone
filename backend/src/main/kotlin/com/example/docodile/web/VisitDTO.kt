@@ -55,6 +55,7 @@ data class VisitDTO(
     // Referral + next review
     val referDoctorId: UUID?,
     val referDoctorName: String?,
+    val referredBy: String?,
     val reviewDate: LocalDate?,
     val reviewDays: Int?,
     val reviewNotes: String?,
