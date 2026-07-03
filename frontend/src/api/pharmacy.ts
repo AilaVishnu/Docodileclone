@@ -9,6 +9,7 @@ export type PharmacyStockDTO = {
   form: string;
   invoiceNo: string | null;
   batch: string | null;
+  supplier?: string | null;
   packPrice: number;
   packMrp: number;
   unitsPerPack: number;
@@ -47,6 +48,7 @@ export function dtoToMed(d: PharmacyStockDTO): Med {
     form,
     invoiceNo: d.invoiceNo ?? "",
     batch: d.batch ?? "",
+    supplier: d.supplier ?? "",
     packPrice: Number(d.packPrice),
     packMrp: Number(d.packMrp),
     unitsPerPack: d.unitsPerPack,
@@ -105,6 +107,7 @@ export function medToRequest(m: Omit<Med, "id">): PharmacyStockRequest {
     form: m.form,
     invoiceNo: m.invoiceNo || null,
     batch: m.batch || null,
+    supplier: m.supplier || null,
     packPrice: m.packPrice,
     packMrp: m.packMrp,
     unitsPerPack: m.unitsPerPack,

@@ -26,6 +26,7 @@ export type Med = {
   form: MedForm;
   invoiceNo: string;
   batch: string;
+  supplier?: string;
   packPrice: number;
   packMrp: number;
   unitsPerPack: number;

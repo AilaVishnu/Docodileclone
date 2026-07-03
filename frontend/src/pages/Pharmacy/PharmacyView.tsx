@@ -20,6 +20,7 @@ import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { colors, fonts, spacing, radii, shadows } from "../../styles/theme";
 import { Icon } from "../../components/Icon";
 import { listPharmacyStock, bulkCreatePharmacyStock, parseInventoryCsv, createPharmacyStock, updatePharmacyStock, deletePharmacyStock, medToRequest } from "../../api/pharmacy";
+import { useSuppliers } from "../../hooks/useSuppliers";
 import { Toast } from "../../components/Toast";
 import { resolveToastIcon } from "../../components/Toast/toastIcon";
 
@@ -574,6 +575,8 @@ export function StockFormBody({
   const [form, setForm] = useState<MedForm>(initial?.form ?? "tablet");
   const [invoiceNo, setInvoiceNo] = useState(initial?.invoiceNo ?? "");
   const [batch, setBatch] = useState(initial?.batch ?? "");
+  const [supplier, setSupplier] = useState(initial?.supplier ?? "");
+  const suppliers = useSuppliers();
   const [packPrice, setPackPrice] = useState(String(initial?.packPrice ?? ""));
   const [packMrp, setPackMrp] = useState(String(initial?.packMrp ?? ""));
   const [unitsPerPack, setUnitsPerPack] = useState(String(initial?.unitsPerPack ?? 1));
@@ -645,6 +648,15 @@ export function StockFormBody({
             <InputBox variant="box" value={batch} onChange={setBatch} placeholder="e.g. 204" inputStyle={{ fontSize: fonts.size.s }} />
           </Field>
         </div>
+
+        <Field label="Supplier">
+          <Select
+            options={supplier && !suppliers.includes(supplier) ? [supplier, ...suppliers] : suppliers}
+            value={supplier}
+            onChange={setSupplier}
+            placeholder={suppliers.length ? "Select supplier" : "Add suppliers in Catalog"}
+          />
+        </Field>
 
         <div style={ms.twoCol}>
           <Field label="Pack price">
