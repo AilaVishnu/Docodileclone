@@ -327,22 +327,22 @@ export function buildPrintHtml(template: PrintTemplate, data: PrintVisitData): s
        prescription fits in the iframe's visible area. */
     overflow: hidden;
   }
-  /* Screen preview fits whatever iframe width is available (the iframe
-     enforces A4 aspect-ratio externally). For print the sheet expands to
-     the real A4 page. */
+  /* Fixed A4 physical size so the layout (text wrapping, table column widths)
+     is computed at TRUE A4 on both the screen preview and the printed page. The
+     preview then just scales this whole sheet down to fit the iframe (script
+     below), so what you see in the preview is exactly what prints — no reflow. */
   .sheet {
-    width: 100%;
-    min-height: 100%;
-    margin: 0 auto;
+    width: 210mm;
+    min-height: 297mm;
     background: white;
     display: flex;
     flex-direction: column;
     position: relative;
-    transform-origin: top center;
+    transform-origin: top left;
   }
   @media print {
     html, body { overflow: visible; }
-    .sheet { width: auto; min-height: 0; margin: 0; transform: none !important; }
+    .sheet { transform: none !important; }
   }
 
   /* Header / footer are edge-to-edge: full page width, no horizontal
@@ -436,14 +436,14 @@ export function buildPrintHtml(template: PrintTemplate, data: PrintVisitData): s
       var sheet = document.querySelector('.sheet');
       if (!sheet) return;
       function fit() {
-        // Reset before measuring so we read the un-scaled height.
+        // Reset before measuring so we read the un-scaled size.
         sheet.style.transform = '';
-        var vh = document.documentElement.clientHeight;
-        var ch = sheet.scrollHeight;
-        if (ch > vh) {
-          var s = vh / ch;
-          sheet.style.transform = 'scale(' + s + ')';
-        }
+        var availW = document.documentElement.clientWidth;
+        var availH = document.documentElement.clientHeight;
+        // The A4 sheet is wider/taller than the iframe — scale it down to fit
+        // both dimensions (they match since both are A4-proportioned).
+        var s = Math.min(availW / sheet.offsetWidth, availH / sheet.scrollHeight, 1);
+        if (s < 1) sheet.style.transform = 'scale(' + s + ')';
       }
       fit();
       window.addEventListener('resize', fit);
