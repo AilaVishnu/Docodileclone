@@ -137,7 +137,7 @@ export function ServicesView({ openCreateSignal }: { openCreateSignal?: number }
 
       {cat !== "Services" && (
         <div style={{ marginTop: "var(--main-gap, 24px)" }}>
-          <DirectoryView category={cat as Exclude<Category, "Services">} />
+          <DirectoryView key={cat} category={cat as Exclude<Category, "Services">} />
         </div>
       )}
 

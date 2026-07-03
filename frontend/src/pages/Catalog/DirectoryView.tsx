@@ -7,7 +7,6 @@ import { Modal } from "../../components/Modal";
 import { ModalHeader } from "../../components/ModalHeader";
 import { ContactCard } from "../../components/Catalog/ContactCard";
 import { Toast } from "../../components/Toast";
-import { resolveToastIcon } from "../../components/Toast/toastIcon";
 import { colors, fonts, spacing, radii } from "../../styles/theme";
 import { styles as form } from "../Services/AddServiceModal.styles";
 import { Category, DirEntry } from "./catalogData";
@@ -70,8 +69,8 @@ export function DirectoryView({ category }: { category: DirCategory }) {
   const [refer, setRefer] = useState<DirEntry | null>(null);
   const [edit, setEdit] = useState<DirEntry | null>(null);
   const [adding, setAdding] = useState(false);
-  const [toast, setToast] = useState<{ visible: boolean; message: string }>({ visible: false, message: "" });
-  const showToast = (message: string) => setToast({ visible: true, message });
+  const [toast, setToast] = useState<{ visible: boolean; message: string; iconName: string }>({ visible: false, message: "", iconName: "buildings" });
+  const showToast = (message: string, iconName: string) => setToast({ visible: true, message, iconName });
 
   // A persisted entry → a card entry: add the client-derived icon + per-category
   // CTA (neither is stored server-side).
@@ -111,17 +110,17 @@ export function DirectoryView({ category }: { category: DirCategory }) {
     if (id && id !== "new") {
       const dto = await updateDirectoryEntry(id, category, body);
       setEntries((prev) => prev.map((e) => (e.id === id ? toEntry(dtoToBody(dto)) : e)));
-      showToast(`${SINGULAR[category]} updated`);
+      showToast(`${SINGULAR[category]} updated`, CAT_ICON[category]);
     } else {
       const dto = await createDirectoryEntry(category, body);
       setEntries((prev) => [...prev, toEntry(dtoToBody(dto))]);
-      showToast(`${SINGULAR[category]} added`);
+      showToast(`${SINGULAR[category]} added`, CAT_ICON[category]);
     }
   };
   const handleDelete = async (id: string) => {
     await deleteDirectoryEntry(id);
     setEntries((prev) => prev.filter((e) => e.id !== id));
-    showToast(`${SINGULAR[category]} deleted`);
+    showToast(`${SINGULAR[category]} deleted`, "trash-bin");
   };
 
   return (
@@ -158,7 +157,7 @@ export function DirectoryView({ category }: { category: DirCategory }) {
       {edit && <ContactEdit entry={edit} category={category} title={`Edit ${SINGULAR_LOWER[category]}`} onClose={() => setEdit(null)} onSave={handleSave} onDelete={handleDelete} />}
       {adding && <ContactEdit entry={blank} category={category} title={ADD_LABEL[category]} onClose={() => setAdding(false)} onSave={handleSave} />}
 
-      <Toast message={toast.message} {...resolveToastIcon(toast.message)} isVisible={toast.visible} onClose={() => setToast({ visible: false, message: "" })} />
+      <Toast message={toast.message} iconName={toast.iconName} isVisible={toast.visible} onClose={() => setToast({ visible: false, message: "", iconName: "buildings" })} />
     </div>
   );
 }
