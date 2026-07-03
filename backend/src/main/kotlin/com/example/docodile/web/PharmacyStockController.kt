@@ -26,6 +26,7 @@ class PharmacyStockController(
         form = s.form,
         invoiceNo = s.invoiceNo,
         batch = s.batch,
+        supplier = s.supplier,
         packPrice = s.packPrice,
         packMrp = s.packMrp,
         unitsPerPack = s.unitsPerPack,
@@ -42,6 +43,7 @@ class PharmacyStockController(
         target.form = req.form.ifBlank { "tablet" }
         target.invoiceNo = req.invoiceNo?.trim()?.ifBlank { null }
         target.batch = req.batch?.trim()?.ifBlank { null }
+        target.supplier = req.supplier?.trim()?.ifBlank { null }
         target.packPrice = req.packPrice
         target.packMrp = req.packMrp
         target.unitsPerPack = req.unitsPerPack.coerceAtLeast(1)
@@ -184,6 +186,7 @@ data class PharmacyStockDTO(
     val form: String,
     val invoiceNo: String?,
     val batch: String?,
+    val supplier: String?,
     val packPrice: BigDecimal,
     val packMrp: BigDecimal,
     val unitsPerPack: Int,
@@ -200,6 +203,7 @@ data class PharmacyStockRequest(
     val form: String = "tablet",
     val invoiceNo: String? = null,
     val batch: String? = null,
+    val supplier: String? = null,
     val packPrice: BigDecimal = BigDecimal.ZERO,
     val packMrp: BigDecimal = BigDecimal.ZERO,
     val unitsPerPack: Int = 1,

@@ -29,6 +29,10 @@ class PharmacyStock(
     @Column(columnDefinition = "TEXT")
     var batch: String? = null,
 
+    // Supplier this stock was procured from (from the Catalog "Suppliers" directory).
+    @Column(columnDefinition = "TEXT")
+    var supplier: String? = null,
+
     @Column(name = "pack_price", nullable = false)
     var packPrice: BigDecimal = BigDecimal.ZERO,
 
